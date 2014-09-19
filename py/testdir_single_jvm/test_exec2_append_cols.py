@@ -15,9 +15,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2, java_heap_GB=1)
+            h2o.build_cloud(java_heap_GB=4)
         else:
-            h2o_hosts.build_cloud_with_hosts(1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
                 msg="actual col name: %s expected col name %s" % (actual, expected))
 
         # make it fail with this one (skip)
-        execExpr = 's.hex[,%s] = r.hex[,%s]' % (101, 1),
+        execExpr = 's.hex[,%s] = r.hex[,%s]' % (2, 1),
         h2e.exec_expr(h2o.nodes[0], execExpr, resultKey='s.hex', timeoutSecs=10)
 
         inspect = h2o_cmd.runInspect(key='s.hex')

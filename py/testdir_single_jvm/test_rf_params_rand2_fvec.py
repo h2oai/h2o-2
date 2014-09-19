@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
         hex_key = 'covtype.data.hex'
-        for trial in range(10):
+        for trial in range(2):
             # params is mutable. This is default.
             params = {'ntrees': 13, 'mtries': 7, 'balance_classes': 0, 'importance': 0}
             colX = h2o_rf.pickRandRfParams(paramDict, params)

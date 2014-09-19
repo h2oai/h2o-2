@@ -8,15 +8,17 @@ import java.util.Properties;
 import water.*;
 import water.Job.ProgressMonitor;
 import water.api.Constants.Extensions;
+import water.fvec.FileVec;
 import water.fvec.Vec;
 import water.util.Log;
 import water.util.RIStream;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
+import com.amazonaws.*;
+import com.amazonaws.auth.*;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.*;
+import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
 
 /** Persistence backend for S3 */
@@ -34,7 +36,7 @@ public final class PersistS3 extends Persist {
       synchronized( _lock ) {
         if( _s3 == null ) {
           try {
-            _s3 = new AmazonS3Client(H2O.getAWSCredentials(), s3ClientCfg());
+            _s3 = new AmazonS3Client(new H2OAWSCredentialsProviderChain(), s3ClientCfg());
           } catch( Throwable e ) {
             StringBuilder msg = new StringBuilder();
             msg.append(e.getMessage() + "\n");
@@ -46,6 +48,43 @@ public final class PersistS3 extends Persist {
       }
     }
     return _s3;
+  }
+
+  /** Modified version of default credentials provider which includes H2O-specific
+   * credentials provider.
+   */
+  public static class H2OAWSCredentialsProviderChain extends AWSCredentialsProviderChain {
+    public H2OAWSCredentialsProviderChain() {
+      super(new H2OArgCredentialsProvider(),
+            new InstanceProfileCredentialsProvider(),
+            new EnvironmentVariableCredentialsProvider(),
+            new SystemPropertiesCredentialsProvider());
+    }
+  }
+
+  /** A simple credentials provider reading file-based credentials from given
+   * command argument <code>--aws_credentials</code>.
+   */
+  static class H2OArgCredentialsProvider implements AWSCredentialsProvider {
+
+    // Default location of the AWS credentials file
+    public static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
+
+    @Override public AWSCredentials getCredentials() {
+      File credentials = new File(Objects.firstNonNull(H2O.OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
+      try {
+        return new PropertiesCredentials(credentials);
+      } catch (IOException e) {
+        throw new AmazonClientException("Unable to load AWS credentials from file " + credentials);
+      }
+    }
+
+    @Override public void refresh() {}
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
+    }
   }
 
   public static final class H2SO3InputStream extends RIStream {
@@ -94,6 +133,9 @@ public final class PersistS3 extends Persist {
     byte[] b = MemoryManager.malloc1(v._max);
     Key k = v._key;
     long skip = 0;
+    // Skip offset based on chunk number
+    if(k._kb[0] == Key.DVEC)
+      skip = FileVec.chunkOffset(k); // The offset
     // Too complicate matters, S3 likes to reset connections when H2O hits it
     // too hard.  We "fix" this by just trying again, assuming we're getting
     // hit with a bogus resource limit (H2O doing a parse looks like a DDOS to

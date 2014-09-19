@@ -71,7 +71,8 @@ public class PCATest extends TestUtil {
     Key kpca = Key.make("basicdata.pca");
     new PCA("PCA on basic small dataset", kpca, fr, 0.0, standardize).invoke();
     model = DKV.get(kpca).get();
-    Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
+    Job.JobState jstate = model.get_params().state;
+    Assert.assertTrue(jstate == Job.JobState.DONE); //HEX-1817
     testHTML(model);
     } finally {
       if( fr    != null ) fr   .delete();

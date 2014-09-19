@@ -41,6 +41,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
 
     // create domains for categorical variables
     if (_createFrame.randomize) {
+      assert(_createFrame.response_factors >= 1);
       _domain = new String[_createFrame.cols+1][];
       _domain[0] = _createFrame.response_factors == 1 ? null : new String[_createFrame.response_factors];
       if (_domain[0] != null) {
@@ -147,9 +148,15 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
 
 
 
-  private static class MissingInserter extends MRTask2<MissingInserter> {
+  public static class MissingInserter extends MRTask2<MissingInserter> {
     final long _seed;
     final double _frac;
+
+    public MissingInserter(long seed, double frac){
+      super(null);
+      _seed = seed;
+      _frac = frac;
+    }
 
     public MissingInserter(H2O.H2OCountedCompleter cmp, long seed, double frac){
       super(cmp);

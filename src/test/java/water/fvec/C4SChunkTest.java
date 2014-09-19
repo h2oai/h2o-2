@@ -35,6 +35,7 @@ public class C4SChunkTest extends TestUtil {
       Assert.assertTrue(cc.isNA(man.length + l));
 
       nc = cc.inflate_impl(new NewChunk(null, 0));
+      nc.values(0, nc.len());
       Assert.assertEquals(man.length + 1 + l, nc.len());
       if (l==1) {
         Assert.assertTrue(nc.isNA0(0));
@@ -91,6 +92,7 @@ public class C4SChunkTest extends TestUtil {
       Assert.assertTrue(cc.isNA(man.length + l));
 
       nc = cc.inflate_impl(new NewChunk(null, 0));
+      nc.values(0, nc.len());
       Assert.assertEquals(man.length + 1 + l, nc.len());
       if (l==1) {
         Assert.assertTrue(nc.isNA0(0));

@@ -41,15 +41,9 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 5000, 'cA', 60),
-            (100, 6000, 'cB', 60),
-            (100, 7000, 'cC', 60),
-            (100, 8000, 'cD', 60),
-            (100, 8200, 'cE', 60),
-            (100, 8500, 'cF', 60),
-            (100, 9000, 'cG', 60),
-            (100, 10000, 'cI', 60),
-            (100, 11000, 'cH', 60),
+            (100, 5000, 'cA', 120),
+            (100, 9000, 'cG', 120),
+            (100, 11000, 'cH', 120),
             ]
 
         ### h2b.browseTheCloud()

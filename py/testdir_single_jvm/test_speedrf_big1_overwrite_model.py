@@ -48,9 +48,9 @@ class Basic(unittest.TestCase):
             print "Change the number of trees, while keeping the rf model key name the same"
             print "Checks that we correctly overwrite previous rf model"
             if OVERWRITE_RF_MODEL:
-                kwargs['num_trees'] = 1 + jobDispatch
+                kwargs['ntrees'] = 1 + jobDispatch
             else:
-                kwargs['num_trees'] = 1
+                kwargs['ntrees'] = 1
                 # don't change the seed if we're overwriting the model. It should get 
                 # different results just from changing the tree count
                 kwargs['seed'] = random.randint(0, sys.maxint)

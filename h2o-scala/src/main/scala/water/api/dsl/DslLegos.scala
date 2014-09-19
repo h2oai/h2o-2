@@ -277,8 +277,8 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def keys(verbose:Boolean = false) = {
     import scala.collection.JavaConversions._ // import implicit inversion for Java collections
     println("*** Available keys *** ")
-    if (H2O.globalKeySet(null).isEmpty()) println("<None>")
-    else H2O.globalKeySet(null).foreach((k:Key) => if (k.user_allowed() || verbose) println(k))
+    if (H2O.KeySnapshot.globalSnapshot().keys().isEmpty ) println("<None>")
+    else H2O.KeySnapshot.globalSnapshot().keys().foreach((k:Key) => if (k.user_allowed() || verbose) println(k))
     println("-----------------------")
   }
   // Access to DKV store is defined by reference

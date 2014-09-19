@@ -69,20 +69,6 @@ test.plus.onFrame <- function(conn) {
   print(head(fivePlusHexMinusFive))
 
   expect_that(dim(fivePlusHex), equals(dim(hex)))
-  Log.info("Expect that this frame: ")
-  print(fivePlusHexHead <- fivePlusHex[1:6,])
-  Log.info("Equals this one: ")
-  fivePlusAsData <- 5 + as.data.frame(hex[1:6,])
-  print(fivePlusAsData)
-  Log.info("Are NAs being treated properly???")
-  fPHH <- as.data.frame(fivePlusHexHead)
-  print(fPHH)
-
-  fPHH <- data.frame(lapply(fPHH, as.numeric))
-  fivePlusAsData <- data.frame(lapply(fivePlusAsData, as.numeric))
-  
-  expect_that(fivePlusAsData, equals(fPHH))
-
 
   Log.info("Checking left and right: ")
   hexPlusFive <- hex + 5
@@ -115,7 +101,6 @@ test.plus.onFrame <- function(conn) {
   Log.info("HPH:")
   print(hph)
 
-  expect_that(hd, equals(hph))
   testEnd()
 }
 

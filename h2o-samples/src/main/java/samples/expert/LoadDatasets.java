@@ -1,10 +1,13 @@
 package samples.expert;
 
+import hex.CreateFrame;
 import water.*;
 import water.api.FrameSplitPage;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.util.Log;
+
+import java.util.Random;
 
 /**
  * Loads all datasets from smalldata folder for testing purposes
@@ -25,6 +28,8 @@ public class LoadDatasets extends TestUtil {
     // load these first
     String[] files = new String[]{
             "smalldata/logreg/prostate.csv",
+            "smalldata/covtype/covtype.20k.data",
+            "smalldata/covtype/covtype.altered.gz",
             "smalldata/weather.csv",
             "smalldata/iris/iris.csv",
             "smalldata/mnist/train.csv.gz",
@@ -124,8 +129,6 @@ public class LoadDatasets extends TestUtil {
             "smalldata/chess/chess_8x8x1000/R/test.csv",
             "smalldata/chess/chess_8x8x1000/R/train.csv",
             "smalldata/constantColumn.csv",
-            "smalldata/covtype/covtype.20k.data",
-            "smalldata/covtype/covtype.altered.gz",
             "smalldata/cuse.data.csv",
             "smalldata/cusedataREADME.rtf",
             "smalldata/cuseexpanded.csv",
@@ -353,7 +356,6 @@ public class LoadDatasets extends TestUtil {
             "smalldata/test/HTWO-87-two-lines-dataset.csv",
             "smalldata/test/HTWO-87-two-unique-lines-dataset.csv",
             "smalldata/test/is_NA.csv",
-            "smalldata/test/is_NA2.csv",
             "smalldata/test/na_test.zip",
             "smalldata/test/R/titanic.csv",
 //              "smalldata/test/rmodels/covtype-rf-50tree-as-factor-X5-20k.rdata",
@@ -412,6 +414,24 @@ public class LoadDatasets extends TestUtil {
     };
     for (String f : files) { TestUtil.parseFromH2OFolder(f); }
 
+//    long seed = new Random().nextLong();
+//    Log.info("seed: " + seed);
+//    CreateFrame cf = new CreateFrame();
+//    cf.key = "random";
+//    cf.rows = (long)(new Random(seed).nextFloat()*100000f + 1);
+//    cf.cols = (int)(new Random(seed).nextFloat()*1000f + 1);
+//    cf.categorical_fraction = 0;
+//    cf.integer_fraction = new Random(seed).nextFloat();
+//    cf.integer_range = 1 + new Random(seed).nextInt(5);
+//    cf.value = 0;
+//    cf.randomize = true;
+//    cf.missing_fraction = new Random(seed).nextFloat();
+//    cf.factors = 2;
+//    cf.response_factors = 1;
+//    cf.positive_response = true;
+//    cf.seed = seed;
+//    cf.serve();
+
 //    for (String f : files2) { TestUtil.parseFromH2OFolder(f); }
 //    reBalanceFrames();
 //    testTrainSplitFrames();
@@ -444,12 +464,14 @@ public class LoadDatasets extends TestUtil {
       if (val == null || !val.isFrame()) continue;
       final Frame fr = val.get();
       if (!fr._key.toString().contains("_part")) {
-        Log.info("Splitting frame under key '" + fr._key.toString() + "' into 75%/25% train/test splits.");
         try {
           FrameSplitPage fsp = new FrameSplitPage();
           fsp.source = fr;
-          fsp.ratios = new float[]{0.75f};
-          fsp.split_keys = null;
+          long seed = new Random().nextLong();
+          Log.info("seed: " + seed);
+          fsp.ratios = new float[]{0.001f + new Random(seed).nextFloat()*0.99f};
+          Log.info("Splitting frame under key '" + fr._key.toString() + "' into " + fsp.ratios[0] + ".");
+          fsp.split_keys = new Key[]{Key.make(), Key.make()};
           fsp.split_rows = null;
           fsp.split_ratios = null;
           fsp.invoke();

@@ -1088,7 +1088,7 @@ Steam.ScoringView = (_, _scoring) ->
       comparisonRows.push inputParametersRow = [
         th [
           (div 'Input Parameters')
-          (hyperlink 'Show more', 'toggle-advanced-parameters')
+          (hyperlink 'Show more')
         ]
       ]
       comparisonRows.push durationRow = [ th 'Time' ]
@@ -1151,7 +1151,7 @@ Steam.ScoringView = (_, _scoring) ->
 
       toggleAdvancedParameters = ($element) ->
         isHidden = yes
-        $toggleLink = $ '#toggle-advanced-parameters', $element
+        $toggleLink = $ '.y-link', $element
         $toggleLink.click ->
           if isHidden
             $('.y-expert', $element).show()

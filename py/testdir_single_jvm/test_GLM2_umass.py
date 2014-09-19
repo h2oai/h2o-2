@@ -24,8 +24,8 @@ class Basic(unittest.TestCase):
     def test_GLM2_umass(self):
         h2o.beta_features = True
         csvFilenameList = [
-            ('cgd.dat', 'gaussian', 12, 5, None),
-            ('chdage.dat', 'binomial', 2, 5, None),
+            ('cgd.dat', 'gaussian', 12, 30, None),
+            ('chdage.dat', 'binomial', 2, 30, None),
     
             # leave out ID and birth weight
             ('clslowbwt.dat', 'binomial', 7, 60, [1,2,3,4,5]),

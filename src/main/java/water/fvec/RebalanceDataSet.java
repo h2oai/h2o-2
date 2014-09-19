@@ -4,6 +4,7 @@ import jsr166y.CountedCompleter;
 import water.H2O;
 import water.Key;
 import water.MRTask2;
+import water.util.Log;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -98,41 +99,46 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
     @Override public boolean logVerbose() { return false; }
 
     private void rebalanceChunk(Vec srcVec, Chunk chk){
-      NewChunk dst = new NewChunk(chk);
-      dst._len = dst._sparseLen = 0;
-      int rem = chk._len;
-      while(rem > 0 && dst._len < chk._len){
-        Chunk srcRaw = srcVec.chunkForRow(chk._start+dst._len);
-        NewChunk src = new NewChunk((srcRaw));
-        src = srcRaw.inflate_impl(src);
-        assert src._len == srcRaw._len;
-        int srcFrom = (int)(chk._start+dst._len - src._start);
-        // check if the result is sparse (not exact since we only take subset of src in general)
-        if((src.sparse() && dst.sparse()) || (src._len + dst._len < NewChunk.MIN_SPARSE_RATIO*(src._len + dst._len))){
-          src.set_sparse(src._sparseLen);
-          dst.set_sparse(dst._sparseLen);
+      try {
+        NewChunk dst = new NewChunk(chk);
+        dst._len = dst._sparseLen = 0;
+        int rem = chk._len;
+        while (rem > 0 && dst._len < chk._len) {
+          Chunk srcRaw = srcVec.chunkForRow(chk._start + dst._len);
+          NewChunk src = new NewChunk((srcRaw));
+          src = srcRaw.inflate_impl(src);
+          assert src._len == srcRaw._len;
+          int srcFrom = (int) (chk._start + dst._len - src._start);
+          // check if the result is sparse (not exact since we only take subset of src in general)
+          if ((src.sparse() && dst.sparse()) || (src._len + dst._len < NewChunk.MIN_SPARSE_RATIO * (src._len + dst._len))) {
+            src.set_sparse(src._sparseLen);
+            dst.set_sparse(dst._sparseLen);
+          }
+          final int srcTo = srcFrom + rem;
+          int off = srcFrom - 1;
+          Iterator<NewChunk.Value> it = src.values(Math.max(0, srcFrom), srcTo);
+          while (it.hasNext()) {
+            NewChunk.Value v = it.next();
+            final int rid = v.rowId0();
+            assert rid < srcTo;
+            int add = rid - off;
+            off = rid;
+            dst.addZeros(add - 1);
+            v.add2Chunk(dst);
+            rem -= add;
+            assert rem >= 0;
+          }
+          int trailingZeros = Math.min(rem, src._len - off - 1);
+          dst.addZeros(trailingZeros);
+          rem -= trailingZeros;
         }
-        final int srcTo = srcFrom + rem;
-        int off = srcFrom-1;
-        Iterator<NewChunk.Value> it = src.values(Math.max(0,srcFrom),srcTo);
-        while(it.hasNext()){
-          NewChunk.Value v = it.next();
-          final int rid = v.rowId0();
-          assert  rid < srcTo;
-          int add = rid - off;
-          off = rid;
-          dst.addZeros(add-1);
-          v.add2Chunk(dst);
-          rem -= add;
-          assert rem >= 0;
-        }
-        int trailingZeros = Math.min(rem,src._len - off -1);
-        dst.addZeros(trailingZeros);
-        rem -= trailingZeros;
+        assert rem == 0 : "rem = " + rem;
+        assert dst._len == chk._len : "len2 = " + dst._len + ", _len = " + chk._len;
+        dst.close(dst.cidx(), _fs);
+      } catch(RuntimeException t){
+        Log.err("got exception while rebalancing chunk " + chk);
+        throw t;
       }
-      assert rem == 0:"rem = " + rem;
-      assert dst._len == chk._len:"len2 = " + dst._len + ", _len = " + chk._len;
-      dst.close(dst.cidx(),_fs);
     }
     @Override public void map(Chunk [] chks){
       for(int i = 0; i < chks.length; ++i)

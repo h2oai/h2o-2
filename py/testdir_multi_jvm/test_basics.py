@@ -23,7 +23,7 @@ class Basic(h2o_common.SetupUnitTest, unittest.TestCase):
 
     def test_D_GenParity1(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_100_quad.data', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=15)
+        h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=60)
 
     def test_E_ParseManyCols(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', timeoutSecs=100)

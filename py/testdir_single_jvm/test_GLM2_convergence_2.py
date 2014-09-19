@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
             y = colCount
             kwargs = {
                     'max_iter': 40, 
-                    'lambda': 1e0,
+                    'lambda': 1e-1,
                     'alpha': 0.5,
                     'n_folds': 0,
                     'beta_epsilon': 1e-4,

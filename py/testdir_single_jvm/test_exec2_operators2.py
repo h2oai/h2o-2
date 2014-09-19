@@ -279,7 +279,7 @@ class Basic(unittest.TestCase):
         
         bigExecExpr = ""
         for execExpr in exprBigList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4.)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

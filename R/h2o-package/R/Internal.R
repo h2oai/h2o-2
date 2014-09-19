@@ -96,6 +96,7 @@ h2o.setLogPath <- function(path, type) {
 # Internal functions & declarations
 .h2o.__PAGE_CANCEL = "Cancel.json"
 .h2o.__PAGE_CLOUD = "Cloud.json"
+.h2o.__PAGE_UP = "Up.json"
 .h2o.__PAGE_JOBS = "Jobs.json"
 .h2o.__PAGE_REMOVE = "Remove.json"
 .h2o.__PAGE_REMOVEALL = "2/RemoveAll.json"
@@ -103,6 +104,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_VIEWALL = "StoreView.json"
 .h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 .h2o.__DOMAIN_MAPPING = "2/DomainMapping.json"
+.h2o.__PAGE_ALLMODELS = "2/Models.json"
 
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
@@ -123,6 +125,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_QUANTILES = "2/QuantilesPage.json"
 .h2o.__PAGE_INSPECTOR = "2/Inspector.json"
 .h2o.__PAGE_ANOMALY = "2/Anomaly.json"
+.h2o.__PAGE_DEEPFEATURES = "2/DeepFeatures.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"
 .h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
@@ -154,6 +157,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
 .h2o.__PAGE_CreateFrame = "2/CreateFrame.json"
 .h2o.__PAGE_SplitFrame = "2/FrameSplitPage.json"
+.h2o.__PAGE_MissingVals = "2/InsertMissingValues.json"
 .h2o.__PAGE_SaveModel = "2/SaveModel.json"
 .h2o.__PAGE_LoadModel = "2/LoadModel.json"
 
@@ -226,6 +230,12 @@ h2o.setLogPath <- function(path, type) {
   res
 }
 
+.h2o.__checkUp <- function(client) {
+  myURL   = paste("http://", client@ip, ":", client@port, sep = "")
+  myUpURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_UP, sep = "")
+  if(!url.exists(myUpURL)) stop("Cannot connect to H2O instance at ", myURL)
+}
+
 .h2o.__cloudSick <- function(node_name = NULL, client) {
   url <- paste("http://", client@ip, ":", client@port, "/Cloud.html", sep = "")
   m1 <- "Attempting to execute action on an unhealthy cluster!\n"
@@ -239,8 +249,8 @@ h2o.setLogPath <- function(path, type) {
   grabCloudStatus <- function(client) {
     ip <- client@ip
     port <- client@port
-    url <- paste("http://", ip, ":", port, "/", .h2o.__PAGE_CLOUD, sep = "")
-    if(!url.exists(url)) stop(paste("H2O connection has been severed. Instance no longer up at address ", ip, ":", port, "/", sep = "", collapse = ""))
+    .h2o.__checkUp(client)
+    url <- paste("http://", ip, ":", port, "/", .h2o.__PAGE_CLOUD, "?quiet=true&skip_ticks=true", sep = "")
     fromJSON(getURLContent(url))
   }
   checker <- function(node, client) {
@@ -697,7 +707,7 @@ function(some_expr_list, envir) {
 #' Discover the destination key (if there is one), the client, and sub in the actual key name for the R variable
 #' that contains the pointer to the key in H2O.
 .replace_with_keys<-
-function(expr, envir = globalenv()) {
+function(expr, envir = globalenv(), expr_only = FALSE) {
   dest_key <- ""
   assign("NEWCOL", "", envir = .pkg.env)
   assign("NUMCOLS", "", envir = .pkg.env)
@@ -728,6 +738,7 @@ function(expr, envir = globalenv()) {
 
     # return the modified expression
     tryCatch(rm("COLNAMES", envir = .pkg.env), warning = function(w) { invisible(w)}, error = function(e) { invisible(e)})
+    if (expr_only) return(.back_to_expr(l))
     as.name(as.character(as.expression(.back_to_expr(l))))
   }
 }
@@ -874,10 +885,13 @@ h2o.getModel <- function(h2o, key) {
       return(model)
   }
   if (algo == "grid") return(.h2o.get.glm.grid(h2o, key, TRUE, h2o.getFrame(h2o, response$"_dataKey")))
-  if(algo == "deeplearning_model")
+  if(algo == "deeplearning_model"){
     params <- json[[model.type]]$model_info$job
-  else
+  } else if (algo == "nb_model") {
+    params <- json[[model.type]]$job
+  } else {
     params <- json[[model.type]]$parameters #.fill.params(model.type, json)
+  }
   params$h2o <- h2o
   model_obj  <- switch(algo, gbm_model = "H2OGBMModel", drf_model = "H2ODRFModel", deeplearning_model = "H2ODeepLearningModel", speedrf_model = "H2OSpeeDRFModel", model= "H2OKMeansModel", glm_model = "H2OGLMModel", nb_model = "H2ONBModel", pca_model = "H2OPCAModel")
   results_fun <- switch(algo, gbm_model = .h2o.__getGBMResults,
@@ -910,17 +924,33 @@ h2o.getModel <- function(h2o, key) {
   if(algo == "pca_model") {
     return(.get.pca.results(train_fr, json[[model.type]], key, params))
   }
-  modelOrig<- results_fun(json[[model.type]], params)
+  if(algo == "nb_model"){
+    modelOrig<- results_fun(json[[model.type]])
+  } else {
+    modelOrig<- results_fun(json[[model.type]], params)
+  }
   res_xval <- list()
   if (algo == "gbm_model") algo <- "GBM"
   if (algo == "drf_model") algo <- "RF"
   if (algo == "deeplearning_model") algo <- "DeepLearning"
   if (algo == "speedrf_model") algo <- "SpeeDRF"
   if (algo == "glm_model") algo <- "GLM"
+  if (algo == "nb_model") algo <- "NaiveBayes"
   if (algo %in% c("GBM", "RF", "DeepLearning", "SpeeDRF", "GLM") && !is.null(params$n_folds)) res_xval <- .h2o.crossvalidation(algo, train_fr, json[[model.type]], params$n_folds, params)
-  if (is.null(params$validation)) valid <- new("H2OParsedData", key=as.character(NA))
-  else valid <- .h2o.exec2(h2o = h2o, expr = params$validation$"_key", dest_key = params$validation$"_key")
+  if (is.null(params$validation)) {
+    if (algo == "DeepLearning" && !is.null(modelOrig$validationKey)) {
+      valid <- .h2o.exec2(h2o = h2o, expr = modelOrig$validationKey, dest_key = modelOrig$validationKey)
+    } else {
+      valid <- new("H2OParsedData", key=as.character(NA))
+    }
+  } else {
+    valid <- .h2o.exec2(h2o = h2o, expr = params$validation$"_key", dest_key = params$validation$"_key")
+  }
+  if(algo == "NaiveBayes") {
+    new(model_obj, key=dest_key, data=train_fr, model=modelOrig)
+  } else {
   new(model_obj, key=dest_key, data=train_fr, model=modelOrig, valid=valid, xval=res_xval)
+  }
 }
 
 .get.glm.params <- function(h2o, key) {
@@ -968,7 +998,7 @@ h2o.getFrame <- function(h2o, key) {
 }
 
 .h2o.__version <- function(client) {
-  res = .h2o.__remoteSend(client, .h2o.__PAGE_CLOUD)
+  res = .h2o.__remoteSendWithParms(client, .h2o.__PAGE_CLOUD, list(quiet="true", skip_ticks="true"))
   res$version
 }
 

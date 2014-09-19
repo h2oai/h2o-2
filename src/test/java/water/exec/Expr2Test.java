@@ -271,7 +271,7 @@ public class Expr2Test extends TestUtil {
       checkStr("x=3;3\n*\n-\nx",3); // Each of '3' and '*' and '-' and 'x' is a standalone statement
 
       // No strings, yet
-      checkStr("function(df) { min(df[,\"age\"]) }","The current Exec does not handle strings\nfunction(df) { min(df[,\"age\"]) }\n                        ^\n");
+      checkStr("function(df) { min(df[,\"age\"]) }","The current Exec does not handle strings\nfunction(df) { min(df[,\"age\"]) }\n                       ^-----^\n");
 
       // Cleanup testing temps
       checkStr("a=0;x=0;y=0",0); // Delete keys from global scope

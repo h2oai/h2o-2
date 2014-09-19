@@ -75,6 +75,7 @@ public class FrameCookbook extends AbstractCookbook {
         //
         // If we did a DKV.remove() here instead of UKV.remove(), then the test would fail with
         // leaked keys.
+        fr.delete();
         UKV.remove(resultFrameKey);
     }
 }

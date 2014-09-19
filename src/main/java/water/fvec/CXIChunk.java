@@ -12,6 +12,7 @@ import java.util.Iterator;
  * Sparse chunk.
  */
 public class CXIChunk extends Chunk {
+  protected transient int _sparseLen;            // Number of elements in this chunk
   protected transient int _valsz; // byte size of stored value
   protected transient int _valsz_log; //
   protected transient int _ridsz; // byte size of stored (chunk-relative) row nums
@@ -29,17 +30,18 @@ public class CXIChunk extends Chunk {
     assert valsz == 0 || (1 << log) == valsz;
     _valsz = valsz;
     _valsz_log = log;
-
     _ridsz = (len >= 65535)?4:2;
     UDP.set4(buf,0,len);
     byte b = (byte) _ridsz;
     buf[4] = b;
     buf[5] = (byte) _valsz;
     _mem = buf;
+    _sparseLen = (_mem.length - OFF) / (_valsz + _ridsz);
+    assert (_mem.length - OFF) % (_valsz + _ridsz) == 0:"unexpected mem.length in sparse chunk: mem.length = " + (_mem.length - OFF) + "val_sz = " + _valsz + ", rowId_sz = " + _ridsz;
   }
 
   @Override public final boolean isSparse() {return true;}
-  @Override public final int sparseLen(){return (_mem.length - OFF) / (_valsz + _ridsz);}
+  @Override public final int sparseLen(){return _sparseLen;}
   @Override public final int nonzeros(int [] arr){
     int len = sparseLen();
     int off = OFF;
@@ -77,6 +79,9 @@ public class CXIChunk extends Chunk {
 
   @Override boolean hasFloat ()                 { return false; }
 
+  @Override public String toString(){
+    return getClass().getSimpleName() + "( start = " + _start + ", len = " + _len + " sparseLen = " + _sparseLen + " valSz = " + _valsz + " rIdSz = " + _ridsz + ")";
+  }
   @Override NewChunk inflate_impl(NewChunk nc) {
     final int slen = sparseLen();
     nc.set_sparseLen(slen);
@@ -156,6 +161,8 @@ public class CXIChunk extends Chunk {
     _len = UDP.get4(_mem,0);
     _ridsz = _mem[4];
     _valsz = _mem[5];
+    _sparseLen = (_mem.length - OFF) / (_valsz + _ridsz);
+    assert (_mem.length - OFF) % (_valsz + _ridsz) == 0:"unexpected mem.length in sparse chunk: mem.length = " + (_mem.length - OFF) + "val_sz = " + _valsz + ", rowId_sz = " + _ridsz;
     int x = _valsz;
     int log = 0;
     while(x > 1){

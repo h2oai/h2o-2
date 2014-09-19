@@ -47,7 +47,7 @@ class Basic(unittest.TestCase):
             'min_rows': 1,
             'response': 'FNDX',
             'classification': 1 if DO_CLASSIFICATION else 0,
-            }
+        }
 
         kwargs = params.copy()
         timeoutSecs = 1800
@@ -94,7 +94,7 @@ class Basic(unittest.TestCase):
             'min_rows': 1,
             'response': 'CAPSULE',
             'classification': 1 if DO_CLASSIFICATION else 0,
-            }
+        }
 
         kwargs = params.copy()
         timeoutSecs = 1800

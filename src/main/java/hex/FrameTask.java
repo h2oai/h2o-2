@@ -23,6 +23,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   protected float _useFraction = 1.0f;
   protected boolean _shuffle = false;
 
+  protected boolean skipMissing() { return true; }
+
   public FrameTask(Key jobKey, DataInfo dinfo) {
     this(jobKey,dinfo,null);
   }
@@ -78,6 +80,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public int _nums;
     public int _cats;
     public int [] _catOffsets;
+    public int [] _catMissing;
     public double [] _normMul;
     public double [] _normSub;
     public double [] _normRespMul;
@@ -104,6 +107,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _cats = dinfo._cats;
       _adaptedFrame = dinfo._adaptedFrame;
       _catOffsets = dinfo._catOffsets;
+      _catMissing = dinfo._catMissing;
       _normMul = dinfo._normMul;
       _normSub = dinfo._normSub;
       _normRespMul = dinfo._normRespMul;
@@ -148,6 +152,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
+      // compute rollupstats in parallel
+      Futures fs = new Futures();
+      for (Vec v : vecs) v.rollupStats(fs);
+      fs.blockForPending();
 
       // put response to the end (if not already)
       if (response != null) {
@@ -204,6 +212,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
+      // compute rollupstats in parallel
+      Futures fs = new Futures();
+      for (Vec v : vecs) v.rollupStats(fs);
+      fs.blockForPending();
 
       ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
       {
@@ -251,7 +263,12 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     private DataInfo(Frame fr, int[][] catLevels, int responses, TransformType predictor_transform, TransformType response_transform, int foldId, int nfolds){
       _adaptedFrame = fr;
       _catOffsets = MemoryManager.malloc4(catLevels.length+1);
+      _catMissing = new int[catLevels.length];
       int s = 0;
+      // compute rollupstats in parallel
+      Futures fs = new Futures();
+      for (Vec v : fr.vecs()) v.rollupStats(fs);
+      fs.blockForPending();
 
       for(int i = 0; i < catLevels.length; ++i){
         _catOffsets[i] = s;
@@ -315,6 +332,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _useAllFactorLevels = useAllFactorLevels;
       _catLvls = null;
       final Vec [] vecs = fr.vecs();
+      // compute rollupstats in parallel
+      Futures fs = new Futures();
+      for (Vec v : vecs) v.rollupStats(fs);
+      fs.blockForPending();
+
       final int n = vecs.length-_responses;
       if (n < 1) throw new IllegalArgumentException("Training data must have at least one column.");
       int [] nums = MemoryManager.malloc4(n);
@@ -339,12 +361,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Vec [] vecs2 = vecs.clone();
       String [] names = fr._names.clone();
       _catOffsets = MemoryManager.malloc4(ncats+1);
+      _catMissing = new int[ncats];
       int len = _catOffsets[0] = 0;
 
       for(int i = 0; i < ncats; ++i){
         Vec v = (vecs2[i] = vecs[cats[i]]);
         names[i] = fr._names[cats[i]];
-        _catOffsets[i+1] = (len += v.domain().length - (useAllFactorLevels?0:1));
+        _catMissing[i] = v.naCnt() > 0 ? 1 : 0; //needed for test time
+        _catOffsets[i+1] = (len += v.domain().length - (useAllFactorLevels?0:1) + (v.naCnt()>0?1:0)); //missing values turn into a new factor level
       }
       if(predictor_transform != TransformType.NONE) {
         _normSub = MemoryManager.malloc8d(nnums);
@@ -381,20 +405,22 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     }
 
     public DataInfo filterExpandedColumns(int [] cols){
+      if(cols == null)return this;
       int i = 0, j = 0, ignoredCnt = 0;
       //public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, double [] normRespSub, double [] normRespMul){
       int [][] catLvls = new int[_cats][];
       int [] ignoredCols = MemoryManager.malloc4(_nums + _cats);
       // first do categoricals...
-      while(i < cols.length && cols[i] < _catOffsets[_catOffsets.length-1]){
-        int [] levels = MemoryManager.malloc4(_catOffsets[j+1] - _catOffsets[j]);
-        int k = 0;
-        while(i < cols.length && cols[i] < _catOffsets[j+1])
-          levels[k++] = cols[i++]-_catOffsets[j];
-        if(k > 0)
-          catLvls[j] = Arrays.copyOf(levels, k);
-        ++j;
-      }
+      if(_catOffsets != null)
+        while(i < cols.length && cols[i] < _catOffsets[_catOffsets.length-1]){
+          int [] levels = MemoryManager.malloc4(_catOffsets[j+1] - _catOffsets[j]);
+          int k = 0;
+          while(i < cols.length && cols[i] < _catOffsets[j+1])
+            levels[k++] = cols[i++]-_catOffsets[j];
+          if(k > 0)
+            catLvls[j] = Arrays.copyOf(levels, k);
+          ++j;
+        }
       for(int k =0; k < catLvls.length; ++k)
         if(catLvls[k] == null)ignoredCols[ignoredCnt++] = k;
       if(ignoredCnt > 0){
@@ -434,9 +460,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       final int n = fullN();
       String [] res = new String[n];
       final Vec [] vecs = _adaptedFrame.vecs();
-      for(int i = 0; i < _cats; ++i)
-        for(int j = _useAllFactorLevels?0:1; j < vecs[i]._domain.length; ++j)
+      for(int i = 0; i < _cats; ++i) {
+        for (int j = _useAllFactorLevels ? 0 : 1; j < vecs[i]._domain.length; ++j)
           res[k++] = _adaptedFrame._names[i] + "." + vecs[i]._domain[j];
+        if (vecs[i].naCnt() > 0) res[k++] = _adaptedFrame._names[i] + ".missing(NA)";
+      }
       final int nums = n-k;
       System.arraycopy(_adaptedFrame._names, _cats, res, k, nums);
       return res;
@@ -516,7 +544,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     int start = 0;
     int end = nrows;
 
-    boolean contiguous = false;
     Random skip_rng = null; //random generator for skipping rows
 
     //Example:
@@ -528,18 +555,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     final int repeats = (int)Math.ceil(_useFraction);
     final float fraction = _useFraction / repeats;
 
-    if (fraction < 1.0) {
-      skip_rng = water.util.Utils.getDeterRNG(new Random().nextLong());
-      if (contiguous) {
-        final int howmany = (int)Math.ceil(fraction*nrows);
-        if (howmany > 0) {
-          start = skip_rng.nextInt(nrows - howmany);
-          end = start + howmany;
-        }
-        assert(start < nrows);
-        assert(end <= nrows);
-      }
-    }
+    if (fraction < 1.0) skip_rng = water.util.Utils.getDeterRNG(new Random().nextLong());
 
     long[] shuf_map = null;
     if (_shuffle) {
@@ -555,30 +571,36 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
         final long lr = r + chunks[0]._start;
         if ((_dinfo._nfolds > 0 && (lr % _dinfo._nfolds) == _dinfo._foldId)
-                || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
-        for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
-        ++num_processed_rows;
+                || (skip_rng != null && skip_rng.nextFloat() > fraction))continue;
+        ++num_processed_rows; //count rows with missing values even if they are skipped
+        for(Chunk c:chunks)if(skipMissing() && c.isNA0(r))continue OUTER; // skip rows with NAs!
         int i = 0, ncats = 0;
         for(; i < _dinfo._cats; ++i){
-          int c = (int)chunks[i].at80(r);
-          if(_dinfo._catLvls != null){ // some levels are ignored?
-            c = Arrays.binarySearch(_dinfo._catLvls[i],c);
-            if(c >= 0)
+          int c;
+          if (chunks[i].isNA0(r)) {
+            cats[ncats++] = (_dinfo._catOffsets[i+1]-1); //missing value turns into extra (last) factor
+          } else {
+            c = (int) chunks[i].at80(r);
+            if (_dinfo._catLvls != null) { // some levels are ignored?
+              c = Arrays.binarySearch(_dinfo._catLvls[i], c);
+              if (c >= 0)
+                cats[ncats++] = c + _dinfo._catOffsets[i];
+            } else if (_dinfo._useAllFactorLevels)
               cats[ncats++] = c + _dinfo._catOffsets[i];
-          } else if(_dinfo._useAllFactorLevels)
-            cats[ncats++] = c + _dinfo._catOffsets[i];
-          else if(c != 0)
-            cats[ncats++] = c + _dinfo._catOffsets[i]-1;
+            else if (c != 0)
+              cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
+          }
         }
         final int n = chunks.length-_dinfo._responses;
         for(;i < n;++i){
-          double d = chunks[i].at0(r);
+          double d = chunks[i].at0(r); //can be NA if skipMissing() == false
           if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
           nums[i-_dinfo._cats] = d;
         }
         for(i = 0; i < _dinfo._responses; ++i) {
           response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
           if (_dinfo._normRespMul != null) response[i] = (response[i] - _dinfo._normRespSub[i])*_dinfo._normRespMul[i];
+          if(Double.isNaN(response[i]))continue OUTER; // skip rows without a valid response (no supervised training possible)
         }
         long seed = offset + rrr*(end-start) + r;
         if (outputs != null && outputs.length > 0)

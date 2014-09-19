@@ -15,8 +15,7 @@ import water.*;
 import water.Job.ProgressMonitor;
 import water.api.Constants;
 import water.api.Constants.Extensions;
-import water.fvec.HdfsFileVec;
-import water.fvec.Vec;
+import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -134,7 +133,7 @@ public final class PersistHdfs extends Persist {
     long skip = 0;
     Key k = v._key;
     if(k._kb[0] == Key.DVEC)
-      skip = water.fvec.NFSFileVec.chunkOffset(k); // The offset
+      skip = FileVec.chunkOffset(k); // The offset
     final Path p = _iceRoot == null?new Path(getPathForKey(k)):new Path(_iceRoot, getIceName(v));
     final long skip_ = skip;
     run(new Callable() {

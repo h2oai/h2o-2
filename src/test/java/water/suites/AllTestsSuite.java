@@ -83,7 +83,6 @@ import org.junit.runners.Suite.SuiteClasses;
   water.score.ScoreTest.class,
   water.serial.ModelSerializationTest.class,
   water.TestKeySnapshot.class,
-  water.TestKeySnapshotLong.class,
   water.TypeAheadTest.class,
   water.util.ModelUtilsTest.class,
   water.util.SBTest.class,

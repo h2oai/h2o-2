@@ -46,9 +46,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=14, base_port=54321)
+            h2o.build_cloud(java_heap_GB=14)
         else:
-            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=28, base_port=54321)
+            h2o_hosts.build_cloud_with_hosts(java_heap_GB=28)
 
 
     @classmethod
@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
         hex_key = "df"
         csvPathname = SYNDATASETS_DIR + "/" + "df.csv"
         write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
-        parseResult = h2i.import_parse(path=csvPathname, schema='local', 
+        parseResult = h2i.import_parse(path=csvPathname, schema='put', 
             hex_key=hex_key, timeoutSecs=3000, retryDelaySecs=2, doSummary=False)
 
         colCount = 1

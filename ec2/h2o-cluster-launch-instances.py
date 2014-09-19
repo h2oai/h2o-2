@@ -14,12 +14,18 @@ import boto.ec2
 # os.environ['AWS_SECRET_ACCESS_KEY'] = '...'
 # os.environ['AWS_SSH_PRIVATE_KEY_FILE'] = '/path/to/private_key.pem'
 
+# Launch EC2 instances with an IAM role
+# --------------------------------------
+# 
+iam_profile_resource_name = None
+# or
+iam_profile_name = None
 
 # Options you MUST tailor to your own AWS account.
 # ------------------------------------------------
 
 # SSH key pair name.
-keyName = '0xdata_Big'
+keyName = '0xdata_Big' 
 
 # AWS security group name.
 # Note:
@@ -103,6 +109,8 @@ reservation = ec2.run_instances(
     key_name=keyName,
     instance_type=instanceType,
     security_groups=[securityGroupName],
+    instance_profile_arn=iam_profile_resource_name,
+    instance_profile_name=iam_profile_name,
     dry_run=dryRun
 )
 

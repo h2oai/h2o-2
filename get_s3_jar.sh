@@ -15,7 +15,7 @@ while getopts nb:v: flag
 do
     case $flag in
         n)
-            echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
+            echo "Won't download the h2o.jar from S3. Copy from h2o-downloaded to target/h2o.jar and hadoop/target/*"
             NO_DOWNLOAD=1
             ;;
         b)
@@ -81,26 +81,26 @@ cp -f ./latest_h2o_jar_version target/latest_h2o_jar_version
 echo "copying the downloaded R dir to  target/R"
 echo "HACK. leave target/R contents in there from a make. need PACKAGES .."
 # rm -f -r target/R
-cp -f -r ./h2o*$version/R target/R
+mkdir -p target/R
+cp -f -r ./h2o*$version/R/* target/R
 
-# this is the one we point the R tests to. but we want a generic, no version name for them (like h2o/target)
+echo "copying the downloaded hadoop h2odriver*jar to target/hadoop"
+mkdir -p target/hadoop
+cp -f -r ./h2o*$version/hadoop/* target/hadoop
+
+# copy here just to have one place where the last download files are
 rm -f -r ./h2o-downloaded
 cp -r ./h2o-*$version ./h2o-downloaded
-echo "You want this for your R tests"
-echo "export H2OWrapperDir=./h2o-downloaded/R"
-echo ""
-echo "Done. Go forth and run tests. If you build.sh or makefile, the h2o.jar will be overwritten"
-echo "I left you a copy here though, if you don't want to download again. Just cp to target/h2o.jar"
-echo "You may want to delete it if they accumulate"
+echo "Done. Go forth and run tests."
 echo "target/h2o-sources.jar is not touched, so it is out-of-step (but not used)"
+echo "target/h2o-zookeeper.jar is not touched, so it is out-of-step (but not used)"
+echo "target/h2o-model.jar is not touched, so it is out-of-step (but not used)"
 
 # look at some stuff
-ls -ltr ./latest_h2o_jar_version
 cat ./latest_h2o_jar_version
+ls -ltr ./latest_h2o_jar_version
 ls -ltr ./h2o-downloaded/R/h2o*.tar.gz
-ls -ltr ./h2o-downloaded/hadoop/h2odriver*.jar
+ls -ltr ./h2o-*$version/hadoop/h2odriver*.jar
 ls -ltr ./h2o-*$version/h2o.jar 
 ls -ltr ./h2o-*$version/R/h2o*.tar.gz
-ls -ltr target/h2o.jar
-ls -ltr target/R/*
 

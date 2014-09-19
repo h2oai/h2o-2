@@ -37,7 +37,7 @@ else
         # for mr in 171 172 173 174 175 176 177 178 179 180
         for mr in 172 173 174 175 176 177 178 179 180
         do
-            ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
+            ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr  \
                 'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
         done
 
@@ -45,7 +45,8 @@ else
     else
         if [[ $USER == "kevin" ]]
         then
-            python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+            # python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+            python ../four_hour_cloud.py -cj pytest_config-jenkins-175-180.json &
         else
             python ../four_hour_cloud.py &
         fi
@@ -104,15 +105,20 @@ then
     # myPy c1 test_c1_rel.py
     # myPy c2 test_c2_rel.py
     # myPy c3 test_c3_rel.py
-    # myPy c4 test_c4_four_billion_rows.py
+    # myPy c4 test_c4_four_billion_rows_fvec.py
 
     #    myPy c6 test_c6_hdfs_fvec.py
     #    myPy c8 test_c8_rf_airlines_hdfs_fvec.py
-    #    myPy c9 test_c9_GBM_airlines_hdfs.py
     #    myPy c9 test_c9_GLM_airlines_hdfs_fvec.py
-    #    myPy c10  test_c10_rel_gbm.py
-    myPy c8 test_c8_rf_airlines_hdfs_fvec.py
-    # myPy c9 test_c9_GLM_rc_fvec.py
+    # myPy c10 test_c10_glm_fvec.py
+    # myPy c10 test_c10_gbm_fvec.py
+
+
+    # myPy c9 test_c9_GBM_airlines_hdfs_fvec.py
+    # myPy c8 test_c8_rf_airlines_hdfs_fvec.py
+    myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
+    myPy c9 test_c9_GLM_rc_fvec.py
+
 
     # put known failure last
     # doesn't work. key gets locked. forget about it

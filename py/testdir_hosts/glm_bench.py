@@ -11,7 +11,7 @@ import os, csv, time, socket
 csv_header = ('time','nodes#','java_heap_GB','dataset','y','x','family','alpha','lambda','n_folds','nLines','nCols','dof','nullDev','resDev','aic','auc','iterations','model_time','model_iterations','val_time','val_iterations','lsm_time', 'wall_clock_secs')
 
 ec2_files = {'allstate':'s3n://h2o-datasets/allstate/train_set.zip','airlines':'s3n://h2o-airlines-unpacked/allyears.csv'}
-local_files = {'allstate':'hdfs://192.168.1.176/datasets/allstate.csv','airlines':'hdfs://192.168.1.176/datasets/airlines_all.csv'}
+local_files = {'allstate':'hdfs://172.16.2.176/datasets/allstate.csv','airlines':'hdfs://172.16.2.176/datasets/airlines_all.csv'}
 
 def is_ec2():
     # return False

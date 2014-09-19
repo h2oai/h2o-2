@@ -283,8 +283,11 @@ help:
 # To run specific tests, run:
 #   make ARGS="-g foobar" test
 # where foobar is a regexp
-test: node
+really_test: node
 	@node $(DIST)/steam.node.js
+
+test: setup
+	$(MAKE) really_test
 
 faucet: node
 	@node $(DIST)/steam.node.js | $(BIN)/faucet
@@ -293,7 +296,7 @@ debug: node
 	@node --debug-brk $(DIST)/steam.node.js
 
 pytest: node
-	(cd ../py && python testdir_single_jvm/test_model_management.py -ccj localhost.json ApiTestCase.test_steam)
+	(cd ../py && python testdir_multi_jvm/test_model_management.py -ccj localhost.json ApiTestCase.test_steam)
 
 coverage: node
 	@mkdir -p $(BUILD)/coverage
@@ -457,4 +460,4 @@ $(DEPLOY)/tests/index.html: src/tests/index.html
 	cp $< $@
 	@echo Built $@
 
-.PHONY: default really_build build node unit smoke test debug report spec coverage doc clean setup reset watch help preload pytest tags
+.PHONY: default really_build build node unit smoke test really_test debug report spec coverage doc clean setup reset watch help preload pytest tags

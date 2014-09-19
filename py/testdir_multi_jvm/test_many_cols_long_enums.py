@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
             SEPARATOR = ord(',')
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=20, 
                 header=0, separator=SEPARATOR) # don't force header..we have NAs in the rows, and NAs mess up headers
             print "Parse result['destination_key']:", parseResult['destination_key']
 

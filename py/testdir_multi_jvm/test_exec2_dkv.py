@@ -55,11 +55,11 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_dkv(self):
+    def test_exec2_dkv(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilenameAll = [
-            ("syn_10x8.csv", 'cA', 5),
+            ("syn_10x8.csv", 'cA', 15),
             ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)

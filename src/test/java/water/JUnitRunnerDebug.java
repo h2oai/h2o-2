@@ -1,13 +1,14 @@
 package water;
 
 import hex.*;
+import hex.deeplearning.NeuronsTest;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import water.deploy.NodeCL;
-import water.fvec.*;
+import water.exec.Expr2Test;
 import water.util.Log;
 import water.util.Utils;
 
@@ -20,7 +21,7 @@ public class JUnitRunnerDebug {
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
     for( int i = 0; i < ports.length; i++ )
-      ports[i] = 54321 + i * 2;
+      ports[i] = 64321 + i * 2;
 
     String flat = "";
     for( int i = 0; i < ports.length; i++ )
@@ -78,14 +79,17 @@ public class JUnitRunnerDebug {
 //      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
 //      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
 //      tests.add(DeepLearningIrisTest.Long.class); //compare Deep Learning vs reference
-//      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
+      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
+//      tests.add(DeepLearningMissingTest.class); //test Deep Learning
 //      tests.add(DeepLearningProstateTest.Long.class); //test Deep Learning
 //      tests.add(NeuronsTest.class); //test Deep Learning
 //      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
 //      tests.add(DropoutTest.class); //test NN Dropput
 
-      tests.add(ParserTest2.class);
-      tests.add(ParserTest2.ParseAllSmalldata.class);
+//      tests.add(ParserTest2.class);
+//      tests.add(ParserTest2.ParseAllSmalldata.class);
+//      tests.add(KMeans2Test.class);
+//      tests.add(KMeans2RandomTest.class);
 //      tests.add(GLMRandomTest.Short.class);
 //      tests.add(SpeeDRFTest.class);
 //      tests.add(SpeeDRFTest2.class);
@@ -95,6 +99,7 @@ public class JUnitRunnerDebug {
 //      tests.add(GBMTest.class);
 //      tests.add(KMeans2Test.class);
 //      tests.add(PCATest.class);
+//      tests.add(NetworkTestTest.class);
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}

@@ -1,4 +1,4 @@
-import("RCurl", "rjson", "statmod", "methods")
+import("RCurl", "rjson", "statmod", "tools", "methods")
 importFrom("utils", "installed.packages")
 exportPattern("^[[:alpha:]]+")
 export('h2o.shutdown', 'h2o.init', 'h2o.glm', 'h2o.kmeans', 'h2o.randomForest', 'h2o.prcomp', 

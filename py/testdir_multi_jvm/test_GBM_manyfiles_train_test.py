@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
                 ]
 
         # if I got to hdfs, it's here
-        # hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz
+        # hdfs://172.16.2.176/datasets/manyfiles-nflx-gz/file_99.dat.gz
 
         h2b.browseTheCloud()
         for (importFolderPath, trainFilename, trainKey, timeoutSecs, response, testFilename, testKey) in files:
@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
 
             # Make col 378 it something we can do binomial regression on!
             execExpr = '%s[,378+1]=%s[,378+1]>15' % (trainKey, trainKey)
-            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=60)
+            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=300)
 
             # Parse (test)****************************************
             parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
 
             # Make col 378 it something we can do binomial regression on!
             execExpr = '%s[,378+1]=%s[,378+1]>15' % (testKey, testKey)
-            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=60)
+            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=300)
 
             # Note ..no inspect of test data here..so translate happens later?
 

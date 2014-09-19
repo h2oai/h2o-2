@@ -7,6 +7,8 @@ import hex.ConfusionMatrix;
 
 import java.util.*;
 
+import hex.drf.DRF;
+import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.Timer;
 import water.api.*;
@@ -83,11 +85,13 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "split limit", importance = ParamImportance.EXPERT)
   public int _exclusiveSplitLimit = 0;
 
-  private static Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
+  private static Random _seedGenerator = Utils.getDeterRNG( new Random().nextLong() );//0xd280524ad7fe0602L);
 
   private boolean regression;
 
   public DRFParams drfParams;
+
+  private long use_seed;
 
   Tree.StatType stat_type;
 
@@ -178,15 +182,22 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (0.0f > sample_rate || sample_rate > 1.0f)
         throw new IllegalArgumentException("Sampling rate must be in [0,1] but found " + sample_rate);
     }
+
+    if(regression) throw new IllegalArgumentException("SpeeDRF does not currently support regression.");
   }
 
   @Override protected void execImpl() {
-    SpeeDRFModel rf_model = null;
+    SpeeDRFModel rf_model;
     try {
       source.read_lock(self());
       if (validation != null && validation != source) validation.read_lock(self());
       buildForest();
       if (n_folds > 0) CrossValUtils.crossValidate(this);
+    } catch (JobCancelledException ex){
+      rf_model = UKV.get(dest());
+      state = JobState.CANCELLED; //for JSON REST response
+      rf_model.get_params().state = state; //for parameter JSON on the HTML page
+      Log.info("Random Forest was cancelled.");
     } catch(Exception ex) {
       ex.printStackTrace();
       throw new RuntimeException(ex);
@@ -203,6 +214,7 @@ public class SpeeDRF extends Job.ValidatedJob {
           return m;
         }
       }.invoke(dest());
+
       emptyLTrash();
       cleanup();
     }
@@ -224,13 +236,23 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.start_training(null);
       model.write_lock(self());
       drfParams = DRFParams.create(train.find(resp), model.N, model.max_depth, (int) train.numRows(), model.nbins,
-              model.statType, seed, model.weights, mtries, model.sampling_strategy, (float) sample_rate, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, true, regression);
+              model.statType, use_seed, model.weights, mtries, model.sampling_strategy, (float) sample_rate, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, true, regression);
 
-      DRFTask tsk = new DRFTask(self(), train, drfParams, model._key);
+      DRFTask tsk = new DRFTask(self(), train, drfParams, model._key, model.src_key);
       tsk.validateInputData(train);
       tsk.invokeOnAllNodes();
+      Log.info("Tree building complete. Scoring...");
       model = UKV.get(dest());
       model.scoreAllTrees(test == null ? train : test, resp);
+      // Launch a Variable Importance Task
+      if (importance && !regression) {
+        Log.info("Scoring complete. Performing Variable Importance Calculations.");
+        model.current_status = "Performing Variable Importance Calculation.";
+        Timer VITimer = new Timer();
+        model.variableImportanceCalc(train, resp);
+        Log.info("Variable Importance on "+(train.numCols()-1)+" variables and "+ ntrees +" trees done in " + VITimer);
+      }
+      model.current_status = "Model Complete";
     } finally {
       if (model != null) {
         model.unlock(self());
@@ -249,10 +271,11 @@ public class SpeeDRF extends Job.ValidatedJob {
     SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, train, regression ? null : train.lastVec().domain(), this, priorDist);
 
     // Model INPUTS
+    model.src_key = src_key.toString();
     model.verbose = verbose; model.verbose_output = new String[]{""};
     model.validation = test != null;
     model.confusion = null;
-    model.zeed = seed;
+    model.zeed = use_seed;
     model.cmDomain = getCMDomain();
     model.nbins = nbins;
     model.max_depth = max_depth;
@@ -275,6 +298,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.local_forests = new Key[csize][]; for(int i=0;i<csize;i++) model.local_forests[i] = new Key[0];
     model.node_split_features = new int[csize];
     model.t_keys = new Key[0];
+    model.dtreeKeys = new Key[ntrees][regression ? 1 : model.classes()];
     model.time = 0;
     for( Key tkey : model.t_keys ) assert DKV.get(tkey)!=null;
     model.jobKey = self();
@@ -290,15 +314,25 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   private void setStatType() { if (regression) stat_type = Tree.StatType.MSE; stat_type = select_stat_type == Tree.SelectStatType.ENTROPY ? Tree.StatType.ENTROPY : Tree.StatType.GINI; }
   private void setSeed(long s) {
-    if (s == -1) seed = _seedGenerator.nextLong();
+    if (s == -1) { seed = _seedGenerator.nextLong(); use_seed = seed; }
     else {
       _seedGenerator = Utils.getDeterRNG(s);
-      seed = _seedGenerator.nextLong();
+      use_seed = _seedGenerator.nextLong();
     }
   }
   private void setMtry(boolean reg, int numCols) { mtries = reg ? (int) Math.floor((float) (numCols) / 3.0f) : (int) Math.floor(Math.sqrt(numCols)); }
   private Frame setTrain() { Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false); if (train.lastVec().masterVec() != null && train.lastVec() != response) gtrash(train.lastVec()); return train; }
-  private Frame setTest() { Frame test = null; if (validation != null) test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false); if (test != null && test.lastVec().masterVec() != null) gtrash(test.lastVec()); return test; }
+  private Frame setTest() {
+    if (validation == null) return null;
+    Frame test = null;
+    ArrayList<Integer> v_ignored_cols = new ArrayList<Integer>();
+    for (int ignored_col : ignored_cols) if (validation.find(source.names()[ignored_col]) != -1) v_ignored_cols.add(ignored_col);
+    int[] v_ignored = new int[v_ignored_cols.size()];
+    for (int i = 0; i < v_ignored.length; ++i) v_ignored[i] = v_ignored_cols.get(i);
+    if (validation != null) test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[validation.find(source.names()[source.find(response)])], v_ignored, !regression, false, false);
+    if (test != null && test.lastVec().masterVec() != null) gtrash(test.lastVec());
+    return test;
+  }
   private Frame setStrat(Frame train, Frame test, Vec resp) {
     Frame fr = train;
     float[] trainSamplingFactors;
@@ -309,7 +343,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       int response_idx = fr.find(_responseName);
       fr.replace(response_idx, resp);
       trainSamplingFactors = new float[resp.domain().length]; //leave initialized to 0 -> will be filled up below
-      Frame stratified = sampleFrameStratified(fr, resp, trainSamplingFactors, (long) (max_after_balance_size * fr.numRows()), seed, true, false);
+      Frame stratified = sampleFrameStratified(fr, resp, trainSamplingFactors, (long) (max_after_balance_size * fr.numRows()), use_seed, true, false);
       if (stratified != fr) {
         fr = stratified;
         gtrash(stratified);
@@ -350,9 +384,10 @@ public class SpeeDRF extends Job.ValidatedJob {
     /** RF parameters. */
     private final DRFParams _params;
     private final Frame _fr;
+    private final String _key;
 
-    DRFTask(Key jobKey, Frame frameKey, DRFParams params, Key rfmodel) {
-      _jobKey = jobKey; _fr = frameKey; _params = params; _rfmodel = rfmodel;
+    DRFTask(Key jobKey, Frame frameKey, DRFParams params, Key rfmodel, String src_key) {
+      _jobKey = jobKey; _fr = frameKey; _params = params; _rfmodel = rfmodel; _key = src_key;
     }
 
     /**Inhale the data, build a DataAdapter and kick-off the computation.
@@ -462,11 +497,11 @@ public class SpeeDRF extends Job.ValidatedJob {
       ChunkAllocInfo cai = new ChunkAllocInfo();
       boolean can_load_all = canLoadAll(fr, cai);
       if (_params._useNonLocalData && !can_load_all) {
-        Log.warn("Cannot load all data from remote nodes - " +
-                "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
-                "Please provide more memory for JVMs or disable the option '"+ Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
-        Log.warn("Automatically disabling fast mode.");
-        throw new IllegalArgumentException("Cannot compute fast RF: Use big data Random Forest.");
+        String heap_warning = "This algorithm requires loading of all data from remote nodes." +
+                "\nThe node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " more memory to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory." +
+                "\n\nPlease provide more memory for JVMs \n\n-OR-\n\n Try Big Data Random Forest: ";
+        Log.warn(heap_warning);
+        throw new IllegalArgumentException(heap_warning + DRF.link(Key.make(_key), "Big Data Random Forest") );
       }
 
       if (can_load_all) {
@@ -485,12 +520,15 @@ public class SpeeDRF extends Job.ValidatedJob {
         }
       }
       long memForNonLocal = fr.byteSize() - localBytes;
+      // Also must add in the RF internal data structure overhead
+      memForNonLocal += fr.numRows() * fr.numCols();
       for(int i = 0; i < H2O.CLOUD._memary.length; i++) {
         HeartBeat hb = H2O.CLOUD._memary[i]._heartbeat;
         long nodeFreeMemory = (long)( (hb.get_max_mem()-(hb.get_tot_mem()-hb.get_free_mem())) * OVERHEAD_MAGIC);
         Log.debug(Log.Tag.Sys.RANDF, i + ": computed available mem: " + PrettyPrint.bytes(nodeFreeMemory));
         Log.debug(Log.Tag.Sys.RANDF, i + ": remote chunks require: " + PrettyPrint.bytes(memForNonLocal));
-        if (nodeFreeMemory - memForNonLocal <= 0) {
+        if (nodeFreeMemory - memForNonLocal <= 0 || (nodeFreeMemory <= TWO_HUNDRED_MB && memForNonLocal >= ONE_FIFTY_MB)) {
+          Log.info("Node free memory raw: "+nodeFreeMemory);
           cai.node = H2O.CLOUD._memary[i];
           cai.availableMemory = nodeFreeMemory;
           cai.requiredMemory = memForNonLocal;
@@ -508,6 +546,8 @@ public class SpeeDRF extends Job.ValidatedJob {
     }
 
     static final float OVERHEAD_MAGIC = 3/8.f; // memory overhead magic
+    static final long TWO_HUNDRED_MB = 200 * 1024 * 1024;
+    static final long ONE_FIFTY_MB = 150 * 1024 * 1024;
 
     @Override
     public void reduce(DRemoteTask drt) { }
@@ -628,8 +668,18 @@ public class SpeeDRF extends Job.ValidatedJob {
    */
   @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
     // Train a clone with slightly modified parameters (to account for cross-validation)
-    SpeeDRF cv = (SpeeDRF) this.clone();
+    final SpeeDRF cv = (SpeeDRF) this.clone();
     cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((SpeeDRFModel) UKV.get(cv.dest())).score(cv.validation);
+    new TAtomic<SpeeDRFModel>() {
+      @Override public SpeeDRFModel atomic(SpeeDRFModel m) {
+        if (!keep_cross_validation_splits && /*paranoid*/ cv.dest().toString().contains("xval")) {
+          m.get_params().source = null;
+          m.get_params().validation=null;
+          m.get_params().response=null;
+        }
+        return m;
+      }
+    }.invoke(cv.dest());
   }
 }

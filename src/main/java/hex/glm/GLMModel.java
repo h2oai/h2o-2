@@ -92,10 +92,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     public void map(GLMModel m) {
       Key [] xvals = m.xvalModels();
       if(xvals != null){
-        H2OCountedCompleter t = getCurrentTask();
-        t.addToPendingCount(xvals.length);
+        addToPendingCount(xvals.length);
         for(int i = 0; i < xvals.length; ++i)
-          new UnlockModelTask(t,xvals[i],_jobKey).forkTask();
+          new UnlockModelTask(this,xvals[i],_jobKey).forkTask();
       }
       m.unlock(_jobKey);
     }
@@ -112,10 +111,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     public void map(GLMModel m) {
       Key[] xvals = m.xvalModels();
       if (xvals != null) {
-        H2OCountedCompleter t = getCurrentTask();
-        t.addToPendingCount(xvals.length);
+        addToPendingCount(xvals.length);
         for (int i = 0; i < xvals.length; ++i)
-          new DeleteModelTask(t, xvals[i]).forkTask();
+          new DeleteModelTask(this, xvals[i]).forkTask();
       }
       m.delete();
     }
@@ -262,39 +260,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       }
     }
     best_lambda_idx = bestId;
-    Submodel sm = submodels[bestId];
-    double[] beta = MemoryManager.malloc8d(coefficients_names.length);
-    for (int i = 0; i < sm.beta.length; ++i)
-      beta[sm.idxs[i]] = sm.beta[i];
-    global_beta = beta;
+    setSubmodelIdx(bestId);
   }
-  public static void pickBestSubmodel(H2OCountedCompleter cmp, Key modelKey, final boolean useAuc){
-    cmp.addToPendingCount(1);
-    new TAtomic<GLMModel>(cmp){
-      @Override
-      public GLMModel atomic(GLMModel old) {
-        int bestId = 0;
-        final boolean xval = old.submodels[0].xvalidation != null;
-        GLMValidation bestVal = xval?old.submodels[0].xvalidation:old.submodels[0].validation;
-        for(int i = 1; i < old.submodels.length; ++i){
-          GLMValidation val = xval?old.submodels[i].xvalidation:old.submodels[i].validation;
-          if((useAuc && val.auc > bestVal.auc)
-                  || (xval && val.residual_deviance < bestVal.residual_deviance)
-                  || (((bestVal.residual_deviance - val.residual_deviance)/val.null_deviance) >= 0.01)){
-            bestVal = val;
-            bestId = i;
-          }
-        }
-        old.best_lambda_idx = bestId;
-        Submodel sm = old.submodels[bestId];
-        double [] beta  = MemoryManager.malloc8d(old.coefficients_names.length);
-        for(int i = 0; i < sm.beta.length; ++i)
-          beta[sm.idxs[i]] = sm.beta[i];
-        old.global_beta = beta;
-        return old;
-      }
-    }.fork(modelKey);
-  }
+
 
   //  public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
   public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
@@ -311,7 +279,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @Override
     public void map(GLMModel m) {
       _res = m.clone();
-      Submodel sm = _res.submodelForLambda(_lambda);
+      Submodel sm = Double.isNaN(_lambda)?_res.submodels[_res.best_lambda_idx]:_res.submodelForLambda(_lambda);
       assert sm != null : "GLM[" + m._key + "]: missing submodel for lambda " + _lambda;
       sm = (Submodel) sm.clone();
       _res.submodels = new Submodel[]{sm};
@@ -495,17 +463,19 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     protected final GLMModel [] _xmodels;
     protected GLMValidation [] _xvals;
     long _nobs;
+    final float [] _thresholds;
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
 
-    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels){this(mainModel,lambda,xmodels,null);}
-    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels, final H2OCountedCompleter completer){
+    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels, float [] thresholds){this(mainModel,lambda,xmodels,thresholds,null);}
+    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels, float [] thresholds, final H2OCountedCompleter completer){
       super(mainModel, lambda,completer);
       _xmodels = xmodels;
+      _thresholds = thresholds;
     }
     @Override public void map(Chunk [] chunks){
       _xvals = new GLMValidation[_xmodels.length];
       for(int i = 0; i < _xmodels.length; ++i)
-        _xvals[i] = new GLMValidation(null,_xmodels[i].ymu,_xmodels[i].glm,_xmodels[i].rank());
+        _xvals[i] = new GLMValidation(null,_xmodels[i].ymu,_xmodels[i].glm,_xmodels[i].rank(),_thresholds);
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_xmodels[0]._names.length);
       float  [] preds = MemoryManager.malloc4f(_xmodels[0].glm.family == Family.binomial?3:1);
@@ -539,7 +509,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i].nobs = _nobs - _xvals[i].nobs;
         GLMModel.setXvalidation(cmp, _xmodels[i]._key, _lambda, _xvals[i]);
       }
-      GLMModel.setXvalidation(cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs));
+      GLMModel.setXvalidation(cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs,_thresholds));
     }
   }
 
@@ -613,12 +583,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     GLM2 params = get_params();
     this.variable_importances = null;
 
-    // Warn if we may be returning results that might not include an important (base) level. . .
-    if (! params.use_all_factor_levels)
-      this.addWarning("Variable Importance may be missing important variables: because use_all_factor_levels is off the importance of base categorical levels will NOT be included.");
-
     final double[] b = beta();
     if (params.variable_importances && null != b) {
+
+      // Warn if we may be returning results that might not include an important (base) level. . .
+      if (! params.use_all_factor_levels)
+        this.addWarning("Variable Importance may be missing important variables: because use_all_factor_levels is off the importance of base categorical levels will NOT be included.");
+
       float[] coefs_abs_value = new float[b.length - 1]; // Don't include the Intercept
       String[] names = new String[b.length - 1];
       for (int i = 0; i < b.length - 1; ++i) {

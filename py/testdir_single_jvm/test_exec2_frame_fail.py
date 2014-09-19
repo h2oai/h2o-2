@@ -22,11 +22,10 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    @unittest.expectedFailure 
     def test_exec2_frame_fail(self):
         h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
-        parseResult = h2i.import_parse(bucket='/Users/spencer/home-0xdiag-imitation', path=csvPathname, schema='put', hex_key='c.hex', timeoutSecs=15)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key='c.hex', timeoutSecs=15)
         print "\nParse key is:", parseResult['destination_key']
 
         start = time.time()

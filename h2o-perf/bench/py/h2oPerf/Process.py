@@ -174,10 +174,26 @@ class RProc(Process):
         print "OUT FILE NAME: " + self.output_file_name
 
         f = open(self.output_file_name, "w")
-        self.child = subprocess.Popen(args=cmd, 
-                                      stdout = f,  
-                                      stderr = subprocess.STDOUT,
-                                      cwd = self.test_dir)
+
+        try:
+            self.child = subprocess.Popen(args=cmd,
+                                          stdout=f,
+                                          stderr=subprocess.STDOUT,
+                                          cwd=self.test_dir)
+            f.close()
+        except:
+            from PerfUtils import dash_line
+            print dash_line
+            "PHASE FAILED!"
+            "Last 10 lines of the output file:"
+            f.close()
+            o = open(self.output_file_name, 'r')
+            print(tail(o,10))
+            print dash_line
+            raise(Exception("Phase failure: " + (self.rfile).strip('.R')))
+
+
+
         @atexit.register
         def kill_process():
             try:
@@ -210,3 +226,28 @@ class RProc(Process):
         types = ['parse', 'model', 'predict']
         rf = self.rfile.lower()
         return [t for t in types if t in rf]
+
+    @staticmethod
+    def tail( f, window=20 ):
+        BUFSIZ = 1024
+        f.seek(0, 2)
+        bytes = f.tell()
+        size = window
+        block = -1
+        data = []
+        while size > 0 and bytes > 0:
+            if (bytes - BUFSIZ > 0):
+                # Seek back one whole BUFSIZ
+                f.seek(block*BUFSIZ, 2)
+                # read BUFFER
+                data.append(f.read(BUFSIZ))
+            else:
+                # file too small, start from begining
+                f.seek(0,0)
+                # only read what was not read
+                data.append(f.read(bytes))
+            linesFound = data[-1].count('\n')
+            size -= linesFound
+            bytes -= BUFSIZ
+            block -= 1
+        return '\n'.join(''.join(data).splitlines()[-window:])

@@ -188,15 +188,17 @@ public abstract class Log {
       if( buf.indexOf("\n") != -1 ) {
         String s = buf.toString();
         String[] lines = s.split("\n");
-        StringBuilder buf2 = new StringBuilder(2 * buf.length());
-        buf2.append(lines[0]);
-        for( int i = 1; i < lines.length; i++ ) {
-          buf2.append(NL).append("+");
-          for( int j = 1; j < headroom; j++ )
-            buf2.append(" ");
-          buf2.append(lines[i]);
+        if (lines.length > 0) { //gracefully handle s = "\n"
+          StringBuilder buf2 = new StringBuilder(2 * buf.length());
+          buf2.append(lines[0]);
+          for (int i = 1; i < lines.length; i++) {
+            buf2.append(NL).append("+");
+            for (int j = 1; j < headroom; j++)
+              buf2.append(" ");
+            buf2.append(lines[i]);
+          }
+          buf = buf2;
         }
-        buf = buf2;
       }
       if( ouch != null ) {
         buf.append(NL);
@@ -385,8 +387,12 @@ public abstract class Log {
     if ((l4j == null) && !loggerCreateWasCalled && !H2O.DEBUG) {
       if (H2O.SELF != null) {
         File dir;
+        boolean windowsPath = H2O.ICE_ROOT.toString().matches("^[a-zA-Z]:.*");
+
         // Use ice folder if local, or default
-        if( H2O.ICE_ROOT.getScheme() == null || Schemes.FILE.equals(H2O.ICE_ROOT.getScheme()) )
+        if (windowsPath)
+          dir = new File(H2O.ICE_ROOT.toString());
+        else if( H2O.ICE_ROOT.getScheme() == null || Schemes.FILE.equals(H2O.ICE_ROOT.getScheme()) )
           dir = new File(H2O.ICE_ROOT.getPath());
         else
           dir = new File(H2O.DEFAULT_ICE_ROOT());

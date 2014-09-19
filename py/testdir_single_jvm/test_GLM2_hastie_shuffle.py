@@ -23,7 +23,7 @@ import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import as h2i
 def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     print "\nStarting GLM of", csvFilename
     parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, 
-        hex_key=csvFilename + ".hex", schema='put', timeoutSecs=10)
+        hex_key=csvFilename + ".hex", schema='put', timeoutSecs=30)
     y = 10
     # Took n_folds out, because GLM doesn't include n_folds time and it's slow
     # wanted to compare GLM time to my measured time

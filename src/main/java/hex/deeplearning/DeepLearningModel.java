@@ -31,9 +31,15 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @API(help="Job that built the model", json = true)
   final private Key jobKey;
 
+  @API(help="Validation dataset used for model building", json = true)
+  public final Key _validationKey;
+
   @API(help="Time to build the model", json = true)
   private long run_time;
   final private long start_time;
+
+  public long actual_train_samples_per_iteration;
+  public double time_for_communication_us; //helper for auto-tuning: time in microseconds for collective bcast/reduce of the model
 
   @API(help="Number of training epochs", json = true)
   public double epoch_counter;
@@ -64,7 +70,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   public float error() { return (float) (isClassifier() ? cm().err() : mse()); }
 
-  @Override
+  @Override public boolean isClassifier() { return super.isClassifier() && !model_info.get_params().autoencoder; }
+
+  @Override public int nfeatures() { return model_info.get_params().autoencoder ? _names.length : _names.length - 1; }
+
   public int compareTo(DeepLearningModel o) {
     if (o.isClassifier() != isClassifier()) throw new UnsupportedOperationException("Cannot compare classifier against regressor.");
     if (o.nclasses() != nclasses()) throw new UnsupportedOperationException("Cannot compare models with different number of classes.");
@@ -686,6 +695,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist != null ? cp._priorClassDist.clone() : null, null);
     final boolean store_best_model = (jobKey == null);
     this.jobKey = jobKey;
+    this._validationKey = cp._validationKey;
     if (store_best_model) {
       model_info = cp.model_info.deep_clone(); //don't want to interfere with model being built, just make a deep copy and store that
       model_info.data_info = dataInfo.deep_clone(); //replace previous data_info with updated version that's passed in (contains enum for classification)
@@ -723,6 +733,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   public DeepLearningModel(final Key destKey, final Key jobKey, final Key dataKey, final DataInfo dinfo, final DeepLearning params, final float[] priorDist) {
     super(destKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
+    this._validationKey = params.validation != null ? params.validation._key : null;
     run_time = 0;
     start_time = System.currentTimeMillis();
     _timeLastScoreEnter = start_time;
@@ -744,7 +755,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     assert(Arrays.equals(_key._kb, destKey._kb));
   }
 
-  private long _timeLastScoreEnter; //not transient: needed for HTML display page
+  public long _timeLastScoreEnter; //not transient: needed for HTML display page
   transient private long _timeLastScoreStart;
   transient private long _timeLastScoreEnd;
   transient private long _timeLastPrintStart;
@@ -759,8 +770,26 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   boolean doScoring(Frame train, Frame ftrain, Frame ftest, Key job_key, Job.ValidatedJob.Response2CMAdaptor vadaptor) {
     try {
       final long now = System.currentTimeMillis();
-      epoch_counter = (float)model_info().get_processed_total()/train.numRows();
-      run_time += now-_timeLastScoreEnter;
+      epoch_counter = (float)model_info().get_processed_total()/training_rows;
+      final double time_last_iter_millis = now-_timeLastScoreEnter;
+
+      // Auto-tuning
+      // if multi-node and auto-tuning and at least 10 ms for communication (to avoid doing thins on multi-JVM on same node),
+      // then adjust the auto-tuning parameter 'actual_train_samples_per_iteration' such that the targeted ratio of comm to comp is achieved
+      // Note: actual communication time is estimated by the NetworkTest's collective test.
+      if (H2O.CLOUD.size() > 1 && get_params().train_samples_per_iteration == -2 && time_for_communication_us > 1e4) {
+//        Log.info("Time taken for communication: " + PrettyPrint.usecs((long)time_for_communication_us));
+//        Log.info("Time taken for Map/Reduce iteration: " + PrettyPrint.msecs((long)time_last_iter_millis, true));
+        final double comm_to_work_ratio = (time_for_communication_us *1e-3) / time_last_iter_millis;
+//        Log.info("Ratio of network communication to computation: " + String.format("%.3f", comm_to_work_ratio));
+//        Log.info("target_comm_to_work: " + get_params().target_ratio_comm_to_comp);
+        final double correction = get_params().target_ratio_comm_to_comp / comm_to_work_ratio;
+//        Log.warn("Suggested value for train_samples_per_iteration: " + get_params().actual_train_samples_per_iteration/correction);
+        actual_train_samples_per_iteration /= correction;
+        actual_train_samples_per_iteration = Math.max(1, actual_train_samples_per_iteration);
+      }
+
+      run_time += time_last_iter_millis;
       _timeLastScoreEnter = now;
       boolean keep_running = (epoch_counter < get_params().epochs);
       final long sinceLastScore = now -_timeLastScoreStart;
@@ -841,6 +870,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
             final Frame validPredict = score(ftest, adaptCM);
             final Frame hitratio_validPredict = new Frame(validPredict);
+            Vec orig_label = validPredict.vecs()[0];
             // Adapt output response domain, in case validation domain is different from training domain
             // Note: doesn't change predictions, just the *possible* label domain
             if (adaptCM) {
@@ -859,6 +889,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             if (trainAUC != null) err.validAUC = validAUC.data();
             else err.valid_mse = validErr;
             validPredict.delete();
+            //also delete the replaced label
+            if (adaptCM) orig_label.remove(new Futures()).blockForPending();
           }
 
           if (get_params().variable_importances) {
@@ -938,8 +970,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         }
       }
       if (model_info().unstable()) {
-        Log.err("Canceling job since the model is unstable (exponential growth observed).");
-        Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
+        Log.warn(unstable_msg);
         keep_running = false;
       } else if ( (isClassifier() && last_scored().train_err <= get_params().classification_stop)
               || (!isClassifier() && last_scored().train_mse <= get_params().regression_stop) ) {
@@ -967,6 +998,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     last_scored().valid_confusion_matrix = cm;
     last_scored().validAUC = auc;
     last_scored().valid_hitratio = hr;
+    DKV.put(this._key, this); //overwrite this model
   }
 
   @Override public String toString() {
@@ -1039,6 +1071,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
    */
   @Override public float[] score0(double[] data, float[] preds) {
     if (model_info().unstable()) {
+      Log.warn(unstable_msg);
       throw new UnsupportedOperationException("Trying to predict with an unstable model.");
     }
     Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
@@ -1098,6 +1131,62 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return l2;
   }
 
+  /**
+   * Score auto-encoded reconstruction (on-the-fly, without allocating the reconstruction as done in Frame score(Frame fr))
+   * @param frame Original data (can contain response, will be ignored)
+   * @return Frame containing one Vec with reconstruction error (MSE) of each reconstructed row, caller is responsible for deletion
+   */
+  public Frame scoreDeepFeatures(Frame frame, final int layer) {
+    assert(layer >= 0 && layer < model_info().get_params().hidden.length);
+    final int len = nfeatures();
+    Vec resp = null;
+    if (isSupervised()) {
+      int ridx = frame.find(responseName());
+      if (ridx != -1) { // drop the response for scoring!
+        frame = new Frame(frame);
+        resp = frame.vecs()[ridx];
+        frame.remove(ridx);
+      }
+    }
+    // Adapt the Frame layout - returns adapted frame and frame containing only
+    // newly created vectors
+    Frame[] adaptFrms = adapt(frame,false,false/*no response*/);
+    // Adapted frame containing all columns - mix of original vectors from fr
+    // and newly created vectors serving as adaptors
+    Frame adaptFrm = adaptFrms[0];
+    // Contains only newly created vectors. The frame eases deletion of these vectors.
+    Frame onlyAdaptFrm = adaptFrms[1];
+    //create new features, will be dense
+    final int features = model_info().get_params().hidden[layer];
+    Vec[] vecs = adaptFrm.anyVec().makeZeros(features);
+    for (int j=0; j<features; ++j) {
+      adaptFrm.add("DF.C" + (j+1), vecs[j]);
+    }
+    new MRTask2() {
+      @Override public void map( Chunk chks[] ) {
+        double tmp [] = new double[len];
+        float df[] = new float [features];
+        final Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
+        for( int row=0; row<chks[0]._len; row++ ) {
+          for( int i=0; i<len; i++ )
+            tmp[i] = chks[i].at0(row);
+          ((Neurons.Input)neurons[0]).setInput(-1, tmp);
+          DeepLearningTask.step(-1, neurons, model_info, false, null);
+          float[] out = neurons[layer+1]._a.raw(); //extract the layer-th hidden feature
+          for( int c=0; c<df.length; c++ )
+            chks[_names.length+c].set0(row,out[c]);
+        }
+      }
+    }.doAll(adaptFrm);
+
+    // Return just the output columns
+    int x=_names.length, y=adaptFrm.numCols();
+    Frame ret = adaptFrm.extractFrame(x, y);
+    onlyAdaptFrm.delete();
+    if (resp != null) ret.prepend(responseName(), resp);
+    return ret;
+  }
+
   // Make (potentially expanded) reconstruction
   private float[] score_autoencoder(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds, Neurons[] neurons) {
     assert(get_params().autoencoder);
@@ -1117,6 +1206,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   private double score_autoencoder(double[] data, float[] preds, Neurons[] neurons) {
     assert(model_info().get_params().autoencoder);
     if (model_info().unstable()) {
+      Log.warn(unstable_msg);
       throw new UnsupportedOperationException("Trying to predict with an unstable model.");
     }
     ((Neurons.Input)neurons[0]).setInput(-1, data); // expands categoricals inside
@@ -1160,6 +1250,16 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return qp.result;
   }
 
+  @Override public ModelAutobufferSerializer getModelSerializer() {
+    // Return a serializer which knows how to serialize keys
+    return new ModelAutobufferSerializer() {
+      @Override protected AutoBuffer postLoad(Model m, AutoBuffer ab) {
+        Job.hygiene(((DeepLearningModel)m).get_params());
+        return ab;
+      }
+    };
+  }
+
   public boolean generateHTML(String title, StringBuilder sb) {
     if (_key == null) {
       DocGen.HTML.title(sb, "No model yet");
@@ -1177,18 +1277,18 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     DocGen.HTML.title(sb, title);
 
-    if (get_params().source == null || UKV.get(get_params().source._key) == null) (Job.hygiene(get_params())).toHTML(sb);
+    if (get_params().source == null || DKV.get(get_params().source._key) == null ||
+            (get_params().validation != null && DKV.get(get_params().validation._key) == null)) (Job.hygiene(get_params())).toHTML(sb);
     else job().toHTML(sb);
 
-    final Key val_key = get_params().validation != null ? get_params().validation._key : null;
     sb.append("<div class='alert'>Actions: "
             + (jobKey != null && UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
-            + (val_key != null ? (Inspect2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
+            + (_validationKey != null ? (Inspect2.link("Inspect validation data (" + _validationKey + ")", _validationKey) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
-            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key)
+            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), _validationKey)
             + (actual_best_model_key != null && UKV.get(actual_best_model_key) != null && actual_best_model_key != _key ? ", " + DeepLearningModelView.link("Go to best model", actual_best_model_key) : "")
-            + (jobKey == null || ((jobKey != null && UKV.get(jobKey) == null)) || (jobKey != null && UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "") + ", "
+            + (jobKey == null || ((jobKey != null && UKV.get(jobKey) == null)) || (jobKey != null && UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), _validationKey) : "") + ", "
             + UIUtils.qlink(SaveModel.class, "model", _key, "Save model") + ", "
             + "</div>");
 
@@ -1201,10 +1301,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
     if (model_info.unstable()) {
-      final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
-              + " Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
       DocGen.HTML.section(sb, "=======================================================================================");
-      DocGen.HTML.section(sb, msg);
+      DocGen.HTML.section(sb, unstable_msg.replace("\n"," "));
       DocGen.HTML.section(sb, "=======================================================================================");
     }
 
@@ -1305,11 +1403,18 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", get_params().epochs));
     int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
     DocGen.HTML.paragraph(sb, "Number of compute nodes: " + (model_info.get_params().single_node_mode ? ("1 (" + H2O.NUMCPUS + " threads)") : (H2O.CLOUD.size() + " (" + cores + " threads)")));
-    DocGen.HTML.paragraph(sb, "Training samples per iteration: " + String.format("%,d", get_params().actual_train_samples_per_iteration));
+    DocGen.HTML.paragraph(sb, "Training samples per iteration" + (
+            get_params().train_samples_per_iteration == -2 ? " (-2 -> auto-tuning): " :
+            get_params().train_samples_per_iteration == -1 ? " (-1 -> max. available data): " :
+            get_params().train_samples_per_iteration == 0 ? " (0 -> one epoch): " : " (user-given): ")
+                    + String.format("%,d", actual_train_samples_per_iteration));
+
     final boolean isEnded = get_params().self() == null || (UKV.get(get_params().self()) != null && Job.isEnded(get_params().self()));
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
-      DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_so_far) + " samples/s");
+      long time_for_speed = isEnded || H2O.CLOUD.size() > 1 ? run_time : time_so_far;
+      if (time_for_speed > 0)
+        DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_for_speed) + " samples/s");
     }
     DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(time_so_far, true));
     if (progress > 0 && !isEnded)
@@ -1326,24 +1431,19 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     if (!error.validation) {
       if (_have_cv_results) {
-        RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-        v_rs.replace("key", get_params().source != null && get_params().source._key != null ? get_params().source._key : "");
-        String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + v_rs.toString() + ":</div>";
+        String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + Inspect2.link(_dataKey) + ":</div>";
         sb.append("<h5>" + cmTitle);
         sb.append("</h5>");
       }
       else {
-        RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-        t_rs.replace("key", get_params().source != null && get_params().source._key != null ? get_params().source._key : "");
-        String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
+        String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + Inspect2.link(_dataKey) + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
         sb.append("<h5>" + cmTitle);
         sb.append("</h5>");
       }
     }
     else {
       RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-      v_rs.replace("key", get_params().validation != null && get_params().validation._key != null ? get_params().validation._key : "");
-      String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
+      String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + Inspect2.link(_validationKey) + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
       sb.append("<h5>" + cmTitle);
       sb.append("</h5>");
     }
@@ -1464,7 +1564,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     sb.append("<th>Training Time</th>");
     sb.append("<th>Training Epochs</th>");
     sb.append("<th>Training Samples</th>");
-    if (isClassifier() && !get_params().autoencoder) {
+    if (isClassifier()) {
 //      sb.append("<th>Training MCE</th>");
       sb.append("<th>Training Error</th>");
       if (nclasses()==2) sb.append("<th>Training AUC</th>");
@@ -1790,6 +1890,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     final Key job = null;
     final DeepLearningModel cp = this;
     DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
+    bestModel.get_params().state = Job.JobState.DONE;
+    bestModel.get_params().job_key = get_params().self();
     bestModel.delete_and_lock(job);
     bestModel.unlock(job);
     assert (UKV.get(bestModelKey) != null);
@@ -1797,9 +1899,22 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     assert (((DeepLearningModel) UKV.get(bestModelKey)).error() == _bestError);
   }
 
-  @Override public void delete( ) {
-    if (actual_best_model_key != null) DKV.remove(actual_best_model_key);
-    super.delete();
+  public void delete_best_model( ) {
+    if (actual_best_model_key != null && actual_best_model_key != _key) DKV.remove(actual_best_model_key);
   }
+
+  public void delete_xval_models( ) {
+    if (get_params().xval_models != null) {
+      for (Key k : get_params().xval_models) {
+        UKV.<DeepLearningModel>get(k).delete_best_model();
+        UKV.<DeepLearningModel>get(k).delete();
+      }
+    }
+  }
+
+  transient private final String unstable_msg = "Job was aborted due to observed numerical instability (exponential growth)."
+          + "\nTry a different initial distribution, a bounded activation function or adding"
+          + "\nregularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
+
 }
 

@@ -206,11 +206,11 @@ public class Summary2 extends Iced {
     public final Summary2 _summaries[];
     public SummaryPerRow( Frame fr ) { this(fr,null); }
     private SummaryPerRow( Frame fr, Summary2[] sums ) { _fr = fr; _summaries = sums; }
-    @Override public void mapreduce( double ds[] ) { 
+    @Override public void mapreduce( double ds[] ) {
       for( int i=0; i<ds.length; i++ )
         _summaries[i].add(ds[i]);
     }
-    @Override public void reduce( SummaryPerRow that ) { 
+    @Override public void reduce( SummaryPerRow that ) {
       for (int i = 0; i < _summaries.length; i++)
         _summaries[i].add(that._summaries[i]);
     }
@@ -230,7 +230,7 @@ public class Summary2 extends Iced {
     }
     public void finishUp() {
       Vec[] vecs = _fr.vecs();
-      for (int i = 0; i < vecs.length; i++) 
+      for (int i = 0; i < vecs.length; i++)
         _summaries[i].finishUp(vecs[i]);
     }
   }
@@ -272,8 +272,8 @@ public class Summary2 extends Iced {
       }
     }
     for (int i = 0; i < _maxs.length>>>1; i++) {
-      double t = _maxs[i];  
-      _maxs[i] = _maxs[_maxs.length-1-i]; 
+      double t = _maxs[i];
+      _maxs[i] = _maxs[_maxs.length-1-i];
       _maxs[_maxs.length-1-i] = t;
     }
     this.stats = _type==T_ENUM ?
@@ -315,11 +315,14 @@ public class Summary2 extends Iced {
       _start2 = 0;
       _binsz = 1;
       _binsz2 = 1;
-      hcnt = new long[_domain.length];
-      hcnt2 = new long[_domain.length];
-      hcnt2_min = new double[_domain.length];
-      hcnt2_max = new double[_domain.length];
-    } 
+      // hack for now. if there are no enum values, keep these length 1, for consistency
+      // in asserts below
+      int dlength = _domain.length==0 ? 1 : _domain.length;
+      hcnt = new long[dlength];
+      hcnt2 = new long[dlength];
+      hcnt2_min = new double[dlength];
+      hcnt2_max = new double[dlength];
+    }
     else if ( !(Double.isNaN(stat0._min2) || Double.isNaN(stat0._max2)) ) {
       // guard against improper parse (date type) or zero c._sigma
       long N = _stat0._len - stat0._nas - stat0._nans - stat0._pinfs - stat0._ninfs;
@@ -337,13 +340,13 @@ public class Summary2 extends Iced {
       double startSuggest = d * Math.floor(stat0._min2 / d);
       double binszSuggest = d;
       int nbinSuggest = (int) Math.ceil((stat0._max2 - startSuggest)/d) + 1;
-      
+
       // Protect against massive binning. browser doesn't need
       int BROWSER_BIN_TARGET = 100;
 
-      //  _binsz/_start is used in the histogramming. 
-      // nbin is used in the array declaration. must be big enough. 
-      // the resulting nbin, could be really large number. We need to cap it. 
+      //  _binsz/_start is used in the histogramming.
+      // nbin is used in the array declaration. must be big enough.
+      // the resulting nbin, could be really large number. We need to cap it.
       // should also be obsessive and check that it's not 0 and force to 1.
       // Since nbin is implied by _binsz, ratio _binsz and recompute nbin
       int binCase = 0; // keep track in case we assert
@@ -377,7 +380,7 @@ public class Summary2 extends Iced {
 
       // Now that we know the best bin size that will fit..Floor the _binsz if integer so visible
       // histogram looks good for integers. This is our final best bin size.
-      double binsz = (binszSuggest!=0) ? binszSuggest : (vec.isInt() ? 1 : 1e-13d); 
+      double binsz = (binszSuggest!=0) ? binszSuggest : (vec.isInt() ? 1 : 1e-13d);
       _binsz = vec.isInt() ? Math.floor(binsz) : binsz;
       // make integers start on an integer too!
       _start = vec.isInt() ? Math.floor(start) : start;
@@ -407,7 +410,7 @@ public class Summary2 extends Iced {
       double d2 = (stat0._max2 - stat0._min2) / max_qbins;
       // _binsz2 = 0 means min/max are equal for reals?. Just make it a little number
       // this won't show up in browser display, since bins are labelled by start value
-      _binsz2 = (d2!=0) ? d2 : (vec.isInt() ? 1 : 1e-13d); 
+      _binsz2 = (d2!=0) ? d2 : (vec.isInt() ? 1 : 1e-13d);
       _start2 = stat0._min2;
       int nbin2 = (int) Math.ceil((stat0._max2 - _start2)/_binsz2) + 1;
       double impliedBinEnd2 = _start2 + (nbin2 * _binsz2);
@@ -429,7 +432,7 @@ public class Summary2 extends Iced {
       // Log.debug("Finer histogram starts at "+_start2+" Visible histogram starts at "+_start);
       // Log.debug("stat0._min2 "+stat0._min2+" stat0._max2 "+stat0._max2);
 
-    } 
+    }
     else { // vec does not contain finite numbers
       Log.debug("Summary2: NaN in stat0._min2: "+stat0._min2+" or stat0._max2: "+stat0._max2);
       // vec.min() wouldn't be any better here. It could be NaN? 4/13/14
@@ -509,7 +512,7 @@ public class Summary2 extends Iced {
 
       int binIdx2Int = (int) binIdx2;
       assert (_start2 <= val) : "Why is val < _start2? val:"+val+" _start2:";
-      assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
+      assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) :
         "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length+" "+val+" "+_start2+" "+_binsz2;
 
       if (hcnt2[binIdx2Int] == 0) {
@@ -548,7 +551,7 @@ public class Summary2 extends Iced {
 
     int binIdxInt = (int) binIdx;
     assert (_start <= val) : "Why is val < _start? val:"+val+" _start:";
-    assert (binIdxInt >= 0 && binIdx < hcnt.length) : 
+    assert (binIdxInt >= 0 && binIdx < hcnt.length) :
         "binIdxInt bad for hcnt2. binIdxInt:"+binIdxInt+" hcnt.length:"+hcnt.length+" val:"+val+" _start:"+_start+" _binsz:"+_binsz;
     ++hcnt[binIdxInt];
   }
@@ -562,7 +565,7 @@ public class Summary2 extends Iced {
 
     if (_type == T_ENUM) return this;
 
-    // merge hcnt2 per-bin mins 
+    // merge hcnt2 per-bin mins
     // other must be same length, but use it's length for safety
     // could add assert on lengths?
     for (int k = 0; k < other.hcnt2_min.length; k++) {
@@ -605,7 +608,7 @@ public class Summary2 extends Iced {
     // seems like everything would fail if hcnt2 doesn't exist here
     if (hcnt2 != null)
       Utils.add(hcnt2, other.hcnt2);
-      
+
     // merge hcnt mins
     double[] ds = MemoryManager.malloc8d(_mins.length);
     int i = 0, j = 0;
@@ -668,21 +671,21 @@ public class Summary2 extends Iced {
     // that have different names. Need to merge sometime.
     // the 'intent' is to be the same as the single pass Quantiles approx, interpolation_type==-1
 
-    // max_qbins was the goal for sizing. 
+    // max_qbins was the goal for sizing.
     // nbins2 was what was used for size, after various calcs
     // just assume hcnt2 is the right length!
     // Don't need at least two bins..since we'll always have 'some' answer
     // are we being called on constant 0?
     int maxBinCnt = hcnt2.length;
-    
+
     // Find the row count we want to hit, within some bin.
     long currentCnt = 0;
     double targetCntFull = threshold * (_gprows-1);  //  zero based indexing
     long targetCntInt = (long) Math.floor(targetCntFull);
     double targetCntFract = targetCntFull  - (double) targetCntInt;
     assert (targetCntFract>=0) && (targetCntFract<=1);
-    Log.debug("QS_ targetCntInt: "+targetCntInt+" targetCntFract: "+targetCntFract);
-      
+    // Log.debug("QS_ targetCntInt: "+targetCntInt+" targetCntFract: "+targetCntFract);
+
     // walk thru and find out what bin to look inside
     int k = 0;
     while(k!=maxBinCnt && ((currentCnt + hcnt2[k]) <= targetCntInt)) {
@@ -697,8 +700,8 @@ public class Summary2 extends Iced {
 
 
     assert hcnt2[k]!=0;
-    Log.debug("QS_ Found k (approx): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
-      " "+_gprows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+    // Log.debug("QS_ Found k (approx): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
+    //  " "+_gprows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 
     assert (currentCnt + hcnt2[k]) > targetCntInt : targetCntInt+" "+currentCnt+" "+k+" "+" "+maxBinCnt;
     assert hcnt2[k]!=1 || hcnt2_min[k]==hcnt2_max[k];
@@ -725,28 +728,28 @@ public class Summary2 extends Iced {
       else {
         guess = hcnt2_max[k];
         done = true;
-        Log.debug("QS_ Guess M "+guess);
+        // Log.debug("QS_ Guess M "+guess);
       }
     }
     else if ( inMidOfBin ) {
-      // if we know there is something before and after us with same value, 
+      // if we know there is something before and after us with same value,
       // we never need to interpolate (only allowed when min=max
       guess = hcnt2_min[k];
       done = true;
-      Log.debug("QS_ Guess N "+guess);
+      // Log.debug("QS_ Guess N "+guess);
     }
 
     if ( !done && atStartOfBin ) {
       // no interpolation needed
-      if ( hcnt2[k]>2 && (hcnt2_min[k]==hcnt2_max[k]) ) { 
+      if ( hcnt2[k]>2 && (hcnt2_min[k]==hcnt2_max[k]) ) {
         guess = hcnt2_min[k];
         done = true;
-        Log.debug("QS_ Guess A "+guess);
-      } 
+        // Log.debug("QS_ Guess A "+guess);
+      }
       // min/max can be equal or not equal here
       else if ( hcnt2[k]==2 ) { // interpolate between min/max for the two value bin
         // type 7 (linear interpolation)
-        // Unlike mean, which just depends on two adjacent values, this adjustment  
+        // Unlike mean, which just depends on two adjacent values, this adjustment
         // adds possible errors related to the arithmetic on the total # of rows.
         dDiff = hcnt2_max[k] - hcnt2_min[k]; // two adjacent..as if sorted!
         // targetCntFract is fraction of total rows
@@ -754,15 +757,15 @@ public class Summary2 extends Iced {
 
         done = true;
         interpolated = true;
-        Log.debug("QS_ Guess B "+guess+" targetCntFract: "+targetCntFract);
-      } 
+        // Log.debug("QS_ Guess B "+guess+" targetCntFract: "+targetCntFract);
+      }
       // no interpolation needed
       else if ( (hcnt2[k]==1) && (targetCntFract==0) ) {
         assert hcnt2_min[k]==hcnt2_max[k];
         guess = hcnt2_min[k];
         done = true;
-        Log.debug("QS_ Guess C "+guess);
-      } 
+        // Log.debug("QS_ Guess C "+guess);
+      }
     }
 
     // interpolate into a nextK value
@@ -772,10 +775,10 @@ public class Summary2 extends Iced {
     if ( !done ) {
       if ( hcnt2[k]==1 ) {
         assert hcnt2_min[k]==hcnt2_max[k];
-        Log.debug("QS_ Single value in this bin, but fractional means we need to interpolate to next non-zero");
+        // Log.debug("QS_ Single value in this bin, but fractional means we need to interpolate to next non-zero");
       }
       if ( interpolateEndNeeded ) {
-        Log.debug("QS_ Interpolating off the end of a bin!");
+        // Log.debug("QS_ Interpolating off the end of a bin!");
       }
 
       double nextVal;
@@ -783,13 +786,13 @@ public class Summary2 extends Iced {
       // if we're at the end
       assert k < maxBinCnt : k+" "+maxBinCnt;
       if ( (k+1)==maxBinCnt) {
-        Log.debug("QS_ Using valEnd for approx interpolate: "+valEnd);
+        // Log.debug("QS_ Using valEnd for approx interpolate: "+valEnd);
         nextVal = valEnd; // just in case the binning didn't max in a bin before the last
-      } 
+      }
       else {
         nextK = k + 1;
         nextVal = hcnt2_min[nextK];
-        Log.debug("QS_ Using nextK for interpolate: "+nextK+" "+hcnt2_min[nextK]);
+        // Log.debug("QS_ Using nextK for interpolate: "+nextK+" "+hcnt2_min[nextK]);
         // hcnt2[nextK] may be zero here if we backfilled
       }
 
@@ -800,21 +803,21 @@ public class Summary2 extends Iced {
         guess = hcnt2_max[k] + (targetCntFract * dDiff);
         interpolated = true;
         done = true; //  has to be one above us when needed. (or we're at end)
-        Log.debug("QS_ Guess D "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
-          " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
-          " _gprows: " + _gprows+" "+stillCanGetIt);
+        // Log.debug("QS_ Guess D "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
+        //   " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
+        //   " _gprows: " + _gprows+" "+stillCanGetIt);
 
       }
       else { // single pass approx..with unresolved bin
         assert hcnt2[k]!=0 : hcnt2[k]+" "+k;
         // use max within this bin, to stay within the guaranteed error bounds
-        dDiff = (hcnt2_max[k] - hcnt2_min[k]) / hcnt2[k]; 
+        dDiff = (hcnt2_max[k] - hcnt2_min[k]) / hcnt2[k];
         guess = hcnt2_min[k] + (targetCntFull-currentCnt) * dDiff;
         interpolated = true;
         done = true; //  has to be one above us when needed. (or we're at end)
-        Log.debug("QS_ Guess E "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
-          " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
-          " _gprows: " + _gprows);
+        // Log.debug("QS_ Guess E "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
+        //   " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
+        //   " _gprows: " + _gprows);
       }
     }
     assert !Double.isNaN(guess); // covers positive/negative inf also (if we divide by 0)
@@ -832,10 +835,10 @@ public class Summary2 extends Iced {
     if ( (maxBinCnt==1) && (hcnt2[0]==0) )  return;
 
     // Perf hack that is currently different than Quantiles.java
-    // back fill hcnt2_min where it's zero, so we can avoid the nextK search 
-    // when we need to interpolate. Keep hcnt2[k]=0 so we know not to use it 
+    // back fill hcnt2_min where it's zero, so we can avoid the nextK search
+    // when we need to interpolate. Keep hcnt2[k]=0 so we know not to use it
     // other than for getting nextK without searching. This is powerful
-    // because if we're getting 10 quantiles from a histogram, we don't 
+    // because if we're getting 10 quantiles from a histogram, we don't
     // do searches to the end (potentially) for ever nextK find. This
     // makes the Quantiles.java algo work well when reused for multiple quantiles
     // here in Summary2
@@ -984,6 +987,6 @@ public class Summary2 extends Iced {
       sb.append("</table>");
       sb.append("</div>");
     }
-    sb.append("</div>\n"); 
+    sb.append("</div>\n");
   }
 }

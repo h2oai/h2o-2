@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         print "WARNING: won't work for remote h2o, because syn_datasets is created locally only, for import"
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=14)
+            h2o.build_cloud(java_heap_GB=14)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -86,10 +86,10 @@ class Basic(unittest.TestCase):
             fileList = os.listdir(SYNDATASETS_DIR)
             for f in fileList:
                 print f
-                h2i.import_only(path=SYNDATASETS_DIR + "/" + f)
+                h2i.import_only(path=SYNDATASETS_DIR + "/" + f, schema='put')
 
             # pattern match all, then use exclude
-            parseResult = h2i.parse_only(pattern="*/syn_*",
+            parseResult = h2i.parse_only(pattern="*syn_*",
                 hex_key=hex_key, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
 

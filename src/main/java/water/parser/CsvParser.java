@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.*;
 import water.fvec.ParseTime;
+import water.util.Log;
 
 public class CsvParser extends CustomParser {
 
@@ -124,7 +125,7 @@ NEXT_CHAR:
             assert _str.get_buf() != bits;
             _str.addBuff(bits);
           }
-          if(_setup._types != null && _str.equals(_setup._types[colIdx]._naStr))
+          if(_setup._types != null && colIdx < _setup._types.length && _str.equals(_setup._types[colIdx]._naStr))
             dout.addInvalidCol(colIdx);
           else
             dout.addStrCol(colIdx, _str);
@@ -209,7 +210,7 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if(_setup._types != null && _setup._types[colIdx]._type == ParserSetup.Coltype.STR){
+          if(_setup._types != null && colIdx < _setup._types.length && _setup._types[colIdx]._type == ParserSetup.Coltype.STR){
             state = STRING; // Do not attempt a number parse, just do a string parse
             _str.set(bits, offset, 0);
             continue MAIN_LOOP;
@@ -330,7 +331,11 @@ NEXT_CHAR:
             if (number >= LARGEST_DIGIT_NUMBER) {
               if (decimal)
                 fractionDigits = offset - 1 - fractionDigits;
-              state = NUMBER_SKIP;
+              if (exp == -1) {
+                number = -number;
+              }
+              exp = 0;
+              state = NUMBER_SKIP_NO_DOT;
             } else {
               number = (number*10)+(c-'0');
             }
@@ -412,7 +417,9 @@ NEXT_CHAR:
           // If we are mid-parse of something, act like we saw a LF to end the
           // current token.
           if ((state != EXPECT_COND_LF) && (state != POSSIBLE_EMPTY_LINE)) {
-            c = CHAR_LF;  continue MAIN_LOOP;
+            c = CHAR_LF;
+            if (!firstChunk) Log.warn("Row entry exceeded " + bits.length + " bytes in size, exceeded current parse limit.");
+            continue MAIN_LOOP;
           }
           break MAIN_LOOP;      // Else we are just done
         }

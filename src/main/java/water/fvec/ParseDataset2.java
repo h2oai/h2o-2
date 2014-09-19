@@ -26,7 +26,7 @@ public final class ParseDataset2 extends Job {
   private MultiFileParseTask _mfpt; // Access to partially built vectors for cleanup after parser crash
   public static enum Compression { NONE, ZIP, GZIP }
 
-  private static Key [] filterEmptyFiles(Key [] keys){
+  public static Key [] filterEmptyFiles(Key [] keys){
     Arrays.sort(keys);
     // first check if there are any empty files and if so remove them
     Vec [] vecs = new Vec [keys.length];
@@ -52,17 +52,16 @@ public final class ParseDataset2 extends Job {
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs
   public static Frame parse(Key okey, Key [] keys) {
-    keys = filterEmptyFiles(keys);
     return parse(okey,keys,new GuessSetup.GuessSetupTsk(new ParserSetup(),true).invoke(keys)._gSetup._setup,true);
   }
 
   public static Frame parse(Key okey, Key[] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
-    keys = filterEmptyFiles(keys);    
     if( globalSetup._ncols == 0 ) throw new java.lang.IllegalArgumentException(globalSetup.toString());
     return forkParseDataset(okey, keys, globalSetup, delete_on_done).get();
   }
   // Same parse, as a backgroundable Job
-  public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
+  public static ParseDataset2 forkParseDataset(final Key dest, Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
+    keys = filterEmptyFiles(keys);
     setup.checkDupColumnNames();
     // Some quick sanity checks: no overwriting your input key, and a resource check.
     long sum=0;
@@ -562,7 +561,7 @@ public final class ParseDataset2 extends Job {
           ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
           // There is at least one entry in zip file and it is not a directory.
           if( ze != null && !ze.isDirectory() ) 
-            _dout = streamParse(zis,localSetup, _vecIdStart, chunkStartIdx,pmon);
+            _dout = streamParse(zis,localSetup, _vecIdStart, chunkStartIdx, pmon);
           else zis.close();       // Confused: which zipped file to decompress
           // set this node as the one which rpocessed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
@@ -572,7 +571,7 @@ public final class ParseDataset2 extends Job {
         case GZIP:
           // Zipped file; no parallel decompression;
           ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
-          _dout = streamParse(new GZIPInputStream(vec.openStream(pmon)),localSetup,_vecIdStart, chunkStartIdx,pmon);
+          _dout = streamParse(new GZIPInputStream(vec.openStream(pmon)),localSetup,_vecIdStart, chunkStartIdx, pmon);
           // set this node as the one which processed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
             _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
@@ -619,10 +618,12 @@ public final class ParseDataset2 extends Job {
       FVecDataOut dout = new FVecDataOut(_vg, chunkStartIdx, localSetup._ncols, vecIdStart, enums(_eKey,localSetup._ncols));
       CustomParser p = localSetup.parser();
       // assume 2x inflation rate
+      //if( localSetup._pType.parallelParseSupported )
       if( localSetup._pType.parallelParseSupported )
-        try{p.streamParse(is, dout,pmon);}catch(IOException e){throw new RuntimeException(e);}
+        try{p.streamParse(is, dout, pmon);}catch(IOException e){throw new RuntimeException(e);}
       else
         try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
+
       // Parse all internal "chunks", until we drain the zip-stream dry.  Not
       // real chunks, just flipping between 32K buffers.  Fills up the single
       // very large NewChunk.
@@ -852,7 +853,6 @@ public final class ParseDataset2 extends Job {
       if(colIdx < _nCols) _nvs[_col = colIdx].addNA();
     }
     @Override public final boolean isString(int colIdx) { return false; }
-
     @Override public final void addStrCol(int colIdx, ValueString str) {
       if(colIdx < _nvs.length){
         if(_ctypes[colIdx] == NCOL){ // support enforced types

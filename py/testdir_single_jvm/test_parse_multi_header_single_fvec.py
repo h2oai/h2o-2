@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2,java_heap_MB=1300,use_flatfile=True)
+            h2o.build_cloud(java_heap_GB=4,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
 

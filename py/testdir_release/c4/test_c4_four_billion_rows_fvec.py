@@ -21,7 +21,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             # Parse*********************************
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=180)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=180, retryDelaySecs=3)
             elapsed = time.time() - start
             print "Parse result['destination_key']:", parseResult['destination_key']
             print csvFilename, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -56,7 +56,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             kwargs = {
                 'k': 3,
                 'initialization': 'Furthest',
-                'max_iter': 4,
+                'max_iter': 10,
                 'normalize': 0,
                 'destination_key': 'junk.hex',
                 'seed': 265211114317615310,
@@ -64,7 +64,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             timeoutSecs = 900
             start = time.time()
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=4, **kwargs)
 
             # GLM*********************************
             print "\n" + csvFilename
@@ -79,7 +79,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             # convert to binomial
             execExpr="A.hex=%s" % parseResult['destination_key']
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
-            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % ('C1', 'C1', 1)
+            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % ('1', '1', 1)
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
             aHack = {'destination_key': "A.hex"}
 

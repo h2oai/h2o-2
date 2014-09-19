@@ -5,11 +5,13 @@ import com.google.common.io.Closeables;
 
 import hex.CreateFrame;
 import hex.GridSearch.GridSearchProgress;
+import hex.InsertMissingValues;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
 import hex.ReBalance;
 import hex.anomaly.Anomaly;
+import hex.deepfeatures.DeepFeatures;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gapstat.GapStatistic;
@@ -27,10 +29,7 @@ import hex.pca.PCAScore;
 import hex.singlenoderf.SpeeDRF;
 import hex.singlenoderf.SpeeDRFModelView;
 import hex.singlenoderf.SpeeDRFProgressPage;
-import water.AutoBuffer;
-import water.Boot;
-import water.H2O;
-import water.NanoHTTPD;
+import water.*;
 import water.api.Upload.PostFile;
 import water.api.handlers.ModelBuildersMetadataHandlerV1;
 import water.deploy.LaunchJar;
@@ -39,7 +38,6 @@ import water.schemas.HTTP500V1;
 import water.schemas.Schema;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
-import water.util.RString;
 import water.util.Utils.ExpectedExceptionForDebug;
 
 import java.io.ByteArrayInputStream;
@@ -49,12 +47,10 @@ import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
@@ -102,7 +98,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Inspector()),     "Inspect",                "Data");
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
-    Request.addToNavbar(registerRequest(new FrameSplitPage()),"Split frame",            "Data");
+    Request.addToNavbar(registerRequest(new FrameSplitPage()),"Split Frame",            "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
     Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
     // Register Inspect2 just for viewing frames
@@ -118,6 +114,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans",                   "Model");
     Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
     Request.addToNavbar(registerRequest(new Anomaly()),     "Anomaly Detection (Beta)", "Model");
+    Request.addToNavbar(registerRequest(new DeepFeatures()),"Deep Feature Extractor (Beta)", "Model");
 
 
     // FVec scoring
@@ -137,9 +134,8 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
     Request.addToNavbar(registerRequest(new JProfile()),    "Profiler",                 "Admin");
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
-    Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",               "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
-    Request.addToNavbar(registerRequest(new UnlockKeys()),  "Unlock Keys",              "Admin");
+    Request.addToNavbar(registerRequest(new NetworkTest()), "Network Test",             "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
     Request.addToNavbar(registerRequest(new TaskStatus()),"TaskInfo","Admin");
 
@@ -158,23 +154,31 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
       registerRequest(new NFoldFrameExtractPage());
+      registerRequest(new Console());
       registerRequest(new GapStatistic());
       registerRequest(new CreateFrame());
+      registerRequest(new InsertMissingValues());
       registerRequest(new KillMinus3());
       registerRequest(new SaveModel());
       registerRequest(new LoadModel());
+      registerRequest(new Debug());
+      registerRequest(new UnlockKeys());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
-      Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold frame extract", "Beta");
+      Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold Frame Extract", "Beta");
       Request.addToNavbar(registerRequest(new Console()),              "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),         "Gap Statistic",        "Beta");
       Request.addToNavbar(registerRequest(new CreateFrame()),          "Create Frame",         "Beta");
+      Request.addToNavbar(registerRequest(new InsertMissingValues()),  "Insert Missing Values","Beta");
       Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
       Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");
       Request.addToNavbar(registerRequest(new LoadModel()),            "Load Model",           "Beta");
+      Request.addToNavbar(registerRequest(new Debug()),                "Debug Dump (floods log file)","Beta");
+      Request.addToNavbar(registerRequest(new UnlockKeys()),           "Unlock Keys (use with caution)","Beta");
     }
 
+    registerRequest(new Up());
     registerRequest(new Get()); // Download
     //Column Expand
     registerRequest(new OneHot());
@@ -388,6 +392,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.endsWith("LogAndEcho.json")) return;
       if (uri.contains("Progress")) return;
       if (uri.startsWith("/Jobs.json")) return;
+      if (uri.startsWith("/Up.json")) return;
     }
 
     String log = String.format("%-4s %s", method, uri);

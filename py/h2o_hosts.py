@@ -132,13 +132,18 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     # paramsToUse.pop('username')
     paramsToUse.pop('password')
     paramsToUse.pop('key_filename')
-   
+
+    # flatfile is going into sandbox (LOG_DIR) now..so clean it first (will make sandbox dir if it doesn't exist already)    
+    h2o.clean_sandbox()
+
     # handles hosts=None correctly
     h2o.write_flatfile(
         node_count=paramsToUse['h2o_per_host'],
+        # let the env variable H2O_PORT_OFFSET add in there
         base_port=paramsToUse['base_port'],
         hosts=hosts,
-        rand_shuffle=paramsToUse['rand_shuffle']
+        rand_shuffle=paramsToUse['rand_shuffle'],
+        port_offset=h2o.get_port_offset(),
         )
 
     if hosts is not None:
@@ -156,4 +161,5 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     node_count = paramsToUse['h2o_per_host']
     paramsToUse.pop('h2o_per_host')
     print "java_heap_GB", paramsToUse['java_heap_GB']
-    h2o.build_cloud(node_count, hosts=hosts, **paramsToUse)
+    # don't wipe out or create the sandbox. already did here, and put flatfile there
+    h2o.build_cloud(node_count, hosts=hosts, init_sandbox=False, **paramsToUse)

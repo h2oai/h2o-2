@@ -3,6 +3,7 @@ package water.parser;
 import java.util.*;
 import water.*;
 import water.fvec.Frame;
+import water.fvec.ParseDataset2;
 import water.parser.CustomParser.PSetupGuess;
 import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
@@ -28,6 +29,7 @@ abstract public class GuessSetup {
   }
 
   public static CustomParser.PSetupGuess guessSetup(ArrayList<Key> keys,Key headerKey, CustomParser.ParserSetup setup, boolean checkHeader)  {
+
     String [] colNames = null;
     CustomParser.PSetupGuess gSetup = null;
     boolean headerKeyPartOfParse = false;
@@ -41,9 +43,9 @@ abstract public class GuessSetup {
       GuessSetupTsk t = new GuessSetupTsk(setup,checkHeader);
       Key [] ks = new Key[keys.size()];
       keys.toArray(ks);
+//      ks = ParseDataset2.filterEmptyFiles(ks);
       t.invoke(ks);
       gSetup = t._gSetup;
-
       if(gSetup._isValid && (!t._failedSetup.isEmpty() || !t._conflicts.isEmpty())){
         // run guess setup once more, this time knowing the global setup to get rid of conflicts (turns them into failures) and bogus failures (i.e. single line files with unexpected separator)
         GuessSetupTsk t2 = new GuessSetupTsk(gSetup._setup, !gSetup._setup._header);
@@ -116,62 +118,79 @@ abstract public class GuessSetup {
   public static class GuessSetupTsk extends MRTask<GuessSetupTsk> {
     final CustomParser.ParserSetup _userSetup;
     final boolean _checkHeader;
+    boolean _empty = true;
     public PSetupGuess _gSetup;
     IcedArrayList<Key> _failedSetup;
     IcedArrayList<Key> _conflicts;
 
-    public GuessSetupTsk(CustomParser.ParserSetup userSetup, boolean checkHeader){
+    public GuessSetupTsk(CustomParser.ParserSetup userSetup, boolean checkHeader) {
       _userSetup = userSetup;
       assert _userSetup != null;
       _checkHeader = checkHeader;
       assert !_userSetup._header || !checkHeader;
     }
+
     public static final int MAX_ERRORS = 64;
+
     @Override public void map(Key key) {
-      _failedSetup = new IcedArrayList<Key>();
-      _conflicts = new IcedArrayList<Key>();
       byte [] bits = Utils.getFirstUnzipedBytes(key);
-      _gSetup = guessSetup(bits, _userSetup, _checkHeader);
-      if(_gSetup == null || !_gSetup._isValid)
-        _failedSetup.add(key);
-      else {
-        _gSetup._setupFromFile = key;
-        if(_checkHeader && _gSetup._setup._header)
-          _gSetup._hdrFromFile = key;
+      if(bits.length > 0) {
+        _empty = false;
+        _failedSetup = new IcedArrayList<Key>();
+        _conflicts = new IcedArrayList<Key>();
+        _gSetup = GuessSetup.guessSetup(bits, _userSetup, _checkHeader);
+        if (_gSetup == null || !_gSetup._isValid)
+          _failedSetup.add(key);
+        else {
+          _gSetup._setupFromFile = key;
+          if (_checkHeader && _gSetup._setup._header)
+            _gSetup._hdrFromFile = key;
+        }
       }
     }
 
-    @Override public void reduce(GuessSetupTsk drt) {
-      if(_gSetup == null || !_gSetup._isValid){
+    @Override
+    public void reduce(GuessSetupTsk drt) {
+      if (drt._empty) return;
+      if (_gSetup == null || !_gSetup._isValid) {
+        _empty = false;
         _gSetup = drt._gSetup;
-        _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
-        _gSetup._setupFromFile = drt._gSetup._setupFromFile;
-      } else if(drt._gSetup._isValid && !_gSetup._setup.isCompatible(drt._gSetup._setup) ){
-        if(_conflicts.contains(_gSetup._setupFromFile) && !drt._conflicts.contains(drt._gSetup._setupFromFile)){
+        if (_gSetup == null)
+          System.out.println("haha");
+//        if(_gSetup != null) {
+        try {
+          _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
+          _gSetup._setupFromFile = drt._gSetup._setupFromFile;
+//        }
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+      } else if (drt._gSetup._isValid && !_gSetup._setup.isCompatible(drt._gSetup._setup)) {
+        if (_conflicts.contains(_gSetup._setupFromFile) && !drt._conflicts.contains(drt._gSetup._setupFromFile)) {
           _gSetup = drt._gSetup; // setups are not compatible, select random setup to send up (thus, the most common setup should make it to the top)
           _gSetup._setupFromFile = drt._gSetup._setupFromFile;
           _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
-        } else if(!drt._conflicts.contains(drt._gSetup._setupFromFile)) {
+        } else if (!drt._conflicts.contains(drt._gSetup._setupFromFile)) {
           _conflicts.add(_gSetup._setupFromFile);
           _conflicts.add(drt._gSetup._setupFromFile);
         }
-      } else if(drt._gSetup._isValid){ // merge the two setups
-        if(!_gSetup._setup._header && drt._gSetup._setup._header){
+      } else if (drt._gSetup._isValid) { // merge the two setups
+        if (!_gSetup._setup._header && drt._gSetup._setup._header) {
           _gSetup._setup._header = true;
           _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
           _gSetup._setup._columnNames = drt._gSetup._setup._columnNames;
         }
-        if(_gSetup._data.length < CustomParser.MAX_PREVIEW_LINES){
+        if (_gSetup._data.length < CustomParser.MAX_PREVIEW_LINES) {
           int n = _gSetup._data.length;
-          int m = Math.min(CustomParser.MAX_PREVIEW_LINES, n + drt._gSetup._data.length-1);
+          int m = Math.min(CustomParser.MAX_PREVIEW_LINES, n + drt._gSetup._data.length - 1);
           _gSetup._data = Arrays.copyOf(_gSetup._data, m);
-          for(int i = n; i < m; ++i){
-            _gSetup._data[i] = drt._gSetup._data[i-n+1];
+          for (int i = n; i < m; ++i) {
+            _gSetup._data[i] = drt._gSetup._data[i - n + 1];
           }
         }
       }
       // merge failures
-      if(_failedSetup == null){
+      if (_failedSetup == null) {
         _failedSetup = drt._failedSetup;
         _conflicts = drt._conflicts;
       } else {
@@ -181,7 +200,7 @@ abstract public class GuessSetup {
     }
   }
 
-  public static PSetupGuess guessSetup(byte [] bits){
+    public static PSetupGuess guessSetup(byte [] bits){
     return guessSetup(bits,new ParserSetup(),true);
   }
 

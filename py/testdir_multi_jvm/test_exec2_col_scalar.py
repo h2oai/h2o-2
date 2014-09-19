@@ -70,17 +70,11 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
-        if localhost:
-            maxTrials = 200
-            csvFilenameAll = [
-                ("covtype.data", "cA", 15),
-            ]
-        else:
-            maxTrials = 20
-            csvFilenameAll = [
-                ("covtype.data", "cA", 15),
-                ("covtype20x.data", "cC", 60),
-            ]
+        maxTrials = 20
+        csvFilenameAll = [
+            ("covtype.data", 15),
+            ("covtype20x.data", 60),
+        ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
@@ -88,7 +82,9 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
         importFolderPath = "standard"
 
-        for (csvFilename, hex_key, timeoutSecs) in csvFilenameList:
+        # just always use the same hex_key, so the zeroList is right all the time
+        hex_key = 'cA'
+        for (csvFilename, timeoutSecs) in csvFilenameList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             # creates csvFilename.hex from file in importFolder dir 
             csvPathname = importFolderPath + "/" + csvFilename

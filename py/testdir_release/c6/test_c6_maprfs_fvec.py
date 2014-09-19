@@ -1,6 +1,6 @@
 import unittest, time, sys, time, random, json
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common, h2o_jobs as h2j
 
 DO_RANDOM_SAMPLE = True
 DO_RF = False
@@ -9,7 +9,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_c6_maprfs(self):
+    def test_c6_maprfs_fvec(self):
         h2o.beta_features = True
         print "\nLoad a list of files from maprfs, parse and do 1 RF tree"
         # larger set in my local dir
@@ -45,7 +45,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # h2o.nodes[0].use_maprfs = True
         # h2o.nodes[0].use_hdfs = False
         # h2o.nodes[0].hdfs_version = 'mapr3.0.1',
-        # h2o.nodes[0].hdfs_name_node = '192.168.1.171:7222'
+        # h2o.nodes[0].hdfs_name_node = '172.16.2.171:7222'
 
         h2o.setup_benchmark_log()
 
@@ -71,14 +71,17 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             timeoutSecs = 1000
             # do an import first, because we want to get the size of the file
             (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs)
-            succeeded = importResult['succeeded']
+            print "importResult:", h2o.dump_json(importResult)
+            succeeded = importResult['files']
+            fails = importResult['fails']
+
             if len(succeeded) < 1:
                 raise Exception("Should have imported at least 1 key for %s" % csvPathname)
 
             # just do a search
             foundIt = None
             for f in succeeded:
-                if csvPathname in f['key']:
+                if csvPathname in f:
                     foundIt = f
                     break
 
@@ -86,12 +89,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
 
             totalBytes = 0
-            #  "succeeded": [
-            #    {
-            #      "file": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "key": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "value_size_bytes": 1115287100
-            #    },
 
             print "Loading", csvFilename, 'from maprfs'
             start = time.time()

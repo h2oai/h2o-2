@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'hhp_107_01.data.gz'
         print "\n" + csvPathname
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
-            hex_key="hhp_107_01.data.hex", timeoutSecs=15)
+            hex_key="hhp_107_01.data.hex", timeoutSecs=15, doSummary=False)
 
         # pop open a browser on the cloud
         # h2b.browseTheCloud()

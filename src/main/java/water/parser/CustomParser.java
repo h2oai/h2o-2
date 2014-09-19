@@ -79,7 +79,7 @@ public abstract class CustomParser extends Iced {
 
     public static class TypeInfo extends Iced{
       Coltype _type;
-      ValueString _naStr = new ValueString("NA");
+      ValueString _naStr = new ValueString("");
       boolean _strongGuess;
 
       public void merge(TypeInfo tinfo){
@@ -118,6 +118,14 @@ public abstract class CustomParser extends Iced {
       _header = header;
       _columnNames = null;
       _ncols = 0;
+    }
+    public ParserSetup(ParserType t, byte sep, boolean header, boolean singleQuotes) {
+      _pType = t;
+      _separator = sep;
+      _header = header;
+      _columnNames = null;
+      _ncols = 0;
+      _singleQuotes = singleQuotes;
     }
     public ParserSetup(ParserType t, byte sep, int ncolumns, boolean header, String [] columnNames, boolean singleQuotes) {
       _pType = t;
@@ -218,10 +226,10 @@ public abstract class CustomParser extends Iced {
       StreamDataOut nextChunk = dout;
       long lastProgress = pmon.progress();
       while( is.available() > 0 ){
-        if(pmon.progress() > lastProgress){
+        if (pmon.progress() > lastProgress) {
           lastProgress = pmon.progress();
           nextChunk.close();
-          if(dout != nextChunk)dout.reduce(nextChunk);
+          if(dout != nextChunk) dout.reduce(nextChunk);
           nextChunk = nextChunk.nextChunk();
         }
         parallelParse(cidx++,din,nextChunk);
@@ -276,8 +284,8 @@ public abstract class CustomParser extends Iced {
 
   public static class StreamData implements CustomParser.DataIn {
     final transient InputStream _is;
-    private byte[] _bits0 = new byte[64*1024];
-    private byte[] _bits1 = new byte[64*1024];
+    private byte[] _bits0 = new byte[2*1024*1024]; //allows for row lengths up to 2M
+    private byte[] _bits1 = new byte[2*1024*1024];
     private int _cidx0=-1, _cidx1=-1; // Chunk #s
     private int _coff0=-1, _coff1=-1; // Last used byte in a chunk
     public StreamData(InputStream is){_is = is;}
@@ -345,41 +353,14 @@ public abstract class CustomParser extends Iced {
       for(int i = 0; i < res.length; ++i)
         res[i] = new ParserSetup.TypeInfo();
       for(int i = 0; i < _ncols; ++i){
-        if(_domains[i].size() <= 1 && _nnums[i] >= .2) // clear number
+        if(_domains[i].size() <= 1) // only consider enums with multiple strings (otherwise it's probably garbage on NA)
           res[i]._type = ParserSetup.Coltype.NUM;
-        else if(_domains[i].size() > 2 && (double)_nstrings[i]/_nlines >= .95) { // clear string/enum
+        else if(_nzeros[i] > 0 && (Math.abs(_nzeros[i] + _nstrings[i] - _nlines) <= 1)) { // enum with 0s for NAs
+          res[i]._naStr = new ValueString("0");
           res[i]._type = ParserSetup.Coltype.STR;
-          res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .99;
-        } else if(_domains[i].size() == 2) { // possibly enum
-          // check for special cases
-          String [] domain = _domains[i].toArray(new String[2]);
-          for (int j = 0; j < domain.length; ++j)
-            domain[j] = domain[j].toUpperCase();
-          Arrays.sort(domain);
-          if (Arrays.deepEquals(domain, new String[]{"N", "Y"})
-            || Arrays.deepEquals(domain, new String[]{"'N'", "'Y'"})
-            || Arrays.deepEquals(domain, new String[]{"\"N\"", "\"Y\""})
-            || Arrays.deepEquals(domain, new String[]{"NO", "YES"})
-            || Arrays.deepEquals(domain, new String[]{"'NO'", "'YES'"})
-            || Arrays.deepEquals(domain, new String[]{"\"NO\"", "\"YES'"})
-            || Arrays.deepEquals(domain, new String[]{"F", "T"})
-            || Arrays.deepEquals(domain, new String[]{"'F'", "'T'"})
-            || Arrays.deepEquals(domain, new String[]{"\"F\"", "\"T\""})
-            || Arrays.deepEquals(domain, new String[]{"FALSE", "TRUE"})
-            || Arrays.deepEquals(domain, new String[]{"'FALSE'", "'TRUE'"})
-            || Arrays.deepEquals(domain, new String[]{"\"FALSE\"", "\"TRUE\""})
-            ) {
-            res[i]._type = ParserSetup.Coltype.STR;
-            res[i]._strongGuess = true;
-            if (_nzeros[i] > 0 && (Math.abs(_nzeros[i] + _nstrings[i] - _nlines) <= 1))
-              res[i]._naStr = new ValueString("0");
-          } else { // some generic two strings, could be garbage or enums
-            if ((double)_nstrings[i] / _nlines >= .95) {
-              res[i]._type = ParserSetup.Coltype.STR;
-              res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .99;
-            } else if (_nnums[i] > 0 && (double)_nnums[i] / _nlines > .2)
-              res[i]._type = ParserSetup.Coltype.NUM;
-          }
+          res[i]._strongGuess = true;
+        } else if(_nstrings[i] >= 9*(_nnums[i]+_nzeros[i])) { // probably generic enum
+          res[i]._type = ParserSetup.Coltype.STR;
         }
       }
       return res;

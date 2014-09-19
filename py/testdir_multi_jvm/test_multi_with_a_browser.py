@@ -16,9 +16,9 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True
         if (localhost):
-            h2o.build_cloud(3, java_heap_GB=1, use_hdfs=True, base_port=54321)
+            h2o.build_cloud(3, java_heap_GB=1, use_hdfs=True)
         else:
-            h2o_hosts.build_cloud_with_hosts(base_port=54321)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):

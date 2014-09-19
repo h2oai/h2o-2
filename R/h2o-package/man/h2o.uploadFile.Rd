@@ -9,7 +9,7 @@ Uploads a file from the local drive and parses it, returning an object containin
 }
 \usage{
 h2o.uploadFile(object, path, key = "", parse = TRUE, header, 
-  sep = "", col.names, silent = TRUE)
+  sep = "", col.names, silent = TRUE, parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -37,6 +37,9 @@ The complete URL or normalized file path of the file to be imported. Each row of
   \item{silent}{
 (Optional) A logical value indicating whether or not to display an upload progress bar.
 }
+\item{parser_type}{
+(Optional) Specify the type of data to be parsed. parser_type = "AUTO" is the default, other acceptable values are "SVMLight", "XLS", and "CSV".
+  }
 }
 
 \details{

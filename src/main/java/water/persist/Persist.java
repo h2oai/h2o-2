@@ -20,11 +20,23 @@ public abstract class Persist<T> {
     Persist ice = null;
     URI uri = H2O.ICE_ROOT;
     if( uri != null ) { // Otherwise class loaded for reflection
-      if( uri.getScheme() == null || Schemes.FILE.equals(uri.getScheme()) ) {
+      boolean windowsPath = uri.toString().matches("^[a-zA-Z]:.*");
+
+      // System.out.println("TOM uri getPath(): " + uri.getPath());
+      // System.out.println("TOM windowsPath: " + (windowsPath ? "true" : "false"));
+
+      if ( windowsPath ) {
+        ice = new PersistFS(new File(uri.toString()));
+      }
+      else if ((uri.getScheme() == null) || Schemes.FILE.equals(uri.getScheme())) {
         ice = new PersistFS(new File(uri.getPath()));
-      } else if( Schemes.HDFS.equals(uri.getScheme()) ) {
+      }
+      else if( Schemes.HDFS.equals(uri.getScheme()) ) {
         ice = new PersistHdfs(uri);
       }
+
+      // System.out.println("TOM ice is null: " + ((ice == null) ? "true" : "false"));
+
 // TODO ice on other back-ends?
 //        else if( Schemes.S3.equals(uri.getScheme()) ) {
 //          ice = new PersistS3(uri);
@@ -38,8 +50,10 @@ public abstract class Persist<T> {
       I[Value.TACHYON] = new PersistTachyon();
 
       // By popular demand, clear out ICE on startup instead of trying to preserve it
-      if( H2O.OPT_ARGS.keepice == null ) ice.clear();
-      else ice.loadExisting();
+      if( H2O.OPT_ARGS.keepice == null )
+        ice.clear();
+      else
+        ice.loadExisting();
     }
   }
 

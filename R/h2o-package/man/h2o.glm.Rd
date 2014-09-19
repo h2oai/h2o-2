@@ -7,9 +7,9 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-h2o.glm(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlambda = -1, 
+h2o.glm(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5, nlambda = -1, 
   lambda.min.ratio = -1, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, 
-  prior, variable_importances = 1, use_all_factor_levels = 0, tweedie.p = 
+  prior, variable_importances = FALSE, use_all_factor_levels = FALSE, tweedie.p =
   ifelse(family == 'tweedie', 1.5, as.numeric(NA)), iter.max = 100, 
   higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, 
   max_predictors = -1)
@@ -29,6 +29,15 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
 }
   \item{family}{
 A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported. When a model is specified as Tweedie, users must also specify the appropriate Tweedie power. 
+}
+  \item{link}{
+(Optional) The link function relates the linear predictor to the distribution function. Default is the canonical link for the specified family. The full list of supported links: \cr
+\cr
+gaussian: identity, log, inverse \cr
+binomial: logit, log \cr
+poisson: log, identity \cr
+gamma: inverse, log, identity \cr
+tweedie: tweedie \cr
 }
   \item{nfolds}{
 (Optional) Number of folds for cross-validation.
@@ -54,10 +63,10 @@ A description of the error distribution and corresponding link function to be us
 (Optional) Prior probability of class 1. Only used if \code{family = "binomial"}. When omitted, prior will default to the frequency of class 1 in the response column.
   }
   \item{variable_importances}{
-  (Optional) A numeric value either 0 or 1 to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.
+  (Optional) A logical value either TRUE or FALSE to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.
   }
   \item{use_all_factor_levels}{
-  (Optional) A numeric value either 0 or 1 to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!
+  (Optional) A logical value either TRUE or FALSE to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!
   }
   \item{tweedie.p}{
   (Optional) The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}.
@@ -106,11 +115,35 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
-prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
-  "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
-h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", 
-  nfolds = 0, alpha = 0.5, lambda_search=FALSE)
+prostatePath = system.file("extdata", "prostate.csv", package = "h2o")
+prostate.hex = h2o.importFile(localH2O, path = prostatePath, key = "prostate.hex")
+h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, 
+        family = "binomial", nfolds = 0, alpha = 0.5, lambda_search = FALSE, 
+        use_all_factor_levels = FALSE, variable_importances = FALSE, higher_accuracy = FALSE)
+
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
-h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 2, alpha = 0.1)
+h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.1,
+        lambda_search = FALSE, use_all_factor_levels = FALSE, variable_importances = FALSE, 
+        higher_accuracy = FALSE)
+
+\dontrun{
+# GLM variable importance
+# Also see:
+#   https://github.com/0xdata/h2o/blob/master/R/tests/testdir_demos/runit_demo_VI_all_algos.R
+data.hex = h2o.importFile(
+  localH2O,
+  path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv",
+  key = "data.hex")
+myX = 1:20
+myY="y"
+my.glm = h2o.glm(x=myX, y=myY, data=data.hex, family="binomial",standardize=T,
+                 use_all_factor_levels=T,higher_accuracy=T,lambda_search=T,
+                 return_all_lambda=T,variable_importances=T)
+best_model = my.glm@best_model
+n_coeff = abs(my.glm@models[[best_model]]@model$normalized_coefficients)
+VI = abs(n_coeff[-length(n_coeff)])
+glm.VI = VI[order(VI,decreasing=T)]
+print(glm.VI)
+}
 }

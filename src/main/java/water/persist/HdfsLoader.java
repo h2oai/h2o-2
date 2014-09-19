@@ -23,6 +23,10 @@ public class HdfsLoader {
       return;
     }
 
+    if (H2O.OPT_ARGS.hdfs_version != null) {
+      Log.info("HDFS version specified on the command line: " + H2O.OPT_ARGS.hdfs_version);
+    }
+
     // Load the HDFS backend for existing hadoop installations.
     // FIX! hadoop/mapr supports other variants? also why isn't port an option on mapr, and why volume?
     // port should be optional

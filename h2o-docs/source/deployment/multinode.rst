@@ -2,7 +2,7 @@
 
 
 H\ :sub:`2`\ O on a Multi-Node Cluster
-=======================================
+======================================
 
 The purpose of this walk-through is to show users how to set up 
 an H\ :sub:`2`\ O multi-node cluster. Begin by locating a set of hosts to make up our cluster (a host could be a server, an EC2 instance, or your laptop.)
@@ -11,7 +11,7 @@ an H\ :sub:`2`\ O multi-node cluster. Begin by locating a set of hosts to make u
 **STEP 1**
 
 To download H\ :sub:`2`\ O, including the .jar, go to
-the H\ :sub:`2`\ O `downloads page <http://0xdata.com/downloadtable/>`_ and choose the version that is right for your environment. 
+the H\ :sub:`2`\ O `downloads page <http://0xdata.com/download/>`_ and choose the version that is right for your environment.
 
 
 **STEP 2**

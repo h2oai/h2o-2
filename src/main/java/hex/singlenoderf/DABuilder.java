@@ -4,6 +4,7 @@ package hex.singlenoderf;
 import hex.singlenoderf.SpeeDRF.DRFParams;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
+import water.Job;
 import water.Key;
 import water.Timer;
 import water.UKV;
@@ -71,6 +72,7 @@ public class DABuilder {
 
     /** Build data adapter for given frame */
     protected DataAdapter inhaleData(Frame fr, boolean useNonLocal) {
+      Log.info("Prepping for data inhale.");
       long id = getChunkId(fr);
       if (id == -99999) {
         return null;
@@ -120,8 +122,11 @@ public class DABuilder {
       Log.info(Log.Tag.Sys.RANDF,"Beginning Random Forest Inhale.");
       ForkJoinTask.invokeAll(dataInhaleJobs);
 
+      if(dapt._jobKey != null && !Job.isRunning(dapt._jobKey)) throw new Job.JobCancelledException();
+
       // Shrink data
       dapt.shrink();
+      if(dapt._jobKey != null && !Job.isRunning(dapt._jobKey)) throw new Job.JobCancelledException();
       Log.info(Log.Tag.Sys.RANDF,"Inhale done in " + t_inhale);
       return dapt;
     }
@@ -129,6 +134,7 @@ public class DABuilder {
     static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final boolean[] isByteCol, final long[] naCnts, boolean regression) {
       return new RecursiveAction() {
         @Override protected void compute() {
+          if(dapt._jobKey != null && !Job.isRunning(dapt._jobKey)) throw new Job.JobCancelledException();
           try {
             Chunk[] chks = new Chunk[fr.numCols()];
             int ncolumns = chks.length;
@@ -136,6 +142,7 @@ public class DABuilder {
               chks[i] = fr.vecs()[i].chunkForChunkIdx(cidx);
             }
             for (int j = 0; j < chks[0]._len; ++j) {
+              if(dapt._jobKey != null && !Job.isRunning(dapt._jobKey)) throw new Job.JobCancelledException();
               int rowNum = (int)chks[0]._start + j;
               boolean rowIsValid = false;
               for(int c = 0; c < chks.length; ++c) {
@@ -161,7 +168,7 @@ public class DABuilder {
               if (!rowIsValid) dapt.markIgnoredRow(j);
             }
           } catch (Throwable t) {
-            t.printStackTrace();
+            //
           }
         }
       };

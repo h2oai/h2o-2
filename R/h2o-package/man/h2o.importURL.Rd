@@ -7,7 +7,8 @@ Import Data from URL
 Imports a file from the URL and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.importURL(object, path, key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importURL(object, path, key = "", parse = TRUE, header, sep = "", col.names,
+              parser_type="AUTO")
 }
 
 \arguments{
@@ -32,6 +33,9 @@ The complete URL of the file to be imported. Each row of data appears as one lin
   \item{col.names}{
 (Optional) A \code{\linkS4class{H2OParsedData}} object containing a single delimited line with the column names for the file.
   }
+  \item{parser_type}{
+  (Optional) Specify the type of data to be parsed. parser_type = "AUTO" is the default, other acceptable values are "SVMLight", "XLS", and "CSV".
+    }
 }
 \details{
 WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
@@ -44,10 +48,12 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 \code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.uploadFile}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
   "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
 class(prostate.hex)
 summary(prostate.hex)
+}
 }

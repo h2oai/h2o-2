@@ -107,6 +107,16 @@ class Basic(unittest.TestCase):
                     GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
                     jobids.append(GBMFirstResult['job_key'])
                     h2o.check_sandbox_for_errors()
+
+                    # try ray's 'models' request to see if anything blows up
+                    modelsParams = {
+                        'key': None,
+                        'find_compatible_frames': 0,
+                        'score_frame': None
+                    }
+                    modelsResult = h2o.nodes[0].models(timeoutSecs=10, **modelsParams)
+                    print "modelsResult:", h2o.dump_json(modelsResult)
+
                     
                 # have to pass the job id
                 # for j in jobids:

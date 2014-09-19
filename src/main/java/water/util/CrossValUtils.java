@@ -24,7 +24,7 @@ public class CrossValUtils {
       for (int i = 0; i < job.n_folds; ++i) {
         if (job.state != Job.JobState.RUNNING) break;
         Key[] destkeys = new Key[]{Key.make(basename + "_xval" + i + "_train"), Key.make(basename + "_xval" + i + "_holdout")};
-        NFoldFrameExtractor nffe = new NFoldFrameExtractor(job.source, job.n_folds, i, destkeys, null);
+        NFoldFrameExtractor nffe = new NFoldFrameExtractor(job.source, job.n_folds, i, destkeys, Key.make() /*key used for locking only*/);
         H2O.submitTask(nffe);
         Frame[] splits = nffe.getResult();
         // Cross-validate individual splits

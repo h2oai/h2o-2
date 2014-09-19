@@ -2,6 +2,7 @@ package hex.deeplearning;
 
 import hex.FrameTask;
 import hex.deeplearning.DeepLearning.Loss;
+import org.apache.commons.lang.ArrayUtils;
 import water.Iced;
 import water.MemoryManager;
 import water.api.Request.API;
@@ -89,16 +90,8 @@ public abstract class Neurons {
 
   public DenseVector _avg_a;
 
-//  /**
-//   * We need a way to encode a missing value in the neural net forward/back-propagation scheme.
-//   * For simplicity and performance, we simply use the largest values to encode a missing value.
-//   * If we run into exactly one of those values with regular neural net updates, then we're very
-//   * likely also running into overflow problems, which will trigger a NaN somewhere, which will be
-//   * caught and lead to automatic job cancellation.
-//   */
-//  public static final int missing_int_value = Integer.MAX_VALUE; //encode missing label or target
-//  public static final double missing_double_value = Double.MAX_VALUE; //encode missing input
-
+  public static final int missing_int_value = Integer.MAX_VALUE; //encode missing label
+  public static final Float missing_real_value = Float.NaN; //encode missing regression target
 
   /**
    * Helper to check sanity of Neuron layers
@@ -534,6 +527,23 @@ public abstract class Neurons {
     return rate;
   }
 
+  /**
+   * Compute learning rate with AdaDelta, specialized for DenseVector (Bias)
+   * @param grad2 squared gradient
+   * @param row neuron index
+   * @param bias_ada_dx_g Matrix holding helper values (2 floats per weight)
+   * @param rho hyper-parameter #1
+   * @param eps hyper-parameter #2
+   * @return learning rate
+   */
+  private static float computeAdaDeltaRateForBias(final float grad2, final int row,
+                                                    final DenseVector bias_ada_dx_g,
+                                                    final float rho, final float eps) {
+    bias_ada_dx_g.raw()[2*row+1] = rho * bias_ada_dx_g.raw()[2*row+1] + (1f - rho) * grad2;
+    final float rate = Utils.approxSqrt((bias_ada_dx_g.raw()[2*row  ] + eps)/(bias_ada_dx_g.raw()[2*row+1] + eps));
+    bias_ada_dx_g.raw()[2*row]   = rho * bias_ada_dx_g.raw()[2*row  ] + (1f - rho) * rate * rate * grad2;
+    return rate;
+  }
 
   /**
    * Helper to enforce learning rule to satisfy sparsity constraint:
@@ -558,19 +568,18 @@ public abstract class Neurons {
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
   void update_bias(final DenseVector _b, final DenseVector _bm, final int row,
-                   final float partial_grad, final float avg_grad2, float rate, final float momentum) {
+                   float partial_grad, final float avg_grad2, float rate, final float momentum) {
     final boolean have_momenta = _minfo.has_momenta();
     final boolean have_ada = _minfo.adaDelta();
+    final float l1 = (float)params.l1;
+    final float l2 = (float)params.l2;
+    final float bias = _b.get(row);
+    partial_grad -= Math.signum(bias) * l1 + bias * l2;
 
     if (have_ada) {
       final float rho = (float)params.rho;
       final float eps = (float)params.epsilon;
-      _bias_ada_dx_g.set(2*row+1, _bias_ada_dx_g.get(2*row+1) * rho);
-      _bias_ada_dx_g.add(2*row+1, (1f-rho)*avg_grad2);
-      final float RMS_dx = Utils.approxSqrt(_bias_ada_dx_g.get(2*row) + eps);
-      final float invRMS_g = Utils.approxInvSqrt(_bias_ada_dx_g.get(2*row+1) + eps);
-      rate = RMS_dx*invRMS_g;
-      _bias_ada_dx_g.set(2*row, rho * _bias_ada_dx_g.get(2*row) + (1f - rho) * rate * rate * avg_grad2);
+      rate = computeAdaDeltaRateForBias(avg_grad2, row, _bias_ada_dx_g, rho, eps);
     }
     if (!params.nesterov_accelerated_gradient) {
       final float delta = rate * partial_grad;
@@ -654,18 +663,28 @@ public abstract class Neurons {
      *             from to be mapped into the input neuron layer
      */
     public void setInput(long seed, final double[] data) {
+//      Log.info("Data: " + ArrayUtils.toString(data));
       assert(_dinfo != null);
       double [] nums = MemoryManager.malloc8d(_dinfo._nums); // a bit wasteful - reallocated each time
       int    [] cats = MemoryManager.malloc4(_dinfo._cats); // a bit wasteful - reallocated each time
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){
-        // Gracefully handle NaN input values -> don't activate any of the horizontalized input features
-        // (can occur when testing data has categorical levels that are not part of training)
-        if (!Double.isNaN(data[i])) {
-          int c = (int) data[i];
+        // This can occur when testing data has categorical levels that are not part of training (or if there's a missing value)
+        if (Double.isNaN(data[i])) {
+          if (_dinfo._catMissing[i]!=0) cats[ncats++] = (_dinfo._catOffsets[i+1]-1); //use the extra level made during training
+          else {
+            if (!_dinfo._useAllFactorLevels)
+              throw new IllegalArgumentException("Model was built without missing categorical factors in column "
+                      + _dinfo.coefNames()[i] + ", but found unknown (or missing) categorical factors during scoring."
+                      + "\nThe model needs to be built with use_all_factor_levels=true for this to work.");
+            // else just leave all activations at 0, and since all factor levels were enabled,
+            // this is OK (missing or new categorical doesn't activate any levels seen during training)
+          }
+        } else {
+          int c = (int)data[i];
           if (_dinfo._useAllFactorLevels)
             cats[ncats++] = c + _dinfo._catOffsets[i];
-          else if (c != 0)
+          else if (c!=0)
             cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
         }
       }
@@ -673,7 +692,7 @@ public abstract class Neurons {
       for(;i < n;++i){
         double d = data[i];
         if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
-        nums[i-_dinfo._cats] = d;
+        nums[i-_dinfo._cats] = d; //can be NaN for missing numerical data
       }
       setInput(seed, nums, ncats, cats);
     }
@@ -690,7 +709,8 @@ public abstract class Neurons {
       _a = _dvec;
       Arrays.fill(_a.raw(), 0f);
       for (int i=0; i<numcat; ++i) _a.set(cats[i], 1f);
-      for (int i=0; i<nums.length; ++i) _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f : (float) nums[i]);
+      for (int i=0; i<nums.length; ++i) _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f /*Always do MeanImputation during scoring*/ : (float) nums[i]);
+//      Log.info("Input Layer: " + ArrayUtils.toString(_a.raw()));
 
       // Input Dropout
       if (_dropout == null) return;
@@ -750,7 +770,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-        Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
+        Utils.mult(_a.raw(), (float)(1-params.hidden_dropout_ratios[_index]));
       }
     }
   }
@@ -835,7 +855,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-        Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
+        Utils.mult(_a.raw(), (float)(1-params.hidden_dropout_ratios[_index]));
       }
     }
   }
@@ -886,7 +906,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-        Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
+        Utils.mult(_a.raw(), (float)(1-params.hidden_dropout_ratios[_index]));
       }
     }
   }
@@ -915,8 +935,10 @@ public abstract class Neurons {
         scale += _a.get(row);
       }
       for( int row = 0; row < rows; row++ ) {
-        if (Float.isNaN(_a.get(row)))
+        if (Float.isNaN(_a.get(row))) {
+          _minfo.set_unstable();
           throw new RuntimeException("Numerical instability, predicted NaN.");
+        }
         _a.raw()[row] /= scale;
       }
     }
@@ -928,7 +950,7 @@ public abstract class Neurons {
      * @param target actual class label
      */
     protected void bprop(int target) {
-//      if (target == missing_int_value) return; //ignore missing response values
+      assert (target != missing_int_value); // no correction of weights/biases for missing label
       float m = momentum();
       float r = _minfo.adaDelta() ? 0 : rate(_minfo.get_processed_total()) * (1f - m);
       float g; //partial derivative dE/dy * dy/dnet
@@ -966,7 +988,7 @@ public abstract class Neurons {
      * @param target floating-point target value
      */
     protected void bprop(float target) {
-//      if (target == missing_double_value) return;
+      assert (target != missing_real_value);
       if (params.loss != Loss.MeanSquare) throw new UnsupportedOperationException("Regression is only implemented for MeanSquare error.");
       final int row = 0;
       // Computing partial derivative: dE/dnet = dE/dy * dy/dnet = dE/dy * 1

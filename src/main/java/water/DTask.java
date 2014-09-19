@@ -1,5 +1,6 @@
 package water;
 
+import jsr166y.CountedCompleter;
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 
@@ -51,13 +52,13 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   /** Override to remove 2 lines of logging per RPC.  0.5M RPC's will lead to
    *  1M lines of logging at about 50 bytes/line produces 50M of log file,
    *  which will swamp all other logging output. */
-  public boolean logVerbose() { return true; }
+  public boolean logVerbose() { return false; }
 
   @Override public String toString(){return getClass().getSimpleName();}
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.put(_ex); }
   @Override public <T extends Freezable> T read(AutoBuffer bb) { _ex = bb.get(); return (T)this; }
   @Override public <F extends Freezable> F newInstance() { throw barf("newInstance"); }
-  @Override public int frozenType() {throw barf("frozeType");}
+  @Override public int frozenType() {throw barf("frozenType");}
   @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
   @Override public water.api.DocGen.FieldDoc[] toDocField() { return null; }
   public void copyOver(Freezable other) {
@@ -73,43 +74,34 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
    * Basically a wrapper around DTask which enables us to bypass
    * remote/local distinction (RPC versus submitTask).
    */
-  public static abstract class DKeyTask<T extends DKeyTask,V extends Iced> extends Iced{
-    private transient H2OCountedCompleter _task;
+  public static abstract class DKeyTask<T extends DKeyTask,V extends Iced> extends DTask<DKeyTask>{
+    private final Key _key;
     public DKeyTask(final Key k) {this(null,k);}
     public DKeyTask(H2OCountedCompleter cmp,final Key k) {
-      final DKeyTask dk = this;
-
-      final DTask dt = new DTask(cmp) {
-        @Override
-        public void compute2() {
-          Value val = H2O.get(k);
-          if(val != null) {
-            V v = val.get();
-            dk._task = this;
-            dk.map(v);
-          }
-          tryComplete();
-        }
-      };
-      if(k.home()) _task = dt;
-      else {
-        _task = new H2OCountedCompleter() {
-          @Override
-          public void compute2() {
-            new RPC(k.home_node(),dt).addCompleter(this).call();
-          }
-        };
-      }
+      super(cmp);
+      _key = k;
     }
-    protected H2OCountedCompleter getCurrentTask(){ return _task;}
+    // override this
     protected abstract void map(V v);
-    public void submitTask() {H2O.submitTask(_task);}
-    public void forkTask() {_task.fork();}
 
+    @Override public final void compute2(){
+      if(_key.home()){
+        Value val = H2O.get(_key);
+        if(val != null) {
+          V v = val.get();
+          map(v);
+        }
+        tryComplete();
+      } else new RPC(_key.home_node(),this).addCompleter(this).call();
+    }
+    // onCompletion must be empty here, may be invoked twice (on remote and local)
+    @Override public void onCompletion(CountedCompleter cc){}
+
+    public void submitTask() {H2O.submitTask(this);}
+    public void forkTask() {fork();}
     public T invokeTask() {
-      assert _task.getCompleter() == null;
-      submitTask();
-      _task.join();
+      H2O.submitTask(this);
+      join();
       return (T)this;
     }
   }

@@ -9,8 +9,11 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global SEED, localhost
-        h2o.build_cloud(1,java_heap_GB=10)
-        #h2o_hosts.build_cloud_with_hosts()
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(java_heap_GB=10)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):

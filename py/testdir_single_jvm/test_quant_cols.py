@@ -7,6 +7,7 @@ DO_PLOT = getpass.getuser()=='kevin'
 DO_MEDIAN = False
 MAX_QBINS = 1000
 MULTI_PASS = 1
+DO_SCIPY_COMPARE = False
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -32,15 +33,9 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
     
-        if getpass.getuser()=='kevin':
-            tryList = [
-                (None, '/home/kevin/Downloads/t.csv', 15, 11, 'cE', 300), 
-                ('home-0xdiag-datasets', 'airlines/year2013.csv', None, None, 'cE', 300), 
-                ]
-        else:
-            tryList = [
-                ('home-0xdiag-datasets', 'airlines/year2013.csv', None, None, 'cE', 300), 
-                ]
+        tryList = [
+            ('home-0xdiag-datasets', 'airlines/year2013.csv', None, None, 'cE', 300), 
+            ]
 
         # h2b.browseTheCloud()
         trial = 0
@@ -107,7 +102,9 @@ class Basic(unittest.TestCase):
 
                 # don't do for enums
                 # also get the median with a sort (h2o_summ.percentileOnSortedlist()
-                if 1==1:
+                # something wrong with mapping to float for some col. maybe don't use_genfromtxt 
+                # talking about airlines
+                if DO_SCIPY_COMPARE:
                     h2o_summ.quantile_comparisons(
                         csvPathnameFull,
                         skipHeader=True,

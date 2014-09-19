@@ -116,7 +116,7 @@ class Basic(unittest.TestCase):
             print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
             # no pattern waits for all
 
-            for i in range(15):
+            for i in range(3):
                 # now issue a couple background GBM jobs that we'll kill
                 jobids = []     
                 for j in range(5):

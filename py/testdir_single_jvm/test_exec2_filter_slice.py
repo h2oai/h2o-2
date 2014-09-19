@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'standard/covtype.data'
         hex_key = "c.hex"
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key, 
-            timeoutSecs=10)
+            timeoutSecs=20)
         print "Parse result['desination_key']:", parseResult['destination_key']
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
             for exprTemplate in exprList:
                 execExpr = h2e.fill_in_expr_template(exprTemplate, colX=0, n=0, row=1, keyX=hex_key, m=2)
                 execResultInspect, min_value = h2e.exec_expr(h2o.nodes[nodeX], execExpr, 
-                    resultKey=None, timeoutSecs=4)
+                    resultKey=None, timeoutSecs=10)
 
                 print "min_value:", min_value, "execExpr:", execExpr
                 h2o.verboseprint("min: ", min_value, "trial:", trial)

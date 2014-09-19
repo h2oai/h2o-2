@@ -5,15 +5,15 @@ class TestJUnit(unittest.TestCase):
 
     def test_A_all_junit(self):
         try:
-            h2o.build_cloud(node_count=2, java_heap_GB=3)
+            h2o.build_cloud(node_count=2, java_heap_GB=2)
 
             # we don't have the port or ip configuration here
             # that util/h2o.py does? Keep this in synch with spawn_h2o there.
             # also don't have --nosigar here?
             (ps, stdout, stderr) = h2o.spawn_cmd('junit', [
                     'java',
-                    '-Xms3G',
-                    '-Xmx3G',
+                    '-Xms2G',
+                    '-Xmx2G',
                     '-Dh2o.arg.ice_root='+h2o.tmp_dir('ice.'),
                     '-Dh2o.arg.name='+h2o.cloud_name(),
                     '-Dh2o.arg.ip='+h2o.get_ip_address(),

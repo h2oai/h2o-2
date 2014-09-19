@@ -65,7 +65,7 @@ class PerfRunner:
         """
         Create a Test object and push it onto the queue.
         """
-        self.pre = "192.168"
+        self.pre = "172.162.2"
         config_file = os.path.abspath(os.path.join(self.test_root_dir, prefix, testDir, testDir + ".cfg"))
         print "USING CONFIGURATION FROM THIS FILE: "
         print config_file
@@ -109,6 +109,11 @@ class PerfRunner:
         # Do _one_ test at a time
         while len(self.tests_not_started) > 0:
             test = self.tests_not_started.pop(0)
+            if "multinode" in test.test_name:
+                print
+                print "Skipping multinode test " + test.test_name
+                print
+                continue
             print
             print "Beginning test " + test.test_name
             print

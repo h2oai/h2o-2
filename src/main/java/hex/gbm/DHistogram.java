@@ -186,11 +186,11 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     Vec vecs[] = fr.vecs();
     for( int c=0; c<ncols; c++ ) {
       Vec v = vecs[c];
-      final float minIn = (float)v.min(); // inclusive vector min
-      final float maxIn = (float)v.max(); // inclusive vector max
+      final float minIn = (float)Math.max(v.min(),-Float.MAX_VALUE); // inclusive vector min
+      final float maxIn = (float)Math.min(v.max(), Float.MAX_VALUE); // inclusive vector max
       final float maxEx = find_maxEx(maxIn,v.isInt()?1:0); // smallest exclusive max
       final long vlen = v.length();
-      hs[c] = v.naCnt()==vlen || v.min()==v.max() || Float.isInfinite(minIn) || Float.isInfinite(maxIn) ? null :
+      hs[c] = v.naCnt()==vlen || v.min()==v.max() ? null :
         make(fr._names[c],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),minIn,maxEx,vlen,doGrpSplit,isBinom);
     }
     return hs;

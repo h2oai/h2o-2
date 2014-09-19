@@ -7,9 +7,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import water.*;
+import water.api.FrameSplitPage;
 import water.api.ImportFiles2;
+import water.api.Parse2;
 import water.deploy.Node;
 import water.deploy.NodeVM;
+import water.parser.CustomParser;
+import water.parser.GuessSetup;
 import water.util.Log;
 
 public class ParserTest2 extends TestUtil {
@@ -758,6 +762,8 @@ public class ParserTest2 extends TestUtil {
     Frame f1 = null,f2 = null, f3=null;
     try {
       files = ImportFiles2.importPath("smalldata/parse_folder_test");
+      // test we can run guess setup task (run by gui)
+      new GuessSetup.GuessSetupTsk(new CustomParser.ParserSetup(),true).invoke(files);
       f1 = ParseDataset2.parse(Key.make("multifile"), files);
       files2 = ImportFiles2.importPath("smalldata/glm_test/prostate_cat_replaced.csv");
       f3 = ParseDataset2.parse(Key.make("singleFile"), files2);
@@ -781,6 +787,7 @@ public class ParserTest2 extends TestUtil {
       }
     }
   }
+
   void runTests(){
     System.out.println("testBasic");
     testBasic();
@@ -839,7 +846,6 @@ public class ParserTest2 extends TestUtil {
 //              "smalldata/airlines/hiveallyears2k/04c40d7c-33c8-486c-8f08-e24ebb8832ed_000001",
 //              "smalldata/airlines/hiveallyears2k/04c40d7c-33c8-486c-8f08-e24ebb8832ed_000002",
 //              "smalldata/airlines/hiveallyears2k/04c40d7c-33c8-486c-8f08-e24ebb8832ed_000005",
-              "smalldata/airlines/uuid_airline.csv",
 //              "smalldata/allstate/claim_prediction_dict.html",
               "smalldata/allstate/claim_prediction_train_set_10000.csv.gz",
               "smalldata/allstate/claim_prediction_train_set_10000_bool.csv.gz",
@@ -1173,8 +1179,9 @@ public class ParserTest2 extends TestUtil {
               "smalldata/test/test_time.csv",
               "smalldata/test/test_tree.csv",
               "smalldata/test/test_tree_minmax.csv",
-              "smalldata/test/test_uuid.csv",
-              "smalldata/test/test_uuid_na.csv",
+//              "smalldata/test/test_uuid.csv", //PUB-1003
+//              "smalldata/test/test_uuid_na.csv", //PUB-1003
+//              "smalldata/airlines/uuid_airline.csv", //PUB-1003
               "smalldata/test/test_var.csv",
               "smalldata/Test_Arabic_Digit_short.data",
               "smalldata/tinyburn.csv",
@@ -1202,12 +1209,45 @@ public class ParserTest2 extends TestUtil {
       };
       for (String f : files) {
         Frame fr=null;
+        Key dest = null;
+        Key split1 = null;
+        Key split2 = null;
         try {
           Log.info("Trying to parse " + f);
           Key fkey = NFSFileVec.make(find_test_file(f));
           fr = ParseDataset2.parse(Key.make(), new Key[]{fkey});
+
+          Log.info("Trying to rebalance " + f);
+          final int splits = Math.min((int)fr.numRows(), 4*H2O.NUMCPUS*H2O.CLOUD.size());
+          dest = Key.make(f + ".balanced");
+          H2O.submitTask(new RebalanceDataSet(fr, dest, splits)).join();
+
+          Log.info("Trying to split " + f);
+          FrameSplitPage fsp = new FrameSplitPage();
+          fsp.source = fr;
+          fsp.ratios = new float[]{0.75f};
+          split1 = Key.make(f + ".one");
+          split2 = Key.make(f + ".two");
+          fsp.split_keys = new Key[]{split1, split2};
+          fsp.invoke();
+
+        } catch (IllegalArgumentException t) {
+          Log.info("Caught non-fatal exception:");
+          t.printStackTrace();
         } finally {
           if (fr != null) fr.delete();
+          if (dest != null) {
+            Frame balanced = UKV.get(dest);
+            if (balanced != null) balanced.delete();
+          }
+          if (split1 != null) {
+            Frame split = UKV.get(split1);
+            if (split != null) split.delete();
+          }
+          if (split2 != null) {
+            Frame split = UKV.get(split2);
+            if (split != null) split.delete();
+          }
         }
       }
     }

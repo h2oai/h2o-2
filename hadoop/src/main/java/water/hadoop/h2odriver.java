@@ -48,11 +48,18 @@ public class h2odriver extends Configured implements Tool {
   static int nthreads = -1;
   static int basePort = -1;
   static boolean beta = false;
+  static boolean enableRandomUdpDrop = false;
   static boolean enableExceptions = false;
   static boolean enableVerboseGC = false;
   static boolean enablePrintGCDetails = false;
   static boolean enablePrintGCTimeStamps = false;
   static boolean enableVerboseClass = false;
+  static boolean enablePrintCompilation = false;
+  static boolean enableExcludeMethods = false;
+  static boolean enableLog4jDefaultInitOverride = h2odriver_config.overrideLog4jInit();
+  static boolean enableDebug = false;
+  static boolean enableSuspend = false;
+  static int debugPort = 5005;    // 5005 is the default from IDEA
   static String licenseFileName = null;
 
   // State filled in as a result of handling options.
@@ -540,6 +547,9 @@ public class h2odriver extends Configured implements Tool {
       else if (s.equals("-beta")) {
         beta = true;
       }
+      else if (s.equals("-random_udp_drop")) {
+        enableRandomUdpDrop = true;
+      }
       else if (s.equals("-ea")) {
         enableExceptions = true;
       }
@@ -548,6 +558,28 @@ public class h2odriver extends Configured implements Tool {
       }
       else if (s.equals("-verbose:class")) {
         enableVerboseClass = true;
+      }
+      else if (s.equals("-XX:+PrintCompilation")) {
+        enablePrintCompilation = true;
+      }
+      else if (s.equals("-exclude")) {
+        enableExcludeMethods = true;
+      }
+      else if (s.equals("-Dlog4j.defaultInitOverride=true")) {
+        enableLog4jDefaultInitOverride = true;
+      }
+      else if (s.equals("-debug")) {
+        enableDebug = true;
+      }
+      else if (s.equals("-suspend")) {
+        enableSuspend = true;
+      }
+      else if (s.equals("-debugport")) {
+        i++; if (i >= args.length) { usage(); }
+        debugPort = Integer.parseInt(args[i]);
+        if ((debugPort < 0) || (debugPort > 65535)) {
+          error("Debug port must be between 1 and 65535");
+        }
       }
       else if (s.equals("-XX:+PrintGCDetails")) {
         enablePrintGCDetails = true;
@@ -787,13 +819,18 @@ public class h2odriver extends Configured implements Tool {
 
       // MRv1 standard options, but also required for YARN.
       String mapChildJavaOpts =
-              "-Xms"
-              + mapperXmx + " -Xmx" + mapperXmx
+              "-Xms" + mapperXmx
+              + " -Xmx" + mapperXmx
               + (enableExceptions ? " -ea" : "")
               + (enableVerboseGC ? " -verbose:gc" : "")
               + (enablePrintGCDetails ? " -XX:+PrintGCDetails" : "")
               + (enablePrintGCTimeStamps ? " -XX:+PrintGCTimeStamps" : "")
-              + (enableVerboseClass ? " -verbose:class" : "");
+              + (enableVerboseClass ? " -verbose:class" : "")
+              + (enablePrintCompilation ? " -XX:+PrintCompilation" : "")
+              + (enableExcludeMethods ? " -XX:CompileCommand=exclude,water/fvec/NewChunk.append2slowd" : "")
+              + (enableLog4jDefaultInitOverride ? " -Dlog4j.defaultInitOverride=true" : "")
+              + (enableDebug ? " -agentlib:jdwp=transport=dt_socket,server=y,suspend=" + (enableSuspend ? "y" : "n") + ",address=" + debugPort : "")
+              ;
       conf.set("mapred.child.java.opts", mapChildJavaOpts);
       conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
 
@@ -841,6 +878,9 @@ public class h2odriver extends Configured implements Tool {
     }
     if (beta) {
         conf.set(h2omapper.H2O_BETA_KEY, "-beta");
+    }
+    if (enableRandomUdpDrop) {
+      conf.set(h2omapper.H2O_RANDOM_UDP_DROP_KEY, "-random_udp_drop");
     }
     if (licenseData != null) {
         conf.set(h2omapper.H2O_LICENSE_DATA_KEY, licenseData);

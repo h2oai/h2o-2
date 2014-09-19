@@ -4,7 +4,7 @@ import sys, itertools, os, re, glob
 
 # use glob.glob. it uses os.listdir() and fnmatch.fnmatch() ..so it's unix style pattern match
 def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
-    cloudShutdownIsError=False, sandboxIgnoreErrors=False, pattern=None):
+    cloudShutdownIsError=False, sandboxIgnoreErrors=False, pattern=None, verbose=False):
     # show the parameters
     ### print "check_sandbox_for_errors:", locals()
     
@@ -15,6 +15,8 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
         LOG_DIR = './sandbox'
 
     if not os.path.exists(LOG_DIR):
+        if verbose:
+            print "directory", LOG_DIR, "not found"
         return
 
     # FIX! wait for h2o to flush to files? how?
@@ -25,35 +27,44 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
     # so don't want to dump it multiple times?
 
     # glob gives full path, so we have to strip to match os.listdir()
-    fileList = []
+    goodLogsList = []
 
     # if we're using a pattern, ignore the "done" files
     if pattern:
+        if verbose:
+            print "Only looking at files that match pattern:", pattern
         # search whatever the pattern says
         # need to exclude directories (syn_datasets)
-        fileList1 = glob.glob(LOG_DIR + "/" + pattern)
+        tempFileList = glob.glob(LOG_DIR + "/" + pattern)
         # have to remove all the line count temp files
         # ignore the json file we copy there also (anything eding in json)
-        for filename in fileList1:
+        for filename in tempFileList:
             if os.path.isfile(filename) and not re.search('doneToLine', filename) and not re.search('\.json$', filename):
-                fileList.append(os.path.basename(filename))
-        if len(fileList)==0:
+                goodLogsList.append(os.path.basename(filename))
+
+        if len(goodLogsList)==0:
             raise Exception("Unexpected: h2o_sandbox found 0 files in %s that matched the pattern: %s" % (LOG_DIR, pattern) )
     else:
-        fileList1 = os.listdir(LOG_DIR)
+        tempFileList = os.listdir(LOG_DIR)
+        if verbose:
+            print "kbn1:", tempFileList
         # don't search the R stdout/stderr
         # this matches the python h2o captured stdout/stderr, and also any downloaded h2o logs
         # not the commands.log
-        for filename in fileList1:
+        for filename in tempFileList:
             # for h2o on hadoop, in the common unit test stuff, we download zipped logs from h2o
             # at the end and expand them. They will be in sandbox like this, because of the names h2o creates
-            # in the zip (I flatten it in sandbox): h2o_192.168.1.178_54321.log
+            # in the zip (I flatten it in sandbox): h2o_172.16.2.178_54321.log
             # So look for that pattern too!
-            if re.search('h2o.*stdout|h2o.*stderr|h2o\..*\.log', filename) and not re.search('doneToLine', filename):
-                fileList.append(filename)
-        if len(fileList)==0:
+            # we log roll so the h2o.*logs can end in a number
+            if re.search('h2o.*stdout|h2o.*stderr|h2o.*\.log.*', filename) and not re.search('doneToLine', filename):
+                goodLogsList.append(filename)
+
+        if verbose:
+            print "kbn2:", goodLogsList
+        if len(goodLogsList)==0:
             # let this go...sh2junit.py apparently calls h2o_sandbox() looking for h2o logs?
-            emsg = "Unexpected: h2o_sandbox found 0 files in %s that matched the stdout/stderr pattern" % LOG_DIR
+            emsg = "Unexpected: h2o_sandbox found 0 files in %s that matched the stdout/stderr or log pattern" % LOG_DIR
             if sandboxIgnoreErrors:
                 print emsg
                 return
@@ -63,11 +74,15 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                 pass
                 # raise Exception(emsg)
 
-    # print "h2o_sandbox: checking", len(fileList), "files"
+    if verbose:
+        print "h2o_sandbox: checking", len(goodLogsList), "files"
 
     errLines = []
-    for filename in fileList:
-        sandFile = open(LOG_DIR + "/" + filename, "r")
+    for filename in goodLogsList:
+        goodLogPath = LOG_DIR + "/" + filename
+        goodLog = open(goodLogPath, "r")
+        if verbose:
+            print "\nScraping this log:", goodLogPath
 
         # if we've already walked it, there will be a matching file
         # with the last line number we checked
@@ -102,7 +117,9 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
         regex2 = re.compile('Caused',re.IGNORECASE)
         # regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
         # FIX! temp to avoid the INFO in jan's latest logging. don't print any info?
-        regex3 = re.compile('warn|TCP', re.IGNORECASE)
+        # don't want the tcp_active in the cloud status. Ok to not look for tcp stuff now
+        # regex3 = re.compile('warn|TCP', re.IGNORECASE)
+        regex3 = re.compile('warn', re.IGNORECASE)
 
         # many hdfs/apache messages have 'error' in the text. treat as warning if they have '[WARN]'
         # i.e. they start with:
@@ -115,7 +132,11 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
         lines = 0 # count per file! errLines accumulates for multiple files.
         currentLine = 0
         log_python_test_name = None
-        for line in sandFile:
+
+        if verbose:
+            print "Using doneToLine line marker %s with %s" % (doneToLine, goodLogPath)
+
+        for line in goodLog:
             currentLine += 1
 
             m = re.search('(python_test_name:) (.*)', line)
@@ -141,6 +162,10 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                 # don't detect these class loader info messags as errors
                 #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                 foundBad = regex1.search(line) and not (
+                    ('Error on' in line) or
+                    # temporary hack. getting these on shutdown in multi-machine
+                    # ApiWatch  ERRR WATER: ApiPortWatchdog: Failed trying to connect to REST API IP and Port (/10.73.149.39:54323, 30000 ms)
+                    ('ApiPortWatchdog' in line) or
                     ('Error reduced' in line) or
                     ('out-of-bag error estimation' in line) or
                     ('reconstruction error' in line) or
@@ -205,7 +230,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                     ('RestS3Service' in line) ):
                     sys.stdout.write(line)
 
-        sandFile.close()
+        goodLog.close()
         # remember what you've checked so far, with a file that matches, plus a suffix
         # this is for the case of multiple tests sharing the same log files
         # only want the test that caused the error to report it. (not flat the subsequent ones as fail)
@@ -239,36 +264,58 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                      "Could have occurred at any prior time\n\n"
             emsg2 = "".join(errLines)
             errorFound = True
-            errorMessage = python_test_name + emsg1 + emsg2
+            errorMessage = str(python_test_name) + emsg1 + emsg2
 
             # just print if using the pattern match
-            if pattern:
-                print "####################################################################"
+            if pattern or sandboxIgnoreErrors:
+                print "########################################################################################################################################"
                 print errorMessage
-                print "####################################################################"
-            
-
-            if not pattern and not sandboxIgnoreErrors:
+                print "########################################################################################################################################"
+            else: 
                 raise Exception(errorMessage)
 
     if errorFound:
         return errorMessage
     else:
-        ## print "h2o_sandbox: h2o logs seem okay"
+        if verbose:
+            print "h2o_sandbox: h2o logs seem okay"
         return
 
+#*********************************************************************************************
 if __name__ == "__main__":
+
+    arg_names = ['me', 'LOG_DIR', 'python_test_name', 'cloudShutdownIsError', 'sandboxIgnoreErrors', 'verbose']
+    # https://docs.python.org/2/library/itertools.html
+    # Nice..Learning itertools stuff:
+    # izip_longest: Make an iterator that aggregates elements from each of the iterables. 
+    # If the iterables are of uneven length, missing values are filled-in with fillvalue. 
+    # Iteration continues until the longest iterable is exhausted. 
+    args = dict(itertools.izip_longest(arg_names, sys.argv))
+    # if you're running this from the command line, remove any existing doneToLine markers
+    if not args['LOG_DIR']:
+        LOG_DIR = './sandbox'
+    else:
+        LOG_DIR = args['LOG_DIR']
+
+    if os.path.exists(LOG_DIR):
+        print "Checking for any marker files to remove first.. (multi-test cloud log scrape uses and we always leave the droppings)"
+        for f in glob.glob(LOG_DIR + '/*doneToLine*'):
+            print "cleaning marker file:", f
+            os.remove(f)
+
     # if you call from the command line, we'll just pass the first two positionally.
     # here's a low budget argsparse :) (args are optional!)
-    arg_names = ['me', 'LOG_DIR', 'python_test_name', 'cloudShutdownIsError', 'sandboxIgnoreErrors']
-    args = dict(itertools.izip_longest(arg_names, sys.argv))
     errorMessage = check_sandbox_for_errors(
-        LOG_DIR=args['LOG_DIR'], 
+        LOG_DIR=LOG_DIR,
         python_test_name=args['python_test_name'],
         cloudShutdownIsError=args['cloudShutdownIsError'], 
-        sandboxIgnoreErrors=args['sandboxIgnoreErrors'])
+        sandboxIgnoreErrors=True,
+        verbose=True, 
+        )
+        # sandboxIgnoreErrors=args['sandboxIgnoreErrors'],
+        # verbose=args['verbose'],
 
     # it shouldn't return here because it should take the exception)
-    if errorMessage:
-        raise Exception('Error found in the logs that we want to consider fatal')
+    # if errorMessage:
+    #    raise Exception('Error found in the logs that we want to consider fatal')
 

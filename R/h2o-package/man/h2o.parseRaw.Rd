@@ -7,7 +7,7 @@ Parse Raw Data File
 Parses a raw data file, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.parseRaw(data, key = "", header, sep = "", col.names)
+h2o.parseRaw(data, key = "", header, sep = "", col.names,parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -25,6 +25,9 @@ An \code{\linkS4class{H2ORawData}} object to be parsed.
   }
   \item{col.names}{
 (Optional) A \code{\linkS4class{H2OParsedData}} object containing a single delimited line with the column names for the file.
+  }
+  \item{parser_type}{
+(Optional) Specify the type of data to be parsed. parser_type = "AUTO" is the default, other acceptable values are "SVMLight", "XLS", and "CSV".
   }
 }
 \details{

@@ -21,7 +21,7 @@ import h2o, h2o_cmd, h2o_kmeans, h2o_util, h2o_hosts, h2o_import as h2i
 
 def kmeans_doit(self, csvFilename, bucket, csvPathname, numRows, timeoutSecs=30):
     print "\nStarting KMeans of", csvFilename
-    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=csvFilename + ".hex", timeoutSecs=10)
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=csvFilename + ".hex", timeoutSecs=20)
     # hastie has two values, 1 and -1.
     # we could not specify cols, but this is more fun
     kwargs = {
@@ -53,7 +53,7 @@ def kmeans_doit(self, csvFilename, bucket, csvPathname, numRows, timeoutSecs=30)
     # inspect doesn't work
     # inspect = h2o_cmd.runInspect(None, key=kmeans['model']['_key'])
     # KMeansModel = inspect['KMeansModel']
-    modelView = h2o.nodes[0].kmeans_model_view(model='KMeansModel.hex')
+    modelView = h2o.nodes[0].kmeans_view(model='KMeansModel.hex')
     h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
     model = modelView['model']
     clusters = model['centers']

@@ -25,7 +25,7 @@ else
         echo "The possibilities should be relatively static over time"
         echo "Could be problems if other threads also using that user on these machines at same time"
         echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 \
+        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.164 \
             'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
 
 
@@ -72,12 +72,6 @@ echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 myPy() {
     DOIT=../testdir_single_jvm/n0.doit
     $DOIT $1/$2 || true
-    # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
-    # think of h2o.check_sandbox_for_errors()
-    rm -f -r sandbox/$1
-    mkdir -p sandbox/$1
-    cp -f sandbox/*log sandbox/$1
-    # rm -f sandbox/*log
 }
 
 
@@ -93,7 +87,7 @@ then
     # myPy c3 test_c3_rel.py
     myPy c3 test_c3_exec_copy.py
     myPy c3 test_c3_nongz_fvec.py
-    # myPy c4 test_c4_four_billion_rows.py
+    # myPy c4 test_c4_four_billion_rows_fvec.py
     # known failure last
     myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
     myPy c6 test_c6_hdfs_fvec.py

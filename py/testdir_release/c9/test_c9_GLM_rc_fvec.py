@@ -38,7 +38,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 # 'alpha': 0.5,
                 'lambda': 1e-8,
                 'alpha': 0.0,
-                'max_iter': 30,
+                'max_iter': 10,
                 'n_folds': 0,
                 'family': 'binomial',
                 'destination_key': "GLMKEY",

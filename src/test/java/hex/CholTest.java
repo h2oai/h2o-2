@@ -1,23 +1,17 @@
 package hex;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import hex.gram.Gram.InPlaceCholesky;
+import jsr166y.ForkJoinPool;
+import jsr166y.RecursiveAction;
 
-import java.io.File;
-import java.util.concurrent.ExecutionException;
-import java.util.Random;
-import java.util.Arrays;
-import java.lang.Math;
 import org.junit.Test;
 
+import water.H2O;
+import water.TestUtil;
+import water.util.Log;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
-
-import jsr166y.*;
-import water.H2O;
-import water.util.Utils;
-import water.util.Log;
-import water.TestUtil;
 
 public class CholTest extends TestUtil{
 
@@ -40,8 +34,8 @@ public class CholTest extends TestUtil{
       }
     }
     Log.info("CholTest::test exit");
-  } 
-  
+  }
+
   private final static class DataSetup implements Cloneable {
     public double xx[][];
     public DataSetup(double xx[][]) {

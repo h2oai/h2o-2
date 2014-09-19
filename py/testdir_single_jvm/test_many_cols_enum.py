@@ -3,14 +3,19 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 import h2o_exec as h2e
 
-def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
+def write_syn_dataset(csvPathname, rowCount, colCount, header, SEED):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
+
 
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            r = "a"
+            # header names need to be unique
+            if header and i==0:
+                r = "a" + str(j)
+            else:
+                r = "a"
             rowData.append(r)
 
         rowDataCsv = ",".join(map(str,rowData))
@@ -42,28 +47,31 @@ class Basic(unittest.TestCase):
     def test_many_cols_enum(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 11000, 'cA', 50),
-            (100, 10000, 'cB', 50),
-            (100, 9000, 'cC', 50),
-            (100, 8000, 'cD', 50),
-            (100, 7000, 'cE', 50),
-            (100, 6000, 'cF', 50),
-            (100, 5000, 'cG', 50),
+            (100, 11000, 0, 'cA', 180),
+            (100, 10000, 1, 'cB', 180),
+            (100, 9000, 0, 'cC', 180),
+            (100, 8000, 1, 'cD', 180),
+            (100, 7000, 0, 'cE', 180),
+            (100, 6000, 1, 'cF', 180),
+            (100, 5000, 0, 'cG', 180),
             ]
 
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
         cnum = 0
-        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
+        # it's interesting to force the first enum row to be used as header or not
+        # with many cols, we tend to hit limits about stuff fitting in a chunk (header or data)
+        for (rowCount, colCount, header, hex_key, timeoutSecs) in tryList:
             cnum += 1
             csvFilename = 'syn_' + str(SEED) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, SEED)
+            write_syn_dataset(csvPathname, rowCount, colCount, header, SEED)
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=60)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', header=header, 
+                hex_key=hex_key, timeoutSecs=60)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?

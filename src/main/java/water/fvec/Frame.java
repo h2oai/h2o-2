@@ -46,11 +46,13 @@ public class Frame extends Lockable<Frame> {
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
+    Futures fs = new Futures();
     for( int i=0; i<vecs.length; i++ ) {
       Key k = _keys[i] = vecs[i]._key;
       if( DKV.get(k)==null )    // If not already in KV, put it there
-        DKV.put(k,vecs[i]);
+        DKV.put(k,vecs[i], fs);
     }
+    fs.blockForPending();
     assert checkCompatible();
   }
 
@@ -573,6 +575,18 @@ public class Frame extends Lockable<Frame> {
     for( int i=0; i<vecs().length; i++ )
       sum += _vecs[i].byteSize();
     return sum;
+  }
+
+
+  // Allow sorting of columns based on some function
+  public void swap( int lo, int hi ) {
+    assert 0 <= lo && lo < _keys.length;
+    assert 0 <= hi && hi < _keys.length;
+    if( lo==hi ) return;
+    Vec vecs[] = vecs();
+    Vec v   = vecs [lo]; vecs  [lo] = vecs  [hi]; vecs  [hi] = v;
+    Key k   = _keys[lo]; _keys [lo] = _keys [hi]; _keys [hi] = k;
+    String n=_names[lo]; _names[lo] = _names[hi]; _names[hi] = n;
   }
 
   @Override public String toString() {

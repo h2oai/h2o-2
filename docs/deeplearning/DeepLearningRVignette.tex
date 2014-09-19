@@ -22,7 +22,7 @@
 \textsc{\small{Arno Candel \hspace{40pt} Viraj Parmar}}
 \\
 \bigskip
-\textsc{August 2014}
+\textsc{September 2014}
 \end{center}
 
 \tableofcontents
@@ -81,7 +81,7 @@ demo(h2o.deeplearning)
 
 \subsection{Support} \label{1.2}
 
-Users of the H2O package may submit general enquiries and bug reports to the 0xdata \href{h2ostream@googlegroups.com}{support address}. Alternatively, specific bugs or issues may be filed to the 0xdata \href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{JIRA}.
+Users of the H2O package may submit general enquiries and bug reports to the 0xdata \href{mailto:h2ostream@googlegroups.com}{support address}. Alternatively, specific bugs or issues may be filed to the 0xdata \href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{JIRA}.
 
 \subsection{Deep learning overview} \label{1.3}
 
@@ -176,6 +176,8 @@ Maxout & $f(\cdot) = \max (w_i x_i + b) \text{, rescale if} \max f(\cdot) \geq 1
 The $\tanh$ function is a rescaled and shifted logistic function and its symmetry around 0 allows the training algorithm to converge faster. The rectified linear activation function has demonstrated high performance on image recognition tasks, and is a more biologically accurate model of neuron activations (\href{http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf}{LeCun et al, 1998}). Maxout activation works particularly well with dropout, a regularization method discussed later in this vignette (\href{http://arxiv.org/pdf/1302.4389.pdf}{Goodfellow et al, 2013}). It is difficult to determine a ``best" activation function to use; each may outperform the others in separate scenarios, but grid search models (also described later) can help to compare activation functions and other parameters. The default activation is the $\tanh$ function. Each of these activation functions also has options in conjunction with dropout.
 \\
 \\
+\bigskip
+\\
 The following choices for the loss function $L(W,B$ $|$ $ j)$ are summarized in Table 2. The system default enforces the table's typical use rule based on whether regression or classification is being performed. Note here that $t^{(j)}$ and $o^{(j)}$ are the target output and actual output, respectively, for training example $j$; further, let $y$ denote the output units and $O$ the output layer.  
 \\
 \begin{table}[ht] 
@@ -260,7 +262,8 @@ Iterate until convergence criterion reached
 Here, the weights and bias updates follow the asynchronous  $\textsc{Hogwild!}$ procedure to incrementally adjust each node's parameters $W_n,B_n$ after seeing example $i$. The Avg$_n$ notation refers to the final averaging of these local parameters across all nodes to obtain the global model parameters and complete training.
 \subsubsection{Specifying the number of training samples per iteration} \label{2.2.4}
 H2O Deep Learning is scalable and can take advantage of a large cluster of compute nodes. There are three modes in which to operate. The default behavior is to let every node train on the entire (replicated) dataset, but automatically locally shuffling (and/or using a subset of) the training examples for each iteration. For datasets that don't fit into each node's memory (also depending on the heap memory specified by the -Xmx option), it might not be possible to replicate the data, and each compute node can be instructed to train only with local data. An experimental single node mode is available for the case where slow final convergence is observed due to the presence of too many nodes, but we've never seen this become necessary.
-The number of training examples (globally) presented to the distributed SGD worker nodes between model averaging is controlled by the important parameter \texttt{train\_samples\_per\_iteration}. The default value is -1, which results in all nodes processing all their local training data per iteration. Note that if \texttt{replicate\_training\_data} is enabled (true by default), this will result in training N epochs per iteration on N nodes, otherwise 1 epoch will be trained per iteration. \\ \\ Another special value is 0, which always results in 1 epoch per iteration, independent of the number of compute nodes. In general, any user-given positive number is permissible for this parameter. For large datasets, it might make sense to specify a fraction of the dataset. For example, if the training data contains $10$ million rows, and we specify the number of training samples per iteration as $100,000$ when running on $4$ nodes, then each node will process $25,000$ examples per iteration, and it will take $40$ such distributed iterations to process one epoch. If the value is set too high, it might take too long between synchronization and model convergence can be slow.  If the value is set too low, network communication overhead will dominate the runtime, and computational performance will suffer.
+\\
+The number of training examples (globally) presented to the distributed SGD worker nodes between model averaging is controlled by the important parameter \texttt{train\_samples\_per\_iteration}. One special value is -1, which results in all nodes processing all their local training data per iteration. Note that if \texttt{replicate\_training\_data} is enabled (true by default), this will result in training N epochs per iteration on N nodes, otherwise 1 epoch will be trained per iteration. Another special value is 0, which always results in 1 epoch per iteration, independent of the number of compute nodes. In general, any user-given positive number is permissible for this parameter. For large datasets, it might make sense to specify a fraction of the dataset. For example, if the training data contains $10$ million rows, and we specify the number of training samples per iteration as $100,000$ when running on $4$ nodes, then each node will process $25,000$ examples per iteration, and it will take $40$ such distributed iterations to process one epoch. If the value is set too high, it might take too long between synchronization and model convergence can be slow.  If the value is set too low, network communication overhead will dominate the runtime, and computational performance will suffer. The special value of -2 (the default) enables auto-tuning of this parameter based on the computational performance of the processors and the network of the system and attempts to find a good balance between computation and communication. Note that this parameter can affect the convergence rate during training.
 \\
 \noindent
 \subsection{Regularization} \label{2.3}
@@ -273,9 +276,9 @@ $\ell_1$ and $\ell_2$ regularization enforce the same penalties as they do with 
 $L'(W,B$ $|$ $j) = L(W,B$ $|$ $j) + \lambda_1 R_1(W,B$ $|$ $j) + \lambda_2 R_2(W,B$ $|$ $j)$
 \end{center}
 
-For $\ell_1$ regularization, $R_1(W,B$ $|$ $j)$ represents of the sum of all $\ell_1$ norms of the weights in the network; $R_2(W,B$ $|$ $j)$ represents the sum of squares of all the weights in the network. The constants $\lambda_1$ and $\lambda_2$ are generally chosen to be very small, for example $10^{-3}$. 
+For $\ell_1$ regularization, $R_1(W,B$ $|$ $j)$ represents of the sum of all $\ell_1$ norms of the weights and biases in the network; $R_2(W,B$ $|$ $j)$ represents the sum of squares of all the weights and biases in the network. The constants $\lambda_1$ and $\lambda_2$ are generally chosen to be very small, for example $10^{-5}$.
 \\
-The second type of regularization available for deep learning is a recent innovation called dropout (\href{http://arxiv.org/pdf/1207.0580.pdf}{Hinton et al., 2012}). Dropout constrains the online optimization such that during forward propagation for a given training example, each neuron in the network suppresses its activation with probability $\textsc{P}$, generally taken to be 0.1 or 0.2 for input neurons and 0.5 for hidden neurons. The effect is twofold: as with $\ell_2$ regularization, the network weight values are scaled toward 0; furthermore, each training example trains a different model, albeit sharing the same global parameters. Thus dropout allows an exponentially large number of models to be averaged as an ensemble, which prevents overfitting and improves generalization. 
+The second type of regularization available for deep learning is a recent innovation called dropout (\href{http://arxiv.org/pdf/1207.0580.pdf}{Hinton et al., 2012}). Dropout constrains the online optimization such that during forward propagation for a given training example, each neuron in the network suppresses its activation with probability $\textsc{P}$, generally taken to be less than 0.2 for input neurons and up to 0.5 for hidden neurons. The effect is twofold: as with $\ell_2$ regularization, the network weight values are scaled toward 0; furthermore, each training example trains a different model, albeit sharing the same global parameters. Thus dropout allows an exponentially large number of models to be averaged as an ensemble, which can prevent overfitting and improve generalization. Note that input dropout can be especially useful when the feature space is large and noisy.
 
 \subsection{Advanced optimization} \label{2.4}
 H2O features both manual and automatic versions of advanced optimization. The manual mode features include momentum training and rate annealing, while automatic mode features adaptive learning rate.
@@ -403,7 +406,8 @@ H2O R users have access to a slick web interface to mirror the model building pr
 
 \subsubsection{Variable importances} \label{3.3.1}
 
-One particularly useful visualization in the web interface is the variable importances, which can be enabled with the additional argument \texttt{variable\_importances=TRUE}. This features allows us to witness the absolute and relative predictive strength of each feature in the classification task. For the purposes of digit classification, this aspect is less useful since each feature merely correponds to a pixel number that is not relevant to the model's more abstract feature representation; but it is useful in general for less uniform data.
+One useful feature is the variable importances option, which can be enabled with the additional argument \texttt{variable\_importances=TRUE}. This features allows us to view the absolute and relative predictive strength of each feature in the prediction task. From R, you can access these strengths with the command \texttt{mnist\_model@model\$varimp}. You can also view a visualization of the variable
+importances on the web interface.
 
 \subsubsection{Java model} \label{3.3.2}
 
@@ -564,12 +568,12 @@ head(test_recon.hex)
 \item \texttt{l1}: The default is 0. See \ref{2.3} for more details.
 \item \texttt{l2}: The default is 0. See \ref{2.3} for more details.
 \item \texttt{max\_w2}: A maximum on the sum of the squared incoming weights into any one neuron. This tuning parameter is especially useful for unbound activation functions such as Maxout or Rectifier. The default leaves this maximum unbounded.
-\item \texttt{initial\_weight\_distribution}:The distribution from which initial weights are to be drawn. The default is the uniform adaptive option. See \ref{2.2.1} for more details.
+\item \texttt{initial\_weight\_distribution}:The distribution from which initial weights are to be drawn. The default is the uniform adaptive option. Other options are Uniform and Normal distributions. See \ref{2.2.1} for more details.
 \item \texttt{initial\_weight\_scale}: The scale of the distribution function for Uniform or Normal distributions. For Uniform, the values are drawn uniformly from (-initial\_weight\_scale, initial\_weight\_scale). For Normal, the values are drawn from a Normal distribution with a standard deviation of initial\_weight\_scale. The default is 1.0. See \ref{2.2.1} for more details.
 \item \texttt{loss}: The default is automatic based on the particular learning problem. See \ref{2.2.2} for more details.
 \item \texttt{score\_interval}: The minimum time (in seconds) to elapse between model scoring. The actual interval is determined by the number of training samples per iteration and the scoring duty cycle. Default is 5.
 \item \texttt{score\_training\_samples}: The number of training dataset points to be used for scoring. Will be randomly sampled. Use 0 for selecting the entire training dataset. Default is 10000.
-\item \texttt{score\_validation\_samples}: The number of validation dataset points to be used for scoring. Can be randomly sampled or stratified (if "balance classes" is set and "score validation sampling" is set to stratify). Use 0 for selecting the entire training dataset (this is also the default).
+\item \texttt{score\_validation\_samples}: The number of validation dataset points to be used for scoring. Can be randomly sampled or stratified (if ``balance classes" is set and ``score validation sampling" is set to stratify). Use 0 for selecting the entire training dataset (this is also the default).
 \item \texttt{score\_duty\_cycle}: Maximum fraction of wall clock time spent on model scoring on training and validation samples, and on diagnostics such as computation of feature importances (i.e., not on training). Default is 0.1.
 \item \texttt{classification\_stop}: The stopping criteria in terms of classification error (1-accuracy) on the training data scoring dataset. When the error is at or below this threshold, training stops. Default is 0.
 \item \texttt{regression\_stop}: The stopping criteria in terms of regression error (MSE) on the training data scoring dataset. When the error is at or below this threshold, training stops. Default is 1e-6.
@@ -577,8 +581,9 @@ head(test_recon.hex)
 \item \texttt{max\_confusion\_matrix\_size}: For classification models, the maximum size (in terms of classes) of the confusion matrix for it to be printed. This option is meant to avoid printing extremely large confusion matrices. Default is 20.
 \item \texttt{max\_hit\_ratio\_k}: The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable). Default is 10.
 \item \texttt{balance\_classes}: For imbalanced data, balance training data class counts via over/under-sampling. This can result in improved predictive accuracy. Default is false.
+\item \texttt{class\_sampling\_factors}: Desired over/under-sampling ratios per class (lexicographic order). Only when balance\_classes is enabled. If not specified, they will be automatically computed to obtain class balance during training.
 \item \texttt{max\_after\_balance\_size}: When classes are balanced, limit the resulting dataset size to the specified multiple of the original dataset size. This is the maximum relative size of the training data after balancing class counts (can be less than 1.0). Default is 5.0.
-\item \texttt{score\_validation\_sampling}: The number of validation dataset points to be used for scoring. Can be randomly sampled or stratified (if "balance classes" is set and "score validation sampling" is set to stratify). Use 0 for selecting the entire training dataset. Default is 0.
+\item \texttt{score\_validation\_sampling}: Method used to sample validation dataset for scoring. The possible methods are Uniform and Stratified. Default is Uniform.
 \item \texttt{diagnostics}: Gather diagnostics for hidden layers, such as mean and RMS values of learning rate, momentum, weights and biases. Default is true.
 \item \texttt{variable\_importances}: Whether to compute variable importances for input features. The implementation considers the weights connecting the input features to the first two hidden layers. Default is false.
 \item \texttt{fast\_mode}: Enable fast mode (minor approximation in back-propagation), should not affect results significantly. Default is true.

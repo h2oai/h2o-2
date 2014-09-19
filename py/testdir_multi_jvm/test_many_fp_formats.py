@@ -45,8 +45,8 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
+            # (100, 100, 'cB', 180),
             (100000, 10, 'cA', 180),
-            (100, 1000, 'cB', 180),
             # (100, 900, 'cC', 30),
             # (100, 500, 'cD', 30),
             # (100, 100, 'cE', 30),
@@ -54,6 +54,7 @@ class Basic(unittest.TestCase):
         
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             NUM_CASES = h2o_util.fp_format()
+            print "Will do %s" % NUM_CASES
             for sel in range(NUM_CASES): # len(caseList)
                 SEEDPERFILE = random.randint(0, sys.maxint)
                 csvFilename = "syn_%s_%s_%s_%s.csv" % (SEEDPERFILE, sel, rowCount, colCount)
@@ -62,12 +63,15 @@ class Basic(unittest.TestCase):
                 print "Creating random", csvPathname
                 write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel)
 
-                selKey2 = hex_key + "_" + str(sel)
-                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=selKey2, 
-                    timeoutSecs=timeoutSecs)
-                print "Parse result['destination_key']:", parseResult['destination_key']
-                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-                print "\n" + csvFilename
+                hex_key = hex_key + "_" + str(sel)
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key,
+                    timeoutSecs=timeoutSecs, doSummary=False)
+                h2o_cmd.runSummary(key=parseResult['destination_key'], max_qbins=100)
+
+                print "Parse result['destination_key']:", hex_key
+                inspect = h2o_cmd.runInspect(None, hex_key)
+                print "Removing", hex_key
+                h2o.nodes[0].remove_key(hex_key)
 
                 # if not h2o.browse_disable:
                 #     h2b.browseJsonHistoryAsUrlLastMatch("Inspect")

@@ -14,7 +14,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,java_heap_GB=4)
+            h2o.build_cloud(2,java_heap_GB=6)
         else:
             h2o_hosts.build_cloud_with_hosts() # uses import Hdfs for s3n instead of import folder
 
@@ -29,26 +29,26 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
-            ("mnist_train.svm", "cM", 30, 1),
+            ("gisette_scale.svm",  "cF", 30, 1, 0),
+            ("covtype.binary.svm", "cC", 30, 1, 1),
+            ("mnist_train.svm", "cM", 30, 1, 1),
             # FIX! fails KMeansScore
             # not integer output
-            # ("colon-cancer.svm",   "cA", 30, 1),
-            ("connect4.svm",       "cB", 30, 1),
-            ("syn_6_1000_10.svm",  "cK", 30, 1),
+            # ("colon-cancer.svm",   "cA", 30, 1, 1),
+            ("connect4.svm",       "cB", 30, 1, 1),
+            # ("syn_6_1000_10.svm",  "cK", 30, 1, 0),   Bad libsvm file has the same column multiple times.
             # float response requires regression
-            # ("syn_0_100_1000.svm", "cL", 30, 1),
-            ("mushrooms.svm",      "cG", 30, 1),
+            ("syn_0_100_1000.svm", "cL", 30, 1, 0),
+            ("mushrooms.svm",      "cG", 30, 1, 1),
             # rf doesn't like reals
-            # ("duke.svm",           "cD", 30, 1),
+            # ("duke.svm",           "cD", 30, 1, 1),
             # too many features? 150K inspect timeout?
-            # ("E2006.train.svm",    "cE", 30, 1),
-            ("gisette_scale.svm",  "cF", 30, 1),
+            # ("E2006.train.svm",    "cE", 30, 1, 1),
             # too big for rf (memory error)
-            # ("news20.svm",         "cH", 30, 1),
+            # ("news20.svm",         "cH", 30, 1, 1),
 
             # multiclass format ..don't support
-            # ("tmc2007_train.svm",  "cJ", 30, 1),
-            ("covtype.binary.svm", "cC", 30, 1),
+            # ("tmc2007_train.svm",  "cJ", 30, 1, 1),
             # normal csv
         ]
 
@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         firstDone = False
-        for (csvFilename, hex_key, timeoutSecs, resultMult) in csvFilenameList:
+        for (csvFilename, hex_key, timeoutSecs, resultMult, classification) in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
             bucket = "home-0xdiag-datasets"
             csvPathname = "libsvm/" + csvFilename
@@ -76,7 +76,8 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'ntrees': 1,
                 'response': 0,
-                'classification': 0,
+                'classification': classification,
+                'importance': 0,
             }
 
             timeoutSecs = 600

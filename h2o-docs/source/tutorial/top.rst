@@ -1,10 +1,8 @@
 
 .. -*- mode: rst -*-
 
-
-
-Walk-Through Tutorials
-======================
+Tutorials For Web UI
+====================
 
 .. toctree::
    :maxdepth: 2
@@ -16,5 +14,5 @@ Walk-Through Tutorials
    pca
    gbm
    gbmgrid
-   rtutorial
    steam   
+   videos

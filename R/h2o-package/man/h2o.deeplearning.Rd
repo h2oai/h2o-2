@@ -16,7 +16,7 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
     initial_weight_distribution, initial_weight_scale, loss,
     score_interval, score_training_samples, score_validation_samples,
     score_duty_cycle, classification_stop, regression_stop, quiet_mode,
-    max_confusion_matrix_size, max_hit_ratio_k, balance_classes,
+    max_confusion_matrix_size, max_hit_ratio_k, balance_classes, class_sampling_factors,
     max_after_balance_size, score_validation_sampling, diagnostics,
     variable_importances, fast_mode, ignore_const_cols, force_load_balance,
     replicate_training_data, single_node_mode, shuffle_training_data,
@@ -41,7 +41,7 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
         \item{autoencoder}{ Enable auto-encoder for model building.}
         \item{use_all_factor_levels}{ Use all factor levels of categorical variables. Otherwise, the first factor level is omitted (without loss of accuracy). Useful for variable importances and auto-enabled for autoencoder. }
         \item{epochs}{ How many times the dataset should be iterated (streamed), can be fractional}
-        \item{train_samples_per_iteration}{ Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)}
+        \item{train_samples_per_iteration}{ Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data), -2: auto-tuning (default)}
         \item{seed}{ Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded}
         \item{adaptive_rate}{ Adaptive learning rate (ADADELTA)}
         \item{rho}{ Adaptive learning rate time decay factor (similarity to prior updates)}
@@ -71,6 +71,7 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
         \item{max_confusion_matrix_size}{ Max. size (number of classes) for confusion matrices to be shown}
         \item{max_hit_ratio_k}{ Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)}
         \item{balance_classes}{ Balance training data class counts via over/under-sampling (for imbalanced data)}
+        \item{class_sampling_factors}{ Desired over/under-sampling ratios per class (lexicographic order). }
         \item{max_after_balance_size}{ Maximum relative size of the training data after balancing class counts (can be less than 1.0)}
         \item{score_validation_sampling}{ Method used to sample validation dataset for scoring}
         \item{diagnostics}{ Enable diagnostics for hidden layers}
@@ -102,4 +103,20 @@ irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", 
                  hidden = c(10, 10), epochs = 5)
+
+\dontrun{
+# DeepLearning variable importance
+# Also see:
+#   https://github.com/0xdata/h2o/blob/master/R/tests/testdir_demos/runit_demo_VI_all_algos.R
+data.hex = h2o.importFile(
+  localH2O,
+  path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv",
+  key = "data.hex")
+myX = 1:20
+myY="y"
+my.dl = h2o.deeplearning(x=myX,y=myY,data=data.hex,classification=T,activation="Tanh",
+                         hidden=c(10,10,10),epochs=12,variable_importances=T)
+dl.VI =my.dl@model$varimp
+print(dl.VI)
+}
 }

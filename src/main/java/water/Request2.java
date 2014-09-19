@@ -1,14 +1,13 @@
 package water;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import hex.GridSearch;
 import water.api.DocGen;
 import water.api.Request;
 import water.api.RequestArguments;
-import water.api.RequestBuilders.Response;
 import water.api.RequestServer.API_VERSION;
-import water.fvec.Frame;
 import water.util.Log;
 import water.util.Utils;
 
@@ -549,6 +548,17 @@ public abstract class Request2 extends Request {
     JsonObject jo = (JsonObject)new JsonParser().parse(json);
     jo.remove("Request2");
     jo.remove("response_info");
+    return jo;
+  }
+
+  public JsonObject toJSON(Set<String> whitelist) {
+    JsonObject jo = toJSON();
+
+    for (Map.Entry<String , JsonElement> entry : jo.entrySet()) {
+      String key = entry.getKey();
+      if (! whitelist.contains(key))
+        jo.remove(key);
+    }
     return jo;
   }
 

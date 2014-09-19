@@ -45,26 +45,7 @@ test.slice.div <- function(conn) {
 
   #hex <- as.h2o(conn, iris)
   Log.info("Try /ing a scalar to a numeric column: 5 / hex[,col]")
-  col <- sample(colnames[colTypes != "enum"], 1)
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", sep = "", collapse = ""))
-  df <- head(hex)
-  col <- sample(colnames(df[!sapply(df, is.factor)]), 1)
-  if (!(grepl("\\.", col))) {
-    col <- gsub("\\.", " ", sample(colnames(df[!sapply(df, is.factor)]), 1)) 
-  }
-    print(which(col == colnames(df)))
-
-  print(colnames(hex))
-  print(col)
-
-  print(col %in% colnames(hex))
-  print(col %in% colnames(df))
-
-  if (!(col %in% colnames(hex))) {
-    col <- which(col == colnames(df))
-  }
-  Log.info(paste("Using column: ", col))
+  col <- sample(ncol(hex), 1)
 
   sliced <- hex[,col]
   Log.info("Placing key \"sliced.hex\" into User Store")

@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         # filename, y, timeoutSecs
         # this hangs during parse for some reason
         csvFilenameList = [
-            ('clslowbwt.dat', 7, 5),
+            ('clslowbwt.dat', 7, 10),
             ]
 
         trial = 0
@@ -33,7 +33,8 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
             kwargs = {'n_folds': 0, 'family': 'binomial', 'response': y}
             start = time.time()
-            parseResult = h2i.import_parse(bucket='smalldata', path='logreg/umass_statdata/' + csvFilename, schema='put')
+            parseResult = h2i.import_parse(bucket='smalldata', path='logreg/umass_statdata/' + csvFilename, 
+                schema='put', timeoutSecs=timeoutSecs)
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end (w/check) on ", csvFilename, 'took', time.time() - start, 'seconds'

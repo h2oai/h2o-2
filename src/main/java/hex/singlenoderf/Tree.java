@@ -11,11 +11,17 @@ import water.fvec.Frame;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 import water.util.Utils;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang.ObjectUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import hex.gbm.DTree.*;
+import water.util.SB;
 
 public class Tree extends H2OCountedCompleter {
 
@@ -50,6 +56,7 @@ public class Tree extends H2OCountedCompleter {
   final byte     _producerId;   // Id of node producing this tree
   final boolean  _regression; // If true, will build regression tree.
   boolean        _local_mode;
+  public TreeModel.CompressedTree compressedTree;
 
   /**
    * Constructor used to define the specs when building the tree from the top.
@@ -74,8 +81,8 @@ public class Tree extends H2OCountedCompleter {
   }
 
   // Oops, uncaught exception
-  @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter _) {
-    ex.printStackTrace();
+  @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter cc) {
+//    ex.printStackTrace();
     return true;
   }
 
@@ -151,31 +158,68 @@ public class Tree extends H2OCountedCompleter {
       }
 
       _stats = null; // GC
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
 
       // Atomically improve the Model as well
       Key tkey = toKey();
-      appendKey(_modelKey, tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", _data_id);
+      Key dtreeKey = toCompressedKey();
+      appendKey(_modelKey, tkey, dtreeKey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", _data_id);
+//      appendKey(_modelKey, tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", _data_id);
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.info(sb.toString());
       if (_verbose > 10) {
-        Log.info(Sys.RANDF, _tree.toString(sb, Integer.MAX_VALUE).toString());
+//        Log.info(Sys.RANDF, _tree.toString(sb, Integer.MAX_VALUE).toString());
+//        Log.info(Sys.RANDF, _tree.toJava(sb, Integer.MAX_VALUE).toString());
       }
-    }
+    } else throw new Job.JobCancelledException();
     // Wait for completion
     tryComplete();
   }
 
   // Stupid static method to make a static anonymous inner class
   // which serializes "for free".
-  static void appendKey(Key model, final Key tKey, final String tString, final int tree_id) {
+  static void appendKey(Key model, final Key tKey, final Key dtKey, final String tString, final int tree_id) {
     final int selfIdx = H2O.SELF.index();
     new TAtomic<SpeeDRFModel>() {
       @Override public SpeeDRFModel atomic(SpeeDRFModel old) {
         if(old == null) return null;
-        return SpeeDRFModel.make(old, tKey, selfIdx, tString, tree_id);
+        return SpeeDRFModel.make(old, tKey, dtKey, selfIdx, tString, tree_id);
       }
     }.invoke(model);
+  }
+
+  public static String deserialize(byte[] bytes) {
+    AutoBuffer ab = new AutoBuffer(bytes);
+    SB sb = new SB();
+    // skip meta data of the tree
+    ab.get4();    // Skip tree-id
+    ab.get8();    // Skip seed
+    ab.get1();    // Skip producer id
+    int cap = 0;
+    String abString = ab.toString();
+    Pattern pattern = Pattern.compile("<= .* <= (.*?) <=");
+    Matcher matcher = pattern.matcher(abString);
+    if (matcher.find()) {
+//      System.out.println(matcher.group(1));
+      cap = Integer.valueOf(matcher.group(1));
+    }
+    // skip meta data of the tree
+    ab.get4();    // Skip tree-id
+    ab.get8();    // Skip seed
+    ab.get1();    // Skip producer id
+    while (ab.position() < cap) {
+      byte currentNodeType = (byte) ab.get1();
+      if (currentNodeType == 'S') {
+        int _col = ab.get2();
+        float splitValue = ab.get4f();
+        sb.p("C").p(_col).p(" <= ").p(splitValue).p("(");
+      } else if (currentNodeType == '[') {
+        int cls = ab.get1();
+        sb.p("["+cls+"]");
+      }
+    }
+    return sb.toString();
   }
 
   private class FJBuild extends RecursiveTask<INode> {
@@ -191,6 +235,7 @@ public class Tree extends H2OCountedCompleter {
     @Override public INode compute() {
       hex.singlenoderf.Statistic left = getStatistic(0,_data, _seed + LTSS_INIT, _exclusiveSplitLimit); // first get the statistics
       hex.singlenoderf.Statistic rite = getStatistic(1,_data, _seed + RTSS_INIT, _exclusiveSplitLimit);
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
       Data[] res = new Data[2]; // create the data, node and filter the data
       int c = _split._column, s = _split._split;
       assert c != _data.columns()-1; // Last column is the class column
@@ -201,6 +246,7 @@ public class Tree extends H2OCountedCompleter {
       FJBuild fj0 = null, fj1 = null;
       hex.singlenoderf.Statistic.Split ls = left.split(res[0], _depth >= _maxDepth); // get the splits
       hex.singlenoderf.Statistic.Split rs = rite.split(res[1], _depth >= _maxDepth);
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
       if (ls.isLeafNode() || ls.isImpossible()) {
         if (_regression) {
           float av = res[0].computeAverage();
@@ -247,12 +293,15 @@ public class Tree extends H2OCountedCompleter {
     abstract void computeStats(ArrayList<SplitInfo>[] stats);
     abstract StringBuilder toString( StringBuilder sb, int len );
     final boolean isLeaf() { return depth() == 0; }
+    abstract StringBuilder toJava( StringBuilder sb, int len, int... depth );
 
     public abstract void print(TreePrinter treePrinter) throws IOException;
     abstract void write( AutoBuffer bs );
     int _size;                  // Byte-size in serialized form
     final int size( ) { return _size==0 ? (_size=size_impl()) : _size;  }
     abstract int size_impl();
+    AutoBuffer compress(AutoBuffer ab) { return ab;}
+    int dtreeSize() {return -1;}
   }
 
   /** Leaf node that for any row returns its the data class it belongs to. */
@@ -279,6 +328,7 @@ public class Tree extends H2OCountedCompleter {
     @Override public void computeStats(ArrayList<SplitInfo>[] stats) { /* do nothing for leaves */ }
     @Override public float classify(Row r) { if (_class == -1) { return _c; } else return (float)_class; }
     @Override public StringBuilder toString(StringBuilder sb, int n ) { return sb.append('[').append(_class).append(']').append('{').append(_rows).append('}'); }
+    @Override public StringBuilder toJava(StringBuilder sb, int n, int... depth ) { return sb.append(_class).append(' '); }
     @Override public void print(TreePrinter p) throws IOException { p.printNode(this); }
     @Override void write( AutoBuffer bs ) {
       bs.put1('[');             // Leaf indicator
@@ -293,6 +343,13 @@ public class Tree extends H2OCountedCompleter {
         return 5;
       }
       return 2; } // 2 bytes in serialized form
+
+    @Override AutoBuffer compress(AutoBuffer ab) {
+      assert !Float.isNaN(classify( null ));
+      // a little hacky here
+      return ab.put4f(classify( null ));
+    }
+    @Override int dtreeSize() { return 4; }
   }
 
   /** Gini classifier node. */
@@ -366,14 +423,38 @@ public class Tree extends H2OCountedCompleter {
       return sb;
     }
 
+    @Override public StringBuilder toJava( StringBuilder sb, int n, int... depth) {
+      int d = 0;
+      if (depth.length==0) {
+        //root
+        sb.append("  static final float predict(double[] data) {\n" +
+                "    float pred = ");
+      } else {d = depth[0];}
+      // d is the distance from the node to its root.
+      sb.append("Double.isNaN(data["+Integer.toString(_column)+"]) || (float) data["+Integer.toString(_column)+"] /* "+_name+"*/ ").append("<= ").append(Utils.p2d(split_value())).append("\n");
+      if( sb.length() > n ) return sb;
+      for (int i = -3 ; i < d ; i++) {sb.append("  ");}
+      sb.append(" ? ");
+      sb = _l.toJava(sb,n,d+1).append("\n");
+      if( sb.length() > n ) return sb;
+      for (int i = -3 ; i < d ; i++) {sb.append("  ");}
+      sb.append(" : ");
+      sb = _r.toJava(sb,n,d+1);
+      return sb;
+    }
+
     @Override void write( AutoBuffer bs ) {
+
       bs.put1('S');             // Node indicator
       assert Short.MIN_VALUE <= _column && _column < Short.MAX_VALUE;
       bs.put2((short) _column);
       bs.put4f(split_value());
       int skip = _l.size(); // Drop down the amount to skip over the left column
       if( skip <= 254 )  bs.put1(skip);
-      else { bs.put1(0); bs.put3(skip); }
+      else { bs.put1(0);
+        if (! ((-1<<24) <= skip && skip < (1<<24))) throw H2O.fail("Trees have grown too deep. Use BigData RF or limit the tree depth for your model. For more information, contact support: support@0xdata.com");
+        bs.put3(skip);
+      }
       _l.write(bs);
       _r.write(bs);
     }
@@ -383,6 +464,53 @@ public class Tree extends H2OCountedCompleter {
     }
     public boolean isIn(final Row row) {  return row.getEncodedColumnValue(_column) <= _split; }
     public final boolean canDecideAbout(final Row row) { return row.hasValidValue(_column); }
+
+    @Override public int dtreeSize() {
+      int result = 1+2+4;
+      int skip = _l.dtreeSize();
+      result += skip;
+      result += _r.dtreeSize();
+      if ( _l instanceof LeafNode) { skip=0;}
+      else {
+        if (skip < 256) skip=1;
+        else if (skip < 65535) skip=2;
+        else if (skip < (1<<24)) skip=3;
+        else skip=4;
+      }
+      result += skip;
+      return result;
+    }
+    @Override AutoBuffer compress(AutoBuffer ab) {
+      int pos = ab.position();
+      int size = 7;
+      byte _nodeType=0;
+      // left child type
+      if (_l instanceof LeafNode) _nodeType |= 0x30; // 00110000 = 0x30
+      int leftSize = _l.dtreeSize(); // size of the left child
+      size += leftSize;
+      if (leftSize < 256)             _nodeType |= 0x00;
+      else if (leftSize < 65535)      _nodeType |= 0x01;
+      else if (leftSize < (1<<24))    _nodeType |= 0x02;
+      else                            _nodeType |= 0x03;
+      // right child type
+      if (_r instanceof LeafNode) _nodeType |= 0xC0; // 11000000 = 0xC0
+        ab.put1(_nodeType);
+        assert _column != -1;
+        ab.put2((short)_column);
+        ab.put4f(_originalSplit); // assuming we only have _equal == 0 or 1 which is binary split
+        if( _l instanceof LeafNode ) { /* don't have skip size if left child is leaf.*/}
+        else {
+          if(leftSize < 256)            {ab.put1(       leftSize); size += 1;}
+          else if (leftSize < 65535)    {ab.put2((short)leftSize); size += 2;}
+          else if (leftSize < (1<<24))  {ab.put3(       leftSize); size += 3;}
+          else                          {ab.put4(       leftSize); size += 4;}// 1<<31-1
+        }
+      size += _r.dtreeSize();
+      _l.compress(ab);
+      _r.compress(ab);
+      assert size == ab.position()-pos:"reported size = " + size + " , real size = " + (ab.position()-pos);
+      return ab;
+    }
   }
 
   /** Node that classifies one column category to the left and the others to the right. */
@@ -418,6 +546,55 @@ public class Tree extends H2OCountedCompleter {
       _r.write(bs);
     }
     public boolean isIn(Row row) { return row.getEncodedColumnValue(_column) == _split; }
+
+    @Override AutoBuffer compress(AutoBuffer ab) {
+      int pos = ab.position();
+      int size = 7;
+      byte _nodeType= 0x04; // 00000100
+      // left child type
+      if (_l instanceof LeafNode) _nodeType |= 0x30; // 00110000 = 0x30
+      int leftSize = _l.dtreeSize(); // size of the left child
+      size += leftSize;
+      if (leftSize < 256)             _nodeType |= 0x00;
+      else if (leftSize < 65535)      _nodeType |= 0x01;
+      else if (leftSize < (1<<24))    _nodeType |= 0x02;
+      else                            _nodeType |= 0x03;
+      // right child type
+      if (_r instanceof LeafNode) _nodeType |= 0xC0; // 11000000 = 0xC0
+      ab.put1(_nodeType);
+      assert _column != -1;
+      ab.put2((short)_column);
+      ab.put4f(_originalSplit); // assuming we only have _equal == 0 or 1 which is binary split
+
+      if( _l instanceof LeafNode ) { /* don't have skip size if left child is leaf.*/}
+      else {
+        if(leftSize < 256)            {ab.put1(       leftSize); size += 1;}
+        else if (leftSize < 65535)    {ab.put2((short)leftSize); size += 2;}
+        else if (leftSize < (1<<24))  {ab.put3(       leftSize); size += 3;}
+        else                          {ab.put4(       leftSize); size += 4;}// 1<<31-1
+      }
+      size += _r.dtreeSize();
+      _l.compress(ab);
+      _r.compress(ab);
+      assert size == ab.position()-pos:"reported size = " + size + " , real size = " + (ab.position()-pos);
+      return ab;
+    }
+
+    @Override public int dtreeSize() {
+      int result = 1+2+4;
+      int skip = _l.dtreeSize();
+      result += skip;
+      result += _r.dtreeSize();
+      if ( _l instanceof LeafNode) { skip=0;}
+      else {
+        if (skip < 256) skip=1;
+        else if (skip < 65535) skip=2;
+        else if (skip < (1<<24)) skip=3;
+        else skip=4;
+      }
+      result += skip;
+      return result;
+    }
   }
 
   public float classify(Row r) { return _tree.classify(r); }
@@ -434,6 +611,14 @@ public class Tree extends H2OCountedCompleter {
     _tree.write(bs);
     Key key = Key.make((byte)1,Key.DFJ_INTERNAL_USER, H2O.SELF);
     DKV.put(key,new Value(key, bs.buf()));
+    return key;
+  }
+
+  public Key toCompressedKey() {
+    AutoBuffer bs = new AutoBuffer();
+    TreeModel.CompressedTree compressedTree = compress();
+    Key key = Key.make((byte)1,Key.DFJ_INTERNAL_USER, H2O.SELF);
+    UKV.put(key, new Value(key, compressedTree));
     return key;
   }
 
@@ -479,11 +664,7 @@ public class Tree extends H2OCountedCompleter {
       assert b == '(' || b == 'S' || b == 'E';
       int col = ts.get2(); // Column number in model-space
       float fcmp = ts.get4f();  // Float to compare against
-      if( Double.isNaN(ds[col]) )
-      {
-        return badat;
-      }
-      float fdat = (float)ds[col];
+      float fdat = Double.isNaN(ds[col]) ? fcmp - 1 : (float)ds[col];
       int skip = (ts.get1()&0xFF);
       if( skip == 0 ) skip = ts.get3();
       if (b == 'E') {
@@ -549,25 +730,153 @@ public class Tree extends H2OCountedCompleter {
       @Override long result( ) {return ((long)_maxdepth<<32) | _leaves; }
     }.visit().result();
   }
+
+  // Build a compressed-tree struct
+  public TreeModel.CompressedTree compress() {
+//    Log.info(Sys.RANDF, _tree.toString(new StringBuilder(), Integer.MAX_VALUE).toString());
+    int size = _tree.dtreeSize();
+    if (_tree instanceof LeafNode) {
+      size += 3;
+    }
+    AutoBuffer ab = new AutoBuffer(size);
+    if( _tree instanceof LeafNode)
+      ab.put1(0).put2((char)65535);
+    _tree.compress(ab);
+    assert ab.position() == size: "Actual size doesn't agree calculated size.";
+    char _nclass = (char)_data.classes();
+    return new TreeModel.CompressedTree(ab.buf(),_nclass,_seed);
+  }
+
+  public TreeModel.CompressedTree getCompressedTree() {
+    if (compressedTree!=null) { return compressedTree; }
+    else { compressedTree = compress(); }
+    return compressedTree;
+  }
+
+  /**
+   * @param tree binary form of a singlenoderf.Tree
+   * @return AutoBuffer that contain all bytes in the singlenoderf.Tree
+   */
+  public static byte[] toDTreeCompressedTreeAB(byte[] tree, boolean regression) {
+    AutoBuffer ab = new AutoBuffer(tree);
+    AutoBuffer result = new AutoBuffer();
+    return toDTreeCompressedTree(ab, regression).buf();
+  }
+
+  /**
+   * @param ab AutoBuffer that contains the remaining tree nodes that we want to serialize.
+   * @return binary form of a DTree.CompressedTree as a AutoBuffer
+   */
+  public static AutoBuffer toDTreeCompressedTree(AutoBuffer ab, boolean regression) {
+    AutoBuffer result = new AutoBuffer();
+    // get the length of the buffer
+    int cap=0;
+    String abString = ab.toString();
+    Pattern pattern = Pattern.compile("<= .* <= (.*?) <=");
+    Matcher matcher = pattern.matcher(abString);
+    if (matcher.find()) {
+//      System.out.println(matcher.group(1));
+      cap = Integer.valueOf(matcher.group(1));
+    }
+
+    // skip meta data of the tree
+    ab.get4();    // Skip tree-id
+    ab.get8();    // Skip seed
+    ab.get1();    // Skip producer id
+
+    while (ab.position() < cap) {
+      byte _nodeType = 0;
+      byte currentNodeType = (byte) ab.get1();
+
+      if (currentNodeType == 'S' || currentNodeType == 'E') {
+        if (currentNodeType == 'E') {
+          _nodeType |= 0x04; // 00000100
+        }
+        int _col =  ab.get2();
+        float splitValue = ab.get4f();
+        int skipSize = ab.get1();
+        int skip;
+        if (skipSize == 0) {
+          // 4 bytes total
+          _nodeType |= 0x02; // 3 bytes to store skip
+          skip = ab.get3();
+        } else {/* single byte for left size */ skip=skipSize; /* 1 byte to store skip*/}
+
+        int currentPosition = ab.position();
+        byte leftType = (byte) ab.get1();
+        ab.position(currentPosition+skip); // jump to the right child.
+        byte rightType = (byte) ab.get1();
+        ab.position(currentPosition);
+        if (leftType == '[') { _nodeType |= 0x30; }
+        if (rightType == '[') { _nodeType |= 0xC0; }
+//        int leftLeaves = getNumLeaves(ab, skip, regression); // number of left leaves.
+        int skipModify = getSkip(ab, skip, regression);
+        skip += skipModify;
+        if (skip > 255) { _nodeType |= 0x02; }
+        result.put1(_nodeType);
+        result.put2((short) _col);
+        result.put4f(splitValue);
+        if (skip <= 255) {
+          if (leftType == 'S' || leftType == 'E') result.put1(skip); // leaf will have no skip size because its size is fixed.
+        }
+        else {
+          result.put3(skip);
+        }
+      }
+      else if (currentNodeType == '[') {
+//        result.put1(0).put2((short)65535); // if leaf then over look top level
+        if (regression) { result.put4f(ab.get4f());}
+        else { result.put4f((float)ab.get1());}
+      } else { /* running out of the buffer*/ return result;}
+    }
+    return result;
+  }
+
+  public static int getNumLeaves(AutoBuffer ab, int leftSize, boolean regression) {
+    int result = 0;
+    int startPos = ab.position();
+    while (ab.position() < startPos + leftSize) {
+      byte currentNodeType = (byte) ab.get1();
+      if (currentNodeType == 'S' || currentNodeType == 'E') {
+        ab.get2(); ab.get4f(); // skip col and split value.
+        int skipSize = ab.get1();
+        if (skipSize == 0) { ab.get3();}
+      } else if (currentNodeType == '[') {
+        result ++;
+        if (regression) ab.get4f();
+        else ab.get1();
+      } else {
+        throw new NotImplementedException();
+      }
+    }
+    ab.position(startPos); // return to the original position so the buffer seems untouched.
+    return result;
+  }
+
+  public static int getSkip(AutoBuffer ab, int leftSize, boolean regression) {
+    int numLeaves = 0;
+    int numLeftLeaves = 0;
+    int startPos = ab.position();
+    boolean prevIsS = false;
+    while (ab.position() < startPos + leftSize) {
+      byte currentNodeType = (byte) ab.get1();
+      if (currentNodeType == 'S' || currentNodeType == 'E') {
+        ab.get2(); ab.get4f(); // skip col and split value.
+        int skipSize = ab.get1();
+        if (skipSize == 0) { ab.get3();}
+        prevIsS = true;
+      } else if (currentNodeType == '[') {
+        numLeaves ++;
+        if (regression) ab.get4f();
+        else ab.get1();
+        if (prevIsS) numLeftLeaves++;
+        prevIsS = false;
+      } else {
+        throw new NotImplementedException();
+      }
+    }
+    ab.position(startPos);
+    return 2*numLeaves - numLeftLeaves; // only for regression tree.
+  }
+
 }
-
-
-//class TreeP extends Iced {
-//  int    _trainSize;
-//  long   _numErrs;
-//  long[] _nonOOB_indexes;
-//  int    _tree_id;
-//  Key    _tk;
-//  public TreeP(int train, long numErr, long[] nonOOB, Key tk) {
-//    _trainSize = train;
-//    _numErrs = numErr;
-//    _nonOOB_indexes = nonOOB;
-//    _tk = tk;
-//  }
-//
-//  public boolean isOOB(Row r) { return !contains(_nonOOB_indexes, r._index); }
-//  public boolean isOOB(int r) { return !contains(_nonOOB_indexes, r); }
-//  public long get_numErrs()  { return _numErrs;   }
-//  public int get_trainSize() { return _trainSize; }
-//  public boolean contains(final long[] array, final long key) { return Arrays.asList(array).contains(key); }
-//}

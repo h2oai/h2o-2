@@ -78,7 +78,7 @@ public class TestUtil {
       DKV.remove(job.job_key);
     }
     DKV.remove(Job.LIST);         // Remove all keys
-    DKV.remove(Log.LOG_KEY);
+    if (Log.LOG_KEY!=null) DKV.remove(Log.LOG_KEY); // The job key does not need to be created if the test does not print into logs
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
     int nvecs = 0, nchunks = 0, nframes = 0, nmodels = 0, nothers = 0;
@@ -91,7 +91,15 @@ public class TestUtil {
         if( o instanceof Vec.VectorGroup )
           leaked_keys--;
         else {
-          System.err.println("Leaked key: " + k + " = " + o);
+          try {
+            System.err.println("Leaked key: " + k + " = " + o);
+          } catch (NullPointerException t) {
+            System.err.println("Leaked key: " + k + " = " + o.getClass().getSimpleName() + " with missing data");
+          } catch (Throwable t) {
+            t.printStackTrace();
+            throw new RuntimeException(t);
+          }
+
           if (k.isChunkKey()) nchunks++;
           else if (k.isVec()) nvecs++;
           else if (o instanceof Frame) nframes++;

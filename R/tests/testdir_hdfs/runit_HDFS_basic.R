@@ -20,11 +20,11 @@ source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))
 # the cdh3 namenode. Update if using other clusters.
 # Note this should fail on home networks, since 176 is not likely to exist
 # also should fail in ec2.
-running_inside_hexdata = url.exists("http://192.168.1.176:80", timeout=1)
+running_inside_hexdata = url.exists("http://172.16.2.176:80", timeout=1)
 
 if (running_inside_hexdata) {
     # cdh3 cluster
-    hdfs_name_node = "192.168.1.176"    
+    hdfs_name_node = "172.16.2.176"    
     hdfs_iris_file = "/datasets/runit/iris_wheader.csv"
     hdfs_iris_dir  = "/datasets/runit/iris_test_train"
 } else {

@@ -8,8 +8,11 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 
 DELETE_KEYS_EACH_ITER = True
 DO_KMEANS = True
+NA_COL_BUG = True
+SCALE_SIZE = 7 # for scaling the expected results from the 128GB case (7x the 26GB case)
+
 # assumes the cloud was built with CDH3? maybe doesn't matter as long as the file is there
-FROM_HDFS = 'CDH3'
+FROM_HDFS = 'CDH3' # not really used
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c5_KMeans_sphere_26GB_fvec(self):
@@ -17,7 +20,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # a kludge
         h2o.setup_benchmark_log()
 
+        # csvFilename = 'syn_sphere15_2711545732row_6col_180GB_from_7x.csv'
         csvFilename = 'syn_sphere15_gen_26GB.csv'
+        # csvFilename = 'syn_sphere_gen_h1m.csv'
+        # csvFilename = 'syn_sphere_gen_real_1.49M.csv'
+        # csvFilename = 'syn_sphere_gen_h1m_no_na.csv'
 
         totalBytes = 183538602156
         if FROM_HDFS:
@@ -29,23 +36,46 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         # FIX! put right values in
         # will there be different expected for random vs the other inits?
-        expected = [
-            ([0.0, -113.00566692375459, -89.99595447985321, -455.9970643424373, 4732.0, 49791778.0, 36800.0], 248846122, 1308149283316.2988) ,
-            ([0.0, 1.0, 1.0, -525.0093818313685, 2015.001629398412, 25654042.00592703, 28304.0], 276924291, 1800760152555.98) ,
-            ([0.0, 5.0, 2.0, 340.0, 1817.995920197288, 33970406.992053084, 31319.99486705394], 235089554, 375419158808.3253) ,
-            ([0.0, 10.0, -72.00113070337981, -171.0198611715457, 4430.00952228909, 37007399.0, 29894.0], 166180630, 525423632323.6474) ,
-            ([0.0, 11.0, 3.0, 578.0043558141306, 1483.0163188052604, 22865824.99639042, 5335.0], 167234179, 1845362026223.1094) ,
-            ([0.0, 12.0, 3.0, 168.0, -4066.995950679284, 41077063.00269915, -47537.998050740985], 195420925, 197941282992.43475) ,
-            ([0.0, 19.00092954923767, -10.999565572612255, 90.00028669073289, 1928.0, 39967190.0, 27202.0], 214401768, 11868360232.658035) ,
-            ([0.0, 20.0, 0.0, 141.0, -3263.0030236302937, 6163210.990273981, 30712.99115201907], 258853406, 598863991074.3276) ,
-            ([0.0, 21.0, 114.01584574295777, 242.99690338815898, 1674.0029079209912, 33089556.0, 36415.0], 190979054, 1505088759456.314) ,
-            ([0.0, 25.0, 1.0, 614.0032787274755, -2275.9931284021022, -48473733.04122273, 47343.0], 87794427, 1124697008162.3955) ,
-            ([0.0, 39.0, 3.0, 470.0, -3337.9880599007597, 28768057.98852736, 16716.003410920028], 78226988, 1151439441529.0215) ,
-            ([0.0, 40.0, 1.0, 145.0, 950.9990795199593, 14602680.991458317, -14930.007919032574], 167273589, 693036940951.0249) ,
-            ([0.0, 42.0, 4.0, 479.0, -3678.0033024834297, 8209673.001421165, 11767.998552236539], 148426180, 35942838893.32379) ,
-            ([0.0, 48.0, 4.0, 71.0, -951.0035145455234, 49882273.00063991, -23336.998167498707], 157533313, 88431531357.62982) ,
-            ([0.0, 147.00394564757505, 122.98729664236723, 311.0047920137008, 2320.0, 46602185.0, 11212.0], 118361306, 1111537045743.7646) ,
-        ]
+        if NA_COL_BUG:
+            expected = [
+                # the centers are the same for the 26GB and 180GB. The # of rows is right for 180GB, 
+                # so shouldn't be used for 26GB
+                # or it should be divided by 7
+                # the distribution is the same, obviously.
+                ([-113.00566692375459, -89.99595447985321, -455.9970643424373, 4732.0, 49791778.0, 36800.0], 248846122, 1308149283316.2988) ,
+                ([1.0, 1.0, -525.0093818313685, 2015.001629398412, 25654042.00592703, 28304.0], 276924291, 1800760152555.98) ,
+                ([5.0, 2.0, 340.0, 1817.995920197288, 33970406.992053084, 31319.99486705394], 235089554, 375419158808.3253) ,
+                ([10.0, -72.00113070337981, -171.0198611715457, 4430.00952228909, 37007399.0, 29894.0], 166180630, 525423632323.6474) ,
+                ([11.0, 3.0, 578.0043558141306, 1483.0163188052604, 22865824.99639042, 5335.0], 167234179, 1845362026223.1094) ,
+                ([12.0, 3.0, 168.0, -4066.995950679284, 41077063.00269915, -47537.998050740985], 195420925, 197941282992.43475) ,
+                ([19.00092954923767, -10.999565572612255, 90.00028669073289, 1928.0, 39967190.0, 27202.0], 214401768, 11868360232.658035) ,
+                ([20.0, 0.0, 141.0, -3263.0030236302937, 6163210.990273981, 30712.99115201907], 258853406, 598863991074.3276) ,
+                ([21.0, 114.01584574295777, 242.99690338815898, 1674.0029079209912, 33089556.0, 36415.0], 190979054, 1505088759456.314) ,
+                ([25.0, 1.0, 614.0032787274755, -2275.9931284021022, -48473733.04122273, 47343.0], 87794427, 1124697008162.3955) ,
+                ([39.0, 3.0, 470.0, -3337.9880599007597, 28768057.98852736, 16716.003410920028], 78226988, 1151439441529.0215) ,
+                ([40.0, 1.0, 145.0, 950.9990795199593, 14602680.991458317, -14930.007919032574], 167273589, 693036940951.0249) ,
+                ([42.0, 4.0, 479.0, -3678.0033024834297, 8209673.001421165, 11767.998552236539], 148426180, 35942838893.32379) ,
+                ([48.0, 4.0, 71.0, -951.0035145455234, 49882273.00063991, -23336.998167498707], 157533313, 88431531357.62982) ,
+                ([147.00394564757505, 122.98729664236723, 311.0047920137008, 2320.0, 46602185.0, 11212.0], 118361306, 1111537045743.7646) ,
+            ]
+        else:
+            expected = [
+                ([0.0, -113.00566692375459, -89.99595447985321, -455.9970643424373, 4732.0, 49791778.0, 36800.0], 248846122, 1308149283316.2988) ,
+                ([0.0, 1.0, 1.0, -525.0093818313685, 2015.001629398412, 25654042.00592703, 28304.0], 276924291, 1800760152555.98) ,
+                ([0.0, 5.0, 2.0, 340.0, 1817.995920197288, 33970406.992053084, 31319.99486705394], 235089554, 375419158808.3253) ,
+                ([0.0, 10.0, -72.00113070337981, -171.0198611715457, 4430.00952228909, 37007399.0, 29894.0], 166180630, 525423632323.6474) ,
+                ([0.0, 11.0, 3.0, 578.0043558141306, 1483.0163188052604, 22865824.99639042, 5335.0], 167234179, 1845362026223.1094) ,
+                ([0.0, 12.0, 3.0, 168.0, -4066.995950679284, 41077063.00269915, -47537.998050740985], 195420925, 197941282992.43475) ,
+                ([0.0, 19.00092954923767, -10.999565572612255, 90.00028669073289, 1928.0, 39967190.0, 27202.0], 214401768, 11868360232.658035) ,
+                ([0.0, 20.0, 0.0, 141.0, -3263.0030236302937, 6163210.990273981, 30712.99115201907], 258853406, 598863991074.3276) ,
+                ([0.0, 21.0, 114.01584574295777, 242.99690338815898, 1674.0029079209912, 33089556.0, 36415.0], 190979054, 1505088759456.314) ,
+                ([0.0, 25.0, 1.0, 614.0032787274755, -2275.9931284021022, -48473733.04122273, 47343.0], 87794427, 1124697008162.3955) ,
+                ([0.0, 39.0, 3.0, 470.0, -3337.9880599007597, 28768057.98852736, 16716.003410920028], 78226988, 1151439441529.0215) ,
+                ([0.0, 40.0, 1.0, 145.0, 950.9990795199593, 14602680.991458317, -14930.007919032574], 167273589, 693036940951.0249) ,
+                ([0.0, 42.0, 4.0, 479.0, -3678.0033024834297, 8209673.001421165, 11767.998552236539], 148426180, 35942838893.32379) ,
+                ([0.0, 48.0, 4.0, 71.0, -951.0035145455234, 49882273.00063991, -23336.998167498707], 157533313, 88431531357.62982) ,
+                ([0.0, 147.00394564757505, 122.98729664236723, 311.0047920137008, 2320.0, 46602185.0, 11212.0], 118361306, 1111537045743.7646) ,
+            ]
 
         benchmarkLogging = ['cpu','disk', 'network', 'iostats', 'jstack']
         benchmarkLogging = ['cpu','disk', 'network', 'iostats']
@@ -93,12 +123,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "col 0 is enum in " + csvFilename + " but KMeans should skip that automatically?? or no?"
             kwargs = {
                 'k': 15, 
-                'max_iter': 3,
-                'normalize': 1,
+                'max_iter': 500,
+                # 'normalize': 1,
+                'normalize': 0, # temp try
                 'initialization': 'Furthest',
                 'destination_key': 'junk.hex', 
                 # we get NaNs if whole col is NA
                 'ignored_cols': 'C1',
+                'normalize': 0,
                 # reuse the same seed, to get deterministic results
                 'seed': 265211114317615310,
                 }
@@ -115,21 +147,70 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             paramsString = json.dumps(params)
 
             start = time.time()
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs,
+            kmeansResult = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs,
                     benchmarkLogging=benchmarkLogging, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
-            print "kmeans result:", h2o.dump_json(kmeans)
+            print "kmeans result:", h2o.dump_json(kmeansResult)
 
             l = '{!s} jvms, {!s}GB heap, {:s} {:s} {:s} for {:.2f} secs {:s}' .format(
                 len(h2o.nodes), h2o.nodes[0].java_heap_GB, "KMeans", "trial "+str(trial), csvFilename, elapsed, paramsString)
             print l
             h2o.cloudPerfH2O.message(l)
 
-            (centers, tupleResultList)  = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
+            # his does predict
+            (centers, tupleResultList)  = h2o_kmeans.bigCheckResults(self, kmeansResult, csvPathname, parseResult, 'd', **kwargs)
             # all are multipliers of expected tuple value
             allowedDelta = (0.01, 0.01, 0.01) 
-            h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, allowError=True, trial=trial)
+            # these clusters were sorted compared to the cluster order in training
+            h2o_kmeans.showClusterDistribution(self, tupleResultList, expected, trial=trial)
+            # why is the expected # of rows not right in KMeans2. That means predictions are wrong
+            h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, allowError=False, 
+                allowRowError=True, trial=trial)
+
+            # the tupleResultList has the size during predict? compare it to the sizes during training
+            # I assume they're in the same order.
+            model = kmeansResult['model']
+            size = model['size']
+            size2 = [t[1] for t in tupleResultList]
+
+            if 1==1: # debug
+                print "training size:", size
+                print "predict size2:", size2
+                print "training sorted(size):", sorted(size)
+                print "predict sorted(size2):", sorted(size2)
+                print h2o.nodes[0].http_addr
+                print h2o.nodes[0].port
+
+            if 1==1: # debug
+                print "sleeping"
+                h2o.sleep(3600)
+
+            clusters = model["centers"]
+            cluster_variances = model["within_cluster_variances"]
+            error = model["total_within_SS"]
+            iterations = model["iterations"]
+            normalized = model["normalized"]
+            max_iter = model["max_iter"]
+            print "iterations", iterations
+
+            if iterations >= (max_iter-1): # h2o hits the limit at max_iter-1..shouldn't hit it
+                raise Exception("trial: %s KMeans unexpectedly took %s iterations..which was the full amount allowed by max_iter %s",
+                    (trial, iterations, max_iter))
+
+            # this size stuff should be compared now in compareResultsToExpected()..leave it here to make sure
+
+            # can't do this compare, because size2 is sorted by center order..
+            # so we don't know how to reorder size the same way
+            # we could just sort the two of them, for some bit of comparison.
+            if sorted(size)!=sorted(size2):
+                raise Exception("trial: %s training cluster sizes: %s not the same as predict on same data: %s" % (trial, size, size2))
+
+            # our expected result is sorted by cluster center ordered. but the sizes are from the predicted histogram
+            expectedSize = [t[1]/SCALE_SIZE for t in expected]
+            
+            if size2!=expectedSize:
+                raise Exception("trial: %s training cluster sizes: %s not the same as expected: %s" % (trial, size, expectedSize))
 
             if DELETE_KEYS_EACH_ITER:
                 h2i.delete_keys_at_all_nodes()

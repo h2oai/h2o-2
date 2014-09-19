@@ -21,6 +21,10 @@ At a minimum, you need to specify an ssh key name and a security group name.
 % ./h2o-cluster-distribute-h2o.sh  --OR--  ./h2o-cluster-download-h2o.sh
 % [optional] ./h2o-cluster-distribute-aws-credentials.sh
 
+Note:  If you run h2o with an IAM role, it is not necessary to distribute
+       the aws-credentials to all the nodes in the cluster. The temporary
+       access key should be accessible by later version of H2O.
+
 Note:  Download may be faster than distribute, since download pulls from S3.
 
 Note:  Distributing the AWS credentials copies the Amazon AWS_ACCESS_KEY_ID

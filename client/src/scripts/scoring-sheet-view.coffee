@@ -587,11 +587,18 @@ createThresholdVisualization = (metrics, variableX, variableY, showReferenceLine
   markup: div()
   behavior: render
 
+createInspectionColorSwatch = ->
+  pop geyser.generate [ "div style='display:inline-block;width:12px;height:12px;margin-right:7px;background-color:$color'" ]
+
 createMetricInspection = (variables, metric) ->
-  [ div, h1, h2, table, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed tbody tr th td'
+  [ div, h1, h2, table, tbody, tr, th, td, span ] = geyser.generate words 'div h1 h2 table.table.table-condensed tbody tr th td span'
+  swatch = createInspectionColorSwatch()
 
   div [
-    h1 metric.caption
+    h1  [ 
+      swatch '', $color:metric.color
+      span metric.caption
+    ]
     table tbody map variables, (variable) ->
       value = variable.read metric
       tr [
@@ -601,7 +608,8 @@ createMetricInspection = (variables, metric) ->
   ]
 
 createThresholdInspection = (variables, metric, index) ->
-  [ div, h1, h2, table, grid, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed table.table.table-bordered tbody tr th td'
+  [ div, h1, h2, table, grid, tbody, tr, th, td, span ] = geyser.generate words 'div h1 h2 table.table.table-condensed table.table.table-bordered tbody tr th td span'
+  swatch = createInspectionColorSwatch()
 
   tabulateProperties = (index) ->
     table tbody map variables, (variable) ->
@@ -611,7 +619,10 @@ createThresholdInspection = (variables, metric, index) ->
       ]
 
   div [
-    h1 metric.caption
+    h1  [ 
+      swatch '', $color:metric.color
+      span metric.caption
+    ]
     h2 'Outputs'
     tabulateProperties index
   ]
@@ -690,6 +701,8 @@ renderMetricsVisualization = (metrics, variableX, variableY, inspect) ->
     .attr 'cy', (d) -> scaleY readY d
     .attr 'stroke', (d) -> d.color
     .on 'click', (d) -> inspect d
+    .append 'title'
+    .text (d) -> d.caption
 
   el
 
@@ -794,6 +807,8 @@ renderThresholdVisualization = (metrics, variableX, variableY, showReferenceLine
         d3.select(@).style 'stroke', metric.color
       .on 'mouseout', (index) ->
         d3.select(@).style 'stroke', 'none'
+      .append 'title'
+      .text metric.caption
   el
 
 createFilter = (variable) ->

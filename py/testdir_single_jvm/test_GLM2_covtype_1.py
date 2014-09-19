@@ -11,9 +11,9 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=4, base_port=54323)
+            h2o.build_cloud(java_heap_GB=4)
         else:
-            h2o_hosts.build_cloud_with_hosts(base_port=54323)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'standard/' + csvFilename
         hex_key = "covtype.hex"
 
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, schema='local', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, schema='local', timeoutSecs=20)
 
         print "Gratuitous use of frame splitting. result not used"
         fs = h2o.nodes[0].frame_split(source=hex_key, ratios=0.75)

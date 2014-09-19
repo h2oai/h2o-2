@@ -56,6 +56,8 @@ public class SummaryPage2 extends Request2 {
       names[i] = source._names[cols[i]];
     }
     Frame fr = new Frame(names, vecs);
+    if(fr.numRows() == 0)
+      throw new IllegalArgumentException("Data frame has zero rows!");
 
     Futures fs = new Futures();
     for( Vec vec : vecs) vec.rollupStats(fs);

@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud()
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         # zero the list of Results using node[0]
         # FIX! is the zerolist not eing seen correctl? is it not initializing to non-zero?
         for execExpr in initList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey="Result.hex", timeoutSecs=4)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey="Result.hex", timeoutSecs=20)
             ### print "\nexecResult:", execResult
 
         trial = 0
@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
                 
                 resultKey = "Result.hex"
                 execResultInspect, min_value = h2e.exec_expr(h2o.nodes[nodeX], execExpr,
-                    resultKey=resultKey, timeoutSecs=4)
+                    resultKey=resultKey, timeoutSecs=20)
 
                 print min_value, execExpr
                 h2o.verboseprint("min_value: ", min_value, "trial:", trial)

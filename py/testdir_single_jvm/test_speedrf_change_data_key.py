@@ -65,7 +65,7 @@ class Basic(unittest.TestCase):
 
         # params is mutable. This is default.
         params = {
-            'num_trees': 2,
+            'ntrees': 2,
             'destination_key': 'RF_model'
         }
 
@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
 
         print "\nRFView start after job completion"
         model_key = kwargs['destination_key']
-        ntrees = kwargs['num_trees']
+        ntrees = kwargs['ntrees']
         start = time.time()
         h2o_cmd.runSpeeDRFView(None, model_key, timeoutSecs)
         print "First rfview end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'

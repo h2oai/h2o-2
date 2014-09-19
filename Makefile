@@ -122,7 +122,7 @@ build:
 	@echo
 	@echo "PHASE: Building ZooKeeper jar..."
 	@echo
-	$(MAKE) -C h2o-zookeeper PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/zookeeper_build.log
+	$(MAKE) -C h2o-zookeeper PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/zookeeper_build.log 2> target/logs/zookeeper_build.err
 
 BUILD_BRANCH=$(shell git branch | grep '*' | sed 's/* //')
 BUILD_HASH=$(shell git log -1 --format="%H")
@@ -164,7 +164,7 @@ build_rjar:
 	mkdir -p target/Rjar/tmp
 	cp target/h2o.jar target/Rjar/tmp/h2o_full.jar
 	(cd target/Rjar/tmp && jar xf h2o_full.jar)
-	(cd target/Rjar/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
+	(cd target/Rjar/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn hadoop/hdp*)
 	(cd target/Rjar/tmp && rm -f h2o_full.jar)
 	(cd target/Rjar/tmp && cp META-INF/MANIFEST.MF ..)
 	(cd target/Rjar/tmp && rm -fr META-INF)
@@ -186,6 +186,7 @@ build_rcran:
 	cd target/Rcran && tar zxvf tmp.tar.gz
 	rm -f target/Rcran/tmp.tar.gz
 	rm -f target/Rcran/h2o/inst/java/h2o.jar
+	cd target/Rcran/h2o && python ../../../scripts/dontrun_r_examples.py
 	cd target/Rcran && tar zcvf $(H2O_R_SOURCE_FILE) h2o
 	rm -fr target/Rcran/h2o
 
@@ -205,6 +206,10 @@ build_package:
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
 	mkdir target/h2o-$(PROJECT_VERSION)/ec2
 	cp -p ec2/*.py ec2/*.sh ec2/README.txt target/h2o-$(PROJECT_VERSION)/ec2
+	mkdir target/h2o-$(PROJECT_VERSION)/spark
+	cp -p spark/* target/h2o-$(PROJECT_VERSION)/spark
+	cp -rp tableau target/h2o-$(PROJECT_VERSION)
+	cp -rp docs/TableauTutorial.docx target/h2o-$(PROJECT_VERSION)/tableau
 	(cd target; zip -q -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	rm -fr target/ci

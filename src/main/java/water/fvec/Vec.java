@@ -887,7 +887,7 @@ public class Vec extends Iced {
    */
   public Vec align(final Vec vec) {
     assert ! this.group().equals(vec.group()) : "Vector align expects a vector from different vector group";
-    assert this._size == vec._size : "Trying to align vectors with different length!";
+    assert this.length()== vec.length() : "Trying to align vectors with different length!";
     Vec avec = makeZero(); // aligned vector
     new MRTask2() {
       @Override public void map(Chunk c0) {
