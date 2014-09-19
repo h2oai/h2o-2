@@ -1064,7 +1064,6 @@ public class DeepLearning extends Job.ValidatedJob {
       model.update(self());
       Log.info("Starting to train the Deep Learning model.");
 
-      if (n_folds == 0 || xval_models == null)
       //main loop
       do model.set_model_info(H2O.CLOUD.size() > 1 && mp.replicate_training_data ? ( mp.single_node_mode ?
               new DeepLearningTask2(train, model.model_info(), rowFraction(train, mp, model)).invoke(Key.make()).model_info() : //replicated data + single node mode

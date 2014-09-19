@@ -770,7 +770,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   boolean doScoring(Frame train, Frame ftrain, Frame ftest, Key job_key, Job.ValidatedJob.Response2CMAdaptor vadaptor) {
     try {
       final long now = System.currentTimeMillis();
-      epoch_counter = (float)model_info().get_processed_total()/train.numRows();
+      epoch_counter = (float)model_info().get_processed_total()/training_rows;
       final double time_last_iter_millis = now-_timeLastScoreEnter;
 
       // Auto-tuning
