@@ -134,10 +134,8 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
     Request.addToNavbar(registerRequest(new JProfile()),    "Profiler",                 "Admin");
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
-    Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",               "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
-    Request.addToNavbar(registerRequest(new UnlockKeys()),  "Unlock Keys",              "Admin");
-    Request.addToNavbar(registerRequest(new NetworkTest()),"Network Test",            "Admin");
+    Request.addToNavbar(registerRequest(new NetworkTest()), "Network Test",             "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials
@@ -155,12 +153,15 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
       registerRequest(new NFoldFrameExtractPage());
+      registerRequest(new Console());
       registerRequest(new GapStatistic());
       registerRequest(new CreateFrame());
       registerRequest(new InsertMissingValues());
       registerRequest(new KillMinus3());
       registerRequest(new SaveModel());
       registerRequest(new LoadModel());
+      registerRequest(new Debug());
+      registerRequest(new UnlockKeys());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
@@ -172,6 +173,8 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
       Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");
       Request.addToNavbar(registerRequest(new LoadModel()),            "Load Model",           "Beta");
+      Request.addToNavbar(registerRequest(new Debug()),                "Debug Dump (floods log file)","Beta");
+      Request.addToNavbar(registerRequest(new UnlockKeys()),           "Unlock Keys (use with caution)","Beta");
     }
 
     registerRequest(new Up());

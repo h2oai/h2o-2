@@ -45,7 +45,8 @@ else
     else
         if [[ $USER == "kevin" ]]
         then
-            python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+            # python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+            python ../four_hour_cloud.py -cj pytest_config-jenkins-175-180.json &
         else
             python ../four_hour_cloud.py &
         fi
@@ -108,12 +109,16 @@ then
 
     #    myPy c6 test_c6_hdfs_fvec.py
     #    myPy c8 test_c8_rf_airlines_hdfs_fvec.py
-    #    myPy c9 test_c9_GBM_airlines_hdfs.py
     #    myPy c9 test_c9_GLM_airlines_hdfs_fvec.py
-    #    myPy c10  test_c10_rel_gbm.py
+    # myPy c10 test_c10_glm_fvec.py
+    # myPy c10 test_c10_gbm_fvec.py
+
+
+    # myPy c9 test_c9_GBM_airlines_hdfs_fvec.py
+    # myPy c8 test_c8_rf_airlines_hdfs_fvec.py
     myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
-    myPy c8 test_c8_rf_airlines_hdfs_fvec.py
-    # myPy c9 test_c9_GLM_rc_fvec.py
+    myPy c9 test_c9_GLM_rc_fvec.py
+
 
     # put known failure last
     # doesn't work. key gets locked. forget about it

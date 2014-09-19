@@ -385,6 +385,12 @@ public class DeepLearning extends Job.ValidatedJob {
   public boolean balance_classes = false;
 
   /**
+   * Desired over/under-sampling ratios per class (lexicographic order). Only when balance_classes is enabled. If not specified, they will be automatically computed to obtain class balance during training.
+   */
+  @API(help = "Desired over/under-sampling ratios per class (lexicographic order).", filter = Default.class, dmin = 0, json = true, importance = ParamImportance.SECONDARY)
+  public float[] class_sampling_factors;
+
+  /**
    * When classes are balanced, limit the resulting dataset size to the
    * specified multiple of the original dataset size.
    */
@@ -605,7 +611,7 @@ public class DeepLearning extends Job.ValidatedJob {
       if(arg._name.equals("regression_stop")) {
         arg.disable("Only for regression.", inputArgs);
       }
-      if(arg._name.equals("max_after_balance_size") && !balance_classes) {
+      if((arg._name.equals("max_after_balance_size") || arg._name.equals("class_sampling_factors")) && !balance_classes) {
         arg.disable("Requires balance_classes.", inputArgs);
       }
     }
@@ -614,7 +620,9 @@ public class DeepLearning extends Job.ValidatedJob {
               || arg._name.equals("max_confusion_matrix_size")
               || arg._name.equals("max_hit_ratio_k")
               || arg._name.equals("max_after_balance_size")
-              || arg._name.equals("balance_classes")) {
+              || arg._name.equals("balance_classes")
+              || arg._name.equals("class_sampling_factors")
+              ) {
         arg.disable("Only for classification.", inputArgs);
       }
       if (validation != null && arg._name.equals("score_validation_sampling")) {
@@ -859,6 +867,9 @@ public class DeepLearning extends Job.ValidatedJob {
     if (input_dropout_ratio < 0 || input_dropout_ratio >= 1) {
       throw new IllegalArgumentException("Input dropout must be in [0,1).");
     }
+    if (class_sampling_factors != null || !balance_classes) {
+      if (!quiet_mode) Log.info("Ignoring class_sampling_factors since balance_classes is not enabled.");
+    }
 
     if (!quiet_mode) {
       if (adaptive_rate) {
@@ -1004,9 +1015,13 @@ public class DeepLearning extends Job.ValidatedJob {
       if (!quiet_mode) Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
       train = model.model_info().data_info()._adaptedFrame;
       if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
-      float[] trainSamplingFactors;
       if (mp.classification && mp.balance_classes) {
-        trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
+        float[] trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
+        if (class_sampling_factors != null) {
+          if (class_sampling_factors.length != train.lastVec().domain().length)
+            throw new IllegalArgumentException("class_sampling_factors must have " + train.lastVec().domain().length + " elements");
+          trainSamplingFactors = class_sampling_factors;
+        }
         train = updateFrame(train, sampleFrameStratified(
                 train, train.lastVec(), trainSamplingFactors, (long)(mp.max_after_balance_size*train.numRows()), mp.seed, true, false));
         model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());

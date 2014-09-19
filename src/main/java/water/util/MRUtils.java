@@ -223,7 +223,7 @@ public class MRUtils {
     }
     final long actualnumrows = Math.min(maxrows, Math.round(numrows)); //cap #rows at maxrows
     assert(actualnumrows >= 0); //can have no matching rows in case of sparse data where we had to fill in a makeZero() vector
-    Log.info("Stratified sampling to a total of " + String.format("%,d", actualnumrows) + " rows.");
+    Log.info("Stratified sampling to a total of " + String.format("%,d", actualnumrows) + " rows" + (actualnumrows < numrows ? " (limited by max_after_balance_size).":"."));
 
     if (actualnumrows != numrows) {
       assert(numrows > 0);
@@ -235,10 +235,10 @@ public class MRUtils {
     if (Utils.minIndex(sampling_ratios) == Utils.maxIndex(sampling_ratios)) {
       Log.info("All classes are sampled with sampling ratio: " + Utils.minValue(sampling_ratios));
     } else {
-      Log.info("Majority class (" + label.domain()[Utils.minIndex(sampling_ratios)].toString()
-              + ") sampling ratio: " + Utils.minValue(sampling_ratios));
-      Log.info("Minority class (" + label.domain()[Utils.maxIndex(sampling_ratios)].toString()
-              + ") sampling ratio: " + Utils.maxValue(sampling_ratios));
+      for (int i=0;i<label.domain().length;++i) {
+        Log.info("Class '" + label.domain()[i].toString()
+                + "' sampling ratio: " + sampling_ratios[i]);
+      }
     }
 
     return sampleFrameStratified(fr, label, sampling_ratios, seed, verbose);
