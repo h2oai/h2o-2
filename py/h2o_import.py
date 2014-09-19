@@ -233,9 +233,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
           
         folderURI = 'nfs:/' + folderPath
         if importParentDir:
-            importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
+            finalImportString = folderPath
         else:
-            importResult = node.import_files(folderPath + "/" + pattern, timeoutSecs=timeoutSecs)
+            finalImportString = folderPath + "/" + pattern
+        importResult = node.import_files(finalImportString, timeoutSecs=timeoutSecs)
 
     else:
         if bucket is not None and re.match("/", head):
