@@ -6,9 +6,9 @@ import water.util.Log;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Cloud extends Request {
-  protected final Bool _quiet = new Bool("quiet", false, "");
-  protected final Bool _skip_ticks = new Bool("skip_ticks", false, "");
+public class Cloud extends Request2 {
+  protected final boolean _quiet = false;
+  protected final boolean _skip_ticks = false;
 
 
   /**
@@ -117,7 +117,7 @@ public class Cloud extends Request {
       // which usually means one core.
       int my_cpu_pct = -1;
       int sys_cpu_pct = -1;
-      if (! _skip_ticks.value()) {
+      if (! _skip_ticks) {
         LastTicksEntry lte = ticksHashMap.get(h2o.toString());
         if (lte != null) {
           long system_total_ticks_delta = hb._system_total_ticks - lte._system_total_ticks;
@@ -154,7 +154,7 @@ public class Cloud extends Request {
     response.addProperty(CONSENSUS, Paxos._commonKnowledge); // Cloud is globally accepted
     response.addProperty(LOCKED, Paxos._cloudLocked); // Cloud is locked against changes
 
-    boolean logCloudStatus = (!cloudHealthy) || (cloudHealthy != lastCloudHealthy) || (!_quiet.value());
+    boolean logCloudStatus = (!cloudHealthy) || (cloudHealthy != lastCloudHealthy) || !_quiet;
     lastCloudHealthy = cloudHealthy;
     if (logCloudStatus) {
       Log.info("H2O Cloud Status:");
