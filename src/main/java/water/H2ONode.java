@@ -306,7 +306,7 @@ public class H2ONode extends Iced implements Comparable {
       if(i < res.length) {
         DTask dt = rpc._dt;
         if(dt != null) // else we got ackack -> not interested!
-          res[i++] = new TaskInfo(rpc._dt, e.getKey(), _unique_idx, rpc._computedAndReplied ? (dt._repliedTcp ? task_status.RTCP : task_status.RUDP) : rpc._computed ? task_status.DONE : rpc._started > 0 ? task_status.CMP : task_status.INIT,rpc._callCnt);
+          res[i++] = new TaskInfo(rpc._dt, e.getKey(), _unique_idx, rpc._computedAndReplied ? (dt._repliedTcp ? task_status.RTCP : task_status.RUDP) : rpc._computed ? task_status.DONE : rpc._startedComputationTime > 0 ? task_status.CMP : task_status.INIT,rpc._callCnt);
       }
     }
     return Arrays.copyOf(res,i);

@@ -307,6 +307,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     final int _tsknum;
     long _started;              // Retry fields for the ackack
     long _retry;
+    transient long _startedComputationTime;
     transient int _callCnt;
     volatile boolean _computedAndReplied; // One time transition from false to true
     volatile boolean _computed; // One time transition from false to true
@@ -323,6 +324,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     }
 
     @Override public void compute2() {
+      _startedComputationTime = System.currentTimeMillis();
       // First set self to be completed when this subtask completer
       assert _dt.getCompleter() == null;
       _dt.setCompleter(this);
@@ -377,9 +379,10 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           Log.info("IOException during ACK, "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
           try { ab.close(); } catch( Exception ignore ) {}
           try { Thread.sleep(100); } catch (InterruptedException ignore) {}
-        } catch( Exception e ) { // Custom serializer just barfed?
+        } catch( Throwable e ) { // Custom serializer just barfed?
           Log.err(e);            // Log custom serializer exception
           try { ab.close(); } catch( Exception ignore ) {}
+          try { Thread.sleep(100); } catch (InterruptedException ignore) {}
         }
       }  // end of while(true)
       if( dt == null )
