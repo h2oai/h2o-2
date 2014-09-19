@@ -330,7 +330,7 @@ public abstract class Log {
         p.setProperty("log4j.rootLogger", "INFO, R");
         p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
         p.setProperty("log4j.appender.R.File", logPathFileName);
-        p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
+        p.setProperty("log4j.appender.R.MaxFileSize", "2MB");
         p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
         p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
 
