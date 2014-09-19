@@ -26,7 +26,10 @@ public class Cloud extends Request2 {
     }
   }
 
-
+  @Override
+  public RequestServer.API_VERSION[] supportedVersions() {
+    return SUPPORTS_V1_V2;
+  }
 
   /**
    * Store last tick counts for each node.
