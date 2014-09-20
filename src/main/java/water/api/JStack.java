@@ -28,8 +28,8 @@ public class JStack extends Request {
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public StackSummary( String name, String traces ) { this.name  = name; this.traces= traces; }
-    @API(help="Node name")    final String name;
-    @API(help="Stack traces") final String traces;
+    @API(help="Node name")    final public String name;
+    @API(help="Stack traces") final public String traces;
   }
   @API(help="Array of Stack Traces, one per Node in the Cluster")
   public StackSummary nodes[];

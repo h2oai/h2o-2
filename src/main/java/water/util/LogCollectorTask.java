@@ -1,24 +1,40 @@
 package water.util;
 
 import java.io.*;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import water.DRemoteTask;
+import jsr166y.CountedCompleter;
+import water.DTask;
 import water.H2O;
+import water.api.JStack;
 
-public class LogCollectorTask extends DRemoteTask {
+
+public class LogCollectorTask extends DTask {
   final int MB = 1 << 20;
   final int MAX_SIZE = 10 * MB;
-  public byte[][] _result;
+  public byte[] _result;
 
-  public LogCollectorTask() {}
+  boolean _jstack;
+  public LogCollectorTask(boolean jstack) { _jstack = jstack; }
 
   private transient ByteArrayOutputStream baos = null;
 
-  @Override public void lcompute() {
-    _result = new byte[H2O.CLOUD._memary.length][];
-    int idx = H2O.SELF.index();
+  @Override public void compute2() {
+
+    if (_jstack) {
+      JStackCollectorTask jt = new JStackCollectorTask();
+      jt.lcompute();
+      String traces[] = jt._result;
+      JStack.StackSummary[] nodes = new JStack.StackSummary[H2O.CLOUD.size()];
+      for (int i = 0; i < nodes.length; i++)
+        nodes[i] = new JStack.StackSummary(H2O.CLOUD._memary[i].toString(), traces[i]);
+      for (int i = 0; i < nodes.length; i++)
+        Log.debug(Log.Tag.Sys.WATER, nodes[i].name, nodes[i].traces);
+    }
+
     baos = new ByteArrayOutputStream();
     ZipOutputStream zos = new ZipOutputStream(baos);
 
@@ -36,12 +52,16 @@ public class LogCollectorTask extends DRemoteTask {
         // do nothing
       }
 
-      byte[] arr = baos.toByteArray();
-      _result[idx] = arr;
+      _result = baos.toByteArray();
 
       tryComplete();
     }
   }
+
+  @Override public void onCompletion(CountedCompleter cc) {
+//      System.out.println(this + "on completion");
+  }
+
 
   //here is the code for the method
   private void zipDir(String dir2zip, ZipOutputStream zos) throws IOException
@@ -99,13 +119,6 @@ public class LogCollectorTask extends DRemoteTask {
     }
   }
 
-  @Override public void reduce(DRemoteTask drt) {
-    LogCollectorTask another = (LogCollectorTask) drt;
-    if( _result == null ) _result = another._result;
-    else for (int i=0; i<_result.length; ++i)
-      if (_result[i] == null)
-        _result[i] = another._result[i];
-  }
 
   @Override public byte priority() { return H2O.GUI_PRIORITY; }
 }
