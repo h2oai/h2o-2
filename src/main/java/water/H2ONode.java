@@ -201,6 +201,22 @@ public class H2ONode extends Iced implements Comparable {
   private SocketChannel _socks[] = new SocketChannel[2];
   private int _socksAvail=_socks.length;
   // Count of concurrent TCP requests both incoming and outgoing
+
+  public void resetAllConnections(){
+    synchronized(this) {
+      for (SocketChannel chan: _socks) {
+        if(chan == null) continue;
+        try {
+          chan.socket().close();
+        } catch (Exception e) {
+        }
+        try {
+          chan.close();
+        } catch (Throwable t) {
+        }
+      }
+    }
+  }
   public static final AtomicInteger TCPS = new AtomicInteger(0);
   public SocketChannel getTCPSocket() throws IOException {
     // Under lock, claim an existing open socket if possible

@@ -195,7 +195,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
             break;             // Break out of retry loop
           } catch( AutoBuffer.AutoBufferException e ) {
             Log.info_no_DKV(Log.Tag.Sys.WATER, "IOException during RPC call: " + e._ioe.getMessage() + ",  AB=" + ab + ", for task#" + _tasknum + ", waiting and retrying...");
-            ab.close();
+            try {ab.close();} catch (Throwable t) {}
             try { Thread.sleep(500); } catch (InterruptedException ignore) {}
           }
         } // end of while(true)
@@ -468,7 +468,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         // indistinguishable from a broken short-writer/long-reader bug, except
         // that we'll re-send endlessly and fail endlessly.
         Log.info("Network congestion OR short-writer/long-reader: TCP "+e._ioe.getMessage()+",  AB="+ab+", ignoring partial send");
-        try { ab.close(); } catch( Exception ignore ) {}
+        try { ab.close(); } catch( Throwable ignore ) {}
         return;
       }
       RPCCall rpc2 = ab._h2o.record_task(rpc);
@@ -477,8 +477,6 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           Log.debug("Start remote task#"+task+" "+rpc._dt.getClass()+" from "+ab._h2o);
         H2O.submitTask(rpc);    // And execute!
       } else {                  // Else lost the task-insertion race
-        if(ab.hasTCP())TimeLine.printMyTimeLine();
-        assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi); // All the resends should be UDP only
         // DROP PACKET
       }
 
@@ -487,19 +485,16 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       // progress locally.  We have no answer to reply but we do not want to
       // re-offer the packet for repeated work.  Just ignore the packet.
       ++old._callCnt;
-      if(ab.hasTCP())TimeLine.printMyTimeLine();
-      assert !ab.hasTCP():"ERROR: got tcp resend with existing in-progress task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi); // All the resends should be UDP only
       // DROP PACKET
     } else {
       // This is an old re-send of the same thing we've answered to before.
       // Send back the same old answer ACK.  If we sent via TCP before, then
       // we know the answer got there so just send a control-ACK back.  If we
       // sent via UDP, resend the whole answer.
-      if(ab.hasTCP())TimeLine.printMyTimeLine();
-      assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi); // All the resends should be UDP only
       old.resend_ack();
     }
-    ab.close();
+    // we don't care about the state of the connection right now, just attempt to close it and silently ignore all exceptions
+    try { ab.close(); } catch( Throwable ignore ) {}
   }
 
   // TCP large RECEIVE of results.  Note that 'this' is NOT the RPC object

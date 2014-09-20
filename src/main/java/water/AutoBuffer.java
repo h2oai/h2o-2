@@ -469,12 +469,12 @@ public class AutoBuffer {
         _size += res;            // What we read
       } catch( IOException e ) { // Dunno how to handle so crash-n-burn
         // Linux/Ubuntu message for a reset-channel
-        if( e.getMessage().equals("An existing connection was forcibly closed by the remote host") )
-          throw new AutoBufferException(e);
+//        if( e.getMessage().equals("An existing connection was forcibly closed by the remote host") )
+        throw new AutoBufferException(e);
         // Windows message for a reset-channel
-        if( e.getMessage().equals("An established connection was aborted by the software in your host machine") )
-          throw new AutoBufferException(e);
-        throw Log.errRTExcept(e);
+//        if( e.getMessage().equals("An established connection was aborted by the software in your host machine") )
+//          throw new AutoBufferException(e);
+//        throw Log.errRTExcept(e);
       }
     }
     _time_io_ns += (System.nanoTime()-ns);
