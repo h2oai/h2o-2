@@ -66,11 +66,11 @@ targets <- vars[3596:3600]
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 25 ## submission index
-blend = F
+submission = 26 ## submission index
+blend = T
 
 ## Settings
-n_loop <- 5
+n_loop <- 1
 n_fold <- 5 # must be <= 5!!
 ensemble = (n_loop > 1) # only used if blend = F and submit = T
 
@@ -295,11 +295,11 @@ for (resp in 1:length(targets)) {
             #             train_resp <- response_folds[[1]]
             #             valid_resp <- response_folds[[2]]
             
-            if (nn==1) train_data <- train_hex1
-            if (nn==2) train_data <- train_hex2
-            if (nn==3) train_data <- train_hex3
-            if (nn==4) train_data <- train_hex4
-            if (nn==5) train_data <- train_hex5
+            if (nn==2) train_data <- train_hex1
+            if (nn==3) train_data <- train_hex2
+            if (nn==4) train_data <- train_hex3
+            if (nn==5) train_data <- train_hex4
+            if (nn==1) train_data <- train_hex5
             
             splits <- h2o.splitFrame(train_data, ratios = 1.-1./n_fold, shuffle=T)
             train <- splits[[1]]
@@ -339,19 +339,19 @@ for (resp in 1:length(targets)) {
                                         activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.77
             
             else if (resp == 3) #pH
-              model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) #0.12
-#            
-#               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-#                                         data = train,
-#                                         validation = valid,
-#                                         classification = F, 
-#                                         score_training_samples = 0,
-#                                         score_validation_samples = 0,
-#                                         score_duty_cycle = 1,
-#                                         score_interval = 0.1,
-#                                         force_load_balance=F,
-#                                         override_with_best_model=T,
-#                                         activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.16
+#               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) #0.12
+           
+              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+                                        data = train,
+                                        validation = valid,
+                                        classification = F, 
+                                        score_training_samples = 0,
+                                        score_validation_samples = 0,
+                                        score_duty_cycle = 1,
+                                        score_interval = 0.1,
+                                        force_load_balance=F,
+                                        override_with_best_model=T,
+                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.16
             else if (resp == 4) #SOC
               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
                                         data = train,
@@ -365,20 +365,20 @@ for (resp in 1:length(targets)) {
                                         override_with_best_model=T,
                                         activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.06                          
              else if (resp == 5) #Sand
-              model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) # 0.116
+#               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) # 0.116
 
-#               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-#                                         data = train,
-#                                         validation = valid,
-#                                         classification = F, 
-#                                         score_training_samples = 0,
-#                                         score_validation_samples = 0,
-#                                         score_duty_cycle = 1,
-#                                         score_interval = 0.1,
-#                                         force_load_balance=F,
-#                                         override_with_best_model=T,
-#                                         activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.12
-#  
+              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+                                        data = train,
+                                        validation = valid,
+                                        classification = F, 
+                                        score_training_samples = 0,
+                                        score_validation_samples = 0,
+                                        score_duty_cycle = 1,
+                                        score_interval = 0.1,
+                                        force_load_balance=F,
+                                        override_with_best_model=T,
+                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.12
+ 
             ## Use the model and store results
             yy_temp_train <- h2o.predict(model, train)
             yy_temp_valid <- h2o.predict(model, valid)
@@ -558,6 +558,8 @@ print(Sys.info())
 #Overall 5 -fold cross-validated MSE on training dataset: 0.1021683 0.7653759 0.1610202 0.09344637 0.1232382 #submission 24, should be 0.45 (5-blend), scored 0.433 on 50-ensemble
 #Overall 5 -fold cross-validated MSE on training dataset: 0.0982809 0.7687449 0.1532805 0.06295989 0.1241085 #again 24, should be 0.437 (5-blend)
 #Overall 5 -fold cross-validated MSE on training dataset: 0.106878 0.9372732 0.1225303 0.0867318 0.1176422 #GLM 10-fold CV no lambda search baseline: 0.4565
+#Overall 5 -fold cross-validated MSE on training dataset: 0.09116863 1.079429 0.1673652 0.07868158 0.1491798 #submission 26, same as 24, rotated train shuffles, should be 0.4833481
+
 
 #GOAL: 1/5*(sqrt(0.06)+sqrt(0.64)+sqrt(0.15)+sqrt(0.07)+sqrt(0.09))
 #CURRENT 0.42: 1/5*(sqrt(0.10)+sqrt(0.77)+sqrt(0.122)+sqrt(0.063)+sqrt(0.117))
