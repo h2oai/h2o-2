@@ -11,9 +11,16 @@ import java.util.Arrays;
  */
 public class TaskStatus extends Request2 {
 
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
   public static class NodeTaskInfo extends Iced {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    @API(help="node name")
     final String _node;
+    @API(help="tasks sent here by remote nodes")
     final TaskInfo[][] _remotes;
+    @API(help="pending tasks sent by me to remotes")
     final TaskInfo  [] _pending;
 
     public NodeTaskInfo(TaskInfo [] pending, TaskInfo[][] ts) {
@@ -56,6 +63,7 @@ public class TaskStatus extends Request2 {
     }
   }
 
+  @API(help="task infos for each node")
   NodeTaskInfo[] _infos;
   @Override
   protected Response serve() {

@@ -1,6 +1,8 @@
 package water;
 
 import water.RPC.RPCCall;
+import water.api.DocGen;
+import water.api.Request.API;
 import water.api.TaskStatus.GetTaskInfo;
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
@@ -292,11 +294,18 @@ public class H2ONode extends Iced implements Comparable {
   public enum task_status {INIT, CMP, DONE, RTCP,RUDP}
 
   public static class TaskInfo extends Iced {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    @API(help="Task name")
     public final String task;
+    @API(help="Task Id, unique id per pair of nodes")
     public final long taskId;
+    @API(help="")
     public final int  nodeId;
+    @API(help="")
     public final int  retriesCnt;
 
+    @API(help="")
     public final task_status taskStatus;
 
     public TaskInfo(DTask task,long tid, int nid, task_status ts, int retriesCnt){
