@@ -12,6 +12,19 @@ which makes the assumption that the R session is running R 2.13.0 or later.
 - CRAN has a policy of updating packages every few weeks to months so the most recent or the last stable release would be available
 - Git has most recent changes committed and a build will be made nightly from the source code, however stability is not guaranteed
 
+Quick Start Video
+"""""""""""""""""
+
+.. raw:: html
+
+ <object width="425" height="344"><param name="movie"
+ value="http://www.youtube.com/v/deRpTB9k77k&hl=en&fs=1"></param><param
+ name="allowFullScreen" value="true"></param><embed
+ src="http://www.youtube.com/v/deRpTB9k77k&hl=en&fs=1"
+ type="application/x-shockwave-flash" allowfullscreen="true"
+ width="425" height="344"></embed></object>
+
+
 Dependencies
 """"""""""""
 The H\ :sub:`2`\ O package is built with some required packages so in order to properly install H\ :sub:`2`\ O's package remember
@@ -22,7 +35,6 @@ to install the following dependencies all of which is available in CRAN:
     - rjson
     - statmod
     - tools
-
 
 Download zip file from 0xdata.com
 """""""""""""""""""""""""""""""""

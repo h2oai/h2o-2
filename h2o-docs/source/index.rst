@@ -31,7 +31,16 @@ Tutorials in H\ :sub:`2`\ O
     :maxdepth: 1
 
     tutorial/top
-    tutorial/videos
+
+Data Science
+============
+
+For information on the details of model specification, and an in-depth look at the math behind our algorithms and tools.
+
+.. toctree::
+    :maxdepth: 1
+
+    datascience/top
 
 H\ :sub:`2`\ O APIs
 ===================
@@ -54,33 +63,6 @@ Deployment and Big Data Management
     deployment/hadoop
     deployment/multinode
 
-Helpful Resources
-=================
-
-Information related to the H\ :sub:`2`\ O project and data available
-in the public domain.
-
-.. toctree::
-    :maxdepth: 1
-
-    resources/glossary
-    resources/algoroadmap
-    resources/publicdata
-    resources/h2odatasheet
-    subjectindex
-
-
-Data Science
-============
-
-For information on the details of model specification, and an in-depth look at the math behind our algorithms and tools.
-
-.. toctree::
-    :maxdepth: 1
-
-    datascience/top
-    benchmarks/benchmarks
-
 Developing in H\ :sub:`2`\ O
 ============================
 
@@ -91,6 +73,22 @@ H\ :sub:`2`\ O is open source, which means you have the opportunity to contribut
 
     developuser/top_developer
     developuser/h2o_sw_arch
+
+Helpful Resources
+=================
+
+Information related to the H\ :sub:`2`\ O project and data available
+in the public domain.
+
+.. toctree::
+    :maxdepth: 1
+
+    resources/algoroadmap
+    resources/h2odatasheet
+    benchmarks/benchmarks
+    resources/publicdata
+    resources/glossary
+    subjectindex
 
 Troubleshooting
 ===============
@@ -112,7 +110,5 @@ A few more things that you might be interested in...
     :maxdepth: 1
 
     resources/community
-    misc/license
-    misc/contactus
     misc/highavail
 

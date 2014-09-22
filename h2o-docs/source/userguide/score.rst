@@ -1,11 +1,12 @@
 
 Score
-========
+=====
 
 .. toctree::
    :maxdepth: 1
 
    scoreMulitModel
+   scorePOJO
    scorePCAscore
    scoreauc
    scoreconfusionmatrix

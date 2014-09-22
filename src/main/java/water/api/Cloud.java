@@ -6,9 +6,11 @@ import water.util.Log;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Cloud extends Request {
-  protected final Bool _quiet = new Bool("quiet", false, "");
-  protected final Bool _skip_ticks = new Bool("skip_ticks", false, "");
+public class Cloud extends Request2 {
+  @API(help="quiet", required=false, filter=Default.class)
+  protected boolean quiet = false;
+  @API(help="skip_ticks", required=false, filter=Default.class)
+  protected boolean skip_ticks = false;
 
 
   /**
@@ -26,7 +28,10 @@ public class Cloud extends Request {
     }
   }
 
-
+  @Override
+  public RequestServer.API_VERSION[] supportedVersions() {
+    return SUPPORTS_V1_V2;
+  }
 
   /**
    * Store last tick counts for each node.
@@ -117,7 +122,7 @@ public class Cloud extends Request {
       // which usually means one core.
       int my_cpu_pct = -1;
       int sys_cpu_pct = -1;
-      if (! _skip_ticks.value()) {
+      if (!skip_ticks) {
         LastTicksEntry lte = ticksHashMap.get(h2o.toString());
         if (lte != null) {
           long system_total_ticks_delta = hb._system_total_ticks - lte._system_total_ticks;
@@ -154,7 +159,7 @@ public class Cloud extends Request {
     response.addProperty(CONSENSUS, Paxos._commonKnowledge); // Cloud is globally accepted
     response.addProperty(LOCKED, Paxos._cloudLocked); // Cloud is locked against changes
 
-    boolean logCloudStatus = (!cloudHealthy) || (cloudHealthy != lastCloudHealthy) || (!_quiet.value());
+    boolean logCloudStatus = (!cloudHealthy) || (cloudHealthy != lastCloudHealthy) || !quiet;
     lastCloudHealthy = cloudHealthy;
     if (logCloudStatus) {
       Log.info("H2O Cloud Status:");
