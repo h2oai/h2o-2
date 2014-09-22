@@ -37,8 +37,10 @@ port <- 54321
 h <- h2o.init(ip = ip, port = port)
 
 
-AIRLINES_ALL_PATH <- "/Users/spencer/master/h2o/smalldata/airlines/allyears2k_headers.zip"  # set this to the path to the airlines dataset
+AIRLINES_ALL_PATH <- ""  # set this to the path to the airlines dataset
 NUM_FEATURES <- 5
+
+if (AIRLINES_AIRLINES_ALL_PATH == "") stop("AIRLINES_ALL_PATH must be set")
 
 # Read in the data
 flights <- h2o.importFile(h, AIRLINES_ALL_PATH, "flights")
