@@ -36,11 +36,16 @@ ip <- "127.0.0.1"
 port <- 54321
 h <- h2o.init(ip = ip, port = port)
 
-
-AIRLINES_ALL_PATH <- ""  # set this to the path to the airlines dataset
-NUM_FEATURES <- 5
+#################################################
+##### IMPORTANT VARIABLES TO SET HERE !!!! ######
+#################################################
+AIRLINES_ALL_PATH <- ""   # set this to the path to the airlines dataset
+NUM_FEATURES <- -1        # set this to toggle the number of features to collect
+#################################################
+#################################################
 
 if (AIRLINES_AIRLINES_ALL_PATH == "") stop("AIRLINES_ALL_PATH must be set")
+if (NUM_NUM_FEATURES <= 0) stop("NUM_FEATURES must be > 0")
 
 # Read in the data
 flights <- h2o.importFile(h, AIRLINES_ALL_PATH, "flights")
