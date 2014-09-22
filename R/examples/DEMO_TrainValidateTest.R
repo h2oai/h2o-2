@@ -19,7 +19,7 @@
 # AIRLINES_ALL_PATH <- "/home/0xdiag/datasets/airlines/airlines_all.csv"
 # EXPORT_PREDS_PATH <- "/home/spencer/pp_demo/preds.csv"
 # For local git:
-# AIRLINES_ALL_PATH <- "/Users/spencer/master/h2o/smalldata/airlines/allyears2k_headers.zip"
+AIRLINES_ALL_PATH <- "/Users/spencer/master/h2o/smalldata/airlines/allyears2k_headers.zip"
 # EXPORT_PREDS_PATH <- "/Users/spencer/pp_demo/preds.csv"
 # library(plyr)
 #######################
@@ -39,13 +39,13 @@ h <- h2o.init(ip = ip, port = port)
 #################################################
 ##### IMPORTANT VARIABLES TO SET HERE !!!! ######
 #################################################
-AIRLINES_ALL_PATH <- ""   # set this to the path to the airlines dataset
-NUM_FEATURES <- -1        # set this to toggle the number of features to collect
+#AIRLINES_ALL_PATH <- ""   # set this to the path to the airlines dataset
+NUM_FEATURES <- 9        # set this to toggle the number of features to collect
 #################################################
 #################################################
 
-if (AIRLINES_AIRLINES_ALL_PATH == "") stop("AIRLINES_ALL_PATH must be set")
-if (NUM_NUM_FEATURES <= 0) stop("NUM_FEATURES must be > 0")
+if (AIRLINES_ALL_PATH == "") stop("AIRLINES_ALL_PATH must be set")
+if (NUM_FEATURES <= 0) stop("NUM_FEATURES must be > 0")
 
 # Read in the data
 flights <- h2o.importFile(h, AIRLINES_ALL_PATH, "flights")
@@ -235,7 +235,7 @@ preds <- h2o.predict(best_model, test)
 cat(paste(" =---------Summary------------=\n",
             "Best model type: ", models.sort.by.auc[1,]$model_type, "\n",
             "Best model auc on test: ", test_auc, "\n",
-            "Top 5 important features: ", models.sort.by.auc[1,]$important_feat, "\n",
+            "Top", NUM_FEATURES, "important features: ", models.sort.by.auc[1,]$important_feat, "\n",
             "Model training time: ", models.sort.by.auc[1,]$train_time_s, "\n",
             "Training data rows: ", nrow(train), "\n",
             "Training data cols: ", ncol(train), "\n",
