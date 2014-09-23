@@ -22,13 +22,14 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after building
 # Now resource manager is at 8050?
-NAME_NODE=192.168.1.186
-HDP_JOBTRACKER=192.168.1.187:8050
+NAME_NODE=172.16.2.186
+HDP_JOBTRACKER=172.16.2.187:8050
 
 HDP_NODES=8
 HDP_HEAP=40g
 
-HDP_JAR=h2odriver_hdp2.0.6.jar
+# HDP_JAR=h2odriver_hdp2.0.6.jar
+HDP_JAR=h2odriver_hdp2.1.jar
 H2O_JAR=h2o.jar
 
 # build.sh removes the h2odriver stuff a 'make' creates
@@ -47,7 +48,7 @@ HDP_JAR_USED=$H2O_BUILT/hadoop/$HDP_JAR
 HDFS_OUTPUT=hdfsOutputDirName
 
 REMOTE_HOME=/home/0xcustomer
-REMOTE_IP=192.168.1.187
+REMOTE_IP=172.16.2.187
 REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -p -i $HOME/.0xcustomer/0xcustomer_id_rsa "
 
@@ -73,7 +74,40 @@ chmod +x /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
 echo "port: start looking at 55821. Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port)"
-echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $HDP_HEAP -nodes $HDP_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+
+# EA=" -ea"
+# ApiWatchdog fail if I use -ea?
+EA=""
+# FIX! how to pass -random_udp_drop thru h2odriver?
+# Limit cores to see what happens
+# h2o checks that it's >=4
+# does this has to be greater than the # of jvms? it's a total, not a per jvm total?
+# THREADS=" -nthreads 8"
+# THREADS=" -nthreads 200"
+echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $HDP_HEAP -nodes $HDP_NODES -output $HDFS_OUTPUT -notify h2o_one_node $EA" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+
+# Usage: h2odriver
+#           -libjars <.../h2o.jar>
+#           [other generic Hadoop ToolRunner options]
+#           [-h | -help]
+#           [-jobname <name of job in jobtracker (defaults to: 'H2O_nnnnn')>]
+#               (Note nnnnn is chosen randomly to produce a unique name)
+#           [-driverif <ip address of mapper->driver callback interface>]
+#           [-driverport <port of mapper->driver callback interface>]
+#           [-network <IPv4network1Specification>[,<IPv4network2Specification> ...]
+#           [-timeout <seconds>]
+#           [-disown]
+#           [-notify <notification file name>]
+#           -mapperXmx <per mapper Java Xmx heap size>
+#           [-extramempercent <0 to 20>]
+#           -n | -nodes <number of H2O nodes (i.e. mappers) to create>
+#           [-nthreads <maximum typical worker threads, i.e. cpus to use>]
+#           [-baseport <starting HTTP port for H2O nodes; default is 54321>]
+#           [-ea]
+#           [-verbose:gc]
+#           [-XX:+PrintGCDetails]
+#           [-license <license file name (local filesystem, not hdfs)>]
+#           -o | -output <hdfs output dir>
 
 # copy the script, just so we have it there too
 $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
@@ -123,10 +157,10 @@ cp -f h2o_one_node sandbox
 
 echo "Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
 echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
-echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
+echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh4) might be using"
 for mr in 181 182 183 184 185 186 187 188 189 190
 do
-    ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'
+    ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr 'cd /mnt/0xcustomer-datasets'
 done
 
 # We now have the h2o-nodes.json, that means we started the jvms
@@ -155,11 +189,16 @@ myPy() {
 
 # worked
 myPy c2 test_c2_rel.py
+myPy c9 test_c9_GLM_airlines_hdfs_multi.py
+
 # myPy c3 test_c3_rel.py
 # test_c8_rf_airlines_hdfs_fvec.py
 # test_c4_four_billion_rows_fvec.py
 # myPy c5 test_c5_KMeans_sphere_h1m_fvec.py
+
+# GOOD!
 myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
+
 # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
 
 # have to update this to poit to the right hdfs?

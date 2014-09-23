@@ -76,16 +76,16 @@ class Basic(unittest.TestCase):
         else:
             tryHeap = 28
 
-        # print "\n", tryHeap,"GB heap, 1 jvm per host, import 192.168.1.176 hdfs, then parse"
+        # print "\n", tryHeap,"GB heap, 1 jvm per host, import 172.16.2.176 hdfs, then parse"
         print "\n", tryHeap,"GB heap, 1 jvm per host, import,  then parse"
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True # for the beta tab in the browser
         if (localhost):
             h2o.build_cloud(node_count=3, java_heap_GB=4)
-                # use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3'
+                # use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4'
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap)
-                # use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3'
+                # use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4'
 
     @classmethod
     def tearDownClass(cls):
@@ -148,7 +148,7 @@ class Basic(unittest.TestCase):
             for o in range(OUTSTANDING):
                 src_key = csvFilename + "_" + str(parseTrial) 
                 hex_key = csvFilename + "_" + str(parseTrial) + ".hexxx"
-                # "key": "hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
+                # "key": "hdfs://172.16.2.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
 
                 # hacked hard ln so source keys would have different names? was getting h2o locking issues
                 if DO_IRIS:

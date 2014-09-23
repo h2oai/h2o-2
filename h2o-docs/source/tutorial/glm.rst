@@ -1,13 +1,20 @@
 .. _GLM_tutorial:
 
 GLM Tutorial
-==============
+============
 
 The purpose of this tutorial is to walk the new user through 
 Generalized Linear Analysis (GLM)  using   H\ :sub:`2`\ O.  
 Users who have never used H\ :sub:`2`\ O before should see
 :ref:`GettingStartedFromaZipFile` for additional instructions on how
 to run H\ :sub:`2`\ O.
+
+Quick Start Video
+"""""""""""""""""
+
+.. raw:: html
+
+  <object width="425" height="344"><param name="movie" value="http://www.youtube.com/v/iRqQVA33l0g&hl=en&fs=1"></param><param name="allowFullScreen" value="true"></param><embed src="http://www.youtube.com/v/iRqQVA33l0g&hl=en&fs=1" type="application/x-shockwave-flash" allowfullscreen="true" width="425" height="344"></embed></object>
 
 
 When to Use GLM
@@ -27,7 +34,7 @@ Here are some examples:
   "How many customers will contact help support in a given time
   frame?"
 
-  
+
 
 Getting Started
 """""""""""""""

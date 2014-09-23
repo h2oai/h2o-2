@@ -37,6 +37,19 @@ public class LogView extends Request {
   static class LogDownload extends Request {
 
     @Override public water.NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
+      Log.info("\nGathering additional data before log collection.");
+
+      Log.info("\nCollecting cloud status.");
+      new Cloud().serve();
+
+      Log.info("\nPerforming network test.");
+      new NetworkTest().invoke();
+
+      Log.info("\nCollecting stack traces.");
+      new JStack().serve();
+
+      Log.info("\nCollecting logs.");
+
       // collect nodes' logs
       LogCollectorTask collector = new LogCollectorTask();
       collector.invokeOnAllNodes();

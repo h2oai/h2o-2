@@ -25,7 +25,7 @@ else
         echo "The possibilities should be relatively static over time"
         echo "Could be problems if other threads also using that user on these machines at same time"
         echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 \
+        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.164 \
             'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
 
 

@@ -65,7 +65,7 @@ class PerfRunner:
         """
         Create a Test object and push it onto the queue.
         """
-        self.pre = "192.168"
+        self.pre = "172.16.2"
         config_file = os.path.abspath(os.path.join(self.test_root_dir, prefix, testDir, testDir + ".cfg"))
         print "USING CONFIGURATION FROM THIS FILE: "
         print config_file

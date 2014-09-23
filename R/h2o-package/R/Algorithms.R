@@ -456,6 +456,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
                              max_confusion_matrix_size,
                              max_hit_ratio_k,
                              balance_classes,
+                             class_sampling_factors,
                              max_after_balance_size,
                              score_validation_sampling,
                              diagnostics,
@@ -556,6 +557,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
   parms = .addIntParm(parms, k="max_confusion_matrix_size", v=max_confusion_matrix_size)
   parms = .addIntParm(parms, k="max_hit_ratio_k", v=max_hit_ratio_k)
   parms = .addBooleanParm(parms, k="balance_classes", v=balance_classes)
+  parms = .addDoubleArrayParm(parms, k="class_sampling_factors", v=class_sampling_factors)
   parms = .addFloatParm(parms, k="max_after_balance_size", v=max_after_balance_size)
   parms = .addStringParm(parms, k="score_validation_sampling", v=score_validation_sampling)
   parms = .addBooleanParm(parms, k="diagnostics", v=diagnostics)
@@ -585,6 +587,18 @@ h2o.deeplearning <- function(x, y, data, key = "",
   noGrid <- noGrid && (missing(momentum_stable) || length(momentum_stable) == 1)
   noGrid <- noGrid && (missing(momentum_start) || length(momentum_start) == 1)
   noGrid <- noGrid && (missing(nesterov_accelerated_gradient) || length(nesterov_accelerated_gradient) == 1)
+  noGrid <- noGrid && (missing(override_with_best_model) || length(override_with_best_model) == 1)
+  noGrid <- noGrid && (missing(seed) || length(seed) == 1)
+  noGrid <- noGrid && (missing(input_dropout_ratio) || length(input_dropout_ratio) == 1)
+  noGrid <- noGrid && (missing(hidden_dropout_ratios) || length(hidden_dropout_ratios) == 1)
+  noGrid <- noGrid && (missing(max_w2) || length(max_w2) == 1)
+  noGrid <- noGrid && (missing(initial_weight_distribution) || length(initial_weight_distribution) == 1)
+  noGrid <- noGrid && (missing(initial_weight_scale) || length(initial_weight_scale) == 1)
+  noGrid <- noGrid && (missing(loss) || length(loss) == 1)
+  noGrid <- noGrid && (missing(balance_classes) || length(balance_classes) == 1)
+  noGrid <- noGrid && (missing(max_after_balance_size) || length(max_after_balance_size) == 1)
+  noGrid <- noGrid && (missing(fast_mode) || length(fast_mode) == 1)
+  noGrid <- noGrid && (missing(shuffle_training_data) || length(shuffle_training_data) == 1)
   if(noGrid)
     .h2o.singlerun.internal("DeepLearning", data, res, nfolds, validation, parms)
   else {
@@ -690,7 +704,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
   }
   
   if(!is.null(errs$variable_importances)) {
-    result$varimp <- errs$variable_importances$varimp
+    result$varimp <- as.data.frame(t(errs$variable_importances$varimp))
     names(result$varimp) <- errs$variable_importances$variables
     result$varimp <- sort(result$varimp, decreasing = TRUE)
   }

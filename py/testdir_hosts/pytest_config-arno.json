@@ -12,14 +12,14 @@
 
     "create_json": true,
 
-    "hdfs_name_node": "192.168.1.176",
-    "hdfs_version": "cdh3",
+    "hdfs_name_node": "172.16.2.176",
+    "hdfs_version": "cdh4",
     "use_hdfs": true,
 
     "use_flatfile": true,
 
     "ip": [
-        "192.168.1.181"
+        "172.16.2.181"
     ]
 }
 

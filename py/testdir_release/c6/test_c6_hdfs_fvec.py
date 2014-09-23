@@ -56,8 +56,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # we have two cdh's though. I guess we're going to use whatever got setup
         # h2o.nodes[0].use_maprfs = False
         # h2o.nodes[0].use_hdfs = True
-        # h2o.nodes[0].hdfs_version = 'cdh3'
-        # h2o.nodes[0].hdfs_name_node = '192.168.1.176'
+        # h2o.nodes[0].hdfs_version = 'cdh4'
+        # h2o.nodes[0].hdfs_name_node = '172.16.2.176'
 
         h2o.setup_benchmark_log()
 

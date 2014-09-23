@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_parse_bounds_libsvm_fvec(self):
+    def test_KMeans_libsvm_fvec(self):
         h2o.beta_features = True
         # just do the import folder once
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)

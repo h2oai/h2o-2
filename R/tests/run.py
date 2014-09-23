@@ -140,7 +140,7 @@ class H2OCloudNode:
         # there is no hdfs currently in ec2, except s3n/hdfs
         # the core-site.xml provides s3n info
         # it's possible that we can just always hardware the hdfs version
-        # to match the cdh3 cluster we're hardwiring tests to
+        # to match the cdh4 cluster we're hardwiring tests to
         # i.e. it won't make s3n/s3 break on ec2
 
         cmd = ["java",
@@ -149,7 +149,8 @@ class H2OCloudNode:
                "-jar", self.h2o_jar,
                "-name", self.cloud_name,
                "-baseport", str(self.my_base_port),
-               "-hdfs_version", "cdh3"]
+               # apparently we don't need -hdfs=hdfs://<namenode> anymore on the java startup?
+               "-hdfs_version", "cdh4"]
 
         # Add S3N credentials to cmd if they exist.
         ec2_hdfs_config_file_name = os.path.expanduser("~/.ec2/core-site.xml")

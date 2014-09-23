@@ -1,100 +1,81 @@
 .. _Javahelp:
 
 
-H\ :sub:`2`\ O Command-line Options
-======================================
+Command-line Options
+====================
 
 When an instance of H\ :sub:`2`\ O is started from the command-line, users
 generally call a Java command similar to "java -Xmx1g -jar
 h2o.jar " Users can customize their running
-instance of H\ :sub:`2`\ O by changing options in this java command. Each of the
-options has a default. 
+instance of H\ :sub:`2`\ O by changing options from their default value during launch.
 
-**Help in the terminal:**
-
-  Users can access help while working in the terminal by calling 
-  **java -jar h2o.jar -help** in the working directory where their H\ :sub:`2`\ O
-  jar is located. 
-
-**Memory Allocation** 
-
-  In **java [-Xmx<size>] -jar h2o.jar [options]** users specify the
-  amount of memory allocated to a particular node by specifying a
-  number in place of the indicator *<size>*. If your data set is
-  large, give H\ :sub:`2`\ O more memory (for example, -Xmx4g gives H\ :sub:`2`\ O four
-  gigabytes of memory).  For best performance, Xmx should be 4x the
-  size of your data, but never more than the total amount of memory on
-  the machine where H\ :sub:`2`\ O is running.
-
-**Where to Place Options**
-
-  There are two places in the java command where options can be specified. 
-  In the call options should be inserted as follows:
-  **java -Xmx<size> [ADDITIONAL JVM OPTIONS GO HERE] -jar h2o.jar [H\ :sub:`2`\ O OPTIONS GO HERE]**
+There are two different argument types: JVM arguments and H\ :sub:`2`\ O arguments that follows
+the following format when ran: *java* **[JVM OPTIONS]** *-jar h2o.jar* **[H2O OPTIONS]**
 
 
 JVM Options
 -----------
 
-The common options are listed below; however, H\ :sub:`2`\ O is designed to not require many flags. 
-Advanced and curious users may find http://www.oracle.com/technetwork/java/javase/tech/vmoptions-jsp-140102.html
-helpful for defining and describing other common java command options. 
+For other common as well as advance JVM options not mentioned below search through available
+`VM Options <http://www.oracle.com/technetwork/java/javase/tech/vmoptions-jsp-140102.html>`_.
+Typically there are only two options used commonly for H\ :sub:`2`\ O's case.
 
-**-version**
-    
-  Print java version info and exit.
+    **-version**
+        Print java version info and exit. Run a check on the java version to make sure the Java and  H\ :sub:`2`\ O's versions are compatible. In particular H\ :sub:`2`\ O supports Java 1.6+.
 
-**-Xmx[totalheapsize]**
-
-  Sets the total heap size for the node of H\ :sub:`2`\ O.
-
+    -Xmx<Heap Size>
+          Is a memory allocation option that sets the total heap size for a H\ :sub:`2`\ O node. By default
+          this option is set to -Xmx1g. It is recommended to launch nodes with a total of four times the
+          memory than your data. *Note: Do not try to launch with more memory than you have available.*
 
 H\ :sub:`2`\ O Options
------------------------ 
+----------------------
 
-**-flatfile <FlatFileName>**
-    
-  Configuration flat file explicitly listing H\ :sub:`2`\ O cloud node members. 
-  
-**-h | -help**
-          
-  Print this help.
+To access the following list from the command line use option -h or -help.
 
-**-ice_root <fileSystemPath>**
-    
-  The directory where H\ :sub:`2`\ O spills temporary data to disk.
-  (The default is '/tmp/h2o-User'.)
-  
-**-ip <ipAddressOfNode>**
-    
-  IP address of this node.
+    -h | -help
+          Print this help.
 
-**-name <h2oCloudName>**
+    **-version**
+          Print version info and exit.
 
-  Cloud name used for discovery of other nodes.
-  Nodes with the same cloud name will form an H\ :sub:`2`\ O cloud
-  (also known as an H\ :sub:`2`\ O cluster).
+    -name <h2oCloudName>
+          Cloud name used for discovery of other nodes.
+          Nodes with the same cloud name will form an H2O cloud
+          (also known as an H2O cluster).
 
-**-network <IPv4network1Specification>[,<IPv4network2Specification> …]**
-    
-  The IP address discovery code will bind to the first interface
-  that matches one of the networks in the comma-separated list.
-  Use instead of -ip when a broad range of addresses is legal.
-  (Example network specification: '10.1.2.0/24' allows 256 legal
-  possibilities.)
+    -flatfile <flatFileName>
+          Configuration file explicitly listing H2O cloud node members.
 
-**-nthreads <number>**
+    -ip <ipAddressOfNode>
+          IP address of this node.
 
-  Maximum number of typical worker threads.  Think of this as the 
-  maximum number of CPUs H\ :sub:`2`\ O will use.  This value is
-  per java instance.  Specifying too small a value may result in
-  deadlocks.  Never specify fewer than 4.  The default value is 99.
+    -port <port>
+          Port number for this node (note: port+1 is also used).
+          (The default port is 54321.)
 
-**-port <port>**
+    -network <IPv4network1Specification>[,<IPv4network2Specification> ...]
+          The IP address discovery code will bind to the first interface
+          that matches one of the networks in the comma-separated list.
+          Use instead of -ip when a broad range of addresses is legal.
+          (Example network specification: '10.1.2.0/24' allows 256 legal
+          possibilities.)
 
-  Port number for this node (note: port+1 is also used).
-  (The default port is 54321.)
+    -ice_root <fileSystemPath>
+          The directory where H2O spills temporary data to disk.
+          (The default is '/tmp/h2o-Amy'.)
 
+    **-single_precision**
+          Reduce the max. (storage) precision for floating point numbers
+          from double to single precision to save memory of numerical data.
+          (The default is double precision.)
+
+    -nthreads <# of threads>
+          Maximum number of threads in the low priority batch-work queue.
+          (The default is 4*numcpus.)
+
+    -license <licenseFilePath>
+          Path to license file on local filesystem.
 
 Cloud formation behavior
 ------------------------
@@ -103,7 +84,7 @@ New H\ :sub:`2`\ O nodes join together to form a cloud at startup time.
 Once a cloud is given work to perform, it locks out new members
 from joining. H\ :sub:`2`\ O works best on distributed multinode clusters
 when the clusters are similar in configuration, and allocated
-equal amounts of memory. 
+equal amounts of memory.
 
 **Examples:**
 
@@ -117,10 +98,3 @@ equal amounts of memory.
       $ java -Xmx2g -jar h2o.jar -name TomsCloud
       $ java -Xmx2g -jar h2o.jar -name TomsCloud
       $ java -Xmx2g -jar h2o.jar -name TomsCloud
-
-
-Supported Java
-""""""""""""""""
-Java 1.8 for developers is not supported at this time. Users running
-H\ :sub:`2`\ O, but not modifying and supplementing code, or
-recompiling the existing code can use Java 1.8

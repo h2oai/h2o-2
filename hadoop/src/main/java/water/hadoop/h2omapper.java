@@ -25,6 +25,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
   final static public String H2O_DRIVER_PORT_KEY = "h2o.driver.port";
   final static public String H2O_NETWORK_KEY = "h2o.network";
   final static public String H2O_BETA_KEY = "h2o.beta";
+  final static public String H2O_RANDOM_UDP_DROP_KEY = "h2o.random.udp.drop";
   final static public String H2O_NTHREADS_KEY = "h2o.nthreads";
   final static public String H2O_BASE_PORT_KEY = "h2o.baseport";
   final static public String H2O_LICENSE_DATA_KEY = "h2o.license.data";
@@ -357,6 +358,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     String nthreadsString = conf.get(H2O_NTHREADS_KEY);
     String basePortString = conf.get(H2O_BASE_PORT_KEY);
     String betaString = conf.get(H2O_BETA_KEY);
+    String randomUdpDropString = conf.get(H2O_RANDOM_UDP_DROP_KEY);
     String licenseData = conf.get(H2O_LICENSE_DATA_KEY);
 
     ServerSocket ss = new ServerSocket();
@@ -395,6 +397,11 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     if (betaString != null) {
       if (betaString.length() > 0) {
         argsList.add(betaString);
+      }
+    }
+    if (randomUdpDropString != null) {
+      if (randomUdpDropString.length() > 0) {
+        argsList.add(randomUdpDropString);
       }
     }
     if (licenseData != null) {

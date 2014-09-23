@@ -922,6 +922,11 @@ public final class H2O {
    * as the only member.
    */
   private static void startLocalNode() {
+    // Print this first, so if any network stuff is affected it's clear this is going on.
+    if (OPT_ARGS.random_udp_drop != null) {
+      Log.warn("Debugging option RANDOM UDP DROP is ENABLED, make sure you really meant it");
+    }
+
     // Figure self out; this is surprisingly hard
     initializeNetworkSockets();
     // Do not forget to put SELF into the static configuration (to simulate
