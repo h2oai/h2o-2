@@ -74,7 +74,7 @@ public final class PersistFS extends Persist {
       try {
         AutoBuffer ab = new AutoBuffer(s.getChannel(), true, Value.ICE);
         byte[] b = ab.getA1(v._max);
-        ab.close();
+        ab.close(false);
         return b;
       } finally {
         s.close();
@@ -99,7 +99,7 @@ public final class PersistFS extends Persist {
     try {
       byte[] m = v.memOrLoad(); // we are not single threaded anymore
       assert m != null && m.length == v._max : "Trying to save partial file: value key=" + v._key + ", length to save=" + m + ", value max size=" + v._max; // Assert not saving partial files
-      new AutoBuffer(s.getChannel(), false, Value.ICE).putA1(m, m.length).close();
+      new AutoBuffer(s.getChannel(), false, Value.ICE).putA1(m, m.length).close(false);
       v.setdsk();             // Set as write-complete to disk
     } finally {
       Utils.close(s);

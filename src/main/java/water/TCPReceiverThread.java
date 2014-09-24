@@ -3,6 +3,7 @@ package water;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+import water.UDP.udp;
 import water.util.Log;
 
 /**
@@ -84,6 +85,11 @@ public class TCPReceiverThread extends Thread {
           switch( UDP.udp.UDPS[x] ) {
           case exec:     RPC.remote_exec  (_ab); break;
           case ack:      RPC.tcp_ack      (_ab); break;
+          case ackack:
+            udp.UDPS[x]._udp.call(_ab);
+            _ab.close(false);
+            break;
+          case fetchack: RPC.tcp_ack      (_ab); break;
           case timeline: TimeLine.tcp_call(_ab); break;
           default: throw new RuntimeException("Unknown TCP Type: " + ctrl+" "+_ab._h2o);
           }

@@ -18,7 +18,7 @@ class FJPacket extends H2OCountedCompleter {
   @Override public void compute2() {
     _ab.getPort(); // skip past the port
     if( _ctrl <= UDP.udp.ack.ordinal() )
-      UDP.udp.UDPS[_ctrl]._udp.call(_ab).close();
+      UDP.udp.UDPS[_ctrl]._udp.call(_ab).close(false);
     else
       RPC.remote_exec(_ab);
     tryComplete();
