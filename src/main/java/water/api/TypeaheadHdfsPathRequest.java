@@ -6,8 +6,8 @@ import org.apache.hadoop.fs.*;
 
 import water.persist.PersistHdfs;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonPrimitive;
+import dontweave.gson.JsonArray;
+import dontweave.gson.JsonPrimitive;
 
 public class TypeaheadHdfsPathRequest extends TypeaheadRequest {
 

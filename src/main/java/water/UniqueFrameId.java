@@ -1,7 +1,7 @@
 package water;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import dontweave.gson.JsonObject;
+import dontweave.gson.JsonParser;
 import org.apache.commons.codec.binary.Hex;
 
 import water.api.DocGen;

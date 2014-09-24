@@ -3,6 +3,7 @@ import unittest, time, sys, random, string
 sys.path.extend(['.','..','py'])
 import h2o, h2o_gbm, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
 
+RANDOM_UDP_DROP = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -13,9 +14,9 @@ class Basic(unittest.TestCase):
         # want detail on the cloud building to see what node fails
         h2o.verbose = True
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=2, base_port=54323)
+            h2o.build_cloud(java_heap_GB=2, base_port=54323, random_udp_drop=RANDOM_UDP_DROP)
         else:
-            h2o_hosts.build_cloud_with_hosts(base_port=54323)
+            h2o_hosts.build_cloud_with_hosts(base_port=54323, random_udp_drop=RANDOM_UDP_DROP)
         h2o.verbose = False
 
     @classmethod

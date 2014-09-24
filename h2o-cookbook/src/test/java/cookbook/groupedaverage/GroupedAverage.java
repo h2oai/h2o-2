@@ -1,6 +1,6 @@
 package cookbook.groupedaverage;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 import water.Key;
 import water.Request2;
 import water.UKV;

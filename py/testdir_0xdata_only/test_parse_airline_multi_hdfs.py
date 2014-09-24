@@ -2,12 +2,16 @@ import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 
-print "random_udp_drop!!"
-RANDOM_UDP_DROP = True
-# NAME_NODE = 'mr-0x6'
-# VERSION = 'cdh4'
-NAME_NODE = 'mr-0xd6'
-VERSION = 'hdp2.1'
+RANDOM_UDP_DROP = False
+DISABLE_ASSERTIONS = False
+if RANDOM_UDP_DROP:
+    print "random_udp_drop!!"
+
+NAME_NODE = 'mr-0x6'
+VERSION = 'cdh4'
+# NAME_NODE = 'mr-0xd6'
+# VERSION = 'hdp2.1'
+
 
 print "Using", VERSION, "on", NAME_NODE
 
@@ -25,10 +29,8 @@ class Basic(unittest.TestCase):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
         h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
-    def test_parse_nflx_loop_hdfs_fvec(self):
+    def test_parse_airline_multi_hdfs(self):
         h2o.beta_features = True
-        print "Using the -.gz files from hdfs"
-        # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
         csvFilename = "hex_10"
         csvFilePattern = '*' # all files in the folder
 
@@ -37,23 +39,27 @@ class Basic(unittest.TestCase):
             print "\n", tryHeap,"GB heap, 1 jvm per host, import mr-0x6 hdfs, then parse"
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55930,
+                h2o.build_cloud(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55930, disable_assertions=DISABLE_ASSERTIONS,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
             else:
-                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55600,
+                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55604, disable_assertions=DISABLE_ASSERTIONS,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
             # h2o.nodes[0].sandboxIgnoreErrors = True
 
-            timeoutSecs = 500
+            timeoutSecs = 3600
             importFolderPath = "datasets/airlines_multi"
 
             for trial in range(trialMax):
                 hex_key = csvFilename + "_" + str(trial) + ".hex"
                 csvPathname = importFolderPath + "/" + csvFilePattern
                 start = time.time()
-                parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
+                importResult = h2i.import_only(path=csvPathname, schema='hdfs', 
+                    timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
+                print "importResult:", h2o.dump_json(importResult)
+
+                parseResult = h2i.parse_only(pattern='*csv', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 elapsed = time.time() - start
 

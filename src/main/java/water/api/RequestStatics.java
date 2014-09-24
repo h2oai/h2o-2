@@ -7,8 +7,8 @@ import java.util.regex.Pattern;
 
 import water.util.Log;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonElement;
+import dontweave.gson.JsonObject;
 
 /** All statics for the Request api.
  *

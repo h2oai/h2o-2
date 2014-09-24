@@ -5,7 +5,7 @@ import water.Lockable;
 import water.UKV;
 import water.Value;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class Remove extends Request {
   @Override public RequestServer.API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }

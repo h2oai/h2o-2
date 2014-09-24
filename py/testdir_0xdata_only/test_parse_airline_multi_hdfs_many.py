@@ -2,8 +2,9 @@ import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs as h2j
 
-print "random_udp_drop!!"
-RANDOM_UDP_DROP = True
+RANDOM_UDP_DROP = False
+if RANDOM_UDP_DROP:
+    print "random_udp_drop!!"
 # NAME_NODE = 'mr-0x6'
 # VERSION = 'cdh4'
 NAME_NODE = 'mr-0xd6'
@@ -26,11 +27,9 @@ class Basic(unittest.TestCase):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
         h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
-    def test_parse_nflx_loop_hdfs_fvec(self):
-        h2o.beta_features = True
-        print "Using the -.gz files from hdfs"
-        # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
+    def test_parse_airline_multi_hdfs_many(self):
 
+        h2o.beta_features = True
         # default
         csvFilename = "hex_10"
         csvFilePattern = '*' # all files in the folder
@@ -42,7 +41,7 @@ class Basic(unittest.TestCase):
                 h2o.build_cloud(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55930,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
             else:
-                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55600,
+                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55600, disable_assertion=True,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
 
             # don't raise exception if we find something bad in h2o stdout/stderr?

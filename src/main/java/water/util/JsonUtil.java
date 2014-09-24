@@ -5,7 +5,7 @@ import java.util.Map.Entry;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
-import com.google.gson.*;
+import dontweave.gson.*;
 
 public class JsonUtil {
   private static final Map<JsonPrimitive, JsonPrimitive> SPECIAL = Maps.newHashMap();

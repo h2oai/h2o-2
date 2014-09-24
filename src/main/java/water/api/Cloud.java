@@ -1,6 +1,6 @@
 package water.api;
 
-import com.google.gson.*;
+import dontweave.gson.*;
 import water.*;
 import water.util.Log;
 

@@ -14,7 +14,7 @@ import water.fvec.Frame;
 import water.util.*;
 
 import com.google.common.io.ByteStreams;
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
