@@ -117,7 +117,8 @@ then
     # myPy c9 test_c9_GBM_airlines_hdfs_fvec.py
     # myPy c8 test_c8_rf_airlines_hdfs_fvec.py
     myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
-    myPy c9 test_c9_GLM_rc_fvec.py
+    # dataset is missing
+    # myPy c9 test_c9_GLM_rc_fvec.py
 
 
     # put known failure last
