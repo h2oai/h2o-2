@@ -30,9 +30,6 @@ class Basic(unittest.TestCase):
     def test_parse_airline_multi_hdfs_many(self):
 
         h2o.beta_features = True
-        print "Using the -.gz files from hdfs"
-        # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
-
         # default
         csvFilename = "hex_10"
         csvFilePattern = '*' # all files in the folder

@@ -6,10 +6,11 @@ RANDOM_UDP_DROP = False
 DISABLE_ASSERTIONS = False
 if RANDOM_UDP_DROP:
     print "random_udp_drop!!"
-# NAME_NODE = 'mr-0x6'
-# VERSION = 'cdh4'
-NAME_NODE = 'mr-0xd6'
-VERSION = 'hdp2.1'
+
+NAME_NODE = 'mr-0x6'
+VERSION = 'cdh4'
+# NAME_NODE = 'mr-0xd6'
+# VERSION = 'hdp2.1'
 
 
 print "Using", VERSION, "on", NAME_NODE
@@ -30,8 +31,6 @@ class Basic(unittest.TestCase):
 
     def test_parse_airline_multi_hdfs(self):
         h2o.beta_features = True
-        print "Using the -.gz files from hdfs"
-        # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
         csvFilename = "hex_10"
         csvFilePattern = '*' # all files in the folder
 
@@ -60,7 +59,7 @@ class Basic(unittest.TestCase):
                     timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 print "importResult:", h2o.dump_json(importResult)
 
-                parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
+                parseResult = h2i.parse_only(pattern='*csv', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 elapsed = time.time() - start
 
