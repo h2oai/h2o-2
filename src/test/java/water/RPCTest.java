@@ -45,39 +45,39 @@ public class RPCTest extends TestUtil {
   }
 
 
-
-  @Test
-  public void testUnreliableTCP () throws Exception {
-    // test unreliable reader
-    // test UDPs
-    Futures fs = new Futures();
-    final ArrayList<ForkJoinTask> ts = new ArrayList<ForkJoinTask>();
-    for (int j = 0; j < H2O.CLOUD.size(); ++j) {
-      final int fj = j;
-      if (H2O.CLOUD._memary[j] == H2O.SELF)
-        continue;
-      for (int k = 0; k < 1000; ++k) {
-        ts.add(new H2OCountedCompleter() {
-          @Override
-          public void compute2() {
-            new RPC<TestReaderSideTask>(H2O.CLOUD._memary[fj], new TestReaderSideTask()).addCompleter(this).call();
-          }
-        });
-      }
-    }
-    Future f = H2O.submitTask(new H2OCountedCompleter() {
-      @Override
-      public void compute2() {
-        ForkJoinTask.invokeAll(ts);
-        tryComplete();
-      }
-    });
-    int i = 0;
-    while(!f.isDone() && !f.isCancelled()){
-      Thread.sleep(10);
-      for(H2ONode n:H2O.CLOUD._memary)
-        n.resetAllConnections();
-    }
-    f.get();
-  }
+//
+//  @Test
+//  public void testUnreliableTCP () throws Exception {
+//    // test unreliable reader
+//    // test UDPs
+//    Futures fs = new Futures();
+//    final ArrayList<ForkJoinTask> ts = new ArrayList<ForkJoinTask>();
+//    for (int j = 0; j < H2O.CLOUD.size(); ++j) {
+//      final int fj = j;
+//      if (H2O.CLOUD._memary[j] == H2O.SELF)
+//        continue;
+//      for (int k = 0; k < 1000; ++k) {
+//        ts.add(new H2OCountedCompleter() {
+//          @Override
+//          public void compute2() {
+//            new RPC<TestReaderSideTask>(H2O.CLOUD._memary[fj], new TestReaderSideTask()).addCompleter(this).call();
+//          }
+//        });
+//      }
+//    }
+//    Future f = H2O.submitTask(new H2OCountedCompleter() {
+//      @Override
+//      public void compute2() {
+//        ForkJoinTask.invokeAll(ts);
+//        tryComplete();
+//      }
+//    });
+//    int i = 0;
+//    while(!f.isDone() && !f.isCancelled()){
+//      Thread.sleep(10);
+//      for(H2ONode n:H2O.CLOUD._memary)
+//        n.resetAllConnections();
+//    }
+//    f.get();
+//  }
 }
