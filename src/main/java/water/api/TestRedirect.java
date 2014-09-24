@@ -1,7 +1,7 @@
 
 package water.api;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class TestRedirect extends Request {
   @Override protected Response serve() {

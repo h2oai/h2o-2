@@ -1,8 +1,8 @@
 package water;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import dontweave.gson.JsonElement;
+import dontweave.gson.JsonObject;
+import dontweave.gson.JsonParser;
 import hex.GridSearch;
 import water.api.DocGen;
 import water.api.Request;

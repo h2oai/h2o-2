@@ -8,7 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.collect.Lists;
-import com.google.gson.*;
+import dontweave.gson.*;
 
 public class Check {
   private static final Pattern JSON_PATTERN = Pattern.compile("[_a-z0-9]*[/_a-z]*");

@@ -2,8 +2,8 @@ package water.api;
 
 import water.api.RequestServer.API_VERSION;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonArray;
+import dontweave.gson.JsonObject;
 
 public abstract class TypeaheadRequest extends Request {
   protected final Str _filter;

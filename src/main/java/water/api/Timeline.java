@@ -7,7 +7,7 @@ import java.util.Date;
 import water.*;
 import water.util.TimelineSnapshot;
 
-import com.google.gson.*;
+import dontweave.gson.*;
 
 public class Timeline extends Request {
 

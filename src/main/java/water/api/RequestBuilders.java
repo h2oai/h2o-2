@@ -1,6 +1,6 @@
 package water.api;
 
-import com.google.gson.*;
+import dontweave.gson.*;
 import water.AutoBuffer;
 import water.H2O;
 import water.Iced;

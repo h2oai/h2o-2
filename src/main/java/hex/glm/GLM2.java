@@ -1,6 +1,6 @@
 package hex.glm;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 import hex.FrameTask.DataInfo;
 import hex.GridSearch.GridSearchProgress;
 import hex.glm.GLMModel.GLMXValidationTask;

@@ -21,7 +21,7 @@ import water.util.Log.Tag.Sys;
 
 import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
-import com.google.gson.*;
+import dontweave.gson.*;
 
 
 public final class PersistHdfs extends Persist {
