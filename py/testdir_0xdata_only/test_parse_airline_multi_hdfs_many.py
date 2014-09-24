@@ -27,7 +27,8 @@ class Basic(unittest.TestCase):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
         h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
-    def test_parse_nflx_loop_hdfs_fvec(self):
+    def test_parse_airline_multi_hdfs_many(self):
+
         h2o.beta_features = True
         print "Using the -.gz files from hdfs"
         # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
@@ -43,7 +44,7 @@ class Basic(unittest.TestCase):
                 h2o.build_cloud(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55930,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
             else:
-                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55600,
+                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55600, disable_assertion=True,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
 
             # don't raise exception if we find something bad in h2o stdout/stderr?

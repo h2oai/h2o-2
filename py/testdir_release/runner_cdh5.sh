@@ -54,6 +54,7 @@ echo "hdfs dfs -rm -r /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMO
 set -e
 EA=" -ea"
 UDP_DROP=" -random_udp_drop"
+UDP_DROP=""
 echo "hadoop jar $CDH5_YARN_JAR water.hadoop.h2odriver -jt $CDH5_YARN_JOBTRACKER -libjars $H2O_JAR -mapperXmx $CDH5_YARN_HEAP -nodes $CDH5_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node $EA $UDP_DROP" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # copy the script, just so we have it there too
