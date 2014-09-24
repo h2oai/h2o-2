@@ -27,7 +27,7 @@ CDH5_YARN_NODES=2
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
 echo "can't get more than 5g for now. node count 2"
 echo "need to adjust the cdh5 cloudera config (yarn memory?)"
-CDH5_YARN_HEAP=2g
+CDH5_YARN_HEAP=4g
 CDH5_YARN_JAR=h2odriver_cdh5.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded

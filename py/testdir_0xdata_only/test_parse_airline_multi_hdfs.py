@@ -56,6 +56,10 @@ class Basic(unittest.TestCase):
                 hex_key = csvFilename + "_" + str(trial) + ".hex"
                 csvPathname = importFolderPath + "/" + csvFilePattern
                 start = time.time()
+                importResult = h2i.import_only(path=csvPathname, schema='hdfs', 
+                    timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
+                print "importResult:", h2o.dump_json(importResult)
+
                 parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 elapsed = time.time() - start
