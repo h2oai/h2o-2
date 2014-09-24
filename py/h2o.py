@@ -2748,7 +2748,11 @@ class H2O(object):
             print "You can attach debugger at port %s for jvm at %s:%s" % (debuggerPort, a, b)
             args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=%s' % debuggerPort]
 
-        args += ["-ea"]
+        if self.disable_assertions:
+            print "WARNING: h2o is running with assertions disabled"
+        else:
+            args += ["-ea"]
+            
 
         if self.use_maprfs:
             args += ["-Djava.library.path=/opt/mapr/lib"]
@@ -2855,6 +2859,7 @@ class H2O(object):
                  h2o_remote_buckets_root=None,
                  delete_keys_at_teardown=False,
                  cloud_name=None,
+                 disable_assertions=None,
     ):
 
         if use_hdfs:
@@ -2937,6 +2942,7 @@ class H2O(object):
         self.enable_benchmark_log = enable_benchmark_log
         self.h2o_remote_buckets_root = h2o_remote_buckets_root
         self.delete_keys_at_teardown = delete_keys_at_teardown
+        self.disable_assertions = disable_assertions
 
         if cloud_name:
             self.cloud_name = cloud_name

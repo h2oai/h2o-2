@@ -84,7 +84,8 @@ EA=""
 # does this has to be greater than the # of jvms? it's a total, not a per jvm total?
 # THREADS=" -nthreads 8"
 # THREADS=" -nthreads 200"
-echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $HDP_HEAP -nodes $HDP_NODES -output $HDFS_OUTPUT -notify h2o_one_node $EA" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+DROP=" -random_udp_drop"
+echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $HDP_HEAP -nodes $HDP_NODES -output $HDFS_OUTPUT -notify h2o_one_node $EA $DROP" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # Usage: h2odriver
 #           -libjars <.../h2o.jar>
@@ -189,6 +190,7 @@ myPy() {
 
 # worked
 myPy c2 test_c2_rel.py
+myPy c6 test_c6_hdfs_fvec.py
 myPy c9 test_c9_GLM_airlines_hdfs_multi.py
 
 # myPy c3 test_c3_rel.py
@@ -202,7 +204,6 @@ myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
 # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
 
 # have to update this to poit to the right hdfs?
-# myPy c6 test_c6_hdfs_fvec.py
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
