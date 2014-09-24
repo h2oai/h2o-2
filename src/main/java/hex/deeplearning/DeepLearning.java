@@ -1020,7 +1020,7 @@ public class DeepLearning extends Job.ValidatedJob {
         if (class_sampling_factors != null) {
           if (class_sampling_factors.length != train.lastVec().domain().length)
             throw new IllegalArgumentException("class_sampling_factors must have " + train.lastVec().domain().length + " elements");
-          trainSamplingFactors = class_sampling_factors;
+          trainSamplingFactors = class_sampling_factors.clone(); //clone: don't modify the original
         }
         train = updateFrame(train, sampleFrameStratified(
                 train, train.lastVec(), trainSamplingFactors, (long)(mp.max_after_balance_size*train.numRows()), mp.seed, true, false));

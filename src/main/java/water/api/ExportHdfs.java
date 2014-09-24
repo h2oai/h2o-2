@@ -6,7 +6,7 @@ import water.*;
 import water.persist.PersistHdfs;
 import water.util.Log;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class ExportHdfs extends Request {
   protected final H2OExistingKey _source = new H2OExistingKey(SOURCE_KEY);

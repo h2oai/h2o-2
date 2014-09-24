@@ -6,8 +6,8 @@ import water.persist.PersistS3;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.Bucket;
 import com.google.common.base.Strings;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonPrimitive;
+import dontweave.gson.JsonArray;
+import dontweave.gson.JsonPrimitive;
 
 public class TypeaheadS3BucketRequest extends TypeaheadRequest {
 

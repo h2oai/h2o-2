@@ -11,7 +11,7 @@ import water.persist.PersistS3;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.google.gson.*;
+import dontweave.gson.*;
 import water.util.Log;
 
 public class ImportS3 extends Request {

@@ -5,7 +5,7 @@ import java.io.InputStream;
 import water.api.Cloud;
 import water.util.Log;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class InternalInterface implements water.ExternalInterface {
   @Override public Key makeKey( String key_name ) { return Key.make(key_name); }

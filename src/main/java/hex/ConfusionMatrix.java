@@ -2,8 +2,8 @@ package hex;
 
 import static water.api.DocGen.FieldDoc;
 import static water.util.Utils.printConfusionMatrix;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonPrimitive;
+import dontweave.gson.JsonArray;
+import dontweave.gson.JsonPrimitive;
 import water.Iced;
 import water.api.Request.API;
 

@@ -1,9 +1,9 @@
 package hex.singlenoderf;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import dontweave.gson.JsonArray;
+import dontweave.gson.JsonElement;
+import dontweave.gson.JsonObject;
+import dontweave.gson.JsonPrimitive;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.gbm.DTree;

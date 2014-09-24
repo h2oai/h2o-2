@@ -11,7 +11,7 @@ import water.Iced;
 import water.Key;
 import water.MemoryManager;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 
 /**

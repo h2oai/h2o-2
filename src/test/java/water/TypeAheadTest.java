@@ -1,8 +1,8 @@
 package water;
 
 import com.amazonaws.util.json.JSONArray;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonArray;
+import dontweave.gson.JsonObject;
 import junit.framework.Assert;
 import org.junit.Test;
 import water.api.TypeaheadKeysRequest;

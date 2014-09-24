@@ -2,7 +2,7 @@ package water.api;
 
 import water.Value;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class RemoveAck extends Request {
   protected final H2OExistingKey _key = new H2OExistingKey(KEY);

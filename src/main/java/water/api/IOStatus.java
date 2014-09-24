@@ -1,6 +1,6 @@
 package water.api;
 
-import com.google.gson.*;
+import dontweave.gson.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;

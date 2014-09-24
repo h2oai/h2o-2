@@ -8,20 +8,24 @@
     "use_home_for_ice": true,
 
     "h2o_per_host": 1, 
-    "java_heap_GB": 14, 
+    "java_heap_GB": 20, 
 
-    "create_json": true,
-
-    "hdfs_name_node": "172.16.2.176",
-    "hdfs_version": "cdh4",
+    "hdfs_name_node": "172.16.2.186",
+    "hdfs_version": "hdp2.1",
     "use_hdfs": true,
-    "random_udp_drop": true,
-    "force_tcp": true,
 
     "use_flatfile": true,
 
     "ip": [
-        "172.16.2.222"
+        "172.16.2.182",
+        "172.16.2.183",
+        "172.16.2.184",
+        "172.16.2.185",
+        "172.16.2.186",
+        "172.16.2.187",
+        "172.16.2.188",
+        "172.16.2.189",
+        "172.16.2.190"
     ]
 }
 

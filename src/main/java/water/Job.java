@@ -18,7 +18,7 @@ import water.fvec.Vec;
 import water.util.*;
 import water.util.Utils.ExpectedExceptionForDebug;
 
-import com.google.gson.*;
+import dontweave.gson.*;
 
 public abstract class Job extends Func {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
