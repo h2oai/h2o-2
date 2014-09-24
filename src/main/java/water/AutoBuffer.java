@@ -168,7 +168,7 @@ public class AutoBuffer {
     _persist = 0;               // No persistance
   }
 
-  /**  Write to an ever-expanding byte[].  Instead of calling {@link #close()},
+  /**  Write to an ever-expanding byte[].  Instead of calling {@link #close(boolean)},
    *  call {@link #buf()} to retrieve the final byte[].
    */
   public AutoBuffer( ) {
@@ -269,7 +269,7 @@ public class AutoBuffer {
   // bytes out.  If the write is to an H2ONode and is short, send via UDP.
   // AutoBuffer close calls order; i.e. a reader close() will block until the
   // writer does a close().
-  public final int close() {
+  public final int close(boolean forceTCP) {
     //if( _size > 2048 ) System.out.println("Z="+_zeros+" / "+_size+", A="+_arys);
     if( isClosed() ) return 0;            // Already closed
     assert _h2o != null || _chan != null; // Byte-array backed should not be closed
@@ -279,12 +279,12 @@ public class AutoBuffer {
         // For small-packet write, send via UDP.  Since nothing is sent until
         // now, this close() call trivially orders - since the reader will not
         // even start (much less close()) until this packet is sent.
-        if( _bb.position() < MTU ) return udpSend();
+        if(!forceTCP && _bb.position() < MTU ) return udpSend();
       }
       // Force AutoBuffer 'close' calls to order; i.e. block readers until
       // writers do a 'close' - by writing 1 more byte in the close-call which
       // the reader will have to wait for.
-      if( hasTCP() ) {          // TCP connection?
+      if( hasTCP(forceTCP) ) {          // TCP connection?
         try {
           if( _read ) {         // Reader?
             int x = get1();     // Read 1 more byte
@@ -359,7 +359,7 @@ public class AutoBuffer {
   }
 
   // True if we opened a TCP channel, or will open one to close-and-send
-  boolean hasTCP() { assert !isClosed(); return _chan instanceof SocketChannel || (_h2o!=null && _bb.position() >= MTU); }
+  boolean hasTCP(boolean forceTCP) { assert !isClosed(); return _chan instanceof SocketChannel || (_h2o!=null && (forceTCP ||_bb.position() >= MTU)); }
 
   // True if we are in read-mode
   boolean readMode() { return _read; }

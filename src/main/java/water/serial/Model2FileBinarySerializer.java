@@ -23,7 +23,7 @@ public class Model2FileBinarySerializer extends BinarySerializer<Model, File, Fi
     } catch( FileNotFoundException e ) {
       throw new IllegalArgumentException("Cannot open given file!", e);
     } finally {
-      if (ab!=null) ab.close();
+      if (ab!=null) ab.close(false);
       Utils.close(fo);
     }
   }
@@ -42,7 +42,7 @@ public class Model2FileBinarySerializer extends BinarySerializer<Model, File, Fi
     } catch( FileNotFoundException e ) {
       throw new IllegalArgumentException("Cannot open given file!", e);
     } finally {
-      if (ab!=null) ab.close();
+      if (ab!=null) ab.close(false);
       Utils.close(fi);
     }
     return m;
