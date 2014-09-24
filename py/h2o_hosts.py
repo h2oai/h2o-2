@@ -65,6 +65,8 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'delete_keys_at_teardown': False, 
         'clone_cloud': False,
         'cloud_name': None,
+        'force_tcp': None,
+        'random_udp_drop': None,
     }
     # initialize the default values
     paramsToUse = {}

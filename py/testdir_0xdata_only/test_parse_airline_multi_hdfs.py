@@ -42,6 +42,7 @@ class Basic(unittest.TestCase):
                 h2o.build_cloud(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55930, disable_assertions=DISABLE_ASSERTIONS,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
             else:
+                # why is 55609 already in use?? 
                 h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55604, disable_assertions=DISABLE_ASSERTIONS,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
 
