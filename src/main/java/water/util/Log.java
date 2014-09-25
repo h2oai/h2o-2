@@ -5,6 +5,7 @@ import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Locale;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 
@@ -421,6 +422,25 @@ public abstract class Log {
     }
 
     return _logger;
+  }
+
+  public static void setLogLevel(int log_level) throws IllegalArgumentException {
+    Level l;
+
+    switch(log_level) {
+      case 1: l = Level.TRACE; break;
+      case 2: l = Level.DEBUG; break;
+      case 3: l = Level.INFO;  break;
+      case 4: l = Level.WARN;  break;
+      case 5: l = Level.ERROR; break;
+      case 6: l = Level.FATAL; break;
+      default:
+        throw new IllegalArgumentException("Log level " + log_level + " is invalid");
+    }
+
+    _logger.setLevel(l);
+    System.out.println("Set log level to " + l);
+    _logger.info("Set log level to " + l);
   }
 
   static volatile boolean loggerCreateWasCalled = false;
