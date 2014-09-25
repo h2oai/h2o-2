@@ -47,6 +47,11 @@ class Check:
             r"^Old maintainer\(s\):",
             r"^\s*Anqi Fu",
             r"^NOTE: There was 1 note.",
+            r"^New submission",
+            r"^Package was archived on CRAN",
+            r"^CRAN repository db overrides:",
+            r"^  X-CRAN-Comment: Archived on 2014-09-23 as did not comply with CRAN",
+            r"^    policies on use of multiple threads.",
         ]
 
         s = f.readline()
