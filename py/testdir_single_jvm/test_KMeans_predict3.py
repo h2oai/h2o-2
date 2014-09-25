@@ -241,6 +241,7 @@ class Basic(unittest.TestCase):
         expectedSizes = [
             [39, 50, 61],
             [38, 50, 62],
+            [22, 31, 97], # let this bad one be legal?
             [24, 29, 97], # let this bad one be legal?
         ]
         sortedSize = sorted(size)
