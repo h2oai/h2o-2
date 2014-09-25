@@ -8,7 +8,8 @@ Principal Components Analysis
 Performs principal components analysis on the given data set.
 }
 \usage{
-h2o.prcomp(data, tol = 0, max_pc = 5000, cols = "", key = "", standardize = TRUE, retx = FALSE)
+h2o.prcomp(data, tol = 0, cols = "", max_pc = 5000, key = "", standardize = TRUE, 
+retx = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
