@@ -189,7 +189,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
             break;             // Break out of retry loop
           } catch( AutoBuffer.AutoBufferException e ) {
             Log.info_no_DKV(Log.Tag.Sys.WATER, "IOException during RPC call: " + e._ioe.getMessage() + ",  AB=" + ab + ", for task#" + _tasknum + ", waiting and retrying...");
-            ab.close();
+            ab.drainClose();
             try { Thread.sleep(500); } catch (InterruptedException ignore) {}
           }
         } // end of while(true)
@@ -367,11 +367,11 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           break;                        // Break out of retry loop
         } catch( AutoBuffer.AutoBufferException e ) {
           Log.info("IOException during ACK, "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
-          try { ab.close(); } catch( Exception ignore ) {}
+          ab.drainClose();
           try { Thread.sleep(100); } catch (InterruptedException ignore) {}
         } catch( Exception e ) { // Custom serializer just barfed?
           Log.err(e);            // Log custom serializer exception
-          try { ab.close(); } catch( Exception ignore ) {}
+          ab.drainClose();
         }
       }  // end of while(true)
       if( dt == null )
@@ -458,7 +458,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         // indistinguishable from a broken short-writer/long-reader bug, except
         // that we'll re-send endlessly and fail endlessly.
         Log.info("Network congestion OR short-writer/long-reader: TCP "+e._ioe.getMessage()+",  AB="+ab+", ignoring partial send");
-        try { ab.close(); } catch( Exception ignore ) {}
+        ab.drainClose();
         return;
       }
       RPCCall rpc2 = ab._h2o.record_task(rpc);
