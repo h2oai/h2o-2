@@ -437,7 +437,7 @@ public abstract class Log {
       log0(l4j, e);
     }
 
-    if( Paxos._cloudLocked && logToKV ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
+    // if( Paxos._cloudLocked && logToKV ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
     if(printOnOut || printAll) unwrap(System.out, e.toShortString());
     e.printMe = false;
   }
