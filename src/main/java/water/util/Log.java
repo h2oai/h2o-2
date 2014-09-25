@@ -54,7 +54,7 @@ public abstract class Log {
 
     /** What kind of message? */
     public static enum Kind implements Tag {
-      INFO, WARN, ERRR;
+      TRAC, DEBG, INFO, WARN, ERRR, FATL;
     }
   }
   static {
@@ -284,7 +284,10 @@ public abstract class Log {
     return LOG_DIR;
   }
 
-  public static String getLogPathFileName() {
+  /**
+   * @return The common prefix for all of the different log files for this process.
+   */
+  private static String getLogPathFileNameStem() {
     String ip;
     if (H2O.SELF_ADDRESS == null) {
       ip = "UnknownIP";
@@ -300,13 +303,87 @@ public abstract class Log {
 
     String logFileName =
             getLogDir() + File.separator +
-                    "h2o_" + ip + "_" + portString + ".log";
+                    "h2o_" + ip + "_" + portString;
 
     return logFileName;
   }
 
+  /**
+   * @return This is what shows up in the Web UI when clicking on show log file.
+   */
+  public static String getLogPathFileName() {
+    return getLogPathFileNameStem() + "-2-debug.log";
+  }
+
   private static org.apache.log4j.Logger getLog4jLogger() {
     return _logger;
+  }
+
+  private static void setLog4jProperties(String logDirParent, java.util.Properties p) {
+    LOG_DIR = logDirParent + File.separator + "h2ologs";
+    String logPathFileName = getLogPathFileNameStem();
+
+    p.setProperty("log4j.rootLogger", "TRACE, R1, R2, R3, R4, R5, R6");
+
+    p.setProperty("log4j.appender.R1",                          "org.apache.log4j.RollingFileAppender");
+    p.setProperty("log4j.appender.R1.Threshold",                "TRACE");
+    p.setProperty("log4j.appender.R1.File",                     logPathFileName + "-1-trace.log");
+    p.setProperty("log4j.appender.R1.MaxFileSize",              "1MB");
+    p.setProperty("log4j.appender.R1.MaxBackupIndex",           "5");
+    p.setProperty("log4j.appender.R1.layout",                   "org.apache.log4j.PatternLayout");
+    p.setProperty("log4j.appender.R1.layout.ConversionPattern", "%m%n");
+
+    p.setProperty("log4j.appender.R2",                          "org.apache.log4j.RollingFileAppender");
+    p.setProperty("log4j.appender.R2.Threshold",                "DEBUG");
+    p.setProperty("log4j.appender.R2.File",                     logPathFileName + "-2-debug.log");
+    p.setProperty("log4j.appender.R2.MaxFileSize",              "2MB");
+    p.setProperty("log4j.appender.R2.MaxBackupIndex",           "5");
+    p.setProperty("log4j.appender.R2.layout",                   "org.apache.log4j.PatternLayout");
+    p.setProperty("log4j.appender.R2.layout.ConversionPattern", "%m%n");
+
+    p.setProperty("log4j.appender.R3",                          "org.apache.log4j.RollingFileAppender");
+    p.setProperty("log4j.appender.R3.Threshold",                "INFO");
+    p.setProperty("log4j.appender.R3.File",                     logPathFileName + "-3-info.log");
+    p.setProperty("log4j.appender.R3.MaxFileSize",              "1MB");
+    p.setProperty("log4j.appender.R3.MaxBackupIndex",           "5");
+    p.setProperty("log4j.appender.R3.layout",                   "org.apache.log4j.PatternLayout");
+    p.setProperty("log4j.appender.R3.layout.ConversionPattern", "%m%n");
+
+    p.setProperty("log4j.appender.R4",                          "org.apache.log4j.RollingFileAppender");
+    p.setProperty("log4j.appender.R4.Threshold",                "WARN");
+    p.setProperty("log4j.appender.R4.File",                     logPathFileName + "-4-warn.log");
+    p.setProperty("log4j.appender.R4.MaxFileSize",              "256KB");
+    p.setProperty("log4j.appender.R4.MaxBackupIndex",           "3");
+    p.setProperty("log4j.appender.R4.layout",                   "org.apache.log4j.PatternLayout");
+    p.setProperty("log4j.appender.R4.layout.ConversionPattern", "%m%n");
+
+    p.setProperty("log4j.appender.R5",                          "org.apache.log4j.RollingFileAppender");
+    p.setProperty("log4j.appender.R5.Threshold",                "ERROR");
+    p.setProperty("log4j.appender.R5.File",                     logPathFileName + "-5-error.log");
+    p.setProperty("log4j.appender.R5.MaxFileSize",              "256KB");
+    p.setProperty("log4j.appender.R5.MaxBackupIndex",           "3");
+    p.setProperty("log4j.appender.R5.layout",                   "org.apache.log4j.PatternLayout");
+    p.setProperty("log4j.appender.R5.layout.ConversionPattern", "%m%n");
+
+    p.setProperty("log4j.appender.R6",                          "org.apache.log4j.RollingFileAppender");
+    p.setProperty("log4j.appender.R6.Threshold",                "FATAL");
+    p.setProperty("log4j.appender.R6.File",                     logPathFileName + "-6-fatal.log");
+    p.setProperty("log4j.appender.R6.MaxFileSize",              "256KB");
+    p.setProperty("log4j.appender.R6.MaxBackupIndex",           "3");
+    p.setProperty("log4j.appender.R6.layout",                   "org.apache.log4j.PatternLayout");
+    p.setProperty("log4j.appender.R6.layout.ConversionPattern", "%m%n");
+
+    // Turn down the logging for some class hierarchies.
+    p.setProperty("log4j.logger.org.apache.http",               "WARN");
+    p.setProperty("log4j.logger.com.amazonaws",                 "WARN");
+    p.setProperty("log4j.logger.org.apache.hadoop",             "WARN");
+    p.setProperty("log4j.logger.org.jets3t.service",            "WARN");
+
+    // See the following document for information about the pattern layout.
+    // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
+    //
+    //  Uncomment this line to find the source of unwanted messages.
+    //     p.setProperty("log4j.appender.R1.layout.ConversionPattern", "%p %C %m%n");
   }
 
   private static org.apache.log4j.Logger createLog4jLogger(String logDirParent) {
@@ -323,30 +400,8 @@ public abstract class Log {
         // TODO:  Need some way to set LOG_DIR here for LogCollectorTask to work.
       }
       else {
-        LOG_DIR = logDirParent + File.separator + "h2ologs";
-        String logPathFileName = getLogPathFileName();
         java.util.Properties p = new java.util.Properties();
-
-        p.setProperty("log4j.rootLogger", "INFO, R");
-        p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
-        p.setProperty("log4j.appender.R.File", logPathFileName);
-        p.setProperty("log4j.appender.R.MaxFileSize", "2MB");
-        p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
-        p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
-
-        // Turn down the logging for some class hierarchies.
-        p.setProperty("log4j.logger.org.apache.http", "WARN");
-        p.setProperty("log4j.logger.com.amazonaws", "WARN");
-        p.setProperty("log4j.logger.org.apache.hadoop", "WARN");
-        p.setProperty("log4j.logger.org.jets3t.service", "WARN");
-
-        // See the following document for information about the pattern layout.
-        // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
-        //
-        //  Uncomment this line to find the source of unwanted messages.
-        //     p.setProperty("log4j.appender.R.layout.ConversionPattern", "%p %C %m%n");
-        p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
-
+        setLog4jProperties(logDirParent, p);
         PropertyConfigurator.configure(p);
       }
 
@@ -363,7 +418,10 @@ public abstract class Log {
 
   private static void log0(org.apache.log4j.Logger l4j, Event e) {
     String s = e.toString();
-    if (e.kind == Kind.ERRR) {
+    if (e.kind == Kind.FATL) {
+      l4j.fatal(s);
+    }
+    else if (e.kind == Kind.ERRR) {
       l4j.error(s);
     }
     else if (e.kind == Kind.WARN) {
@@ -371,6 +429,12 @@ public abstract class Log {
     }
     else if (e.kind == Kind.INFO) {
       l4j.info(s);
+    }
+    else if (e.kind == Kind.DEBG) {
+      l4j.debug(s);
+    }
+    else if (e.kind == Kind.TRAC) {
+      l4j.trace(s);
     }
     else {
       // Choose error by default if we can't figure out the right logging level.
@@ -528,13 +592,13 @@ public abstract class Log {
   /** Log a debug message to the log file and the store if the subsystem's flag is set. */
   static public void debug(Object... objects) {
     if (flag(Sys.WATER) == false) return;
-    Event e =  Event.make(Sys.WATER, Kind.INFO, null, objects);
+    Event e =  Event.make(Sys.WATER, Kind.DEBG, null, objects);
     write(e,false,true);
   }
   /** Log a debug message to the log file and the store if the subsystem's flag is set. */
   static public void debug(Sys t, Object... objects) {
     if (flag(t) == false) return;
-    Event e =  Event.make( t, Kind.INFO, null, objects);
+    Event e =  Event.make( t, Kind.DEBG, null, objects);
     write(e,false,true);
   }
   /** Temporary log statement. Search for references to make sure they have been removed. */
