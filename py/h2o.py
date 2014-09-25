@@ -2864,6 +2864,7 @@ class H2O(object):
                  delete_keys_at_teardown=False,
                  cloud_name=None,
                  disable_assertions=None,
+                 sandbox_ignore_errors=False,
     ):
 
         if use_hdfs:
@@ -2937,7 +2938,7 @@ class H2O(object):
         # don't want multiple reports from tearDown and tearDownClass
         # have nodes[0] remember (0 always exists)
         self.sandbox_error_was_reported = False
-        self.sandbox_ignore_errors = False
+        self.sandbox_ignore_errors = sandbox_ignore_errors
 
         self.random_udp_drop = random_udp_drop
         self.force_tcp = force_tcp

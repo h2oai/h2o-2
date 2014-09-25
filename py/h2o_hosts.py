@@ -67,6 +67,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'cloud_name': None,
         'force_tcp': None,
         'random_udp_drop': None,
+        'sandbox_ignore_errors': None,
     }
     # initialize the default values
     paramsToUse = {}
