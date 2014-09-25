@@ -383,7 +383,7 @@ public abstract class Log {
     p.setProperty("log4j.appender.HTTPD.MaxFileSize",           "1MB");
     p.setProperty("log4j.appender.HTTPD.MaxBackupIndex",        "3");
     p.setProperty("log4j.appender.HTTPD.layout",                "org.apache.log4j.PatternLayout");
-    p.setProperty("log4j.appender.HTTPDlayout.ConversionPattern", "%m%n");
+    p.setProperty("log4j.appender.HTTPD.layout.ConversionPattern", "%m%n");
 
     // Turn down the logging for some class hierarchies.
     p.setProperty("log4j.logger.org.apache.http",               "WARN");
