@@ -374,6 +374,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           dt._repliedTcp = ab.hasTCP(H2O.OPT_ARGS.force_tcp); // Resends do not need to repeat TCP result
           ab.close(H2O.OPT_ARGS.force_tcp);                   // Then close; send final byte
           _computedAndReplied = true;   // After the final handshake, set computed+replied bit
+          if(dt._repliedTcp) // no need for ack ack if sent by tcp
+            _client.remove_task_tracking(_tsknum);
           break;                        // Break out of retry loop
         } catch( AutoBuffer.AutoBufferException e ) {
           Log.info("IOException during ACK, "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
@@ -533,8 +535,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         throw Log.err("Network congestion OR short-writer/long-reader, AB="+ab,e._ioe);
       }
     }
+    // no need for ackack in case of tcp send!
     // ACKACK the remote, telling him "we got the answer"
-    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close(H2O.OPT_ARGS.force_tcp);
+//    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close(false);
   }
 
   // Got a response UDP packet, or completed a large TCP answer-receive.
@@ -544,7 +547,10 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       assert _tasknum==ab.getTask();
       if( _done ) return ab.close(false); // Ignore duplicate response packet
       int flag = ab.getFlag();    // Must read flag also, to advance ab
-      if( flag == SERVER_TCP_SEND ) return ab.close(false); // Ignore UDP packet for a TCP reply
+      if( flag == SERVER_TCP_SEND ) {
+        assert !ab.hasTCP(false);
+        return ab.close(false); // Ignore UDP packet for a TCP reply
+      }
       assert flag == SERVER_UDP_SEND;
       synchronized(this) {        // Install the answer under lock
         if( _done ) return ab.close(false); // Ignore duplicate response packet

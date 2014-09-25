@@ -35,7 +35,7 @@ public class TimeLine extends UDP {
   // - Sys.Nano, 8 bytes-3 bits
   // - Nano low bit is 1 id packet was droped, next bit is 0 for send, 1 for recv, next bit is 0 for udp, 1 for tcp
   // - 16 bytes of payload; 1st byte is a udp_type opcode, next 4 bytes are typically task#
-  public static final int MAX_EVENTS=2048; // Power-of-2, please
+  public static final int MAX_EVENTS=(1 << 12);//   // Power-of-2, please
   static final int WORDS_PER_EVENT=4;
   static final long[] TIMELINE = new long[MAX_EVENTS*WORDS_PER_EVENT+1];
 
@@ -101,16 +101,16 @@ public class TimeLine extends UDP {
 
   // Record a completed I/O event.  The nanosecond time slot is actually nano's-blocked-on-io
   public static void record_IOclose( AutoBuffer b, int flavor ) {
-    H2ONode h2o = b._h2o==null ? H2O.SELF : b._h2o;
-    // First long word going out has sender-port and a 'bad' control packet
-    long b0 = UDP.udp.i_o.ordinal(); // Special flag to indicate io-record and not a rpc-record
-    b0 |= H2O.SELF._key.udp_port()<<8;
-    b0 |= flavor<<24;           // I/O flavor; one of the Value.persist backends
-    long iotime = b._time_start_ms > 0 ? (b._time_close_ms - b._time_start_ms) : 0;
-    b0 |= iotime<<32;           // msec from start-to-finish, including non-i/o overheads
-    long b8 = b._size;          // byte's transfered in this I/O
-    long ns = b._time_io_ns;    // nano's blocked doing I/O
-    record2(h2o,ns,true,b.readMode()?1:0,0,b0,b8);
+//    H2ONode h2o = b._h2o==null ? H2O.SELF : b._h2o;
+//    // First long word going out has sender-port and a 'bad' control packet
+//    long b0 = UDP.udp.i_o.ordinal(); // Special flag to indicate io-record and not a rpc-record
+//    b0 |= H2O.SELF._key.udp_port()<<8;
+//    b0 |= flavor<<24;           // I/O flavor; one of the Value.persist backends
+//    long iotime = b._time_start_ms > 0 ? (b._time_close_ms - b._time_start_ms) : 0;
+//    b0 |= iotime<<32;           // msec from start-to-finish, including non-i/o overheads
+//    long b8 = b._size;          // byte's transfered in this I/O
+//    long ns = b._time_io_ns;    // nano's blocked doing I/O
+//    record2(h2o,ns,true,b.readMode()?1:0,0,b0,b8);
   }
 
   /* Record an I/O call without using an AutoBuffer / NIO.
@@ -123,14 +123,14 @@ public class TimeLine extends UDP {
    * @param flavor - Value.HDFS or Value.S3
    */
   public static void record_IOclose( long start_ns, long start_io_ms, int r_w, long size, int flavor ) {
-    long block_ns = System.nanoTime() - start_ns;
-    long io_ms = System.currentTimeMillis() - start_io_ms;
-    // First long word going out has sender-port and a 'bad' control packet
-    long b0 = UDP.udp.i_o.ordinal(); // Special flag to indicate io-record and not a rpc-record
-    b0 |= H2O.SELF._key.udp_port()<<8;
-    b0 |= flavor<<24;           // I/O flavor; one of the Value.persist backends
-    b0 |= io_ms<<32;            // msec from start-to-finish, including non-i/o overheads
-    record2(H2O.SELF,block_ns,true,r_w,0,b0,size);
+//    long block_ns = System.nanoTime() - start_ns;
+//    long io_ms = System.currentTimeMillis() - start_io_ms;
+//    // First long word going out has sender-port and a 'bad' control packet
+//    long b0 = UDP.udp.i_o.ordinal(); // Special flag to indicate io-record and not a rpc-record
+//    b0 |= H2O.SELF._key.udp_port()<<8;
+//    b0 |= flavor<<24;           // I/O flavor; one of the Value.persist backends
+//    b0 |= io_ms<<32;            // msec from start-to-finish, including non-i/o overheads
+//    record2(H2O.SELF,block_ns,true,r_w,0,b0,size);
   }
 
   // Accessors, for TimeLines that come from all over the system

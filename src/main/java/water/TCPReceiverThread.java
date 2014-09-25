@@ -85,11 +85,9 @@ public class TCPReceiverThread extends Thread {
           switch( UDP.udp.UDPS[x] ) {
           case exec:     RPC.remote_exec  (_ab); break;
           case ack:      RPC.tcp_ack      (_ab); break;
-          case ackack:
-            udp.UDPS[x]._udp.call(_ab);
-            _ab.close(false);
+          case fetchack:
+            RPC.tcp_ack      (_ab);
             break;
-          case fetchack: RPC.tcp_ack      (_ab); break;
           case timeline: TimeLine.tcp_call(_ab); break;
           default: throw new RuntimeException("Unknown TCP Type: " + ctrl+" "+_ab._h2o);
           }

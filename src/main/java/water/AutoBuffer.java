@@ -303,7 +303,7 @@ public class AutoBuffer {
             if( x == -1 ) throw new IOException("Other side closed connection before handshake byte read");
             assert x == 0xcd : "Handshake; writer expected a 0xcd from reader but got "+x;
           }
-        } catch( IOException ioe ) {
+        } catch( AutoBufferException ioe ) { // nobody really throws IOE, sendPartial wraps it into AutobufferException
           try { _chan.close(); } catch( IOException ignore ) {} // Silently close
           _chan = null;         // No channel now, since i/o error
           throw ioe;            // Rethrow after close

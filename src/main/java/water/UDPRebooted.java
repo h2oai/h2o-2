@@ -70,6 +70,7 @@ public class UDPRebooted extends UDP {
   // Pretty-print bytes 1-15; byte 0 is the udp_type enum
   public String print16( AutoBuffer ab ) {
     ab.getPort();
-    return T.values()[ab.get1()].toString();
+    int id = ab.get1();
+    return 0 <= id && id < T.values().length?T.values()[id].toString():"unknown(" + id + ")";
   }
 }
