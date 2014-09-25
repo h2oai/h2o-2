@@ -174,7 +174,10 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
     if(parse) {
       if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
-      regPath <- paste(path, pattern, sep=.Platform$file.sep)
+      ## Removed regPath that relies on front end input, takes backend input to create regPath
+      ## There is no pattern option for main h2o.importFile function
+      if(pattern=="") {regPath <- sub(pattern = basename(res$files[[1]]), replacement = "", x = res$files[[1]])
+      } else {regPath <- paste(path, pattern, sep = .Platform$file.sep)}
       srcKey  <- ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData <- new("H2ORawData", h2o=object, key=srcKey)
       h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names, parser_type = parser_type)
@@ -221,7 +224,7 @@ h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "
   else
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
   rawData = new("H2ORawData", h2o=object, key=path)
-  if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names, parser_type = parser_type) else rawData
+  if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, parser_type = parser_type) else rawData
 }
 
 # ----------------------------------- File Parse Operations --------------------------------- #
