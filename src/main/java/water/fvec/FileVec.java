@@ -75,8 +75,14 @@ public abstract class FileVec extends ByteVec {
     // DVec is just the raw file data with a null-compression scheme
     Value val2 = new Value(dkey,len,null,TypeMap.C1NCHUNK,_be);
     val2.setdsk(); // It is already on disk.
+    // If not-home, then block till the Key is everywhere.  Most calls here are
+    // from the parser loading a text file, and the parser splits the work such
+    // that most puts here are on home - so this is a simple speed optimization: 
+    // do not make a Futures nor block on it on home.
+    Futures fs = dkey.home() ? null : new Futures();
     // Atomically insert: fails on a race, but then return the old version
-    Value val3 = DKV.DputIfMatch(dkey,val2,null,null);
+    Value val3 = DKV.DputIfMatch(dkey,val2,null,fs);
+    if( !dkey.home() && fs != null ) fs.blockForPending();
     return val3 == null ? val2 : val3;
   }
 }
