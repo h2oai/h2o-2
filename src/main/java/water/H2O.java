@@ -927,6 +927,9 @@ public final class H2O {
     if (OPT_ARGS.random_udp_drop != null) {
       Log.warn("Debugging option RANDOM UDP DROP is ENABLED, make sure you really meant it");
     }
+    if (OPT_ARGS.force_tcp) {
+      Log.warn("Debugging option FORCE TCP is ENABLED, make sure you really meant it");
+    }
 
     // Figure self out; this is surprisingly hard
     initializeNetworkSockets();
