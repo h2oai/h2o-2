@@ -388,11 +388,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.endsWith(".ico")) return;
       if (uri.startsWith("/Typeahead")) return;
       if (uri.startsWith("/2/Typeahead")) return;
-      if (uri.startsWith("/Cloud.json")) return;
       if (uri.endsWith("LogAndEcho.json")) return;
-      if (uri.contains("Progress")) return;
-      if (uri.startsWith("/Jobs.json")) return;
-      if (uri.startsWith("/Up.json")) return;
     }
 
     String log = String.format("%-4s %s", method, uri);
@@ -401,6 +397,16 @@ public class RequestServer extends NanoHTTPD {
       if( value != null && value.length() != 0 )
         log += " " + arg + "=" + value;
     }
+
+    Log.info(Sys.HTLOG, log);
+
+    if (filterOutRepetitiveStuff) {
+      if (uri.startsWith("/Cloud.json")) return;
+      if (uri.contains("Progress")) return;
+      if (uri.startsWith("/Jobs.json")) return;
+      if (uri.startsWith("/Up.json")) return;
+    }
+
     Log.info(Sys.HTTPD, log);
   }
 
