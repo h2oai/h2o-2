@@ -48,7 +48,7 @@ public abstract class Log {
   public static interface Tag {
     /** Which subsystem of h2o? */
     public static enum Sys implements Tag {
-      RANDF, GBM__, DRF__, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCORM, LOCKS;
+      RANDF, GBM__, DRF__, GENLM, KMEAN, PARSE, STORE, WATER, HDFS_, HTTPD, CLEAN, CONFM, EXCEL, SCORM, LOCKS, HTLOG;
       boolean _enable;
     }
 
@@ -323,29 +323,30 @@ public abstract class Log {
     LOG_DIR = logDirParent + File.separator + "h2ologs";
     String logPathFileName = getLogPathFileNameStem();
 
+    // H2O-wide logging
     p.setProperty("log4j.rootLogger", "TRACE, R1, R2, R3, R4, R5, R6");
 
     p.setProperty("log4j.appender.R1",                          "org.apache.log4j.RollingFileAppender");
     p.setProperty("log4j.appender.R1.Threshold",                "TRACE");
     p.setProperty("log4j.appender.R1.File",                     logPathFileName + "-1-trace.log");
     p.setProperty("log4j.appender.R1.MaxFileSize",              "1MB");
-    p.setProperty("log4j.appender.R1.MaxBackupIndex",           "5");
+    p.setProperty("log4j.appender.R1.MaxBackupIndex",           "3");
     p.setProperty("log4j.appender.R1.layout",                   "org.apache.log4j.PatternLayout");
     p.setProperty("log4j.appender.R1.layout.ConversionPattern", "%m%n");
 
     p.setProperty("log4j.appender.R2",                          "org.apache.log4j.RollingFileAppender");
     p.setProperty("log4j.appender.R2.Threshold",                "DEBUG");
     p.setProperty("log4j.appender.R2.File",                     logPathFileName + "-2-debug.log");
-    p.setProperty("log4j.appender.R2.MaxFileSize",              "2MB");
-    p.setProperty("log4j.appender.R2.MaxBackupIndex",           "5");
+    p.setProperty("log4j.appender.R2.MaxFileSize",              "3MB");
+    p.setProperty("log4j.appender.R2.MaxBackupIndex",           "3");
     p.setProperty("log4j.appender.R2.layout",                   "org.apache.log4j.PatternLayout");
     p.setProperty("log4j.appender.R2.layout.ConversionPattern", "%m%n");
 
     p.setProperty("log4j.appender.R3",                          "org.apache.log4j.RollingFileAppender");
     p.setProperty("log4j.appender.R3.Threshold",                "INFO");
     p.setProperty("log4j.appender.R3.File",                     logPathFileName + "-3-info.log");
-    p.setProperty("log4j.appender.R3.MaxFileSize",              "1MB");
-    p.setProperty("log4j.appender.R3.MaxBackupIndex",           "5");
+    p.setProperty("log4j.appender.R3.MaxFileSize",              "2MB");
+    p.setProperty("log4j.appender.R3.MaxBackupIndex",           "3");
     p.setProperty("log4j.appender.R3.layout",                   "org.apache.log4j.PatternLayout");
     p.setProperty("log4j.appender.R3.layout.ConversionPattern", "%m%n");
 
@@ -372,6 +373,17 @@ public abstract class Log {
     p.setProperty("log4j.appender.R6.MaxBackupIndex",           "3");
     p.setProperty("log4j.appender.R6.layout",                   "org.apache.log4j.PatternLayout");
     p.setProperty("log4j.appender.R6.layout.ConversionPattern", "%m%n");
+
+    // HTTPD logging
+    p.setProperty("log4j.logger.water.api.RequestServer",       "TRACE, HTTPD");
+
+    p.setProperty("log4j.appender.HTTPD",                       "org.apache.log4j.RollingFileAppender");
+    p.setProperty("log4j.appender.HTTPD.Threshold",             "TRACE");
+    p.setProperty("log4j.appender.HTTPD.File",                  logPathFileName + "-httpd.log");
+    p.setProperty("log4j.appender.HTTPD.MaxFileSize",           "1MB");
+    p.setProperty("log4j.appender.HTTPD.MaxBackupIndex",        "3");
+    p.setProperty("log4j.appender.HTTPD.layout",                "org.apache.log4j.PatternLayout");
+    p.setProperty("log4j.appender.HTTPDlayout.ConversionPattern", "%m%n");
 
     // Turn down the logging for some class hierarchies.
     p.setProperty("log4j.logger.org.apache.http",               "WARN");
@@ -417,6 +429,23 @@ public abstract class Log {
   static volatile private ArrayList<Event> startupLogEvents = new ArrayList<Event>();
 
   private static void log0(org.apache.log4j.Logger l4j, Event e) {
+    if (e.sys == Sys.HTLOG) {
+      // As a special additional log, put HTLOG requests in their own file.
+      // HTLOG are requests from RequestServer that haven't been filtered out.
+      // HTLOG requests should only come at INFO.
+      e.sys = Sys.HTTPD;
+      String s = e.toString();
+      org.apache.log4j.Logger httpdLogger = LogManager.getLogger("water.api.RequestServer");
+      if (e.kind == Kind.INFO) {
+        httpdLogger.info(s);
+      }
+      else {
+        httpdLogger.error(s);
+      }
+
+      return;
+    }
+
     String s = e.toString();
     if (e.kind == Kind.FATL) {
       l4j.fatal(s);
