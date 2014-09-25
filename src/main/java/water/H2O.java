@@ -1193,7 +1193,7 @@ public final class H2O {
         try {
           H2O.CLOUD_DGRAM.send(bb, h2o._key);
         } catch( IOException e ) {
-          Log.err("Multicast Error to "+h2o, e);
+          Log.warn("Multicast Error to "+h2o+e);
         }
       }
     }
