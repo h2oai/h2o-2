@@ -8,7 +8,8 @@ Principal Components Analysis
 Performs principal components analysis on the given data set.
 }
 \usage{
-h2o.prcomp(data, tol = 0, cols = "", key = "", standardize = TRUE, retx = FALSE)
+h2o.prcomp(data, tol = 0, cols = "", max_pc = 5000, key = "", standardize = TRUE, 
+retx = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -18,6 +19,7 @@ h2o.prcomp(data, tol = 0, cols = "", key = "", standardize = TRUE, retx = FALSE)
   \item{tol}{
   (Optional) A value indicating the magnitude below which components should be omitted. (Components are omitted if their standard deviations are less than or equal to tol times the standard deviation of the first component.) With the default setting \code{tol = 0}, no components are omitted.
   }
+  \item{max_pc}{Integer value denoting the number of principle components returned in the output as a R data frame. By default all of the components up to 5000 components will be shown but for much larger number of components it's best to show a subset.}
   \item{cols}{
   (Optional) A vector of column names or indices indicating the features to perform PCA on. By default, all columns in the dataset are analyzed.
   }

@@ -201,6 +201,7 @@ ipaddr_from_cmd_line = None
 config_json = None
 debugger = False
 random_udp_drop = False
+force_tcp = False
 random_seed = None
 beta_features = True
 sleep_at_tear_down = False
@@ -2833,6 +2834,9 @@ class H2O(object):
         if self.random_udp_drop or random_udp_drop:
             args += ['--random_udp_drop']
 
+        if self.force_tcp:
+            args += ['--force_tcp']
+
         if self.disable_h2o_log:
             args += ['--nolog']
 
@@ -2851,7 +2855,7 @@ class H2O(object):
                  aws_credentials=None,
                  use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None,
                  use_home_for_ice=False, node_id=None, username=None,
-                 random_udp_drop=False,
+                 random_udp_drop=False, force_tcp=False,
                  redirect_import_folder_to_s3_path=None,
                  redirect_import_folder_to_s3n_path=None,
                  disable_h2o_log=False,
@@ -2860,6 +2864,7 @@ class H2O(object):
                  delete_keys_at_teardown=False,
                  cloud_name=None,
                  disable_assertions=None,
+                 sandbox_ignore_errors=False,
     ):
 
         if use_hdfs:
@@ -2933,9 +2938,10 @@ class H2O(object):
         # don't want multiple reports from tearDown and tearDownClass
         # have nodes[0] remember (0 always exists)
         self.sandbox_error_was_reported = False
-        self.sandbox_ignore_errors = False
+        self.sandbox_ignore_errors = sandbox_ignore_errors
 
         self.random_udp_drop = random_udp_drop
+        self.force_tcp = force_tcp
         self.disable_h2o_log = disable_h2o_log
 
         # this dumps stats from tests, and perf stats while polling to benchmark.log
