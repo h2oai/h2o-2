@@ -42,7 +42,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'parser_type' : 'CSV',
                 'separator' : 44,
                 'header': 0,
-                'delete_on_done': 0,
+                # 'delete_on_done': 0,
+                'delete_on_done': 1,
             }
             parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=trainKey, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start

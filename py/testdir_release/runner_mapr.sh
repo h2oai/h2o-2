@@ -24,8 +24,8 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # Now resource manager is at 8050?
 NAME_NODE=172.16.2.172
 MAPR_JOBTRACKER=172.16.2.172:9001
-MAPR_NODES=4
-MAPR_HEAP=16g
+MAPR_NODES=1
+MAPR_HEAP=1g
 # MAPR_JAR=h2odriver_mapr2.1.3.jar
 MAPR_JAR=h2odriver_mapr3.1.1.jar
 H2O_JAR=h2o.jar

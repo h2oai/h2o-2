@@ -1,11 +1,11 @@
 package samples.expert;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.internal.Streams;
-import com.google.gson.stream.JsonWriter;
+import dontweave.gson.Gson;
+import dontweave.gson.JsonElement;
+import dontweave.gson.JsonObject;
+import dontweave.gson.JsonParser;
+import dontweave.gson.internal.Streams;
+import dontweave.gson.stream.JsonWriter;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;

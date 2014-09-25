@@ -751,7 +751,7 @@ h2o.naiveBayes <- function(x, y, data, key = "", laplace = 0, dropNACols = FALSE
 }
 
 # ----------------------- Principal Components Analysis ----------------------------- #
-h2o.prcomp <- function(data, tol=0, cols = "", key = "", standardize=TRUE, retx=FALSE) {
+h2o.prcomp <- function(data, tol=0, cols = "", max_pc = 5000, key = "", standardize=TRUE, retx=FALSE) {
   args <- .verify_datacols(data, cols)
   
   if(!is.character(key)) stop("key must be of class character")
@@ -760,6 +760,7 @@ h2o.prcomp <- function(data, tol=0, cols = "", key = "", standardize=TRUE, retx=
   if(!is.numeric(tol)) stop('tol must be numeric')
   if(!is.logical(standardize)) stop('standardize must be TRUE or FALSE')
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')
+  if(!is.numeric(max_pc)) stop('max_pc must be a numeric')
   
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, destination_key=key, ignored_cols = args$cols_ignore, tolerance=tol, standardize=as.numeric(standardize))
   .h2o.__waitOnJob(data@h2o, res$job_key)
@@ -773,9 +774,11 @@ h2o.prcomp <- function(data, tol=0, cols = "", key = "", standardize=TRUE, retx=
   result$standardized = standardize
   result$sdev = res2$sdev
   nfeat = length(res2$eigVec[[1]])
-  temp = t(matrix(unlist(res2$eigVec), nrow = nfeat))
+  if(max_pc > nfeat) max_pc = nfeat
+  temp = t(matrix(unlist(res2$eigVec), nrow = nfeat))[,1:max_pc]
+  temp = as.data.frame(temp)
   rownames(temp) = res2$namesExp #'_names'
-  colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
+  colnames(temp) = paste("PC", seq(0, ncol(temp)-1), sep="")
   result$rotation = temp
   
   if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data, model=result))

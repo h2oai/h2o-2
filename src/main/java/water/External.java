@@ -4,7 +4,7 @@ import java.io.InputStream;
 
 import water.util.Log;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 /**
  *  Expose internal H2O API calls to the External World

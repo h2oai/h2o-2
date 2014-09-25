@@ -2,6 +2,7 @@ import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 
+RANDOM_UDP_DROP = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -28,10 +29,10 @@ class Basic(unittest.TestCase):
             print "\n", tryHeap,"GB heap, 1 jvm per host, import mr-0x6 hdfs, then parse"
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(base_port=55930, java_heap_GB=tryHeap, random_udp_drop=True,
+                h2o.build_cloud(base_port=55930, java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP,
                     use_hdfs=True, hdfs_name_node='mr-0x6', hdfs_version='cdh4')
             else:
-                h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
+                h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP,
                     use_hdfs=True, hdfs_name_node='mr-0x6', hdfs_version='cdh4')
 
             # don't raise exception if we find something bad in h2o stdout/stderr?

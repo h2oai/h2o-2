@@ -165,7 +165,7 @@ myPy c2 test_c2_rel.py
 # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
 
 # have to update this to poit to the right hdfs?
-# myPy c6 test_c6_hdfs_fvec.py
+myPy c6 test_c6_hdfs_fvec.py
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.

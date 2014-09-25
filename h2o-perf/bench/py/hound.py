@@ -10,7 +10,7 @@ class ssh_connect:
         policy = paramiko.AutoAddPolicy()
         self.ssh.set_missing_host_key_policy(policy)
         self.ssh.load_system_host_keys()
-        self.ssh.connect("192.168.1.171", username="0xperf", password="0xperf")
+        self.ssh.connect("172.16.2.171", username="0xperf", password="0xperf")
         # keep connection - send keepalive packet evety 5minutes
 #        self.ssh.get_transport().set_keepalive(300)
 

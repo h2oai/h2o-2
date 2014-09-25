@@ -192,6 +192,7 @@ public final class TimelineSnapshot implements
         break;
       case ack:
       case ackack:
+      case fetchack:
       case exec:
       case heartbeat:
         // compare 3 ctrl bytes + 4 bytes task #

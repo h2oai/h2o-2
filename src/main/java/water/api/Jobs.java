@@ -1,8 +1,8 @@
 package water.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonArray;
+import dontweave.gson.JsonElement;
+import dontweave.gson.JsonObject;
 import water.DKV;
 import water.Job;
 import water.Job.JobState;
