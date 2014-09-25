@@ -43,6 +43,7 @@ public class COXPH extends Request2 {
   @API(help="se(coef)")                 double se_coef;     // vector
   @API(help="z-score")                  double z_coef;      // vector
   @API(help="var(coef)")                double var_coef;    // matrix
+  @API(help="null log-likelihood")      double null_loglik; // scalar
   @API(help="log-likelihood")           double loglik;      // scalar
   @API(help="gradient")                 double gradient;    // vector
   @API(help="Hessian")                  double hessian;     // matrix
@@ -83,7 +84,7 @@ public class COXPH extends Request2 {
     if (ignore_start_column)
       min_time      = (long) stop_column.min();
     else
-      min_time      = (long) start_column.min();
+      min_time      = (long) start_column.min() + 1;
     max_time      = (long) stop_column.max();
     int n_time    = (int) (max_time - min_time + 1);
     double x_mean = x_column.mean();
@@ -94,7 +95,7 @@ public class COXPH extends Request2 {
     double oldLoglik = - Double.MAX_VALUE;
     double newCoef   = 0;
     double newLoglik;
-    for (i = 0; i < 1000; i++) {
+    for (i = 0; i < 100; i++) {
       iter = i + 1;
 
       // Map & Reduce
@@ -131,10 +132,13 @@ public class COXPH extends Request2 {
           newLoglik -= cox1.countEvents[t] * Math.log(cox1.cumsumExpXBeta[t]);
           gradient  -= cox1.countEvents[t] * gamma;
           hessian   -= cox1.countEvents[t] *
-                       (((cox1.cumsumXXExpXBeta[i]  / cox1.cumsumExpXBeta[i]) -
-                         (gamma * (cox1.cumsumXExpXBeta[i] / cox1.cumsumExpXBeta[i]))));
+                       (((cox1.cumsumXXExpXBeta[t]  / cox1.cumsumExpXBeta[t]) -
+                         (gamma * (cox1.cumsumXExpXBeta[t] / cox1.cumsumExpXBeta[t]))));
         }
       }
+
+      if (i == 0)
+        null_loglik = newLoglik;
 
       if (newLoglik > oldLoglik) {
         coef     = newCoef;
@@ -224,9 +228,9 @@ public class COXPH extends Request2 {
         t2 = (int) (stop_i - _min_time);
         if (!_ignore_start_column) {
           start_i = start.at80(i);
-          t1 = start_i <= _min_time ? 0 : (int) (start_i - _min_time);
           if (start_i >= stop_i)
             throw new IllegalArgumentException("start values must be strictly less than stop values");
+          t1 = (int) ((start_i + 1) - _min_time);
         }
         x_i = xs.at0(i) - _x_mean;
         if (!Double.isNaN(x_i)) {
@@ -260,6 +264,7 @@ public class COXPH extends Request2 {
     @Override public void reduce(CoxphFitTask that) {
       n += that.n;
       for (int t = 0; t < _n_time; t++) {
+        countRisk[t]     += that.countRisk[t];
         countCensored[t] += that.countCensored[t];
         countEvents[t]   += that.countEvents[t];
         sumXEvents[t]    += that.sumXEvents[t];
