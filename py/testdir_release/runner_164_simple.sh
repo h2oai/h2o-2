@@ -64,7 +64,7 @@ DOIT=../testdir_single_jvm/n0.doit
 
 # $DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
 $DOIT c1/test_c1_rel.py || true
-# $DOIT c2/test_c2_rel.py || true
+# $DOIT c2/test_c2_fvec.py || true
 # $DOIT c3/test_c3_rel.py || true
 # $DOIT c4/test_c4_four_billion_rows_fvec.py || true
 # $DOIT c6/test_c6_hdfs_fvec.py || true

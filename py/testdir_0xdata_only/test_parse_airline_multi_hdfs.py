@@ -34,16 +34,18 @@ class Basic(unittest.TestCase):
         csvFilename = "hex_10"
         csvFilePattern = '*' # all files in the folder
 
-        trialMax = 2
+        trialMax = 10
         for tryHeap in [24]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import mr-0x6 hdfs, then parse"
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55930, disable_assertions=DISABLE_ASSERTIONS,
+                h2o.build_cloud(force_tcp=True, sandbox_ignore_errors=True, java_heap_GB=tryHeap, 
+                    random_udp_drop=RANDOM_UDP_DROP, base_port=55930, disable_assertions=DISABLE_ASSERTIONS,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
             else:
                 # why is 55609 already in use?? 
-                h2o_hosts.build_cloud_with_hosts(sandbox_ignore_errors=True, force_tcp=True, java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55604, disable_assertions=DISABLE_ASSERTIONS,
+                h2o_hosts.build_cloud_with_hosts(force_tcp=True, sandbox_ignore_errors=True, java_heap_GB=tryHeap, 
+                    random_udp_drop=RANDOM_UDP_DROP, base_port=55604, disable_assertions=DISABLE_ASSERTIONS,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
 
             # don't raise exception if we find something bad in h2o stdout/stderr?

@@ -81,7 +81,7 @@ then
     # and keys aren't deleted? Exec starts to convert all (leading to timeout)
     # just get rid of VA stuff
     # myPy c1 test_c1_rel.py
-    # myPy c2 test_c2_rel.py
+    # myPy c2 test_c2_fvec.py
     myPy c1 test_c1_fvec.py
     myPy c2 test_c2_nongz_fvec.py
     # myPy c3 test_c3_rel.py

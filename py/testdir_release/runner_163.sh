@@ -87,7 +87,7 @@ then
     # fails without this
     # myPy c1 test_c1_rel.py
 
-    # myPy c2 test_c2_rel.py
+    # myPy c2 test_c2_fvec.py
     # this failed
     myPy c2 test_c2_nongz_fvec.py
 

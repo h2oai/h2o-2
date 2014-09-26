@@ -1221,7 +1221,7 @@ class H2O(object):
     # so we can create noise with different urls!, and different parms to that url
     # no noise if None
     def poll_url(self, response,
-                 timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=0, pollTimeoutSecs=180,
+                 timeoutSecs=20, retryDelaySecs=0.5, initialDelaySecs=0, pollTimeoutSecs=180,
                  noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
@@ -2469,7 +2469,7 @@ class H2O(object):
         h2o_cmd.infoFromSummary(a, noPrint=noPrint, numRows=numRows, numCols=numCols)
         return a
 
-    def log_view(self, timeoutSecs=10, **kwargs):
+    def log_view(self, timeoutSecs=20, **kwargs):
         browseAlso = kwargs.pop('browseAlso', False)
         a = self.__do_json_request('LogView.json', timeout=timeoutSecs)
         verboseprint("\nlog_view result:", dump_json(a))

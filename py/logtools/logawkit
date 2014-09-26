@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# h2o_10.65.243.14_54321.log:16-Sep 04:42:34.530 10.65.243.14:54321    14834 FJ-123-27 INFO WATER: Start remote task#1224 class water.parser.GuessSetup$GuessSetupTsk from /10.65.243.143:54321
+# h2o_10.65.243.14_54321.log:16-Sep 04:42:34.771 10.65.243.14:54321    14834 FJ-0-61   INFO WATER: Done remote task#1224 class water.parser.GuessSetup$GuessSetupTsk to /10.65.243.143:54321
+
+awkcommand='
+BEGIN {
+    totalStart = 0
+    totalDone = 0
+    FS = " "
+}
+{
+    
+    logfile = $1
+    time = $2
+    node = $3
+    task = $8
+    num = $10
+    target = $14
+
+    print "task", task, num
+    if (task ~ /Start/) {
+        totalStart = totalStart + 1
+        if (state[num]=="") {
+            state[num] = task
+            state0[num] = $0
+        }
+        else {
+            prior = state[num]
+            if (prior=="Start") {
+                print "Error: already Start", prior, "now:", $0
+            }
+            else { # must have a Done task
+                # clear it if was Done
+                state[num] = "c"
+            }
+        }
+    }
+    else {
+        if (task ~ /Done/) {
+            totalDone = totalDone + 1
+            if (state[num]=="") {
+                state[num] = task
+                state0[num] = $0
+            }
+            else {
+                prior = state[num]
+                if (prior=="Done") {
+                    print "Error: already Done", prior, "now:", $0
+                }
+                else { # must be Done task
+                    # clear it if Done
+                    state[num] = "c"
+                }
+            }
+        }
+        else {
+            print "Unknown task:", $0
+        }
+    }
+    totalTasks = totalTasks + 1
+}
+
+END {
+    print "Starts with no Done"
+    snd = 0
+    dns = 0
+    for (i in state) {
+        if (state[i]=="Start") { 
+            print state[i], state0[i]
+            snd = snd + 1
+        }
+    }
+    print "Dones with no Start"
+    for (i in state) {
+        if (state[i]=="Done") { 
+            print state[i], state0[i]
+            dns = dns + 1
+        }
+    }
+    for (i in state) {
+        if (state[i]!="Start" && state[i]!="Done" && state[i]!="c") { 
+            print "Unknown state:", state[i], state0[i]
+        }
+    }
+
+    print "Done No Start:", dns
+    print "Start No Done:", snd
+    print "totalStart:", totalStart
+    print "totalDone:", totalDone
+    print "totalTasks:", totalTasks
+}
+
+'
+
+egrep '(Start.*task|Done.*task)' | awk "$awkcommand"
+
+

@@ -103,7 +103,7 @@ then
     # the import leaves keys that apparently get converted by exec -> timeout
     # just do fvec tests
     # myPy c1 test_c1_rel.py
-    # myPy c2 test_c2_rel.py
+    # myPy c2 test_c2_fvec.py
     # myPy c3 test_c3_rel.py
     # myPy c4 test_c4_four_billion_rows_fvec.py
 
