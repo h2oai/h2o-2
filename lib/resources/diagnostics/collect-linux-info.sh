@@ -38,6 +38,9 @@ set +e
 /bin/cat /etc/redhat-release > redhat-release.txt 2>&1
 /bin/cat /etc/lsb-release > lsb-release.txt 2>&1
 
+# System kernel settings
+/bin/cat /etc/sysctl.conf > sysctl.conf 2>&1
+
 # Proc filesystem.
 /bin/cat /proc/stat > proc_stat.txt 2>&1
 /bin/cat /proc/cpuinfo > proc_cpuinfo.txt 2>&1
