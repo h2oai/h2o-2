@@ -50,7 +50,7 @@ h2o.coxph <- function(x, y, data, key = "")
          method       = "breslow",
          n            = res$n,
          nevent       = res$total_event,
-         wald.test    = structure(NA_real_, names = x),
+         wald.test    = structure(res$wald_test, names = x),
          call         = match.call())
   summary <-
     list(call         = match.call(),
@@ -73,7 +73,7 @@ h2o.coxph <- function(x, y, data, key = "")
          logtest      = c(test = res$loglik_test, df = 1, pvalue = NA_real_),
          sctest       = c(test = NA_real_, df = 1, pvalue = NA_real_),
          rsq          = NA_real_,
-         waldtest     = c(test = NA_real_, df = 1, pvalue = NA_real_),
+         waldtest     = c(test = res$wald_test, df = 1, pvalue = NA_real_),
          used.robust  = FALSE,
          concordance  = c("concordance.concordant" = NA_real_,
                           "se.std(c-d)"            = NA_real_))

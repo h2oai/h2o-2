@@ -47,6 +47,7 @@ public class COXPH extends Request2 {
   @API(help="null log-likelihood")      double null_loglik;  // scalar
   @API(help="log-likelihood")           double loglik;       // scalar
   @API(help="log-likelihood test stat") double loglik_test;  // scalar
+  @API(help="Wald test stat")           double wald_test;    // scalar
   @API(help="gradient")                 double gradient;     // vector
   @API(help="Hessian")                  double hessian;      // matrix
   @API(help="log relative error")       double lre;          // scalar
@@ -152,6 +153,7 @@ public class COXPH extends Request2 {
         z_coef       = coef / se_coef;
         loglik       = newLoglik;
         loglik_test  = -2 * (null_loglik - loglik);
+        wald_test    = coef * coef / var_coef;
 
         if (newLoglik == 0)
           lre = -Math.log10(Math.abs(oldLoglik - newLoglik));
