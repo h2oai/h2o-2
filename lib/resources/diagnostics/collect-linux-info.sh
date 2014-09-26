@@ -40,7 +40,6 @@ set +e
 
 # System kernel settings
 /bin/cat /etc/sysctl.conf > sysctl.conf 2>&1
-echo `sysctl -a` > sysctl.current 2>&1
 
 # Proc filesystem.
 /bin/cat /proc/stat > proc_stat.txt 2>&1
