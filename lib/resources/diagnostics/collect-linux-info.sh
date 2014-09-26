@@ -55,6 +55,9 @@ set +e
 /sbin/ifconfig -a > ifconfig_dash_a.txt 2>&1
 /sbin/iptables --list > iptables_dash_list.txt 2>&1
 /bin/netstat -s > netstat_dash_s.txt 2>&1
+/bin/ss -s > socker.txt 2>&1
+/bin/ip -s link > iplink.txt 2>&1
+/usr/bin/nstat > nstat.txt 2>&1
 
 # System.
 /bin/uname -a > uname_dash_a.txt 2>&1
