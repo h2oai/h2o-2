@@ -135,7 +135,7 @@ myPy() {
 
 # don't run this until we know whether 0xcustomer permissions also exist for the hadoop job
 # myPy c1 test_c1_rel.py
-myPy c2 test_c2_rel.py
+myPy c2 test_c2_fvec.py
 myPy c3 test_c3_rel.py
 # myPy c4 test_c4_four_billion_rows_fvec.py
 myPy c6 test_c6_hdfs_fvec.py
