@@ -127,6 +127,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_ANOMALY = "2/Anomaly.json"
 .h2o.__PAGE_DEEPFEATURES = "2/DeepFeatures.json"
 
+.h2o.__PAGE_COXPH = "2/COXPH.json"
 .h2o.__PAGE_DRF = "2/DRF.json"
 .h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
 .h2o.__PAGE_DRFModelView = "2/DRFModelView.json"

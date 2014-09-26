@@ -11,6 +11,7 @@ setClass("H2OModel", representation(key="character", data="H2OParsedData", model
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame"))
 
+setClass("H2OCoxPHModel", contains="H2OModel", representation(summary="list", survfit="list"))
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
@@ -26,6 +27,7 @@ setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
 setClass("H2ODeepLearningGrid", contains="H2OGrid")
 setClass("H2OSpeeDRFGrid", contains="H2OGrid")
+setClass("H2OCoxPHModelSummary", representation(summary="list"))
 setClass("H2OGLMModelList", representation(models="list", best_model="numeric", lambdas="numeric"))
 
 # Register finalizers for H2O data and model objects
@@ -94,6 +96,37 @@ setMethod("show", "H2OGrid", function(object) {
   temp = data.frame(t(sapply(object@sumtable, c)))
   cat("\nSummary\n"); print(temp)
 })
+
+setMethod("show", "H2OCoxPHModel", function(object)
+  get("print.coxph", getNamespace("survival"))(object@model))
+
+setMethod("show", "H2OCoxPHModelSummary", function(object)
+  get("print.summary.coxph", getNamespace("survival"))(object@summary))
+
+print.survfit.H2OCoxPHModel <- function(x, ...)
+  suppressWarnings(NextMethod("print"))
+
+setMethod("summary","H2OCoxPHModel", function(object, ...)
+  new("H2OCoxPHModelSummary", summary = object@summary))
+
+extractAIC.H2OCoxPHModel <- function(fit, scale, k = 2, ...)
+{
+  fun <- get("extractAIC.coxph", getNamespace("stats"))
+  if (missing(scale))
+    fun(fit@model, k = k)
+  else
+    fun(fit@model, scale = scale, k = k)
+}
+
+logLik.H2OCoxPHModel <- function(object, ...)
+  get("logLik.coxph", getNamespace("survival"))(object@model, ...)
+
+survfit.H2OCoxPHModel <- function(formula, ...)
+  structure(c(formula@survfit, call = match.call()),
+            class = c("survfit.H2OCoxPHModel", "survfit.coxph", "survfit"))
+
+vcov.H2OCoxPHModel <- function(object, ...)
+  get("vcov.coxph", getNamespace("survival"))(object@model, ...)
 
 setMethod("show", "H2OKMeansModel", function(object) {
     print(object@data@h2o)

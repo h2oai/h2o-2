@@ -1,4 +1,100 @@
 # Model-building operations and algorithms
+# --------------------- Cox Proportional Hazards Model (COXPH) ---------------------- #
+# methods(class = "coxph")
+#   anova.coxph
+#   extractAIC.coxph   // done
+#   logLik.coxph       // done
+#   model.frame.coxph
+#   model.matrix.coxph
+#   predict.coxph
+#   print.coxph        // show done
+#   residuals.coxph
+#   summary.coxph      // done
+#   survfit.coxph      // done
+#   vcov.coxph         // done
+h2o.coxph <- function(x, y, data, key = "")
+{
+  if (!is(data, "H2OParsedData"))
+    stop("'data' must be an H2O parsed dataset")
+
+  if (!is.character(x) || !(x %in% colnames(data)))
+    stop("'x' must be a character string")
+
+  ny <- length(y)
+  if (!is.character(y) || ny < 2L || ny > 3L)
+    stop("'y' must be a character vector containing a ",
+         "(start, stop, event) triplet or (stop, event) couplet")
+
+  if (!is.character(key) && length(key) == 1L)
+    stop("'key' must be a character string")
+  if (nchar(key) > 0 && !grepl("^[a-zA-Z_][a-zA-Z0-9_.]*$", key))
+    stop("'key' must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
+
+  res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_COXPH,
+                           source = data@key,
+                           use_start_column = as.integer(ny == 3L),
+                           start_column = y[1L],
+                           stop_column  = y[ny - 1L],
+                           event_column = y[ny],
+                           x_column     = x)
+  model <-
+    list(coefficients = structure(res$coef, names = x),
+         var          = matrix(res$var, 1L, 1L),
+         loglik       = c(res$null_loglik, res$loglik),
+         score        = NA_real_,
+         iter         = res$iter,
+         means        = structure(res$x_mean, names = x),
+         concordance  = c(concordant = NA_real_, discordant = NA_real_,
+                          tied.risk  = NA_real_, tied.time  = NA_real_,
+                          "std(c-d)" = NA_real_),
+         method       = "breslow",
+         n            = res$n,
+         nevent       = res$total_event,
+         wald.test    = structure(NA_real_, names = x),
+         call         = match.call())
+  summary <-
+    list(call         = match.call(),
+         n            = model$n,
+         loglik       = model$loglik,
+         nevent       = model$nevent,
+         coefficients = matrix(c(res$coef, res$exp_coef, res$se_coef,
+                                 res$z_coef, NA_real_),
+                               nrow = 1L, ncol = 5L,
+                               dimnames =
+                               list(x,
+                                    c("coef", "exp(coef)", "se(coef)",
+                                      "z", "Pr(>|z|)"))),
+         conf.int     = matrix(c(res$exp_coef, res$exp_neg_coef, NA, NA),
+                               nrow = 1L, ncol = 4L,
+                               dimnames =
+                               list(x,
+                               c("exp(coef)", "exp(-coef)",
+                                 "lower .95", "upper .95"))),
+         logtest      = c(test = res$loglik_test, df = 1, pvalue = NA_real_),
+         sctest       = c(test = NA_real_, df = 1, pvalue = NA_real_),
+         rsq          = NA_real_,
+         waldtest     = c(test = NA_real_, df = 1, pvalue = NA_real_),
+         used.robust  = FALSE,
+         concordance  = c("concordance.concordant" = NA_real_,
+                          "se.std(c-d)"            = NA_real_))
+  survfit <-
+    list(n               = model$n,
+         time            = res$min_time:res$max_time,
+         n.risk          = res$n_risk,
+         n.event         = res$n_event,
+         n.censor        = res$n_censor,
+         surv            = NULL,
+         type            = ifelse(ny == 2L, "right", "counting"),
+         cumhaz          = NULL,
+         std.err         = NULL,
+         upper           = NULL,
+         lower           = NULL,
+         conf.type       = NULL,
+         conf.int        = NULL)
+  new("H2OCoxPHModel", key = key, data = data, model = model,
+      summary = summary, survfit = survfit)
+}
+
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,

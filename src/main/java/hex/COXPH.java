@@ -22,7 +22,7 @@ public class COXPH extends Request2 {
   public Frame source;
 
   @API(help="",                  required=true,  filter=Default.class)
-  public boolean ignore_start_column = true;
+  public boolean use_start_column = true;
 
   @API(help="Start Time Column", required=false, filter=COXPHVecSelect.class)
   public Vec start_column;
@@ -38,27 +38,30 @@ public class COXPH extends Request2 {
 
   private class COXPHVecSelect extends VecSelect { COXPHVecSelect() { super("source"); } }
 
-  @API(help="coef")                     double coef;        // vector
-  @API(help="exp(coef)")                double exp_coef;    // vector
-  @API(help="se(coef)")                 double se_coef;     // vector
-  @API(help="z-score")                  double z_coef;      // vector
-  @API(help="var(coef)")                double var_coef;    // matrix
-  @API(help="null log-likelihood")      double null_loglik; // scalar
-  @API(help="log-likelihood")           double loglik;      // scalar
-  @API(help="gradient")                 double gradient;    // vector
-  @API(help="Hessian")                  double hessian;     // matrix
-  @API(help="log relative error")       double lre;         // scalar
-  @API(help="number of iterations")     int    iter;        // scalar
-  @API(help="n")                        long   n;           // scalar
-  @API(help="total events")             long   total_event; // scalar
-  @API(help="minimum stop time")        long   min_time;    // scalar
-  @API(help="maximum stop time")        long   max_time;    // scalar
-  @API(help="number at risk")           long[] n_risk;      // vector
-  @API(help="number of events")         long[] n_event;     // vector
-  @API(help="number of censored obs")   long[] n_censor;    // vector
+  @API(help="coef")                     double coef;         // vector
+  @API(help="exp(coef)")                double exp_coef;     // vector
+  @API(help="exp(-coef)")               double exp_neg_coef; // vector
+  @API(help="se(coef)")                 double se_coef;      // vector
+  @API(help="z-score")                  double z_coef;       // vector
+  @API(help="var(coef)")                double var_coef;     // matrix
+  @API(help="null log-likelihood")      double null_loglik;  // scalar
+  @API(help="log-likelihood")           double loglik;       // scalar
+  @API(help="log-likelihood test stat") double loglik_test;  // scalar
+  @API(help="gradient")                 double gradient;     // vector
+  @API(help="Hessian")                  double hessian;      // matrix
+  @API(help="log relative error")       double lre;          // scalar
+  @API(help="number of iterations")     int    iter;         // scalar
+  @API(help="mean of x column")         double x_mean;       // scalar
+  @API(help="n")                        long   n;            // scalar
+  @API(help="total events")             long   total_event;  // scalar
+  @API(help="minimum stop time")        long   min_time;     // scalar
+  @API(help="maximum stop time")        long   max_time;     // scalar
+  @API(help="number at risk")           long[] n_risk;       // vector
+  @API(help="number of events")         long[] n_event;      // vector
+  @API(help="number of censored obs")   long[] n_censor;     // vector
 
   @Override public Response serve() {
-    if (!ignore_start_column && !start_column.isInt())
+    if (use_start_column && !start_column.isInt())
       throw new IllegalArgumentException("start time must be null or of type integer");
 
     if (!stop_column.isInt())
@@ -68,26 +71,26 @@ public class COXPH extends Request2 {
       throw new IllegalArgumentException("event must be of type integer or factor");
 
     Vec[] cols;
-    if (ignore_start_column) {
-      cols    = new Vec[3];
-      cols[0] = stop_column;
-      cols[1] = event_column;
-      cols[2] = x_column;
-    } else {
-      cols    = new Vec[4];
+    if (use_start_column) {
+      cols = new Vec[4];
       cols[0] = start_column;
       cols[1] = stop_column;
       cols[2] = event_column;
       cols[3] = x_column;
+    } else {
+      cols    = new Vec[3];
+      cols[0] = stop_column;
+      cols[1] = event_column;
+      cols[2] = x_column;
     }
 
-    if (ignore_start_column)
-      min_time      = (long) stop_column.min();
+    if (use_start_column)
+      min_time = (long) start_column.min() + 1;
     else
-      min_time      = (long) start_column.min() + 1;
-    max_time      = (long) stop_column.max();
-    int n_time    = (int) (max_time - min_time + 1);
-    double x_mean = x_column.mean();
+      min_time = (long) stop_column.min();
+    max_time   = (long) stop_column.max();
+    int n_time = (int) (max_time - min_time + 1);
+    x_mean     = x_column.mean();
 
     int    i, t;
     double step      = Double.NaN;
@@ -99,9 +102,9 @@ public class COXPH extends Request2 {
       iter = i + 1;
 
       // Map & Reduce
-      CoxphFitTask cox1 = new CoxphFitTask(newCoef, min_time, n_time, ignore_start_column, x_mean).doAll(cols);
+      CoxphFitTask cox1 = new CoxphFitTask(newCoef, min_time, n_time, use_start_column, x_mean).doAll(cols);
       // Finalize
-      if (ignore_start_column) {
+      if (!use_start_column) {
         for (t = n_time - 2; t >= 0; t--) {
           cox1.cumsumExpXBeta[t]   += cox1.cumsumExpXBeta[t+1];
           cox1.cumsumXExpXBeta[t]  += cox1.cumsumXExpXBeta[t+1];
@@ -116,7 +119,7 @@ public class COXPH extends Request2 {
         n_risk   = cox1.countRisk.clone();
         n_event  = cox1.countEvents.clone();
         n_censor = cox1.countCensored.clone();
-        if (ignore_start_column)
+        if (!use_start_column)
           for (t = n_time - 2; t >= 0; t--)
             n_risk[t] += n_risk[t+1];
       }
@@ -141,12 +144,14 @@ public class COXPH extends Request2 {
         null_loglik = newLoglik;
 
       if (newLoglik > oldLoglik) {
-        coef     = newCoef;
-        exp_coef = Math.exp(coef);
-        var_coef = -1 / hessian;
-        se_coef  = Math.sqrt(var_coef);
-        z_coef   = coef / se_coef;
-        loglik   = newLoglik;
+        coef         = newCoef;
+        exp_coef     = Math.exp(coef);
+        exp_neg_coef = Math.exp(-coef);
+        var_coef     = -1 / hessian;
+        se_coef      = Math.sqrt(var_coef);
+        z_coef       = coef / se_coef;
+        loglik       = newLoglik;
+        loglik_test  = -2 * (null_loglik - loglik);
 
         if (newLoglik == 0)
           lre = -Math.log10(Math.abs(oldLoglik - newLoglik));
@@ -175,7 +180,7 @@ public class COXPH extends Request2 {
     private final double  _beta;
     private final int     _n_time;
     private final long    _min_time;
-    private final boolean _ignore_start_column;
+    private final boolean _use_start_column;
     private final double  _x_mean;
 
     long     n;
@@ -188,27 +193,27 @@ public class COXPH extends Request2 {
     double[] cumsumXExpXBeta;
     double[] cumsumXXExpXBeta;
 
-    CoxphFitTask(final double beta, final long min_time, final int n_time, final boolean ignore_start_column,
+    CoxphFitTask(final double beta, final long min_time, final int n_time, final boolean use_start_column,
                  final double x_mean) {
-      _beta                = beta;
-      _n_time              = n_time;
-      _min_time            = min_time;
-      _ignore_start_column = ignore_start_column;
-      _x_mean              = x_mean;
+      _beta             = beta;
+      _n_time           = n_time;
+      _min_time         = min_time;
+      _use_start_column = use_start_column;
+      _x_mean           = x_mean;
     }
 
     @Override public void map(Chunk[] cols) {
       Chunk start, stop, events, xs;
-      if (_ignore_start_column) {
-        start  = null;
-        stop   = cols[0];
-        events = cols[1];
-        xs     = cols[2];
-      } else {
+      if (_use_start_column) {
         start  = cols[0];
         stop   = cols[1];
         events = cols[2];
         xs     = cols[3];
+      } else {
+        start  = null;
+        stop   = cols[0];
+        events = cols[1];
+        xs     = cols[2];
       }
 
       int i, t, t1 = -1, t2;
@@ -226,7 +231,7 @@ public class COXPH extends Request2 {
         event_i = events.at80(i);
         stop_i  = stop.at80(i);
         t2 = (int) (stop_i - _min_time);
-        if (!_ignore_start_column) {
+        if (_use_start_column) {
           start_i = start.at80(i);
           if (start_i >= stop_i)
             throw new IllegalArgumentException("start values must be strictly less than stop values");
@@ -245,18 +250,18 @@ public class COXPH extends Request2 {
             sumXBetaEvents[t2] += xbeta_i;
           } else
             countCensored[t2]++;
-          if (_ignore_start_column) {
-            countRisk[t2]++;
-            cumsumExpXBeta[t2]   += expXBeta_i;
-            cumsumXExpXBeta[t2]  += xExpXBeta_i;
-            cumsumXXExpXBeta[t2] += xxExpXBeta_i;
-          } else {
+          if (_use_start_column) {
             for (t = t1; t <= t2; t++) {
               countRisk[t]++;
               cumsumExpXBeta[t]   += expXBeta_i;
               cumsumXExpXBeta[t]  += xExpXBeta_i;
               cumsumXXExpXBeta[t] += xxExpXBeta_i;
             }
+          } else {
+            countRisk[t2]++;
+            cumsumExpXBeta[t2]   += expXBeta_i;
+            cumsumXExpXBeta[t2]  += xExpXBeta_i;
+            cumsumXXExpXBeta[t2] += xxExpXBeta_i;
           }
         }
       }
