@@ -161,6 +161,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new KillMinus3());
       registerRequest(new SaveModel());
       registerRequest(new LoadModel());
+      registerRequest(new CollectLinuxInfo());
       registerRequest(new SetLogLevel());
       registerRequest(new Debug());
       registerRequest(new UnlockKeys());
@@ -175,6 +176,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
       Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");
       Request.addToNavbar(registerRequest(new LoadModel()),            "Load Model",           "Beta");
+      Request.addToNavbar(registerRequest(new CollectLinuxInfo()),     "Collect Linux Info",   "Beta");
       Request.addToNavbar(registerRequest(new SetLogLevel()),          "Set Log Level",        "Beta");
       Request.addToNavbar(registerRequest(new Debug()),                "Debug Dump (floods log file)","Beta");
       Request.addToNavbar(registerRequest(new UnlockKeys()),           "Unlock Keys (use with caution)","Beta");
