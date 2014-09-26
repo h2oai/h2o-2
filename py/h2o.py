@@ -2513,14 +2513,18 @@ class H2O(object):
         nameList = z.namelist()
         # the first is the h2ologs dir name.
         h2oLogDir = logDir + "/" + nameList.pop(0)
+        print "h2oLogDir:", h2oLogDir
+        print "logDir:", logDir
 
         # it's a zip of zipped files
+        # first unzip it
         z = zipfile.ZipFile(StringIO.StringIO(r.content))
         z.extractall(logDir)
         # unzipped file should be in LOG_DIR now
+        # now unzip the files in that directory
         for zname in nameList:
             resultList = h2o_util.flat_unzip(logDir + "/" + zname, logDir)
-            print "resultList:", resultList
+            print "logDir:", logDir, "resultList:", resultList
         return resultList
 
     # kwargs used to pass many params
