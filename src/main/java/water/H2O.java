@@ -425,7 +425,7 @@ public final class H2O {
       Log.err(t);
       return null;
     } finally {
-      Log.warn(m);
+      Log.info(m);
       Utils.close(s);
     }
   }
