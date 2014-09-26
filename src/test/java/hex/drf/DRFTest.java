@@ -35,22 +35,22 @@ public class DRFTest extends TestUtil {
           "./smalldata/iris/iris_train.csv","iris_train.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
           1,
-          a( a(6, 0,  0),
-             a(0, 7,  0),
-             a(0, 2, 11)),
+          a( a(12, 0,  0),
+             a(0, 14,  1),
+             a(0, 1, 15)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
+
   }
 
-  //[[30, 0, 0], [0, 31, 3], [0, 4, 32]], but was: [[28, 0, 0], [0, 30, 2], [0, 2, 28]]: arrays first differed at element [0]; expected:<30> but was:<28>
   @Test public void testClassIris5() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
           "./smalldata/iris/iris_train.csv","iris_train.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
           5,
-          a( a(28, 0,  0),
-             a(0, 30,  2),
-             a(0,  2, 28)),
+          a( a(27, 0,  0),
+             a(0, 25,  2),
+             a(0,  5, 24)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -60,11 +60,11 @@ public class DRFTest extends TestUtil {
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
-        a( a(1,  0, 0, 1, 0),
-           a(3, 55, 0, 1, 1),
-           a(0,  0, 0, 0, 0),
-           a(1,  2, 0,16, 2),
-           a(0,  0, 0, 2,33)),
+        a( a(0,  0, 0, 0, 0),
+           a(0, 62, 0, 7, 0),
+           a(0,  1, 0, 0, 0),
+           a(0,  0, 0,31, 0),
+           a(0,  0, 0, 0,40)),
         s("3", "4", "5", "6", "8"));
   }
 
@@ -73,11 +73,11 @@ public class DRFTest extends TestUtil {
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         5,
-        a( a(3,   1, 0,  0,   0),
-           a(2, 174, 1,  3,   0),
-           a(0,   2, 0,  1,   0),
-           a(1,   4, 1, 60,   2),
-           a(0,   0, 0,  1,  93)),
+        a( a(3,   0, 0,  0,   0),
+           a(0, 173, 2,  9,   0),
+           a(0,   1, 1,  0,   0),
+           a(0,   2, 2, 68,   2),
+           a(0,   0, 0,  2,  88)),
         s("3", "4", "5", "6", "8"));
   }
 
@@ -102,7 +102,7 @@ public class DRFTest extends TestUtil {
         new PrepData() { @Override int prep(Frame fr) { return fr.find("DateofBirth"); } },
         1,
         a( a(6, 0),
-           a(7, 0)),
+           a(9, 1)),
         s("0", "1"));
   }
 
