@@ -288,7 +288,7 @@ public abstract class Log {
   /**
    * @return The common prefix for all of the different log files for this process.
    */
-  private static String getLogPathFileNameStem() {
+  public static String getLogPathFileNameStem() {
     String ip;
     if (H2O.SELF_ADDRESS == null) {
       ip = "UnknownIP";
@@ -299,7 +299,7 @@ public abstract class Log {
     // Somehow, the above process for producing an IP address has a slash
     // in it, which is mystifying.  Remove it.
 
-    int port = H2O.UDP_PORT-1;
+    int port = H2O.API_PORT;
     String portString = Integer.toString(port);
 
     String logFileName =
