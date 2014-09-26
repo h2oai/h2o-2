@@ -124,8 +124,8 @@ then
 fi
 ps aux | grep four_hour_cloud
 
-# test_c2_rel has about 11 subtests inside it, that will be tracked individually by jenkins
-# ../testdir_single_jvm/n0.doit test_c2_rel || true
+# test_c2_fvec has about 11 subtests inside it, that will be tracked individually by jenkins
+# ../testdir_single_jvm/n0.doit test_c2_fvec || true
 # We don't want the jenkins job to complete until we kill it, so the cloud stays alive for debug
 # also prevents us from overrunning ourselves with cloud building
 # If we don't wait, the cloud will get torn down.
