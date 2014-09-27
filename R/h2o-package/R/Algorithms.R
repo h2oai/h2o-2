@@ -77,20 +77,21 @@ h2o.coxph <- function(x, y, data, key = "")
          used.robust  = FALSE,
          concordance  = c("concordance.concordant" = NA_real_,
                           "se.std(c-d)"            = NA_real_))
+  ok <- which((res$n_event + res$n_censor) > 0L)
   survfit <-
-    list(n               = model$n,
-         time            = res$min_time:res$max_time,
-         n.risk          = res$n_risk,
-         n.event         = res$n_event,
-         n.censor        = res$n_censor,
-         surv            = NULL,
-         type            = ifelse(ny == 2L, "right", "counting"),
-         cumhaz          = NULL,
-         std.err         = NULL,
-         upper           = NULL,
-         lower           = NULL,
-         conf.type       = NULL,
-         conf.int        = NULL)
+    list(n            = model$n,
+         time         = (res$min_time:res$max_time)[ok],
+         n.risk       = res$n_risk[ok],
+         n.event      = res$n_event[ok],
+         n.censor     = res$n_censor[ok],
+         surv         = res$surv[ok],
+         type         = ifelse(ny == 2L, "right", "counting"),
+         cumhaz       = res$cumhaz[ok],
+         std.err      = res$se_cumhaz[ok],
+         upper        = NULL,
+         lower        = NULL,
+         conf.type    = NULL,
+         conf.int     = NULL)
   new("H2OCoxPHModel", key = key, data = data, model = model,
       summary = summary, survfit = survfit)
 }

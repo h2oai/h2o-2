@@ -38,28 +38,31 @@ public class COXPH extends Request2 {
 
   private class COXPHVecSelect extends VecSelect { COXPHVecSelect() { super("source"); } }
 
-  @API(help="coef")                     double coef;         // vector
-  @API(help="exp(coef)")                double exp_coef;     // vector
-  @API(help="exp(-coef)")               double exp_neg_coef; // vector
-  @API(help="se(coef)")                 double se_coef;      // vector
-  @API(help="z-score")                  double z_coef;       // vector
-  @API(help="var(coef)")                double var_coef;     // matrix
-  @API(help="null log-likelihood")      double null_loglik;  // scalar
-  @API(help="log-likelihood")           double loglik;       // scalar
-  @API(help="log-likelihood test stat") double loglik_test;  // scalar
-  @API(help="Wald test stat")           double wald_test;    // scalar
-  @API(help="gradient")                 double gradient;     // vector
-  @API(help="Hessian")                  double hessian;      // matrix
-  @API(help="log relative error")       double lre;          // scalar
-  @API(help="number of iterations")     int    iter;         // scalar
-  @API(help="mean of x column")         double x_mean;       // scalar
-  @API(help="n")                        long   n;            // scalar
-  @API(help="total events")             long   total_event;  // scalar
-  @API(help="minimum stop time")        long   min_time;     // scalar
-  @API(help="maximum stop time")        long   max_time;     // scalar
-  @API(help="number at risk")           long[] n_risk;       // vector
-  @API(help="number of events")         long[] n_event;      // vector
-  @API(help="number of censored obs")   long[] n_censor;     // vector
+  @API(help="coefficients")             double   coef;         // vector
+  @API(help="exp(coefficients)")        double   exp_coef;     // vector
+  @API(help="exp(-coefficients)")       double   exp_neg_coef; // vector
+  @API(help="se(coefficients)")         double   se_coef;      // vector
+  @API(help="z-score")                  double   z_coef;       // vector
+  @API(help="var(coefficients)")        double   var_coef;     // matrix
+  @API(help="null log-likelihood")      double   null_loglik;  // scalar
+  @API(help="log-likelihood")           double   loglik;       // scalar
+  @API(help="log-likelihood test stat") double   loglik_test;  // scalar
+  @API(help="Wald test stat")           double   wald_test;    // scalar
+  @API(help="gradient")                 double   gradient;     // vector
+  @API(help="Hessian")                  double   hessian;      // matrix
+  @API(help="log relative error")       double   lre;          // scalar
+  @API(help="number of iterations")     int      iter;         // scalar
+  @API(help="mean of x column")         double   x_mean;       // scalar
+  @API(help="n")                        long     n;            // scalar
+  @API(help="total events")             long     total_event;  // scalar
+  @API(help="minimum time")             long     min_time;     // scalar
+  @API(help="maximum time")             long     max_time;     // scalar
+  @API(help="number at risk")           long[]   n_risk;       // vector
+  @API(help="number of events")         long[]   n_event;      // vector
+  @API(help="number of censored obs")   long[]   n_censor;     // vector
+  @API(help="cumulative hazard")        double[] cumhaz;       // vector
+  @API(help="se(cumulative hazard)")    double[] se_cumhaz;    // vector
+  @API(help="survival function")        double[] surv;         // vector
 
   @Override public Response serve() {
     if (use_start_column && !start_column.isInt())
@@ -92,6 +95,10 @@ public class COXPH extends Request2 {
     max_time   = (long) stop_column.max();
     int n_time = (int) (max_time - min_time + 1);
     x_mean     = x_column.mean();
+    cumhaz     = MemoryManager.malloc8d(n_time);
+    se_cumhaz  = MemoryManager.malloc8d(n_time);
+    surv       = MemoryManager.malloc8d(n_time);
+    double[] se_term = MemoryManager.malloc8d(n_time);
 
     int    i, t;
     double step      = Double.NaN;
@@ -107,9 +114,9 @@ public class COXPH extends Request2 {
       // Finalize
       if (!use_start_column) {
         for (t = n_time - 2; t >= 0; t--) {
-          cox1.cumsumExpXBeta[t]   += cox1.cumsumExpXBeta[t+1];
-          cox1.cumsumXExpXBeta[t]  += cox1.cumsumXExpXBeta[t+1];
-          cox1.cumsumXXExpXBeta[t] += cox1.cumsumXXExpXBeta[t+1];
+          cox1.rcumsumRisk[t]   += cox1.rcumsumRisk[t+1];
+          cox1.rcumsumXRisk[t]  += cox1.rcumsumXRisk[t+1];
+          cox1.rcumsumXXRisk[t] += cox1.rcumsumXXRisk[t+1];
         }
       }
 
@@ -117,7 +124,7 @@ public class COXPH extends Request2 {
         n = cox1.n;
         for (t = 0; t < n_time; t++)
           total_event += cox1.countEvents[t];
-        n_risk   = cox1.countRisk.clone();
+        n_risk   = cox1.countRiskSet.clone();
         n_event  = cox1.countEvents.clone();
         n_censor = cox1.countCensored.clone();
         if (!use_start_column)
@@ -130,14 +137,14 @@ public class COXPH extends Request2 {
       hessian   = 0;
       for (t = n_time - 1; t >= 0; t--) {
         if (cox1.countEvents[t] > 0) {
-          newLoglik += cox1.sumXBetaEvents[t];
+          newLoglik += cox1.sumLogRiskEvents[t];
           gradient  += cox1.sumXEvents[t];
-          double gamma = cox1.cumsumXExpXBeta[t] / cox1.cumsumExpXBeta[t];
-          newLoglik -= cox1.countEvents[t] * Math.log(cox1.cumsumExpXBeta[t]);
+          double gamma = cox1.rcumsumXRisk[t] / cox1.rcumsumRisk[t];
+          newLoglik -= cox1.countEvents[t] * Math.log(cox1.rcumsumRisk[t]);
           gradient  -= cox1.countEvents[t] * gamma;
           hessian   -= cox1.countEvents[t] *
-                       (((cox1.cumsumXXExpXBeta[t]  / cox1.cumsumExpXBeta[t]) -
-                         (gamma * (cox1.cumsumXExpXBeta[t] / cox1.cumsumExpXBeta[t]))));
+                       (((cox1.rcumsumXXRisk[t]  / cox1.rcumsumRisk[t]) -
+                         (gamma * (cox1.rcumsumXRisk[t] / cox1.rcumsumRisk[t]))));
         }
       }
 
@@ -154,6 +161,23 @@ public class COXPH extends Request2 {
         loglik       = newLoglik;
         loglik_test  = -2 * (null_loglik - loglik);
         wald_test    = coef * coef / var_coef;
+
+        for (t = 0; t < n_time; t++) {
+          cumhaz[t]    = cox1.countEvents[t] / cox1.rcumsumRisk[t];
+          se_cumhaz[t] = cox1.countEvents[t] / (cox1.rcumsumRisk[t] * cox1.rcumsumRisk[t]);
+          se_term[t]   = (cox1.rcumsumXRisk[t] / cox1.rcumsumRisk[t]) * cumhaz[t];
+        }
+
+        for (t = 1; t < n_time; t++) {
+          cumhaz[t]    = cumhaz[t - 1] + cumhaz[t];
+          se_cumhaz[t] = se_cumhaz[t - 1] + se_cumhaz[t];
+          se_term[t]   = se_term[t - 1] + se_term[t];
+        }
+
+        for (t = 0; t < n_time; t++) {
+          se_cumhaz[t] = Math.sqrt(se_cumhaz[t] + (se_term[t] * var_coef * se_term[t]));
+          surv[t]      = Math.exp(-cumhaz[t]);
+        }
 
         if (newLoglik == 0)
           lre = -Math.log10(Math.abs(oldLoglik - newLoglik));
@@ -186,14 +210,14 @@ public class COXPH extends Request2 {
     private final double  _x_mean;
 
     long     n;
-    long[]   countRisk;
+    long[]   countRiskSet;
     long[]   countCensored;
     long[]   countEvents;
     double[] sumXEvents;
-    double[] sumXBetaEvents;
-    double[] cumsumExpXBeta;
-    double[] cumsumXExpXBeta;
-    double[] cumsumXXExpXBeta;
+    double[] sumLogRiskEvents;
+    double[] rcumsumRisk;
+    double[] rcumsumXRisk;
+    double[] rcumsumXXRisk;
 
     CoxphFitTask(final double beta, final long min_time, final int n_time, final boolean use_start_column,
                  final double x_mean) {
@@ -220,15 +244,15 @@ public class COXPH extends Request2 {
 
       int i, t, t1 = -1, t2;
       long start_i, stop_i, event_i;
-      double x_i, xbeta_i, expXBeta_i, xExpXBeta_i, xxExpXBeta_i;
-      countRisk        = MemoryManager.malloc8(_n_time);
+      double x_i, logRisk_i, risk_i, xRisk_i, xxRisk_i;
+      countRiskSet     = MemoryManager.malloc8(_n_time);
       countCensored    = MemoryManager.malloc8(_n_time);
       countEvents      = MemoryManager.malloc8(_n_time);
       sumXEvents       = MemoryManager.malloc8d(_n_time);
-      sumXBetaEvents   = MemoryManager.malloc8d(_n_time);
-      cumsumExpXBeta   = MemoryManager.malloc8d(_n_time);
-      cumsumXExpXBeta  = MemoryManager.malloc8d(_n_time);
-      cumsumXXExpXBeta = MemoryManager.malloc8d(_n_time);
+      sumLogRiskEvents = MemoryManager.malloc8d(_n_time);
+      rcumsumRisk      = MemoryManager.malloc8d(_n_time);
+      rcumsumXRisk     = MemoryManager.malloc8d(_n_time);
+      rcumsumXXRisk    = MemoryManager.malloc8d(_n_time);
       for (i = 0; i < stop._len; i++) {
         event_i = events.at80(i);
         stop_i  = stop.at80(i);
@@ -241,29 +265,29 @@ public class COXPH extends Request2 {
         }
         x_i = xs.at0(i) - _x_mean;
         if (!Double.isNaN(x_i)) {
-          xbeta_i      = x_i * _beta;
-          expXBeta_i   = Math.exp(xbeta_i);
-          xExpXBeta_i  = x_i * expXBeta_i;
-          xxExpXBeta_i = x_i * xExpXBeta_i;
+          logRisk_i = x_i * _beta;
+          risk_i    = Math.exp(logRisk_i);
+          xRisk_i   = x_i * risk_i;
+          xxRisk_i  = x_i * xRisk_i;
           n++;
           if (event_i > 0) {
             countEvents[t2]++;
-            sumXEvents[t2] += x_i;
-            sumXBetaEvents[t2] += xbeta_i;
+            sumXEvents[t2]       += x_i;
+            sumLogRiskEvents[t2] += logRisk_i;
           } else
             countCensored[t2]++;
           if (_use_start_column) {
             for (t = t1; t <= t2; t++) {
-              countRisk[t]++;
-              cumsumExpXBeta[t]   += expXBeta_i;
-              cumsumXExpXBeta[t]  += xExpXBeta_i;
-              cumsumXXExpXBeta[t] += xxExpXBeta_i;
+              countRiskSet[t]++;
+              rcumsumRisk[t]   += risk_i;
+              rcumsumXRisk[t]  += xRisk_i;
+              rcumsumXXRisk[t] += xxRisk_i;
             }
           } else {
-            countRisk[t2]++;
-            cumsumExpXBeta[t2]   += expXBeta_i;
-            cumsumXExpXBeta[t2]  += xExpXBeta_i;
-            cumsumXXExpXBeta[t2] += xxExpXBeta_i;
+            countRiskSet[t2]++;
+            rcumsumRisk[t2]   += risk_i;
+            rcumsumXRisk[t2]  += xRisk_i;
+            rcumsumXXRisk[t2] += xxRisk_i;
           }
         }
       }
@@ -271,13 +295,13 @@ public class COXPH extends Request2 {
     @Override public void reduce(CoxphFitTask that) {
       n += that.n;
       for (int t = 0; t < _n_time; t++) {
-        countRisk[t]     += that.countRisk[t];
+        countRiskSet[t]  += that.countRiskSet[t];
         countCensored[t] += that.countCensored[t];
         countEvents[t]   += that.countEvents[t];
         sumXEvents[t]    += that.sumXEvents[t];
-        cumsumExpXBeta[t]   += that.cumsumExpXBeta[t];
-        cumsumXExpXBeta[t]  += that.cumsumXExpXBeta[t];
-        cumsumXXExpXBeta[t] += that.cumsumXXExpXBeta[t];
+        rcumsumRisk[t]   += that.rcumsumRisk[t];
+        rcumsumXRisk[t]  += that.rcumsumXRisk[t];
+        rcumsumXXRisk[t] += that.rcumsumXXRisk[t];
       }
     }
   }
