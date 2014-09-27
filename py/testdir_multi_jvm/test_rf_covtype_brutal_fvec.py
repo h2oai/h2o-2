@@ -101,8 +101,11 @@ class Basic(unittest.TestCase):
         kwargs   = paramsTrainRF.copy()
         trainResult1 = h2o_rf.trainRF(trainKey1, scoreKey1, **kwargs)
         (classification_error1, classErrorPctList1, totalScores1) = h2o_rf.simpleCheckRFView(rfv=trainResult1)
-        self.assertEqual(4.29, classification_error1)
-        self.assertEqual([4.17, 2.98, 4.09, 14.91, 21.12, 15.38, 5.22], classErrorPctList1)
+        # self.assertEqual(4.29, classification_error1)
+        # self.assertEqual([4.17, 2.98, 4.09, 14.91, 21.12, 15.38, 5.22], classErrorPctList1)
+        # with new RNG 9/26/14
+        self.assertEqual(4.4, classification_error1)
+        self.assertEqual([3.71, 3.56, 4.32, 18.55, 21.22, 13.51, 5.82], classErrorPctList1)
         self.assertEqual(58101, totalScores1)
 
         kwargs   = paramsScoreRF.copy()
@@ -114,8 +117,11 @@ class Basic(unittest.TestCase):
         kwargs   = paramsTrainRF.copy()
         trainResult2 = h2o_rf.trainRF(trainKey2, scoreKey2, **kwargs)
         (classification_error2, classErrorPctList2, totalScores2) = h2o_rf.simpleCheckRFView(rfv=trainResult2)
-        self.assertEqual(4.29, classification_error2)
-        self.assertEqual([4.17, 2.98, 4.09, 14.91, 21.12, 15.38, 5.22], classErrorPctList2)
+        # self.assertEqual(4.29, classification_error2)
+        # self.assertEqual([4.17, 2.98, 4.09, 14.91, 21.12, 15.38, 5.22], classErrorPctList2)
+        # with new RNG 9/26/14
+        self.assertEqual(4.4, classification_error1)
+        self.assertEqual([3.71, 3.56, 4.32, 18.55, 21.22, 13.51, 5.82], classErrorPctList1)
         self.assertEqual(58101, totalScores2)
 
         kwargs   = paramsScoreRF.copy()
