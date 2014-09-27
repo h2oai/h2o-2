@@ -154,8 +154,8 @@ myPy() {
 
 # worked
 myPy c2 test_c2_fvec.py
-myPy c6 test_c6_hdfs_fvec.py
 myPy c9 test_c9_GLM_airlines_hdfs_multi.py
+myPy c6 test_c6_hdfs_fvec.py
 
 # myPy c3 test_c3_rel.py
 # test_c8_rf_airlines_hdfs_fvec.py

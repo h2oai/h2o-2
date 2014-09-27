@@ -18,6 +18,7 @@
     "base_port": 54472,
     "cloud_name": "jenkins-172-180",
     "delete_keys_at_teardown": true,
+    "force_tcp": true,
 
 
     "ip": [

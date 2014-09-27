@@ -74,8 +74,11 @@ echo "hdfs dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE
 chmod +x /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
+FORCE_TCP=
+FORCE_TCP=" -force_tcp"
+
 echo "port: start looking at 55821. Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port)"
-echo "yarn jar $CDH4_YARN_JAR water.hadoop.h2odriver -jt $CDH4_YARN_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH4_YARN_HEAP -nodes $CDH4_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node -ea" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "yarn jar $CDH4_YARN_JAR water.hadoop.h2odriver -jt $CDH4_YARN_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH4_YARN_HEAP -nodes $CDH4_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node -ea $FORCE_TCP" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # copy the script, just so we have it there too
 $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
@@ -158,7 +161,7 @@ myPy() {
 # worked
 myPy c2 test_c2_fvec.py
 # myPy c3 test_c3_rel.py
-# test_c8_rf_airlines_hdfs_fvec.py
+test_c8_rf_airlines_hdfs_fvec.py
 # test_c4_four_billion_rows_fvec.py
 # myPy c5 test_c5_KMeans_sphere_h1m_fvec.py
 # myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
