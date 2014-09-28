@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
                 h2o.build_cloud(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55930,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
             else:
-                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55600, disable_assertions=True,
+                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55600, disable_assertions=False,
                     use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
