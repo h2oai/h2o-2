@@ -48,6 +48,7 @@ public class COXPH extends Request2 {
   @API(help="log-likelihood")           double   loglik;       // scalar
   @API(help="log-likelihood test stat") double   loglik_test;  // scalar
   @API(help="Wald test stat")           double   wald_test;    // scalar
+  @API(help="Score test stat")          double   score_test;   // scalar
   @API(help="gradient")                 double   gradient;     // vector
   @API(help="Hessian")                  double   hessian;      // matrix
   @API(help="log relative error")       double   lre;          // scalar
@@ -161,6 +162,8 @@ public class COXPH extends Request2 {
         loglik       = newLoglik;
         loglik_test  = -2 * (null_loglik - loglik);
         wald_test    = coef * coef / var_coef;
+        if (i == 0)
+          score_test = - gradient * gradient / hessian;
 
         for (t = 0; t < n_time; t++) {
           cumhaz[t]    = cox1.countEvents[t] / cox1.rcumsumRisk[t];
