@@ -41,7 +41,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             kwargs = {
                 'parser_type' : 'CSV',
                 'separator' : 44,
-                'header': 0,
+                'header': 1,
                 # 'delete_on_done': 0,
                 'delete_on_done': 1,
             }

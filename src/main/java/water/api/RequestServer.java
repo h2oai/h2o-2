@@ -160,6 +160,8 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new KillMinus3());
       registerRequest(new SaveModel());
       registerRequest(new LoadModel());
+      registerRequest(new CollectLinuxInfo());
+      registerRequest(new SetLogLevel());
       registerRequest(new Debug());
       registerRequest(new UnlockKeys());
     } else {
@@ -173,6 +175,8 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
       Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");
       Request.addToNavbar(registerRequest(new LoadModel()),            "Load Model",           "Beta");
+      Request.addToNavbar(registerRequest(new CollectLinuxInfo()),     "Collect Linux Info",   "Beta");
+      Request.addToNavbar(registerRequest(new SetLogLevel()),          "Set Log Level",        "Beta");
       Request.addToNavbar(registerRequest(new Debug()),                "Debug Dump (floods log file)","Beta");
       Request.addToNavbar(registerRequest(new UnlockKeys()),           "Unlock Keys (use with caution)","Beta");
     }
@@ -387,11 +391,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.endsWith(".ico")) return;
       if (uri.startsWith("/Typeahead")) return;
       if (uri.startsWith("/2/Typeahead")) return;
-      if (uri.startsWith("/Cloud.json")) return;
       if (uri.endsWith("LogAndEcho.json")) return;
-      if (uri.contains("Progress")) return;
-      if (uri.startsWith("/Jobs.json")) return;
-      if (uri.startsWith("/Up.json")) return;
     }
 
     String log = String.format("%-4s %s", method, uri);
@@ -400,6 +400,16 @@ public class RequestServer extends NanoHTTPD {
       if( value != null && value.length() != 0 )
         log += " " + arg + "=" + value;
     }
+
+    Log.info(Sys.HTLOG, log);
+
+    if (filterOutRepetitiveStuff) {
+      if (uri.startsWith("/Cloud.json")) return;
+      if (uri.contains("Progress")) return;
+      if (uri.startsWith("/Jobs.json")) return;
+      if (uri.startsWith("/Up.json")) return;
+    }
+
     Log.info(Sys.HTTPD, log);
   }
 

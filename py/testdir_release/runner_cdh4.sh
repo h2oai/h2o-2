@@ -153,7 +153,7 @@ myPy() {
 # myPy c1 test_c1_rel.py
 
 # worked
-myPy c2 test_c2_rel.py
+myPy c2 test_c2_fvec.py
 myPy c6 test_c6_hdfs_fvec.py
 myPy c9 test_c9_GLM_airlines_hdfs_multi.py
 
