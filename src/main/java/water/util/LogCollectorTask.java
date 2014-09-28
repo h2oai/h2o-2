@@ -9,7 +9,7 @@ import water.H2O;
 
 public class LogCollectorTask extends DRemoteTask {
   final int MB = 1 << 20;
-  final int MAX_SIZE = 10 * MB;
+  final int MAX_SIZE = 25 * MB;
   public byte[][] _result;
 
   public LogCollectorTask() {}
@@ -90,7 +90,10 @@ public class LogCollectorTask extends DRemoteTask {
         fis.close();
         zos.closeEntry();
 
-        if (stopEarlyBecauseTooMuchData) break;
+        if (stopEarlyBecauseTooMuchData) {
+          Log.warn("LogCollectorTask stopEarlyBecauseTooMuchData");
+          break;
+        }
       }
     }
     catch(Exception e)
