@@ -37,6 +37,7 @@ h2o.coxph <- function(x, y, data, key = "")
                            stop_column  = y[ny - 1L],
                            event_column = y[ny],
                            x_column     = x)
+  mcall <- match.call()
   model <-
     list(coefficients = structure(res$coef, names = x),
          var          = matrix(res$var, 1L, 1L),
@@ -44,16 +45,13 @@ h2o.coxph <- function(x, y, data, key = "")
          score        = res$score_test,
          iter         = res$iter,
          means        = structure(res$x_mean, names = x),
-         concordance  = c(concordant = NA_real_, discordant = NA_real_,
-                          tied.risk  = NA_real_, tied.time  = NA_real_,
-                          "std(c-d)" = NA_real_),
          method       = "breslow",
          n            = res$n,
          nevent       = res$total_event,
          wald.test    = structure(res$wald_test, names = x),
-         call         = match.call())
+         call         = mcall)
   summary <-
-    list(call         = match.call(),
+    list(call         = mcall,
          n            = model$n,
          loglik       = model$loglik,
          nevent       = model$nevent,
@@ -72,11 +70,9 @@ h2o.coxph <- function(x, y, data, key = "")
                                  "lower .95", "upper .95"))),
          logtest      = c(test = res$loglik_test, df = 1, pvalue = NA_real_),
          sctest       = c(test = res$score_test,  df = 1, pvalue = NA_real_),
-         rsq          = NA_real_,
+         rsq          = c(rsq  = res$rsq,     maxrsq = res$maxrsq),
          waldtest     = c(test = res$wald_test,   df = 1, pvalue = NA_real_),
-         used.robust  = FALSE,
-         concordance  = c("concordance.concordant" = NA_real_,
-                          "se.std(c-d)"            = NA_real_))
+         used.robust  = FALSE)
   ok <- which((res$n_event + res$n_censor) > 0L)
   survfit <-
     list(n            = model$n,

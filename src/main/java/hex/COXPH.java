@@ -49,6 +49,8 @@ public class COXPH extends Request2 {
   @API(help="log-likelihood test stat") double   loglik_test;  // scalar
   @API(help="Wald test stat")           double   wald_test;    // scalar
   @API(help="Score test stat")          double   score_test;   // scalar
+  @API(help="R-square")                 double   rsq;          // scalar
+  @API(help="Maximum R-square")         double   maxrsq;       // scalar
   @API(help="gradient")                 double   gradient;     // vector
   @API(help="Hessian")                  double   hessian;      // matrix
   @API(help="log relative error")       double   lre;          // scalar
@@ -149,21 +151,22 @@ public class COXPH extends Request2 {
         }
       }
 
-      if (i == 0)
-        null_loglik = newLoglik;
-
       if (newLoglik > oldLoglik) {
-        coef         = newCoef;
-        exp_coef     = Math.exp(coef);
-        exp_neg_coef = Math.exp(-coef);
-        var_coef     = -1 / hessian;
-        se_coef      = Math.sqrt(var_coef);
-        z_coef       = coef / se_coef;
-        loglik       = newLoglik;
-        loglik_test  = -2 * (null_loglik - loglik);
-        wald_test    = coef * coef / var_coef;
-        if (i == 0)
-          score_test = - gradient * gradient / hessian;
+        if (i == 0) {
+          null_loglik = newLoglik;
+          maxrsq      = 1 - Math.exp(2 * null_loglik / n);
+          score_test  = - gradient * gradient / hessian;
+        }
+        coef          = newCoef;
+        exp_coef      = Math.exp(coef);
+        exp_neg_coef  = Math.exp(- coef);
+        var_coef      = - 1 / hessian;
+        se_coef       = Math.sqrt(var_coef);
+        z_coef        = coef / se_coef;
+        loglik        = newLoglik;
+        loglik_test   = - 2 * (null_loglik - loglik);
+        wald_test     = coef * coef / var_coef;
+        rsq           = 1 - Math.exp(- loglik_test / n);
 
         for (t = 0; t < n_time; t++) {
           cumhaz[t]    = cox1.countEvents[t] / cox1.rcumsumRisk[t];
