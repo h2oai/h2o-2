@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
             'lambda': 1e-5, 
             'family': 'binomial',
         }
-        timeoutSecs = 60
+        timeoutSecs = 120
 
         for trial in range(100):
             # always slice from the beginning
