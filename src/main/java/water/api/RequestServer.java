@@ -165,6 +165,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new SetLogLevel());
       registerRequest(new Debug());
       registerRequest(new UnlockKeys());
+      registerRequest(new WaterMeter());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
@@ -180,6 +181,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new SetLogLevel()),          "Set Log Level",        "Beta");
       Request.addToNavbar(registerRequest(new Debug()),                "Debug Dump (floods log file)","Beta");
       Request.addToNavbar(registerRequest(new UnlockKeys()),           "Unlock Keys (use with caution)","Beta");
+      Request.addToNavbar(registerRequest(new WaterMeter()),           "Water Meter",          "Beta");
     }
 
     registerRequest(new Up());
