@@ -270,7 +270,9 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME, 
     cfg['ec2_region']      = ec2_config['region']
     # cfg['redirect_import_folder_to_s3_path'] = True
     # New! we can redirect import folder to s3n thru hdfs, now (ec2)
-    cfg['redirect_import_folder_to_s3n_path'] = True
+    # cfg['redirect_import_folder_to_s3n_path'] = True
+    # kbn 9/28/14..change it back to s3 to see what breaks
+    cfg['redirect_import_folder_to_s3_path'] = True
     # put ssh commands into comments
     cmds = get_ssh_commands(ec2_config, reservation)
     idx  = 1
