@@ -1500,6 +1500,9 @@ class H2O(object):
     def netstat(self):
         return self.__do_json_request('Network.json')
 
+    def linux_info(self, timeoutSecs=30):
+        return self.__do_json_request("CollectLinuxInfo.json", timeout=timeoutSecs)
+
     def jstack(self, timeoutSecs=30):
         return self.__do_json_request("JStack.json", timeout=timeoutSecs)
 
@@ -1979,6 +1982,47 @@ class H2O(object):
         a = self.__do_json_request('2/QuantilesPage.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nquantiles result:", dump_json(a))
         return a
+
+    def anomaly(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+        noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source': None,
+            'dl_autoencoder_model': None,
+            'thresh': -1,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'anomaly', print_params)
+        a = self.__do_json_request('2/Anomaly.json', timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+
+        verboseprint("\nanomaly result:", dump_json(a))
+        return a
+
+    def deep_features(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+        noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source': None,
+            'dl_model': None,
+            'layer': -1,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'deep_features', print_params)
+        a = self.__do_json_request('2/DeepFeatures.json', timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+
+        verboseprint("\ndeep_features result:", dump_json(a))
+        return a
+
 
     def naive_bayes(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
         noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
@@ -2526,6 +2570,7 @@ class H2O(object):
             resultList = h2o_util.flat_unzip(logDir + "/" + zname, logDir)
             print "logDir:", logDir, "resultList:", resultList
         return resultList
+
 
     # kwargs used to pass many params
     def GLM_shared(self, key,

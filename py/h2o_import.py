@@ -256,9 +256,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
 
         n = h2o.nodes[0]
         if schema=='s3' or node.redirect_import_folder_to_s3_path:
-            # FIX! hack for now...when we change import folder to import s3, point to unique bucket name for h2o
-            # should probably deal with this up in the bucket resolution 
-            # this may change other cases, but smalldata should only exist as a "bucket" for us?
+            # this is just like s3n now? i.e. we can point down inside the s3 bucket like s3n?
             folderOffset = re.sub("smalldata", "h2o-smalldata", folderOffset)
             folderURI = "s3://" + folderOffset
             if not n.aws_credentials:
