@@ -46,7 +46,7 @@ source ./kill_hadoop_jobs.sh
 
 #*****HERE' WHERE WE START H2O ON HADOOP*******************************************
 rm -f /tmp/h2o_on_hadoop_$REMOTE_IP.sh
-echo "cd /home/0xcustomer" > /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "cd /home/0xcustomer" > /tmp/h2o_on_hadoop_$REMOTE_IP; chmod 777 /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 echo "rm -fr h2o_one_node" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
