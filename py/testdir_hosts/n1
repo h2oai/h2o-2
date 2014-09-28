@@ -8,7 +8,6 @@
 # ./n1.doit test_cloud_5_loop.py
 # ./n1.doit test_cloud.py
 # ./n1.doit test_cloud_udp_drop.py
-./n1.doit test_create_frame_rand1.py
 ./n1.doit test_csv_download_libsvm.py
 ./n1.doit test_ddply_plot2.py
 ./n1.doit test_dead_node_status.py
@@ -27,6 +26,7 @@
 ./n1.doit test_exec2_slicing.py
 ./n1.doit test_exec2_sum_cols.py
 ./n1.doit test_flatfile_fvec.py
+./n1.doit test_frame_split_rebalance.py
 ./n1.doit test_GBM_cancel_model_reuse.py
 ./n1.doit test_GBM_covtype_train_test.py
 ./n1.doit test_GBM_manyfiles_train_test.py
@@ -52,6 +52,7 @@
 ./n1.doit test_jstack.py
 ./n1.doit test_KMeans2_sphere100.py
 ./n1.doit test_KMeans2_sphere5_bad_inits.py
+./n1.doit test_KMeans2_sphere5_inits.py
 ./n1.doit test_KMeans2_winesPCA.py
 ./n1.doit test_KMeans_covtype20x_fvec.py
 ./n1.doit test_KMeans_covtype_cols_fvec.py
@@ -83,7 +84,6 @@
 ./n1.doit test_parse_csv_download_fvec.py
 ./n1.doit test_parse_file_loop_fvec.py
 ./n1.doit test_parse_fs_schmoo_fvec.py
-./n1.doit test_parse_libsvm_fvec.py
 ./n1.doit test_parse_many_cols_fvec.py
 ./n1.doit test_parse_manyfiles_fvec.py
 ./n1.doit test_parse_mnist_rebalance.py
