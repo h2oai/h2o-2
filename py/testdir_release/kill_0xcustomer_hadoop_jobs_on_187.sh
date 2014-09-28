@@ -23,7 +23,7 @@ remote_kill() {
     rm -f /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
     echo "Checking hadoop jobs"
-    $REMOTE_SSH_USER_WITH_JAVA 'mapred job -list' > /tmp/my_jobs_on_hadoop_$REMOTE_IP
+    $REMOTE_SSH_USER_WITH_JAVA 'mapred job -list' > /tmp/my_jobs_on_hadoop_$REMOTE_IP; chmod 777 /tmp/my_jobs_on_hadoop_$REMOTE_IP
     cat /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
     echo "kill any running hadoop jobs by me"
