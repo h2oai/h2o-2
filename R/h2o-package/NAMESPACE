@@ -9,6 +9,8 @@ export('h2o.shutdown', 'h2o.init', 'h2o.coxph', 'h2o.glm', 'h2o.kmeans',
        'h2o.uploadFile', 'h2o.parseRaw', 'h2o.ls', 'h2o.rm',
        'summary.H2OParsedData', 'screeplot.H2OPCAModel', 'h2o.cut',
        '.', 'h2o..', 'cbind.H2OParsedData', 'unique.H2OParsedData')
+S3method("coef", "H2OCoxPHModel")
+S3method("coef", "H2OCoxPHModelSummary")
 S3method("extractAIC", "H2OCoxPHModel")
 S3method("logLik", "H2OCoxPHModel")
 S3method("print", "survfit.H2OCoxPHModel")

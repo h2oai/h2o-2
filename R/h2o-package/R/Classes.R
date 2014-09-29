@@ -109,6 +109,9 @@ print.survfit.H2OCoxPHModel <- function(x, ...)
 setMethod("summary","H2OCoxPHModel", function(object, ...)
   new("H2OCoxPHModelSummary", summary = object@summary))
 
+coef.H2OCoxPHModel        <- function(object, ...) object@model$coefficients
+coef.H2OCoxPHModelSummary <- function(object, ...) object@summary$coefficients
+
 extractAIC.H2OCoxPHModel <- function(fit, scale, k = 2, ...)
 {
   fun <- get("extractAIC.coxph", getNamespace("stats"))

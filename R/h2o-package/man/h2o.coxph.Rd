@@ -2,6 +2,8 @@
 \alias{h2o.coxph}
 \alias{H2OCoxPHModel-class}
 \alias{H2OCoxPHModelSummary-class}
+\alias{coef.H2OCoxPHModel}
+\alias{coef.H2OCoxPHModelSummary}
 \alias{extractAIC.H2OCoxPHModel}
 \alias{logLik.H2OCoxPHModel}
 \alias{print.survfit.H2OCoxPHModel}
