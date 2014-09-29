@@ -374,7 +374,8 @@ public class H2ONode extends Iced implements Comparable {
     assert rpcall._started == 0 || rpcall._dt.hasException();
     rpcall._started = System.currentTimeMillis();
     rpcall._retry = RPC.RETRY_MS; // Start the timer on when to resend
-    AckAckTimeOutThread.PENDING.add(rpcall);
+    if(!rpcall._dt._repliedTcp) // only do ackacks for udps
+      AckAckTimeOutThread.PENDING.add(rpcall);
   }
   // Stop tracking a remote task, because we got an ACKACK.
   void remove_task_tracking( int task ) {
