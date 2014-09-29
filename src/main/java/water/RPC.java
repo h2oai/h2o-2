@@ -542,8 +542,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         throw Log.err("Network congestion OR short-writer/long-reader, AB="+ab,e._ioe);
       }
     }
-    // ACKACK the remote, telling him "we got the answer"
-    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close(false);
+    // no need for ack ack for tcps... ACKACK the remote, telling him "we got the answer"
+//    new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close(false);
   }
 
   // Got a response UDP packet, or completed a large TCP answer-receive.
