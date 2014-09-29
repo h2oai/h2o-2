@@ -38,7 +38,7 @@ echo ""
 
 #*******************************************************************************
 # don't always remove..other users may have stuff he doesn't want to re-install
-cat <<!  > /tmp/init_R_stuff.sh
+cat <<!  > /tmp/init_R_stuff.sh; chmod 777 /tmp/init_R_stuff.sh
     echo "Rebuilding ~/.Renviron and ~/.Rprofile for $USER"
     # Set CRAN mirror to a default location
     rm -f ~/.Renviron
