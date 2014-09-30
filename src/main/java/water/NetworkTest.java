@@ -149,7 +149,7 @@ public class NetworkTest extends Func {
       H2ONode node = H2O.CLOUD._memary[i];
       Timer t = new Timer();
       for (int l = 0; l < repeats; ++l) {
-        Log.debug("NetworkTest send_recv_all starting iteration "+ l +" of "+ repeats + " ...");
+        Log.debug("NetworkTest send_recv_all starting msg_size " + msg_size + " bytes, iteration "+ l +" of "+ repeats + " ...");
         PingPongTask ppt = new PingPongTask(payload); //same payload for all nodes
         new RPC<PingPongTask>(node, ppt).call().get(); //blocking send
         Log.debug("NetworkTest send_recv_all completed iteration "+ l +" of "+ repeats);
@@ -186,7 +186,7 @@ public class NetworkTest extends Func {
 
     Timer t = new Timer();
     for (int l = 0; l < repeats; ++l) {
-      Log.debug("NetworkTest send_recv_collective starting iteration "+ l +" of "+ repeats + " ...");
+      Log.debug("NetworkTest send_recv_collective starting msg_size " + msg_size + " bytes, iteration "+ l +" of "+ repeats + " ...");
       new CollectiveTask(payload).doAll(v); //same payload for all nodes
       Log.debug("NetworkTest send_recv_collective completed iteration "+ l +" of "+ repeats);
     }
