@@ -32,18 +32,11 @@
 
 \section{Introduction} \label{1}
 
-This vignette presents the deep learning framework in the \href{http://cran.r-project.org/web/packages/h2o/index.html}{H2O} package. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} and the R package \href{http://cran.r-project.org/web/packages/h2o/h2o.pdf}{manual}. The full datasets and code of this vignette can be found at the \href{https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O Github}. This introductory section provides instructions on getting H2O started, followed by a brief overview of deep learning.
+This documentation presents the Deep Learning framework in H2O, as presented through the H2O R interface. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} at http://docs.0xdata.com, especially the ``R User documentation". The full datasets and example code of this vignette can be found at the \href{https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O Github repository} at \\https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo/. This introductory section provides instructions on getting H2O started from R, followed by a brief overview of deep learning.
 
 \subsection{Installation} \label{1.1}
 
-You can load the latest CRAN H2O package by running
-
-\begin{spverbatim}
-install.packages("h2o")
-\end{spverbatim}
-\bigskip
-\noindent
-Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O \href{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}{download table}. Open your R Console and run the following to install the latest H2O build in R:
+To install H2O, follow the ``Download" link on \href{http://h2o.ai/}{H2O's website} at http://h2o.ai/. For multi-node operation, download the H2O zip file and deploy H2O on your cluster, following instructions from the ``Full Documentation". For single-node operation, follow the instructions in the ``Install in R" tab. Open your R Console and run the following to install and start H2O directly from R:
 
 \begin{spverbatim}
 # The following two commands remove any previously installed H2O packages for R.
@@ -51,7 +44,7 @@ if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 
 if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 
-# Next, we download, install and initialize the H2O package for R (filling in the *'s with the matching digits in the download table)
+# Next, we download, install and initialize the H2O package for R (filling in the *'s with the latest version number obtained from the H2O download page)
 install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/
 ****/R", getOption("repos"))))
 
@@ -59,7 +52,7 @@ library(h2o)
 
 \end{spverbatim}
 \noindent
-If you are operating on a single node then initialize H2O with
+Initialize H2O with
 
 \begin{spverbatim}
 h2o_server = h2o.init()
@@ -178,7 +171,7 @@ The $\tanh$ function is a rescaled and shifted logistic function and its symmetr
 \\
 \bigskip
 \\
-The following choices for the loss function $L(W,B$ $|$ $ j)$ are summarized in Table 2. The system default enforces the table's typical use rule based on whether regression or classification is being performed. Note here that $t^{(j)}$ and $o^{(j)}$ are the target output and actual output, respectively, for training example $j$; further, let $y$ denote the output units and $O$ the output layer.  
+The following choices for the loss function $L(W,B$ $|$ $ j)$ are summarized in Table 2. The system default enforces the table's typical use rule based on whether regression or classification is being performed. Note here that $t^{(j)}$ and $o^{(j)}$ are the predicted (target) output and actual output, respectively, for training example $j$; further, let $y$ denote the output units and $O$ the output layer.
 \\
 \begin{table}[ht] 
 \caption{Loss functions }
@@ -190,7 +183,7 @@ Function & Formula & Typical use \\ [0.5ex] % inserts table
 %heading 
 \hline % inserts single horizontal line 
 Mean Squared Error & $L(W,B | j) = \frac{1}{2}\|t^{(j)} - o^{(j)}\|_2^2$ & Regression \\ % inserting body of the table 
-Cross Entropy & $L(W,B | j) = \sum\limits_{y \in O} -\ln(o_y^{(j)}) \cdot t_y^{(j)}$ & Classification \\  
+Cross Entropy & $L(W,B | j) = -\sum\limits_{y \in O} \ln(o_y^{(j)}) \cdot t_y^{(j)} + \ln(1-o_y^{(j)}) \cdot (1-t_y^{(j)}) $ & Classification \\
 \hline %inserts single line 
 \end{tabular} 
 \label{table:nonlin} % is used to refer this table in the text 
