@@ -29,13 +29,14 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
   if (!is(data, "H2OParsedData"))
     stop("'data' must be an H2O parsed dataset")
 
-  if (!is.character(x) || !(x %in% colnames(data)))
-    stop("'x' must be a character string")
+  cnames <- colnames(data)
+  if (!is.character(x) || length(x) != 1L || !(x %in% cnames))
+    stop("'x' must be a character string specifying a column name from 'data'")
 
   ny <- length(y)
-  if (!is.character(y) || ny < 2L || ny > 3L)
-    stop("'y' must be a character vector containing a ",
-         "(start, stop, event) triplet or (stop, event) couplet")
+  if (!is.character(y) || ny < 2L || ny > 3L || !all(y %in% cnames))
+    stop("'y' must be a character vector of column names from 'data' ",
+         "specifying a (start, stop, event) triplet or (stop, event) couplet")
 
   if (!is.character(key) && length(key) == 1L)
     stop("'key' must be a character string")
