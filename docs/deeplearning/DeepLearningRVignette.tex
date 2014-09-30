@@ -452,7 +452,7 @@ Checkpoint models are also applicable for the case when we wish to reload existi
 
 \begin{spverbatim}
 #Specify a model and the file path where it is to be saved
-h2o.saveModel(object = mnist_model_grid@model[[1]], filename = "/tmp/mymodel", force = TRUE)
+h2o.saveModel(object = mnist_model_grid@model[[1]], name = "/tmp/mymodel", force = TRUE)
 
 #Alternatively, save the model key in some directory (here we use /tmp)
 #h2o.saveModel(object = mnist_model_grid@model[[1]], dir = "/tmp", force = TRUE)
@@ -463,6 +463,9 @@ Later (e.g., after restarting  H2O) we can load the saved model by indicating th
 
 \begin{spverbatim}
 best_mnist_grid.load = h2o.loadModel(h2o_server, "/tmp/mymodel")
+
+#Continue training the loaded model
+best_mnist_grid.continue = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=best_mnist_grid.load, validation = test_images.hex, epochs=1)
 
 \end{spverbatim}
 \noindent
