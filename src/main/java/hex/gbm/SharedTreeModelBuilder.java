@@ -47,13 +47,13 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000, json=true, importance=ParamImportance.CRITICAL)
+  @API(help = "Number of trees. Grid Search, comma sep values:50,100,150,200", filter = Default.class, lmin=1, lmax=1000000, json=true, importance=ParamImportance.CRITICAL)
   public int ntrees = 50;
 
-  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000, json=true, importance=ParamImportance.CRITICAL)
+  @API(help = "Maximum tree depth. Grid Search, comma sep values:5,7", filter = Default.class, lmin=1, lmax=10000, json=true, importance=ParamImportance.CRITICAL)
   public int max_depth = 5;
 
-  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1, json=true, importance=ParamImportance.SECONDARY)
+  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize'). Grid Search, comma sep values", filter = Default.class, lmin=1, json=true, importance=ParamImportance.SECONDARY)
   public int min_rows = 10;
 
   @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000, json=true, importance=ParamImportance.SECONDARY)
