@@ -35,7 +35,7 @@ public class TimeLine extends UDP {
   // - Sys.Nano, 8 bytes-3 bits
   // - Nano low bit is 1 id packet was droped, next bit is 0 for send, 1 for recv, next bit is 0 for udp, 1 for tcp
   // - 16 bytes of payload; 1st byte is a udp_type opcode, next 4 bytes are typically task#
-  public static final int MAX_EVENTS=(1 << 12);//   // Power-of-2, please
+  public static final int MAX_EVENTS=(1 << 11);//   // Power-of-2, please
   static final int WORDS_PER_EVENT=4;
   static final long[] TIMELINE = new long[MAX_EVENTS*WORDS_PER_EVENT+1];
 

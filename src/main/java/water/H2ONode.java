@@ -258,7 +258,7 @@ public class H2ONode extends Iced implements Comparable {
   private final NonBlockingHashMapLong<RPC> _tasks = new NonBlockingHashMapLong();
   public void taskPut(int tnum, RPC rpc ) { _tasks.put(tnum,rpc); }
   public RPC taskGet(int tnum) { return _tasks.get(tnum); }
-  public void taskRemove(int tnum) { _tasks.remove(tnum); }
+  public boolean taskRemove(int tnum) { return _tasks.remove(tnum) != null; }
   public Collection<RPC> tasks() { return _tasks.values(); }
   public int taskSize() { return _tasks.size(); }
 
