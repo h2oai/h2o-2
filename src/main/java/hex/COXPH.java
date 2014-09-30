@@ -24,19 +24,23 @@ public class COXPH extends Request2 {
   @API(help="",                  required=true,  filter=Default.class)
   public boolean use_start_column = true;
 
-  @API(help="Start Time Column", required=false, filter=COXPHVecSelect.class)
+  @API(help="Start Time Column", required=false, filter=CoxPHVecSelect.class)
   public Vec start_column;
 
-  @API(help="Stop Time Column",  required=true,  filter=COXPHVecSelect.class)
+  @API(help="Stop Time Column",  required=true,  filter=CoxPHVecSelect.class)
   public Vec stop_column;
 
-  @API(help="Event Column",      required=true,  filter=COXPHVecSelect.class)
+  @API(help="Event Column",      required=true,  filter=CoxPHVecSelect.class)
   public Vec event_column;
 
-  @API(help="X Column",          required=true,  filter=COXPHVecSelect.class)
+  @API(help="X Column",          required=true,  filter=CoxPHVecSelect.class)
   public Vec x_column;
 
-  private class COXPHVecSelect extends VecSelect { COXPHVecSelect() { super("source"); } }
+  @API(help="Method for Handling Ties", required=true, filter=Default.class, json=true)
+  public CoxPHTies ties = CoxPHTies.efron;
+
+  private class CoxPHVecSelect extends VecSelect {  CoxPHVecSelect() { super("source"); } }
+  public static enum CoxPHTies {efron, breslow;}
 
   @API(help="coefficients")             double   coef;         // vector
   @API(help="exp(coefficients)")        double   exp_coef;     // vector
@@ -138,17 +142,41 @@ public class COXPH extends Request2 {
       newLoglik = 0;
       gradient  = 0;
       hessian   = 0;
-      for (t = n_time - 1; t >= 0; t--) {
-        if (cox1.countEvents[t] > 0) {
-          newLoglik += cox1.sumLogRiskEvents[t];
-          gradient  += cox1.sumXEvents[t];
-          double gamma = cox1.rcumsumXRisk[t] / cox1.rcumsumRisk[t];
-          newLoglik -= cox1.countEvents[t] * Math.log(cox1.rcumsumRisk[t]);
-          gradient  -= cox1.countEvents[t] * gamma;
-          hessian   -= cox1.countEvents[t] *
-                       (((cox1.rcumsumXXRisk[t]  / cox1.rcumsumRisk[t]) -
-                         (gamma * (cox1.rcumsumXRisk[t] / cox1.rcumsumRisk[t]))));
-        }
+      switch (ties) {
+        case efron:
+          for (t = n_time - 1; t >= 0; t--) {
+            if (cox1.countEvents[t] > 0) {
+              newLoglik += cox1.sumLogRiskEvents[t];
+              gradient  += cox1.sumXEvents[t];
+              for (long e = 0; e < cox1.countEvents[t]; e++) {
+                double frac   = ((double) e) / ((double) cox1.countEvents[t]);
+                double term   = cox1.rcumsumRisk[t]   - frac * cox1.sumRiskEvents[t];
+                double dterm  = cox1.rcumsumXRisk[t]  - frac * cox1.sumXRiskEvents[t];
+                double d2term = cox1.rcumsumXXRisk[t] - frac * cox1.sumXXRiskEvents[t];
+                double dlogTerm  = dterm / term;
+                newLoglik -= Math.log(term);
+                gradient  -= dlogTerm;
+                hessian   -= d2term / term - (dlogTerm * (dterm / term));
+              }
+            }
+          }
+          break;
+        case breslow:
+          for (t = n_time - 1; t >= 0; t--) {
+            if (cox1.countEvents[t] > 0) {
+              newLoglik += cox1.sumLogRiskEvents[t];
+              gradient  += cox1.sumXEvents[t];
+              double dlogTerm = cox1.rcumsumXRisk[t] / cox1.rcumsumRisk[t];
+              newLoglik -= cox1.countEvents[t] * Math.log(cox1.rcumsumRisk[t]);
+              gradient  -= cox1.countEvents[t] * dlogTerm;
+              hessian   -= cox1.countEvents[t] *
+                (((cox1.rcumsumXXRisk[t] / cox1.rcumsumRisk[t]) -
+                    (dlogTerm * (cox1.rcumsumXRisk[t] / cox1.rcumsumRisk[t]))));
+            }
+          }
+          break;
+        default:
+          throw new IllegalArgumentException("ties method must be either efron or breslow");
       }
 
       if (newLoglik > oldLoglik) {
@@ -168,10 +196,30 @@ public class COXPH extends Request2 {
         wald_test     = coef * coef / var_coef;
         rsq           = 1 - Math.exp(- loglik_test / n);
 
-        for (t = 0; t < n_time; t++) {
-          cumhaz[t]    = cox1.countEvents[t] / cox1.rcumsumRisk[t];
-          se_cumhaz[t] = cox1.countEvents[t] / (cox1.rcumsumRisk[t] * cox1.rcumsumRisk[t]);
-          se_term[t]   = (cox1.rcumsumXRisk[t] / cox1.rcumsumRisk[t]) * cumhaz[t];
+        switch (ties) {
+          case efron:
+            for (t = 0; t < n_time; t++) {
+              cumhaz[t]    = 0;
+              se_cumhaz[t] = 0;
+              se_term[t]   = 0;
+              for (long e = 0; e < cox1.countEvents[t]; e++) {
+                double frac = ((double) e) / ((double) cox1.countEvents[t]);
+                double haz  = 1 / (cox1.rcumsumRisk[t] - frac * cox1.sumRiskEvents[t]);
+                cumhaz[t]    += haz;
+                se_cumhaz[t] += haz * haz;
+                se_term[t]   += (cox1.rcumsumXRisk[t] - frac * cox1.sumXRiskEvents[t]) * haz * haz;
+              }
+            }
+            break;
+          case breslow:
+            for (t = 0; t < n_time; t++) {
+              cumhaz[t]    = cox1.countEvents[t] / cox1.rcumsumRisk[t];
+              se_cumhaz[t] = cox1.countEvents[t] / (cox1.rcumsumRisk[t] * cox1.rcumsumRisk[t]);
+              se_term[t]   = (cox1.rcumsumXRisk[t] / cox1.rcumsumRisk[t]) * cumhaz[t];
+            }
+            break;
+          default:
+            throw new IllegalArgumentException("ties method must be either efron or breslow");
         }
 
         for (t = 1; t < n_time; t++) {
@@ -182,7 +230,7 @@ public class COXPH extends Request2 {
 
         for (t = 0; t < n_time; t++) {
           se_cumhaz[t] = Math.sqrt(se_cumhaz[t] + (se_term[t] * var_coef * se_term[t]));
-          surv[t]      = Math.exp(-cumhaz[t]);
+          surv[t]      = Math.exp(- cumhaz[t]);
         }
 
         if (newLoglik == 0)
@@ -220,6 +268,9 @@ public class COXPH extends Request2 {
     long[]   countCensored;
     long[]   countEvents;
     double[] sumXEvents;
+    double[] sumRiskEvents;
+    double[] sumXRiskEvents;
+    double[] sumXXRiskEvents;
     double[] sumLogRiskEvents;
     double[] rcumsumRisk;
     double[] rcumsumXRisk;
@@ -255,6 +306,9 @@ public class COXPH extends Request2 {
       countCensored    = MemoryManager.malloc8(_n_time);
       countEvents      = MemoryManager.malloc8(_n_time);
       sumXEvents       = MemoryManager.malloc8d(_n_time);
+      sumRiskEvents    = MemoryManager.malloc8d(_n_time);
+      sumXRiskEvents   = MemoryManager.malloc8d(_n_time);
+      sumXXRiskEvents  = MemoryManager.malloc8d(_n_time);
       sumLogRiskEvents = MemoryManager.malloc8d(_n_time);
       rcumsumRisk      = MemoryManager.malloc8d(_n_time);
       rcumsumXRisk     = MemoryManager.malloc8d(_n_time);
@@ -279,6 +333,9 @@ public class COXPH extends Request2 {
           if (event_i > 0) {
             countEvents[t2]++;
             sumXEvents[t2]       += x_i;
+            sumRiskEvents[t2]    += risk_i;
+            sumXRiskEvents[t2]   += xRisk_i;
+            sumXXRiskEvents[t2]  += xxRisk_i;
             sumLogRiskEvents[t2] += logRisk_i;
           } else
             countCensored[t2]++;
@@ -301,13 +358,17 @@ public class COXPH extends Request2 {
     @Override public void reduce(CoxphFitTask that) {
       n += that.n;
       for (int t = 0; t < _n_time; t++) {
-        countRiskSet[t]  += that.countRiskSet[t];
-        countCensored[t] += that.countCensored[t];
-        countEvents[t]   += that.countEvents[t];
-        sumXEvents[t]    += that.sumXEvents[t];
-        rcumsumRisk[t]   += that.rcumsumRisk[t];
-        rcumsumXRisk[t]  += that.rcumsumXRisk[t];
-        rcumsumXXRisk[t] += that.rcumsumXXRisk[t];
+        countRiskSet[t]     += that.countRiskSet[t];
+        countCensored[t]    += that.countCensored[t];
+        countEvents[t]      += that.countEvents[t];
+        sumXEvents[t]       += that.sumXEvents[t];
+        sumRiskEvents[t]    += that.sumRiskEvents[t];
+        sumXRiskEvents[t]   += that.sumXRiskEvents[t];
+        sumXXRiskEvents[t]  += that.sumXXRiskEvents[t];
+        sumLogRiskEvents[t] += that.sumLogRiskEvents[t];
+        rcumsumRisk[t]      += that.rcumsumRisk[t];
+        rcumsumXRisk[t]     += that.rcumsumXRisk[t];
+        rcumsumXXRisk[t]    += that.rcumsumXXRisk[t];
       }
     }
   }

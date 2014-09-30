@@ -12,7 +12,7 @@
 #   summary.coxph      // done
 #   survfit.coxph      // done
 #   vcov.coxph         // done
-h2o.coxph <- function(x, y, data, key = "")
+h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"))
 {
   if (!is(data, "H2OParsedData"))
     stop("'data' must be an H2O parsed dataset")
@@ -30,13 +30,16 @@ h2o.coxph <- function(x, y, data, key = "")
   if (nchar(key) > 0 && !grepl("^[a-zA-Z_][a-zA-Z0-9_.]*$", key))
     stop("'key' must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
 
+  ties <- match.arg(ties)
+
   res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_COXPH,
-                           source = data@key,
+                           source       = data@key,
                            use_start_column = as.integer(ny == 3L),
                            start_column = y[1L],
                            stop_column  = y[ny - 1L],
                            event_column = y[ny],
-                           x_column     = x)
+                           x_column     = x,
+                           ties         = ties)
   mcall <- match.call()
   model <-
     list(coefficients = structure(res$coef, names = x),
@@ -45,7 +48,7 @@ h2o.coxph <- function(x, y, data, key = "")
          score        = res$score_test,
          iter         = res$iter,
          means        = structure(res$x_mean, names = x),
-         method       = "breslow",
+         method       = ties,
          n            = res$n,
          nevent       = res$total_event,
          wald.test    = structure(res$wald_test, names = x),
