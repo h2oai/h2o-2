@@ -18,26 +18,32 @@ public class COXPH extends Request2 {
   // for GET.
   static final String DOC_GET = "Cox Proportional Hazards Model with 1 predictor";
 
-  @API(help="Data Frame",        required=true,  filter=Default.class)
+  @API(help="Data Frame",        required=true,  filter=Default.class, json=true)
   public Frame source;
 
-  @API(help="",                  required=true,  filter=Default.class)
+  @API(help="",                  required=true,  filter=Default.class, json=true)
   public boolean use_start_column = true;
 
-  @API(help="Start Time Column", required=false, filter=CoxPHVecSelect.class)
+  @API(help="Start Time Column", required=false, filter=CoxPHVecSelect.class, json=true)
   public Vec start_column;
 
-  @API(help="Stop Time Column",  required=true,  filter=CoxPHVecSelect.class)
+  @API(help="Stop Time Column",  required=true,  filter=CoxPHVecSelect.class, json=true)
   public Vec stop_column;
 
-  @API(help="Event Column",      required=true,  filter=CoxPHVecSelect.class)
+  @API(help="Event Column",      required=true,  filter=CoxPHVecSelect.class, json=true)
   public Vec event_column;
 
-  @API(help="X Column",          required=true,  filter=CoxPHVecSelect.class)
+  @API(help="X Column",          required=true,  filter=CoxPHVecSelect.class, json=true)
   public Vec x_column;
 
   @API(help="Method for Handling Ties", required=true, filter=Default.class, json=true)
   public CoxPHTies ties = CoxPHTies.efron;
+
+  @API(help="",                  required=true,  filter=Default.class, json=true)
+  public double lre_min = 9;
+
+  @API(help="",                  required=true,  filter=Default.class, json=true)
+  public int iter_max = 20;
 
   private class CoxPHVecSelect extends VecSelect {  CoxPHVecSelect() { super("source"); } }
   public static enum CoxPHTies {efron, breslow;}
@@ -81,6 +87,12 @@ public class COXPH extends Request2 {
     if (!event_column.isInt() && !event_column.isEnum())
       throw new IllegalArgumentException("event must be of type integer or factor");
 
+    if (Double.isNaN(lre_min) || lre_min <= 0)
+      throw new IllegalArgumentException("lre_min must be a positive number");
+
+    if (iter_max < 1)
+      throw new IllegalArgumentException("iter_max must be a positive integer");
+
     Vec[] cols;
     if (use_start_column) {
       cols = new Vec[4];
@@ -113,7 +125,7 @@ public class COXPH extends Request2 {
     double oldLoglik = - Double.MAX_VALUE;
     double newCoef   = 0;
     double newLoglik;
-    for (i = 0; i < 100; i++) {
+    for (i = 0; i < iter_max; i++) {
       iter = i + 1;
 
       // Map & Reduce
@@ -234,10 +246,10 @@ public class COXPH extends Request2 {
         }
 
         if (newLoglik == 0)
-          lre = -Math.log10(Math.abs(oldLoglik - newLoglik));
+          lre = - Math.log10(Math.abs(oldLoglik - newLoglik));
         else
-          lre = -Math.log10(Math.abs((oldLoglik - newLoglik) / newLoglik));
-        if (lre > 9)
+          lre = - Math.log10(Math.abs((oldLoglik - newLoglik) / newLoglik));
+        if (lre >= lre_min)
           break;
 
         step = gradient / hessian;

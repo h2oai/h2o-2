@@ -1,5 +1,6 @@
 \name{h2o.coxph}
 \alias{h2o.coxph}
+\alias{h2o.coxph.control}
 \alias{H2OCoxPHModel-class}
 \alias{H2OCoxPHModelSummary-class}
 \alias{coef.H2OCoxPHModel}
@@ -19,7 +20,10 @@ H2O: Cox Proportional Hazards Models
 Fit a Cox Proportional Hazards Model.
 }
 \usage{
-h2o.coxph(x, y, data, key = "", ties = c("efron", "breslow"))
+h2o.coxph(x, y, data, key = "", ties = c("efron", "breslow"),
+          control = h2o.coxph.control(...), ...)
+
+h2o.coxph.control(lre = 9, iter.max = 20, ...)
 
 # H2OCoxPHModel summary functions
 \S4method{summary}{H2OCoxPHModel}(object, ...)
@@ -42,6 +46,13 @@ h2o.coxph(x, y, data, key = "", ties = c("efron", "breslow"))
   \item{ties}{A character string denoting which approximation method for
     handling ties should be used in the partial likelihood;
     one of either \code{"efron"} or \code{"breslow"}.}
+  \item{control}{The model fitting control arguments specified by
+    \code{h2o.coxph.control}}.
+  \item{lre}{A positive number for the log-relative error (LRE) of subsequent
+    log partial likelihood calculations to determine convergence in
+    \code{h2o.coxph}.}
+  \item{iter.max}{A positive integer denoting the maximum number of iterations
+    to allow for convergence in \code{h2o.coxph}.}
   \item{object, formula, fit}{An object of class \code{H2OCoxPHModel}.}
   \item{scale}{An optional number that specifies the scale parameter of the
     model.}

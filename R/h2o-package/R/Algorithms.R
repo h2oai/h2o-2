@@ -12,7 +12,19 @@
 #   summary.coxph      // done
 #   survfit.coxph      // done
 #   vcov.coxph         // done
-h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"))
+h2o.coxph.control <- function(lre = 9, iter.max = 20, ...)
+{
+  if (!is.numeric(lre) || length(lre) != 1L || is.na(lre) || lre <= 0)
+    stop("'lre' must be a positive number")
+
+  if (!is.numeric(iter.max) || length(iter.max) != 1L || is.na(iter.max) ||
+      iter.max < 1)
+    stop("'iter.max' must be a positive integer")
+
+  list(lre = lre, iter.max = as.integer(iter.max))
+}
+h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
+                      control = h2o.coxph.control(...), ...)
 {
   if (!is(data, "H2OParsedData"))
     stop("'data' must be an H2O parsed dataset")
@@ -39,7 +51,9 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"))
                            stop_column  = y[ny - 1L],
                            event_column = y[ny],
                            x_column     = x,
-                           ties         = ties)
+                           ties         = ties,
+                           lre_min      = control$lre,
+                           iter_max     = control$iter.max)
   mcall <- match.call()
   model <-
     list(coefficients = structure(res$coef, names = x),
