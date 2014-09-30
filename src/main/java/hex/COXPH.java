@@ -125,8 +125,8 @@ public class COXPH extends Request2 {
     double oldLoglik = - Double.MAX_VALUE;
     double newCoef   = 0;
     double newLoglik;
-    for (i = 0; i < iter_max; i++) {
-      iter = i + 1;
+    for (i = 0; i <= iter_max; i++) {
+      iter = i;
 
       // Map & Reduce
       CoxphFitTask cox1 = new CoxphFitTask(newCoef, min_time, n_time, use_start_column, x_mean).doAll(cols);
