@@ -454,7 +454,7 @@ public abstract class Log {
       // HTLOG are requests from RequestServer that haven't been filtered out.
       // HTLOG requests should only come at INFO.
       e.sys = Sys.HTTPD;
-      String s = e.toString();
+      String s = "tid(" + Thread.currentThread().getId() + ") " + e.toString();
       org.apache.log4j.Logger httpdLogger = LogManager.getLogger("water.api.RequestServer");
       if (e.kind == Kind.INFO) {
         httpdLogger.info(s);
