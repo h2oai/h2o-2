@@ -15,6 +15,10 @@ test.CoxPH.args <- function(conn) {
   Log.info("H2O Cox PH data Argument\n")
   checkException(h2o.coxph(x = "number", y = c("stop", "event"), data = bladder))
 
+  Log.info("H2O Cox PH init Control Argument\n")
+  checkException(h2o.coxph(x = "number", y = c("stop", "event"), data = bladder.h2o, init = NULL))
+  checkException(h2o.coxph(x = "number", y = c("stop", "event"), data = bladder.h2o, init = NA_real_))
+
   Log.info("H2O Cox PH lre Control Argument\n")
   checkException(h2o.coxph(x = "number", y = c("stop", "event"), data = bladder.h2o, lre = -1))
   checkException(h2o.coxph(x = "number", y = c("stop", "event"), data = bladder.h2o, lre = NULL))

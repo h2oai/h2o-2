@@ -41,8 +41,10 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
               tolerance = tolerance)
   checkEquals(summaryCoxPH.r$rsq,          summaryCoxPH.h2o@summary$rsq,
               tolerance = tolerance)
-  checkEquals(summaryCoxPH.r$waldtest[1:2],summaryCoxPH.h2o@summary$waldtest[1:2],
-              tolerance = sqrt(tolerance))
+  checkEquals(summaryCoxPH.r$waldtest[1:2],
+              c(round(summaryCoxPH.h2o@summary$waldtest[1L], 2),
+                      summaryCoxPH.h2o@summary$waldtest[2L]),
+              tolerance = tolerance)
 
   survfitCoxPH.h2o <- survfit(myCoxPH.h2o)
   survfitCoxPH.r   <- survfit(myCoxPH.r)

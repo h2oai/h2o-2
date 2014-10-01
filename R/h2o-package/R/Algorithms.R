@@ -24,7 +24,7 @@ h2o.coxph.control <- function(lre = 9, iter.max = 20, ...)
   list(lre = lre, iter.max = as.integer(iter.max))
 }
 h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
-                      control = h2o.coxph.control(...), ...)
+                      init = 0, control = h2o.coxph.control(...), ...)
 {
   if (!is(data, "H2OParsedData"))
     stop("'data' must be an H2O parsed dataset")
@@ -45,6 +45,9 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
 
   ties <- match.arg(ties)
 
+  if (!is.numeric(init) || length(init) != 1L || !is.finite(init))
+    stop("'init' must be a numeric vector containing finite coefficient starting values")
+
   res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_COXPH,
                            source       = data@key,
                            use_start_column = as.integer(ny == 3L),
@@ -53,6 +56,7 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
                            event_column = y[ny],
                            x_column     = x,
                            ties         = ties,
+                           init         = init,
                            lre_min      = control$lre,
                            iter_max     = control$iter.max)
   mcall <- match.call()

@@ -21,7 +21,7 @@ Fit a Cox Proportional Hazards Model.
 }
 \usage{
 h2o.coxph(x, y, data, key = "", ties = c("efron", "breslow"),
-          control = h2o.coxph.control(...), ...)
+          init = 0, control = h2o.coxph.control(...), ...)
 
 h2o.coxph.control(lre = 9, iter.max = 20, ...)
 
@@ -46,6 +46,8 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
   \item{ties}{A character string denoting which approximation method for
     handling ties should be used in the partial likelihood;
     one of either \code{"efron"} or \code{"breslow"}.}
+  \item{init}{A numeric vector containing the finite starting values for the
+    model coefficients.}
   \item{control}{The model fitting control arguments specified by
     \code{h2o.coxph.control}}.
   \item{lre}{A positive number for the log-relative error (LRE) of subsequent

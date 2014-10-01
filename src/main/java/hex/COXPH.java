@@ -39,6 +39,9 @@ public class COXPH extends Request2 {
   @API(help="Method for Handling Ties", required=true, filter=Default.class, json=true)
   public CoxPHTies ties = CoxPHTies.efron;
 
+  @API(help="",                  required=true, filter=Default.class, json=true)
+  public double init = 0;
+
   @API(help="",                  required=true,  filter=Default.class, json=true)
   public double lre_min = 9;
 
@@ -123,7 +126,7 @@ public class COXPH extends Request2 {
     double step      = Double.NaN;
     double oldCoef   = Double.NaN;
     double oldLoglik = - Double.MAX_VALUE;
-    double newCoef   = 0;
+    double newCoef   = init;
     double newLoglik;
     for (i = 0; i <= iter_max; i++) {
       iter = i;
@@ -197,16 +200,17 @@ public class COXPH extends Request2 {
           maxrsq      = 1 - Math.exp(2 * null_loglik / n);
           score_test  = - gradient * gradient / hessian;
         }
-        coef          = newCoef;
-        exp_coef      = Math.exp(coef);
-        exp_neg_coef  = Math.exp(- coef);
-        var_coef      = - 1 / hessian;
-        se_coef       = Math.sqrt(var_coef);
-        z_coef        = coef / se_coef;
-        loglik        = newLoglik;
-        loglik_test   = - 2 * (null_loglik - loglik);
-        wald_test     = coef * coef / var_coef;
-        rsq           = 1 - Math.exp(- loglik_test / n);
+        coef             = newCoef;
+        exp_coef         = Math.exp(coef);
+        exp_neg_coef     = Math.exp(- coef);
+        var_coef         = - 1 / hessian;
+        se_coef          = Math.sqrt(var_coef);
+        z_coef           = coef / se_coef;
+        loglik           = newLoglik;
+        loglik_test      = - 2 * (null_loglik - loglik);
+        double diff_init = coef - init;
+        wald_test        = (diff_init * diff_init) / var_coef;
+        rsq              = 1 - Math.exp(- loglik_test / n);
 
         switch (ties) {
           case efron:
