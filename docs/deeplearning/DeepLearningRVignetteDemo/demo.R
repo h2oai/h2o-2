@@ -110,13 +110,16 @@ l1_params
 mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=mnist_model_grid@model[[1]], validation = test_images.hex, epochs=9)
 
 #Specify a model and the filename where it is to be saved
-h2o.saveModel(object = mnist_model_grid@model[[1]], filename = "/tmp/mymodel", force = TRUE)
+h2o.saveModel(object = mnist_model_grid@model[[1]], name = "/tmp/mymodel", force = TRUE)
 
 #Alternatively, save the model under its key in some directory (here we use /tmp)
 #h2o.saveModel(object = mnist_model_grid@model[[1]], dir = "/tmp", force = TRUE))
 
 #Later, load the saved model by indicating the host and saved model filename
 best_mnist_grid.load = h2o.loadModel(h2o_server, "/tmp/mymodel")
+
+#Continue training the loaded model
+best_mnist_grid.continue = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=best_mnist_grid.load, validation = test_images.hex, epochs=1)
 
 #This model should result in a test set error of 0.9% or better - runs for several hours
 #super_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, activation="RectifierWithDropout",

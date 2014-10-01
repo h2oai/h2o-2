@@ -386,16 +386,6 @@ public class RequestServer extends NanoHTTPD {
   void maybeLogRequest (String uri, String method, Properties parms) {
     boolean filterOutRepetitiveStuff = true;
 
-    if (filterOutRepetitiveStuff) {
-      if (uri.endsWith(".css")) return;
-      if (uri.endsWith(".js")) return;
-      if (uri.endsWith(".png")) return;
-      if (uri.endsWith(".ico")) return;
-      if (uri.startsWith("/Typeahead")) return;
-      if (uri.startsWith("/2/Typeahead")) return;
-      if (uri.endsWith("LogAndEcho.json")) return;
-    }
-
     String log = String.format("%-4s %s", method, uri);
     for( Object arg : parms.keySet() ) {
       String value = parms.getProperty((String) arg);
@@ -406,6 +396,13 @@ public class RequestServer extends NanoHTTPD {
     Log.info(Sys.HTLOG, log);
 
     if (filterOutRepetitiveStuff) {
+      if (uri.endsWith(".css")) return;
+      if (uri.endsWith(".js")) return;
+      if (uri.endsWith(".png")) return;
+      if (uri.endsWith(".ico")) return;
+      if (uri.startsWith("/Typeahead")) return;
+      if (uri.startsWith("/2/Typeahead")) return;
+      if (uri.endsWith("LogAndEcho.json")) return;
       if (uri.startsWith("/Cloud.json")) return;
       if (uri.contains("Progress")) return;
       if (uri.startsWith("/Jobs.json")) return;
