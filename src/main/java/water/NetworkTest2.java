@@ -20,7 +20,7 @@ public class NetworkTest2 extends Func {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help = "Message sizes", filter = Default.class, json=true)
-  public int[] msg_sizes = new int[]{1,32,64,128,256,512,1024,AutoBuffer.MTU-1}; //INPUT
+  public int[] msg_sizes = new int[]{1,32,64,128,256,512,1024,AutoBuffer.MTU-100}; //INPUT
 
 
 
@@ -32,7 +32,7 @@ public class NetworkTest2 extends Func {
 
   private static class UDPPing extends DTask<UDPPing>{
     boolean _done;
-    int _retries = 0;
+    int _retries = -1;
     final long _t1;
     long _t2;
     byte [] _payload;
@@ -54,6 +54,7 @@ public class NetworkTest2 extends Func {
       _done = true;
       _t2 = System.currentTimeMillis();
       _retries = ab.get4();
+      System.out.println("retries = " + _retries);
       byte [] bs = ab.getA1();
       if(_payload != null && !Arrays.equals(_payload,bs)){
         System.out.println("*** payloads don't match ***");
@@ -66,7 +67,8 @@ public class NetworkTest2 extends Func {
     }
 
     @Override public synchronized AutoBuffer write(AutoBuffer ab){
-      ab.put4(_retries++); // count the number of retries as number of serialization calls
+      if(!_done) ++_retries;
+      ab.put4(_retries); // count the number of retries as number of serialization calls
       ab.putA1(_payload);
       return ab;
     }
@@ -77,7 +79,70 @@ public class NetworkTest2 extends Func {
       _payload = u._payload;
     }
   }
-  private static class UDPDropTester extends DTask<UDPDropTester> {
+
+
+  private static class TCPTester extends DTask<TCPTester> {
+    public final int _srcId;
+    public final int _tgtId;
+    public final int _N;
+    private final int[] _msgSzs;
+    private transient RPC<UDPPing>[][] _pings;
+    double[] _dropRates;
+
+
+    int[] _droppedPackets;
+
+    public TCPTester(H2ONode src, H2ONode tgt, int[] msgSzs, int ntests) {
+      _srcId = src.index();
+      _tgtId = tgt.index();
+      _msgSzs = msgSzs;
+      _N = ntests;
+    }
+
+    private transient boolean _done;
+
+    private final void doTest() {
+      _droppedPackets = new int[_N];
+      Arrays.fill(_droppedPackets, -1);
+      _pings = new RPC[_msgSzs.length][_N];
+//      addToPendingCount(_msgSzs.length*_N - 1);
+      for (int i = 0; i < _msgSzs.length; ++i)
+        for (int j = 0; j < _N; ++j)  // instead of synchronization, just wait for predetermined amount of time
+          _pings[i][j] = new RPC(H2O.CLOUD._memary[_tgtId], new UDPPing(_msgSzs[i]))/*.addCompleter(this)*/.call();
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+      }
+      // if not done yet, finish no matter what (racy but we don't care here - only a debug tool, does not have to be precise)
+//      setPendingCount(0);
+
+    }
+
+    @Override
+    public synchronized void onCompletion(CountedCompleter caller) {
+      if (!_done) { // only one completion
+        _done = true;
+        _dropRates = MemoryManager.malloc8d(_msgSzs.length);
+        // compute the drop rates
+        for (int i = 0; i < _msgSzs.length; ++i) {
+          double sum = 0;
+          for (int j = 0; j < _N; ++j) {
+            RPC<UDPPing> rpc = _pings[i][j];
+            sum += (rpc._dt._retries == -1 ? Double.POSITIVE_INFINITY : rpc._dt._retries);
+          }
+          _dropRates[i] = 1 - _N / (_N + sum);
+          System.out.println("completed ( at " + H2O.SELF + " ) " + _srcId + " -> " + _tgtId + ", drop rates = " + Arrays.toString(_dropRates));
+        }
+      }
+    }
+
+    @Override
+    public void compute2() {
+
+    }
+  }
+
+    private static class UDPDropTester extends DTask<UDPDropTester> {
     public final int _srcId;
     public final int _tgtId;
     public final int _N;
@@ -87,11 +152,7 @@ public class NetworkTest2 extends Func {
 
 
     int [] _droppedPackets;
-    public final static int [] DEFAULT_SZS = new int[]{1,32,64,128,256,512,AutoBuffer.MTU};
 
-    public UDPDropTester(H2ONode src, H2ONode tgt){
-      this(src,tgt,DEFAULT_SZS,10);
-    }
     public UDPDropTester(H2ONode src, H2ONode tgt, int [] msgSzs, int ntests){
       _srcId = src.index();
       _tgtId = tgt.index();
@@ -122,7 +183,7 @@ public class NetworkTest2 extends Func {
           double sum = 0;
           for (int j = 0; j < _N; ++j) {
             RPC<UDPPing> rpc = _pings[i][j];
-            sum += (rpc._dt._retries == -1 ? rpc._callCnt : rpc._dt._retries);
+            sum += (rpc._dt._retries == -1 ? Double.POSITIVE_INFINITY : rpc._dt._retries);
           }
           _dropRates[i] = 1 - _N/(_N+sum);
           System.out.println("completed ( at " + H2O.SELF + " ) " + _srcId + " -> " + _tgtId + ", drop rates = " + Arrays.toString(_dropRates));
@@ -196,6 +257,8 @@ public class NetworkTest2 extends Func {
     Log.debug("Network test udp drop rates: ");
     for(UDPDropMatrix m:dropRates)
       Log.debug(m.toString());
+    // now do the tcp bandwith test
+
     // print out
   }
 
