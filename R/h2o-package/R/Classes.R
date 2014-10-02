@@ -522,7 +522,7 @@ h2o.table <- function(x, return.in.R = FALSE) {
 ddply <- function (.data, .variables, .fun = NULL, ..., .progress = "none",
              .inform = FALSE, .drop = TRUE, .parallel = FALSE, .paropts = NULL) {
              if (inherits(.data, "H2OParsedData")) UseMethod("ddply")
-             else plyr::ddply(.data, .variables, .fun, ..., .progress, .inform, .drop, .parallel, .paraopts) }
+             else { if (require(plyr)) {plyr::ddply(.data, .variables, .fun, ..., .progress, .inform, .drop, .parallel, .paropts)} else { stop("invalid input data for H2O. Trying to default to plyr ddply, but plyr not found. Install plyr, or use H2OParsedData objects.") } } }
 
 ddply.H2OParsedData <- function (.data, .variables, .fun = NULL, ..., .progress = "none",
                                  .inform = FALSE, .drop = TRUE, .parallel = FALSE, .paropts = NULL) {
@@ -1048,7 +1048,7 @@ setMethod("is.na",   "H2OParsedData", function(x) {
 #  res <- as.numeric(res)
 })
 setMethod("t",       "H2OParsedData", function(x) { .h2o.__unop2("t",     x) })
-setMethod("as.numeric", "H2OParsedData", function(x) { .h2o.__unop2("as.numeric", x) })
+#setMethod("as.numeric", "H2OParsedData", function(x) { .h2o.__unop2("as.numeric", x) })
 
 round.H2OParsedData <- function(x, digits = 0) {
   if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")

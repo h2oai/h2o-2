@@ -1,5 +1,5 @@
-\name{h2o.ddply}
-\alias{h2o.ddply}
+\name{ddply.H2OParsedData}
+\alias{ddply.H2OParsedData}
 \alias{ddply}
 \alias{h2o..}
 %- Also NEED an '\alias' for EACH other topic documented here.
@@ -10,7 +10,9 @@ Split H2O dataset, apply function, and return results
 For each subset of a H2O dataset, apply a user-specified function, then combine the results.
 }
 \usage{
-h2o.ddply(.data, .variables, .fun = NULL, ..., .progress = "none")
+ddply(.data, .variables, .fun = NULL, ..., .progress = "none",
+                    .inform = FALSE, .drop = TRUE, .parallel = FALSE,
+                    .paropts = NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -29,6 +31,10 @@ Additional arguments passed on to \code{.fun}. (Currently unimplemented).
   \item{.progress}{
 Name of the progress bar to use. (Currently unimplemented).
 }
+\item{.inform}{ Ignored }
+\item{.drop}{ Ignored }
+\item{.parallel}{ Ignored }
+\item{.paropts}{ Ignored }
 }
 \details{
 This is an extension of the plyr library's ddply function to datasets loaded into H2O.
@@ -60,6 +66,7 @@ fun = function(df) { sum(df[,1], na.rm = T)/nrow(df) }
 h2o.addFunction(localH2O, fun)
 
 # Apply function to groups by class of flower
-res = h2o.ddply(iris.hex, "class", fun)
+# uses h2o's ddply, since iris.hex is an H2OParsedData object
+res = ddply(iris.hex, "class", fun)
 head(res)
 }
