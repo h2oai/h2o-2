@@ -1,9 +1,11 @@
 package water.exec;
 
-import java.util.*;
 import water.*;
-import water.fvec.*;
+import water.fvec.Frame;
 import water.util.Log;
+
+import java.util.ArrayList;
+import java.util.Stack;
 
 /** Parse and execute a generic R-like string, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -203,6 +205,8 @@ public class Exec2 {
       if( _buf[_x] == '*' ) { _x+=2; return "%*%"; }
       if (_buf[_x] == '/' ) { _x+=2; return "%/%"; }
     }
+
+    if (_x+2 <= _buf.length && c == '%' && _buf[_x] == '%') { _x++; return "%%"; }
 
     // If first char is special, accept 1 or 2 special chars.
     // i.e. allow != >= == <= but not = alone
