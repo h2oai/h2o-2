@@ -584,23 +584,16 @@ ddply.H2OParsedData <- function (.data, .variables, .fun = NULL, ..., .progress 
 #'
 #' Impute the missing values in the data `column` belonging to the dataset `data`.
 #'
-#' Possible values for `method`:  "mean", "median", "reg", "RF"
+#' Possible values for `method`:  "mean", "median", "mode"
 #'
-#' If `groupBy` is NULL, then for `mean` and `median`, missing values are imputed using the column mean/median.
-#' For `reg` and `RF`, all columns except for `column` are used in the regression/RF fit.
+#' If `groupBy` is NULL, then for `mean`/`median`/`mode`, missing values are imputed using the column mean/median.
 #'
-#' If `groupBy` is not NULL, then for `mean` and `median`, the missing values are imputed using the mean/median of
+#' If `groupBy` is not NULL, then for `mean` and `median` and `mode`, the missing values are imputed using the mean/median/mode of
 #' `column` within the groups formed by the groupBy columns.
-#' For `reg` and `RF`, the groupBy variables are the input variables to the regression/RF fit.
-#'
-#' If the column is non-numeric and the method selected is "reg", an error will be produced.
 h2o.impute <- function(data, column, method = "mean", groupBy = NULL) {
-  # possible methods: "mean", "median", "reg", "RF"
-  # what happens when a grouping has only NA values ? -> default to "method" for the unimputed column.
   stopifnot(!missing(data))
   stopifnot(!missing(column))
   stopifnot(method %in% c("mean", "median", "mode"))
-#  if (!is.null(groupBy)) stopifnot(any(groupBy <= 0))
   stopifnot(inherits(data, "H2OParsedData"))
 
   .data <- data
@@ -650,7 +643,6 @@ h2o.impute <- function(data, column, method = "mean", groupBy = NULL) {
   bad <- is.na(col_idx) | col_idx < 1 | col_idx > ncol(.data)
   if( any(bad) ) stop( sprintf('can\'t recognize column %s', paste(vars[bad], sep=',')) )
   if (length(col_idx) > 1) stop("Only allows imputation of a single column at a time!")
-  #x@h2o, .h2o.__HACK_SETCOLNAMES2, source=x@key, cols=numCols, comma_separated_list=name)
   invisible(.h2o.__remoteSend(data@h2o, .h2o.__PAGE_IMPUTE, source=data@key, column=col_idx-1, method=method, group_by=idx))
 }
 
