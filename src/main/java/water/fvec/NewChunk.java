@@ -645,6 +645,8 @@ public class NewChunk extends Chunk {
       long pow10lo = PrettyPrint.pow10i(xlo-xmin);
       lemin = llo*pow10lo;
       if( (lemin/pow10lo) != llo ) overflow = true;
+      if(lemin < 0 && lemax >= (Long.MAX_VALUE + lemin))
+        floatOverflow = true;
     }
 
     // Boolean column?
