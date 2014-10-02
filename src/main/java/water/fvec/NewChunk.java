@@ -118,12 +118,12 @@ public class NewChunk extends Chunk {
         StringBuilder sb = new StringBuilder("NewChunk: got exception during values() call, _len = " + _len + " _sparseLen = " + _sparseLen + " _isSparse = " + isSparse() + ", isDouble = " + (_ds != null) + "\n");
         // print first 10 elems
         for (int i = 0; i < Math.min(len(),10); ++i)
-          sb.append(i + ": rowId = " + (_id == null ? i : _id[i]) + ", value = " + (_ds == null ? (_ds[i]) : (_ls[i] + " e" + _xs[i])) + "\n");
+          sb.append(i + ": rowId = " + (_id == null ? i : _id[i]) + ", value = " + (_ds != null ? (_ds[i]) : (_ls[i] + " e" + _xs[i])) + "\n");
         // print last 10
         if(len() > 10) {
           sb.append("...");
           for(int i = Math.max(10,len()-10); i < len(); ++i)
-            sb.append(i + ": rowId = " + (_id == null ? i : _id[i]) + ", value = " + (_ds == null ? (_ds[i]) : (_ls[i] + " e" + _xs[i])) + "\n");
+            sb.append(i + ": rowId = " + (_id == null ? i : _id[i]) + ", value = " + (_ds != null ? (_ds[i]) : (_ls[i] + " e" + _xs[i])) + "\n");
         }
         Log.err(sb.toString());
       } catch(Throwable tt){
