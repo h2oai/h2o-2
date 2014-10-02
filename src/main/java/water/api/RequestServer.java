@@ -3,6 +3,7 @@ package water.api;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
+import hex.CoxPH;
 import hex.CreateFrame;
 import hex.GridSearch.GridSearchProgress;
 import hex.InsertMissingValues;
@@ -151,7 +152,7 @@ public class RequestServer extends NanoHTTPD {
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new hex.LR2());
-      registerRequest(new hex.COXPH());
+      registerRequest(new CoxPH());
       registerRequest(new ReBalance());
       registerRequest(new NFoldFrameExtractPage());
       registerRequest(new Console());
@@ -168,7 +169,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new WaterMeter());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
-      Request.addToNavbar(registerRequest(new hex.COXPH()),            "Cox Proportional Hazards", "Beta");
+      Request.addToNavbar(registerRequest(new CoxPH()),                "Cox Proportional Hazards", "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
       Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold Frame Extract", "Beta");
       Request.addToNavbar(registerRequest(new Console()),              "Console",              "Beta");
@@ -192,6 +193,8 @@ public class RequestServer extends NanoHTTPD {
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
     registerRequest(new Cancel());
+    registerRequest(new CoxPHModelView());
+    registerRequest(new CoxPHProgressPage());
     registerRequest(new DomainMapping());
     registerRequest(new DRFModelView());
     registerRequest(new DRFProgressPage());
