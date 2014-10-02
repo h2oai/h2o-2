@@ -651,7 +651,7 @@ public class NanoHTTPD
     private void sendError( String status, String msg ) throws InterruptedException
     {
       String s = "         HTTP_status: " + status;
-      Log.info(Sys.HTLOG, s);
+      Log.info_no_stdout(Sys.HTLOG, s);
       sendResponse( status, MIME_PLAINTEXT, null, new ByteArrayInputStream( msg.getBytes()));
       throw new InterruptedException();
     }
@@ -659,7 +659,7 @@ public class NanoHTTPD
     private void sendResponse( long startMillis, String status, String mime, Properties header, InputStream data ) {
       long deltaMillis = System.currentTimeMillis() - startMillis;
       String s = "         HTTP_status: " + status + ", millis: " + deltaMillis;
-      Log.info(Sys.HTLOG, s);
+      Log.info_no_stdout(Sys.HTLOG, s);
       sendResponse(status, mime, header, data);
     }
 

@@ -251,6 +251,9 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new Models());
     registerRequest(new Frames());
     registerRequest(new ModelMetrics());
+
+    // WaterMeter support APIs
+    registerRequest(new WaterMeter.WaterMeterCpuTicks());
   }
 
   /**
@@ -394,7 +397,7 @@ public class RequestServer extends NanoHTTPD {
         log += " " + arg + "=" + value;
     }
 
-    Log.info(Sys.HTLOG, log);
+    Log.info_no_stdout(Sys.HTLOG, log);
 
     if (filterOutRepetitiveStuff) {
       if (uri.endsWith(".css")) return;
