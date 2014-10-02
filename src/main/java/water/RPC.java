@@ -4,6 +4,7 @@ import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
+import water.H2ONode.AckAckTimeOutThread;
 import water.util.Log;
 
 import java.io.IOException;
@@ -48,6 +49,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // disappears or we cancel things (hence not final).
   H2ONode _target;
 
+  public final int MAX_UDP_RETRIES = 3;
   public transient int _callCnt;
   // The distributed Task to execute.  Think: code-object+args while this RPC
   // is a call-in-progress (i.e. has an 'execution stack')
@@ -396,7 +398,6 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       }
     }
 
-
     // Re-send strictly the ack, because we're missing an AckAck
     final void resend_ack() {
       assert _computedAndReplied : "Found RPCCall not computed "+_tsknum;
@@ -409,12 +410,16 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       else dt.write(rab.put1(RPC.SERVER_UDP_SEND)); // Original reply sent via UDP
       assert sz_check(rab) : "Resend of "+_dt.getClass()+" changes size from "+_size+" to "+rab.size();
       assert dt._repliedTcp==wasTCP;
-      rab.close(H2O.OPT_ARGS.force_tcp);
+      boolean forceTCP = ++_callCnt == 3 || H2O.OPT_ARGS.force_tcp;
+      rab.close(forceTCP);
+      if(_dt._repliedTcp = forceTCP)
+        AckAckTimeOutThread.PENDING.remove(_tsknum);
       // Double retry until we exceed existing age.  This is the time to delay
       // until we try again.  Note that we come here immediately on creation,
       // so the first doubling happens before anybody does any waiting.  Also
       // note the generous 5sec cap: ping at least every 5 sec.
-      _retry += (_retry < 5000 ) ? _retry : 5000;
+      else
+        _retry += (_retry < 5000 ) ? _retry : 5000;
     }
     @Override public byte priority() { return _dt.priority(); }
     // How long until we should do the "timeout" action?
