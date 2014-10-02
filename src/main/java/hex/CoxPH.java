@@ -15,7 +15,6 @@ import water.api.DocGen;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.RString;
 
 public class CoxPH extends Job {
   // This Request supports the HTML 'GET' command, and this is the help text
@@ -66,6 +65,8 @@ public class CoxPH extends Job {
     @Override public final CoxPH get_params() { return parameters; }
     @Override public final Request2 job() { return get_params(); }
 
+    @API(help = "names of coefficients")
+    String names_coef;   // vector
     @API(help = "coefficients")
     double coef;         // vector
     @API(help = "exp(coefficients)")
@@ -130,6 +131,26 @@ public class CoxPH extends Job {
 
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb, title);
+
+      sb.append("<h4>Data</h4>");
+      sb.append("<table class='table table-striped table-bordered table-condensed'><col width=\"15%\"><col width=\"85%\">");
+      sb.append("<tr><th>Number of Rows</th><td>"   + n           + "</td></tr>");
+      sb.append("<tr><th>Number of Events</th><td>" + total_event + "</td></tr>");
+      sb.append("</table>");
+
+      sb.append("<h4>Coefficients</h4>");
+      sb.append("<table class='table table-striped table-bordered table-condensed'>");
+      sb.append("<tr><th></th><td>coef</td><td>exp(coef)</td><td>se(coef)</td><td>z</td></tr>");
+      sb.append("<tr><th>" + names_coef + "</th><td>" + coef + "</td><td>" + exp_coef + "</td><td>" + se_coef + "</td><td>" + z_coef + "</td></tr>");
+      sb.append("</table>");
+
+      sb.append("<h4>Model Statistics</h4>");
+      sb.append("<table class='table table-striped table-bordered table-condensed'><col width=\"15%\"><col width=\"85%\">");
+      sb.append("<tr><th>Rsquare</th><td>" + String.format("%.3f", rsq) + " (max possible = " + String.format("%.3f", maxrsq) + ")</td></tr>");
+      sb.append("<tr><th>Likelihood ratio test</th><td>" + String.format("%.2f", loglik_test) + " on 1 df</td></tr>");
+      sb.append("<tr><th>Wald test            </th><td>" + String.format("%.2f", wald_test)   + " on 1 df</td></tr>");
+      sb.append("<tr><th>Score (logrank) test </th><td>" + String.format("%.2f", score_test)  + " on 1 df</td></tr>");
+      sb.append("</table>");
     }
 
     public void toJavaHtml(StringBuilder sb) {
@@ -141,7 +162,7 @@ public class CoxPH extends Job {
     }
   }
 
-  CoxPHModel output;
+  CoxPHModel coxph_model;
 
   @Override public Response serve() {
     if (use_start_column && !start_column.isInt())
@@ -162,62 +183,53 @@ public class CoxPH extends Job {
     String[] names;
     if (use_start_column) {
       names = new String[4];
-      int i = 0;
       for (int j = 0; j < source.numCols(); j++) {
         Vec vec = source.vec(j);
-        if (vec == start_column ||
-            vec == stop_column  ||
-            vec == event_column ||
-            vec == x_column) {
-          names[i] = source.names()[j];
-          i++;
-        }
+        if (vec == start_column)
+          names[0] = source.names()[j];
+        else if (vec == stop_column)
+          names[1] = source.names()[j];
+        else if (vec == event_column)
+          names[2] = source.names()[j];
+        else if (vec == x_column)
+          names[3] = source.names()[j];
       }
     } else {
       names = new String[3];
-      int i = 0;
       for (int j = 0; j < source.numCols(); j++) {
         Vec vec = source.vec(j);
-        if (vec == stop_column  ||
-            vec == event_column ||
-            vec == x_column) {
-          names[i] = source.names()[j];
-          i++;
-        }
+        if (vec == stop_column)
+          names[0] = source.names()[j];
+        else if (vec == event_column)
+          names[1] = source.names()[j];
+        else if (vec == x_column)
+          names[2] = source.names()[j];
       }
     }
-    Frame cols = source.subframe(names);
 
-    output = new CoxPHModel(this, dest(), cols._key, cols, null);
+    source = source.subframe(names);
+
+    coxph_model = new CoxPHModel(this, dest(), source._key, source, null);
 
     H2O.H2OCountedCompleter task = new H2O.H2OCountedCompleter() {
       @Override
       public void compute2() {
-        Vec[] cols;
-        if (use_start_column) {
-          cols = new Vec[4];
-          cols[0] = start_column;
-          cols[1] = stop_column;
-          cols[2] = event_column;
-          cols[3] = x_column;
-        } else {
-          cols    = new Vec[3];
-          cols[0] = stop_column;
-          cols[1] = event_column;
-          cols[2] = x_column;
-        }
+        Vec[] cols = source.vecs();
 
-        if (use_start_column)
-          output.min_time = (long) start_column.min() + 1;
-        else
-          output.min_time = (long) stop_column.min();
-        output.max_time   = (long) stop_column.max();
-        int n_time = (int) (output.max_time - output.min_time + 1);
-        output.x_mean     = x_column.mean();
-        output.cumhaz     = MemoryManager.malloc8d(n_time);
-        output.se_cumhaz  = MemoryManager.malloc8d(n_time);
-        output.surv       = MemoryManager.malloc8d(n_time);
-        double[] se_term  = MemoryManager.malloc8d(n_time);
+        if (use_start_column) {
+          coxph_model.names_coef = source.names()[3];
+          coxph_model.min_time   = (long) start_column.min() + 1;
+        } else {
+          coxph_model.names_coef = source.names()[2];
+          coxph_model.min_time = (long) stop_column.min();
+        }
+        coxph_model.max_time     = (long) stop_column.max();
+        int n_time               = (int) (coxph_model.max_time - coxph_model.min_time + 1);
+        coxph_model.x_mean       = x_column.mean();
+        coxph_model.cumhaz       = MemoryManager.malloc8d(n_time);
+        coxph_model.se_cumhaz    = MemoryManager.malloc8d(n_time);
+        coxph_model.surv         = MemoryManager.malloc8d(n_time);
+        double[] se_term         = MemoryManager.malloc8d(n_time);
 
         int    i, t;
         double step      = Double.NaN;
@@ -226,10 +238,10 @@ public class CoxPH extends Job {
         double newCoef   = init;
         double newLoglik;
         for (i = 0; i <= iter_max; i++) {
-          output.iter = i;
+          coxph_model.iter = i;
 
           // Map & Reduce
-          CoxPHFitTask coxFit = new CoxPHFitTask(newCoef, output.min_time, n_time, use_start_column, output.x_mean).doAll(cols);
+          CoxPHFitTask coxFit = new CoxPHFitTask(newCoef, coxph_model.min_time, n_time, use_start_column, coxph_model.x_mean).doAll(cols);
           // Finalize
           if (!use_start_column) {
             for (t = n_time - 2; t >= 0; t--) {
@@ -240,35 +252,35 @@ public class CoxPH extends Job {
           }
 
           if (i == 0) {
-            output.n = coxFit.n;
+            coxph_model.n = coxFit.n;
             for (t = 0; t < n_time; t++)
-              output.total_event += coxFit.countEvents[t];
-            output.n_risk   = coxFit.countRiskSet.clone();
-            output.n_event  = coxFit.countEvents.clone();
-            output.n_censor = coxFit.countCensored.clone();
+              coxph_model.total_event += coxFit.countEvents[t];
+            coxph_model.n_risk         = coxFit.countRiskSet.clone();
+            coxph_model.n_event        = coxFit.countEvents.clone();
+            coxph_model.n_censor       = coxFit.countCensored.clone();
             if (!use_start_column)
               for (t = n_time - 2; t >= 0; t--)
-                output.n_risk[t] += output.n_risk[t+1];
+                coxph_model.n_risk[t] += coxph_model.n_risk[t+1];
           }
 
-          newLoglik       = 0;
-          output.gradient = 0;
-          output.hessian  = 0;
+          newLoglik            = 0;
+          coxph_model.gradient = 0;
+          coxph_model.hessian  = 0;
           switch (ties) {
             case efron:
               for (t = n_time - 1; t >= 0; t--) {
                 if (coxFit.countEvents[t] > 0) {
                   newLoglik += coxFit.sumLogRiskEvents[t];
-                  output.gradient  += coxFit.sumXEvents[t];
+                  coxph_model.gradient  += coxFit.sumXEvents[t];
                   for (long e = 0; e < coxFit.countEvents[t]; e++) {
-                    double frac   = ((double) e) / ((double) coxFit.countEvents[t]);
-                    double term   = coxFit.rcumsumRisk[t]   - frac * coxFit.sumRiskEvents[t];
-                    double dterm  = coxFit.rcumsumXRisk[t]  - frac * coxFit.sumXRiskEvents[t];
-                    double d2term = coxFit.rcumsumXXRisk[t] - frac * coxFit.sumXXRiskEvents[t];
-                    double dlogTerm  = dterm / term;
-                    newLoglik       -= Math.log(term);
-                    output.gradient -= dlogTerm;
-                    output.hessian  -= d2term / term - (dlogTerm * (dterm / term));
+                    double frac           = ((double) e) / ((double) coxFit.countEvents[t]);
+                    double term           = coxFit.rcumsumRisk[t]   - frac * coxFit.sumRiskEvents[t];
+                    double dterm          = coxFit.rcumsumXRisk[t]  - frac * coxFit.sumXRiskEvents[t];
+                    double d2term         = coxFit.rcumsumXXRisk[t] - frac * coxFit.sumXXRiskEvents[t];
+                    double dlogTerm       = dterm / term;
+                    newLoglik            -= Math.log(term);
+                    coxph_model.gradient -= dlogTerm;
+                    coxph_model.hessian  -= d2term / term - (dlogTerm * (dterm / term));
                   }
                 }
               }
@@ -276,12 +288,12 @@ public class CoxPH extends Job {
             case breslow:
               for (t = n_time - 1; t >= 0; t--) {
                 if (coxFit.countEvents[t] > 0) {
-                  newLoglik        += coxFit.sumLogRiskEvents[t];
-                  output.gradient  += coxFit.sumXEvents[t];
-                  double dlogTerm   = coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t];
-                  newLoglik        -= coxFit.countEvents[t] * Math.log(coxFit.rcumsumRisk[t]);
-                  output.gradient  -= coxFit.countEvents[t] * dlogTerm;
-                  output.hessian   -= coxFit.countEvents[t] *
+                  newLoglik             += coxFit.sumLogRiskEvents[t];
+                  coxph_model.gradient  += coxFit.sumXEvents[t];
+                  double dlogTerm        = coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t];
+                  newLoglik             -= coxFit.countEvents[t] * Math.log(coxFit.rcumsumRisk[t]);
+                  coxph_model.gradient  -= coxFit.countEvents[t] * dlogTerm;
+                  coxph_model.hessian   -= coxFit.countEvents[t] *
                     (((coxFit.rcumsumXXRisk[t] / coxFit.rcumsumRisk[t]) -
                       (dlogTerm * (coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t]))));
                 }
@@ -293,42 +305,42 @@ public class CoxPH extends Job {
 
           if (newLoglik > oldLoglik) {
             if (i == 0) {
-              output.null_loglik = newLoglik;
-              output.maxrsq      = 1 - Math.exp(2 * output.null_loglik / output.n);
-              output.score_test  = - output.gradient * output.gradient / output.hessian;
+              coxph_model.null_loglik = newLoglik;
+              coxph_model.maxrsq      = 1 - Math.exp(2 * coxph_model.null_loglik / coxph_model.n);
+              coxph_model.score_test  = - coxph_model.gradient * coxph_model.gradient / coxph_model.hessian;
             }
-            output.coef          = newCoef;
-            output.exp_coef      = Math.exp(output.coef);
-            output.exp_neg_coef  = Math.exp(- output.coef);
-            output.var_coef      = - 1 / output.hessian;
-            output.se_coef       = Math.sqrt(output.var_coef);
-            output.z_coef        = output.coef / output.se_coef;
-            output.loglik        = newLoglik;
-            output.loglik_test   = - 2 * (output.null_loglik - output.loglik);
-            double diff_init     = output.coef - init;
-            output.wald_test     = (diff_init * diff_init) / output.var_coef;
-            output.rsq           = 1 - Math.exp(- output.loglik_test / output.n);
+            coxph_model.coef          = newCoef;
+            coxph_model.exp_coef      = Math.exp(coxph_model.coef);
+            coxph_model.exp_neg_coef  = Math.exp(- coxph_model.coef);
+            coxph_model.var_coef      = - 1 / coxph_model.hessian;
+            coxph_model.se_coef       = Math.sqrt(coxph_model.var_coef);
+            coxph_model.z_coef        = coxph_model.coef / coxph_model.se_coef;
+            coxph_model.loglik        = newLoglik;
+            coxph_model.loglik_test   = - 2 * (coxph_model.null_loglik - coxph_model.loglik);
+            double diff_init          = coxph_model.coef - init;
+            coxph_model.wald_test     = (diff_init * diff_init) / coxph_model.var_coef;
+            coxph_model.rsq           = 1 - Math.exp(- coxph_model.loglik_test / coxph_model.n);
 
             switch (ties) {
               case efron:
                 for (t = 0; t < n_time; t++) {
-                  output.cumhaz[t]    = 0;
-                  output.se_cumhaz[t] = 0;
-                  se_term[t]          = 0;
+                  coxph_model.cumhaz[t]    = 0;
+                  coxph_model.se_cumhaz[t] = 0;
+                  se_term[t]               = 0;
                   for (long e = 0; e < coxFit.countEvents[t]; e++) {
-                    double frac = ((double) e) / ((double) coxFit.countEvents[t]);
-                    double haz  = 1 / (coxFit.rcumsumRisk[t] - frac * coxFit.sumRiskEvents[t]);
-                    output.cumhaz[t]    += haz;
-                    output.se_cumhaz[t] += haz * haz;
-                    se_term[t]          += (coxFit.rcumsumXRisk[t] - frac * coxFit.sumXRiskEvents[t]) * haz * haz;
+                    double frac               = ((double) e) / ((double) coxFit.countEvents[t]);
+                    double haz                = 1 / (coxFit.rcumsumRisk[t] - frac * coxFit.sumRiskEvents[t]);
+                    coxph_model.cumhaz[t]    += haz;
+                    coxph_model.se_cumhaz[t] += haz * haz;
+                    se_term[t]               += (coxFit.rcumsumXRisk[t] - frac * coxFit.sumXRiskEvents[t]) * haz * haz;
                   }
                 }
                 break;
               case breslow:
                 for (t = 0; t < n_time; t++) {
-                  output.cumhaz[t]    = coxFit.countEvents[t] / coxFit.rcumsumRisk[t];
-                  output.se_cumhaz[t] = coxFit.countEvents[t] / (coxFit.rcumsumRisk[t] * coxFit.rcumsumRisk[t]);
-                  se_term[t]          = (coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t]) * output.cumhaz[t];
+                  coxph_model.cumhaz[t]    = coxFit.countEvents[t] / coxFit.rcumsumRisk[t];
+                  coxph_model.se_cumhaz[t] = coxFit.countEvents[t] / (coxFit.rcumsumRisk[t] * coxFit.rcumsumRisk[t]);
+                  se_term[t]               = (coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t]) * coxph_model.cumhaz[t];
                 }
                 break;
               default:
@@ -336,24 +348,24 @@ public class CoxPH extends Job {
             }
 
             for (t = 1; t < n_time; t++) {
-              output.cumhaz[t]    = output.cumhaz[t - 1] + output.cumhaz[t];
-              output.se_cumhaz[t] = output.se_cumhaz[t - 1] + output.se_cumhaz[t];
-              se_term[t]   = se_term[t - 1] + se_term[t];
+              coxph_model.cumhaz[t]    = coxph_model.cumhaz[t - 1] + coxph_model.cumhaz[t];
+              coxph_model.se_cumhaz[t] = coxph_model.se_cumhaz[t - 1] + coxph_model.se_cumhaz[t];
+              se_term[t]               = se_term[t - 1] + se_term[t];
             }
 
             for (t = 0; t < n_time; t++) {
-              output.se_cumhaz[t] = Math.sqrt(output.se_cumhaz[t] + (se_term[t] * output.var_coef * se_term[t]));
-              output.surv[t]      = Math.exp(- output.cumhaz[t]);
+              coxph_model.se_cumhaz[t] = Math.sqrt(coxph_model.se_cumhaz[t] + (se_term[t] * coxph_model.var_coef * se_term[t]));
+              coxph_model.surv[t]      = Math.exp(- coxph_model.cumhaz[t]);
             }
 
             if (newLoglik == 0)
-              output.lre = - Math.log10(Math.abs(oldLoglik - newLoglik));
+              coxph_model.lre = - Math.log10(Math.abs(oldLoglik - newLoglik));
             else
-              output.lre = - Math.log10(Math.abs((oldLoglik - newLoglik) / newLoglik));
-            if (output.lre >= lre_min)
+              coxph_model.lre = - Math.log10(Math.abs((oldLoglik - newLoglik) / newLoglik));
+            if (coxph_model.lre >= lre_min)
               break;
 
-            step = output.gradient / output.hessian;
+            step = coxph_model.gradient / coxph_model.hessian;
             if (Double.isNaN(step) || Double.isInfinite(step))
               break;
 
@@ -370,7 +382,7 @@ public class CoxPH extends Job {
 
       @Override public void onCompletion(CountedCompleter cc) {
         Futures fs = new Futures();
-        DKV.put(dest(), output, fs);
+        DKV.put(dest(), coxph_model, fs);
         fs.blockForPending();
         remove();
       }
