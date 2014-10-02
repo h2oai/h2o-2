@@ -4,6 +4,9 @@
 # Purpose:  Demonstrate basic imputation example with H2O driven from R.
 #----------------------------------------------------------------------
 
+# make a copy of a dataframe
+cp <- function(this) h2o.exec(this[seq(1, nrow(this), 1),seq(1, ncol(this), 1)])
+
 # Source setup code to define myIP and myPort and helper functions.
 # If you are having trouble running this, just set the condition to FALSE
 # and hardcode myIP and myPort.
@@ -34,6 +37,7 @@ conn <- h2o.init(ip=myIP, port=myPort, startH2O=FALSE)
 
 # Uploading data file to h2o.
 air <- h2o.importFile(conn, filePath, "air")
+airCopy <- cp(air)  # make a copy so we can revert our imputations easily
 
 # Print dataset size.
 dim(air)
@@ -53,21 +57,27 @@ DepTime_mean = mean(air$DepTime, na.rm = TRUE)
 DepTime_mean
 
 # impute the column in place with h2o.impute(...)
-
-
-# Add a new column to the exsiting dataset.
-# This is cheap, since H2O data frames are mutable.  The data is not copied, we just add a new column.
-air$DepTimeNoNAs = ifelse(is.na(air$DepTime), DepTime_mean, air$DepTime)
-numNAs = sum(is.na(air$DepTimeNoNAs))
+h2o.impute(air, "DepTime", method = "mean")   # can also have method = "median"
+numNAs <- sum(is.na(air$DepTime))
 stopifnot(numNAs == 0)
-mean(air$DepTimeNoNAs)
 
-# Or, just replace the existing column in place.
-# This is also cheap.
-air$DepTime = ifelse(is.na(air$DepTime), DepTime_mean, air$DepTime)
-numNAs = sum(is.na(air$DepTime))
-stopifnot(numNAs == 0)
-mean(air$DepTime)
+# revert imputations
+air <- cp(airCopy)
 
+# impute the column in place using a grouping based on the Origin and Distance
+# NB: If the Origin and Distance produce groupings of NAs, then no imputation will be done (NAs will result).
+h2o.impute(air, .(DepTime), method = "median", groupBy = c("Origin", "Distance"))
+
+# revert imputations
+air <- cp(airCopy)
+
+# impute a factor column by the most common factor in that column
+h2o.impute(air, "TailNum", method = "mode")
+
+# revert imputations
+air <- cp(airCopy)
+
+# impute a factor column using a grouping based on the Month and Year
+h2o.impute(air, "TailNum", method = "mode", .(Month, Year))
 
 PASS_BANNER()
