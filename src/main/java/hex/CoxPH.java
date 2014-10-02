@@ -15,6 +15,7 @@ import water.api.DocGen;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Utils;
 
 public class CoxPH extends Job {
   // This Request supports the HTML 'GET' command, and this is the help text
@@ -55,7 +56,9 @@ public class CoxPH extends Job {
 
   public static enum CoxPHTies { efron, breslow; }
 
-  public static class CoxPHModel extends Model {
+  public static final int MAX_TIME_BINS = 10000;
+
+  public static class CoxPHModel extends Model implements Job.Progress {
     static final int API_WEAVER = 1; // This file has auto-generated doc & JSON fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from auto-generated code.
 
@@ -64,6 +67,7 @@ public class CoxPH extends Job {
 
     @Override public final CoxPH get_params() { return parameters; }
     @Override public final Request2 job() { return get_params(); }
+    @Override public float progress() { return (float) iter / (float) get_params().iter_max; }
 
     @API(help = "names of coefficients")
     String names_coef;   // vector
@@ -105,6 +109,8 @@ public class CoxPH extends Job {
     double x_mean;       // scalar
     @API(help = "n")
     long n;              // scalar
+    @API(help = "number of rows with missing values")
+    long n_missing;      // scalar
     @API(help = "total events")
     long total_event;    // scalar
     @API(help = "minimum time")
@@ -133,9 +139,10 @@ public class CoxPH extends Job {
       DocGen.HTML.title(sb, title);
 
       sb.append("<h4>Data</h4>");
-      sb.append("<table class='table table-striped table-bordered table-condensed'><col width=\"15%\"><col width=\"85%\">");
-      sb.append("<tr><th>Number of Rows</th><td>"   + n           + "</td></tr>");
-      sb.append("<tr><th>Number of Events</th><td>" + total_event + "</td></tr>");
+      sb.append("<table class='table table-striped table-bordered table-condensed'><col width=\"25%\"><col width=\"75%\">");
+      sb.append("<tr><th>Number of Complete Cases</th><td>"           + n           + "</td></tr>");
+      sb.append("<tr><th>Number of Non Complete Cases</th><td>"       + n_missing   + "</td></tr>");
+      sb.append("<tr><th>Number of Events in Complete Cases</th><td>" + total_event + "</td></tr>");
       sb.append("</table>");
 
       sb.append("<h4>Coefficients</h4>");
@@ -158,7 +165,7 @@ public class CoxPH extends Job {
 
     @Override
     protected float[] score0(double[] data, float[] preds) {
-      return new float[0];
+      throw H2O.unimpl();
     }
   }
 
@@ -180,33 +187,28 @@ public class CoxPH extends Job {
     if (iter_max < 1)
       throw new IllegalArgumentException("iter_max must be a positive integer");
 
+    long min_time;
+    if (use_start_column)
+      min_time = (long) start_column.min() + 1;
+    else
+      min_time = (long) stop_column.min();
+    int n_time = (int) (stop_column.max() - min_time + 1);
+    if (n_time > MAX_TIME_BINS)
+      throw new IllegalArgumentException("The time number of time points is " + n_time + "; allowed maximum is " + MAX_TIME_BINS);
+
     String[] names;
     if (use_start_column) {
       names = new String[4];
-      for (int j = 0; j < source.numCols(); j++) {
-        Vec vec = source.vec(j);
-        if (vec == start_column)
-          names[0] = source.names()[j];
-        else if (vec == stop_column)
-          names[1] = source.names()[j];
-        else if (vec == event_column)
-          names[2] = source.names()[j];
-        else if (vec == x_column)
-          names[3] = source.names()[j];
-      }
+      names[0] = source.names()[source.find(start_column)];
+      names[1] = source.names()[source.find(stop_column)];
+      names[2] = source.names()[source.find(event_column)];
+      names[3] = source.names()[source.find(x_column)];
     } else {
       names = new String[3];
-      for (int j = 0; j < source.numCols(); j++) {
-        Vec vec = source.vec(j);
-        if (vec == stop_column)
-          names[0] = source.names()[j];
-        else if (vec == event_column)
-          names[1] = source.names()[j];
-        else if (vec == x_column)
-          names[2] = source.names()[j];
-      }
+      names[0] = source.names()[source.find(stop_column)];
+      names[1] = source.names()[source.find(event_column)];
+      names[2] = source.names()[source.find(x_column)];
     }
-
     source = source.subframe(names);
 
     coxph_model = new CoxPHModel(this, dest(), source._key, source, null);
@@ -252,7 +254,8 @@ public class CoxPH extends Job {
           }
 
           if (i == 0) {
-            coxph_model.n = coxFit.n;
+            coxph_model.n              = coxFit.n;
+            coxph_model.n_missing      = coxFit.n_missing;
             for (t = 0; t < n_time; t++)
               coxph_model.total_event += coxFit.countEvents[t];
             coxph_model.n_risk         = coxFit.countRiskSet.clone();
@@ -377,14 +380,11 @@ public class CoxPH extends Job {
 
           newCoef = oldCoef - step;
         }
-        tryComplete();
-      }
-
-      @Override public void onCompletion(CountedCompleter cc) {
         Futures fs = new Futures();
         DKV.put(dest(), coxph_model, fs);
         fs.blockForPending();
         remove();
+        tryComplete();
       }
     };
     start(task);
@@ -401,6 +401,7 @@ public class CoxPH extends Job {
     private final double  _x_mean;
 
     long     n;
+    long     n_missing;
     long[]   countRiskSet;
     long[]   countCensored;
     long[]   countEvents;
@@ -451,17 +452,23 @@ public class CoxPH extends Job {
       rcumsumXRisk     = MemoryManager.malloc8d(_n_time);
       rcumsumXXRisk    = MemoryManager.malloc8d(_n_time);
       for (i = 0; i < stop._len; i++) {
-        event_i = events.at80(i);
-        stop_i  = stop.at80(i);
-        t2 = (int) (stop_i - _min_time);
-        if (_use_start_column) {
-          start_i = start.at80(i);
-          if (start_i >= stop_i)
-            throw new IllegalArgumentException("start values must be strictly less than stop values");
-          t1 = (int) ((start_i + 1) - _min_time);
-        }
-        x_i = xs.at0(i) - _x_mean;
-        if (!Double.isNaN(x_i)) {
+        boolean missing_obs = stop.isNA0(i) || events.isNA0(i) || xs.isNA0(i);
+        if (_use_start_column)
+          missing_obs = missing_obs || start.isNA0(i);
+
+        if (missing_obs)
+          n_missing++;
+        else {
+          event_i = events.at80(i);
+          stop_i  = stop.at80(i);
+          t2 = (int) (stop_i - _min_time);
+          if (_use_start_column) {
+            start_i = start.at80(i);
+            if (start_i >= stop_i)
+              throw new IllegalArgumentException("start values must be strictly less than stop values");
+            t1 = (int) ((start_i + 1) - _min_time);
+          }
+          x_i = xs.at0(i) - _x_mean;
           logRisk_i = x_i * _beta;
           risk_i    = Math.exp(logRisk_i);
           xRisk_i   = x_i * risk_i;
@@ -494,20 +501,19 @@ public class CoxPH extends Job {
     }
 
     @Override public void reduce(CoxPHFitTask that) {
-      n += that.n;
-      for (int t = 0; t < _n_time; t++) {
-        countRiskSet[t]     += that.countRiskSet[t];
-        countCensored[t]    += that.countCensored[t];
-        countEvents[t]      += that.countEvents[t];
-        sumXEvents[t]       += that.sumXEvents[t];
-        sumRiskEvents[t]    += that.sumRiskEvents[t];
-        sumXRiskEvents[t]   += that.sumXRiskEvents[t];
-        sumXXRiskEvents[t]  += that.sumXXRiskEvents[t];
-        sumLogRiskEvents[t] += that.sumLogRiskEvents[t];
-        rcumsumRisk[t]      += that.rcumsumRisk[t];
-        rcumsumXRisk[t]     += that.rcumsumXRisk[t];
-        rcumsumXXRisk[t]    += that.rcumsumXXRisk[t];
-      }
+      n         += that.n;
+      n_missing += that.n_missing;
+      Utils.add(countRiskSet,     that.countRiskSet);
+      Utils.add(countCensored,    that.countCensored);
+      Utils.add(countEvents,      that.countEvents);
+      Utils.add(sumXEvents,       that.sumXEvents);
+      Utils.add(sumRiskEvents,    that.sumRiskEvents);
+      Utils.add(sumXRiskEvents,   that.sumXRiskEvents);
+      Utils.add(sumXXRiskEvents,  that.sumXXRiskEvents);
+      Utils.add(sumLogRiskEvents, that.sumLogRiskEvents);
+      Utils.add(rcumsumRisk,      that.rcumsumRisk);
+      Utils.add(rcumsumXRisk,     that.rcumsumXRisk);
+      Utils.add(rcumsumXXRisk,    that.rcumsumXXRisk);
     }
   }
 }
