@@ -13,4 +13,5 @@ Depends: R (>= 2.13.0), RCurl, rjson, statmod, survival, stats, tools, utils,
 Collate: Wrapper.R Internal.R Classes.R ParseImport.R models.R Algorithms.R
 NeedsCompilation: no
 SystemRequirements: Java (>= 1.6)
+Suggests: plyr
 URL: http://www.0xdata.com

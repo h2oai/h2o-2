@@ -257,7 +257,7 @@ public class Vec extends Iced {
    * @param domain domain of new vector
    * @return always return a new vector which maps given values into a new domain
    */
-  Vec makeTransf(final int[] values, final int[] indexes, final String[] domain) {
+  public Vec makeTransf(final int[] values, final int[] indexes, final String[] domain) {
     if( _espc == null ) throw H2O.unimpl();
     Vec v0 = new TransfVec(values, indexes, domain, this._key, group().addVecs(1)[0],_espc);
     UKV.put(v0._key,v0);

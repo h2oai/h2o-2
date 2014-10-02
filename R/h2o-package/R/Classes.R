@@ -555,7 +555,16 @@ h2o.table <- function(x, return.in.R = FALSE) {
   return(tb)
 }
 
-h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none') {
+ddply <- function (.data, .variables, .fun = NULL, ..., .progress = "none",
+             .inform = FALSE, .drop = TRUE, .parallel = FALSE, .paropts = NULL) {
+             if (inherits(.data, "H2OParsedData")) UseMethod("ddply")
+             else { if (require(plyr)) {plyr::ddply(.data, .variables, .fun, ..., .progress, .inform, .drop, .parallel, .paropts)} else { stop("invalid input data for H2O. Trying to default to plyr ddply, but plyr not found. Install plyr, or use H2OParsedData objects.") } } }
+
+ddply.H2OParsedData <- function (.data, .variables, .fun = NULL, ..., .progress = "none",
+                                 .inform = FALSE, .drop = TRUE, .parallel = FALSE, .paropts = NULL) {
+
+  # .inform, .drop, .parallel, .paropts are all ignored inputs.
+
   if(missing(.data)) stop('must specify .data')
   if(class(.data) != "H2OParsedData") stop('.data must be an H2OParsedData object')
   if( missing(.variables) ) stop('must specify .variables')
@@ -596,7 +605,6 @@ h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none') 
   res <- .h2o.__exec2(.data@h2o, exec_cmd)
   .h2o.exec2(res$dest_key, h2o = .data@h2o, res$dest_key)
 }
-ddply <- h2o.ddply
 
 # TODO: how to avoid masking plyr?
 `h2o..` <- function(...) {
@@ -606,6 +614,73 @@ ddply <- h2o.ddply
 }
 
 `.` <- `h2o..`
+
+#'
+#' Impute Missing Values
+#'
+#' Impute the missing values in the data `column` belonging to the dataset `data`.
+#'
+#' Possible values for `method`:  "mean", "median", "mode"
+#'
+#' If `groupBy` is NULL, then for `mean`/`median`/`mode`, missing values are imputed using the column mean/median.
+#'
+#' If `groupBy` is not NULL, then for `mean` and `median` and `mode`, the missing values are imputed using the mean/median/mode of
+#' `column` within the groups formed by the groupBy columns.
+h2o.impute <- function(data, column, method = "mean", groupBy = NULL) {
+  stopifnot(!missing(data))
+  stopifnot(!missing(column))
+  stopifnot(method %in% c("mean", "median", "mode"))
+  stopifnot(inherits(data, "H2OParsedData"))
+
+  .data <- data
+  .variables <- groupBy
+  idx <- NULL
+  if (!is.null(.variables)) {
+  # we accept eg .(col1, col2), c('col1', 'col2'), 1:2, c(1,2)
+    # as column names.  This is a bit complicated
+    if( class(.variables) == 'character'){
+      vars <- .variables
+      idx <- match(vars, colnames(.data))
+    } else if( class(.variables) == 'H2Oquoted' ){
+      vars <- as.character(.variables)
+      idx <- match(vars, colnames(.data))
+    } else if( class(.variables) == 'quoted' ){ # plyr overwrote our . fn
+      vars <- names(.variables)
+      idx <- match(vars, colnames(.data))
+    } else if( class(.variables) == 'integer' ){
+      vars <- .variables
+      idx <- .variables
+    } else if( class(.variables) == 'numeric' ){   # this will happen eg c(1,2,3)
+      vars <- .variables
+      idx <- as.integer(.variables)
+    }
+    bad <- is.na(idx) | idx < 1 | idx > ncol(.data)
+    if( any(bad) ) stop( sprintf('can\'t recognize .variables %s', paste(vars[bad], sep=',')) )
+    idx <- idx - 1
+  }
+
+  col_idx <- NULL
+  if( class(column) == 'character'){
+    vars <- column
+    col_idx <- match(vars, colnames(.data))
+  } else if( class(column) == 'H2Oquoted' ){
+    vars <- as.character(column)
+    col_idx <- match(vars, colnames(.data))
+  } else if( class(column) == 'quoted' ){ # plyr overwrote our . fn
+    vars <- names(column)
+    col_idx <- match(vars, colnames(.data))
+  } else if( class(column) == 'integer' ){
+    vars <- column
+    col_idx <- column
+  } else if( class(column) == 'numeric' ){   # this will happen eg c(1,2,3)
+    vars <- column
+    col_idx <- as.integer(column)
+  }
+  bad <- is.na(col_idx) | col_idx < 1 | col_idx > ncol(.data)
+  if( any(bad) ) stop( sprintf('can\'t recognize column %s', paste(vars[bad], sep=',')) )
+  if (length(col_idx) > 1) stop("Only allows imputation of a single column at a time!")
+  invisible(.h2o.__remoteSend(data@h2o, .h2o.__PAGE_IMPUTE, source=data@key, column=col_idx-1, method=method, group_by=idx))
+}
 
 h2o.addFunction <- function(object, fun, name){
   if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
@@ -996,8 +1071,12 @@ setMethod("floor",   "H2OParsedData", function(x) { .h2o.__unop2("floor", x) })
 setMethod("trunc",   "H2OParsedData", function(x) { .h2o.__unop2("trunc", x) })
 setMethod("log",     "H2OParsedData", function(x) { .h2o.__unop2("log",   x) })
 setMethod("exp",     "H2OParsedData", function(x) { .h2o.__unop2("exp",   x) })
-setMethod("is.na",   "H2OParsedData", function(x) { .h2o.__unop2("is.na", x) })
+setMethod("is.na",   "H2OParsedData", function(x) {
+  res <- .h2o.__unop2("is.na", x)
+#  res <- as.numeric(res)
+})
 setMethod("t",       "H2OParsedData", function(x) { .h2o.__unop2("t",     x) })
+#setMethod("as.numeric", "H2OParsedData", function(x) { .h2o.__unop2("as.numeric", x) })
 
 round.H2OParsedData <- function(x, digits = 0) {
   if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
@@ -1402,6 +1481,23 @@ function (test, yes, no)
     ans[nas] <- NA
     ans
 }
+
+#.getDomainMapping2 <- function(l, s = "") {
+# if (is.list(l)) {
+#   return( .getDomainMapping2( l[[length(l)]], s))
+# }
+# return(.getDomainMapping(eval(l), s)$map)
+#}
+#
+#ifelse <- function(test,yes, no) if (inherits(test, "H2OParsedData") ||
+#                                     inherits(no, "H2OParsedData")    ||
+#                                     inherits(yes, "H2oParsedData")) UseMethod("ifelse") else base::ifelse(test, yes, no)
+#
+#ifelse.H2OParsedData <- function(test, yes, no) {
+#  if (is.character(yes)) yes <- .getDomainMapping2(as.list(substitute(test)), yes)
+#  if (is.character(no))  no  <- .getDomainMapping2(as.list(substitute(test)), no)
+#  h2o.exec(ifelse(test, yes, no))
+#}
 
 #setMethod("ifelse", signature(test="H2OParsedData", yes="ANY", no="ANY"), function(test, yes, no) {
 #  if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
