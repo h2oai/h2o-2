@@ -3,9 +3,7 @@ import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e
-
-print "apparently need to have at least one normal character otherwise the parse doesn't work right"
-print "is char 0x00 treated as NA? skip"
+import codecs
 
 # https://0xdata.atlassian.net/browse/HEX-1950
 # inconsistent handling of some utf-8 char encodings (NA vs not-NA)
@@ -28,6 +26,8 @@ print "is char 0x00 treated as NA? skip"
 
 # hive separator is 0xa? ..down in the control chars I think
 # tab is 0x9, so that's excluded
+
+# only by test used if utf8/ascii
 nonQuoteChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
 
 nonQuoteChoices.remove(0x09) # is 9 bad
@@ -57,6 +57,7 @@ nonQuoteChoices.remove(0x38) # 8
 nonQuoteChoices.remove(0x39) # 9
 # print nonQuoteChoices
 
+UTF16 = True
 def generate_random_utf8_string(length=1):
     return "".join(unichr(random.choice(nonQuoteChoices)) for i in range(length-1))
 
@@ -73,16 +74,21 @@ def generate_random_utf8_string(length=1):
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
-    dsf = open(csvPathname, "w+")
+    if UTF16:
+        dsf = codecs.open(csvPathname, encoding='utf-16', mode='w+')
+    else:
+        dsf = open(csvPathname, "w+")
+
     for i in range(rowCount):
-        rowData = []
-        for j in range(colCount):
-            r = generate_random_utf8_string(length=2)
-            rowData.append(r)
-
-        rowDataCsv = ",".join(map(str,rowData))
+        if UTF16:
+            rowDataCsv = unichr(233) + unichr(0x0bf2) + unichr(3972) + unichr(6000) + unichr(13231)
+        else:
+            rowData = []
+            for j in range(colCount):
+                r = generate_random_utf8_string(length=2)
+                rowData.append(r)
+            rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
-
     dsf.close()
 
 class Basic(unittest.TestCase):
@@ -103,7 +109,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_rand_utf8(self):
+    def test_parse_rand_utf16(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
