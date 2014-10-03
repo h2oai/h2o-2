@@ -40,6 +40,11 @@ public class WaterMeter extends HTMLOnlyRequest {
           _cpuTicks = lpfr.getCpuTicks();
         }
         else {
+          // In the case where there isn't any tick information, the client receives a json
+          // response object containing an array of length 0.
+          //
+          // e.g.
+          // { cpuTicks: [] }
           _cpuTicks = new long[0][0];
         }
 
@@ -57,12 +62,14 @@ public class WaterMeter extends HTMLOnlyRequest {
       }
 
       H2ONode node = H2O.CLOUD._memary[node_idx.value()];
-      GetTicksTask ppt = new GetTicksTask(); //same payload for all nodes
+      GetTicksTask ppt = new GetTicksTask();
       Log.trace("GetTicksTask starting to node " + node_idx.value() + "...");
-      new RPC<GetTicksTask>(node, ppt).call().get(); //blocking send
+      // Synchronous RPC call to get ticks from remote (possibly this) node.
+      new RPC<GetTicksTask>(node, ppt).call().get();
       Log.trace("GetTicksTask completed to node " + node_idx.value());
       long[][] cpuTicks = ppt._cpuTicks;
 
+      // Stuff tick information into json response.
       JsonArray j = new JsonArray();
       for (long[] arr : cpuTicks) {
         JsonArray j2 = new JsonArray();
