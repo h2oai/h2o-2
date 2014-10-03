@@ -411,6 +411,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.contains("Progress")) return;
       if (uri.startsWith("/Jobs.json")) return;
       if (uri.startsWith("/Up.json")) return;
+      if (uri.startsWith("/2/WaterMeter")) return;
     }
 
     Log.info(Sys.HTTPD, log);

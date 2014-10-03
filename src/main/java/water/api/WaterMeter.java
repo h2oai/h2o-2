@@ -1,7 +1,9 @@
 package water.api;
 
 import dontweave.gson.*;
+import water.*;
 import water.util.LinuxProcFileReader;
+import water.util.Log;
 
 /**
  * Redirect to water meter page.
@@ -12,6 +14,8 @@ public class WaterMeter extends HTMLOnlyRequest {
   }
 
   public static class WaterMeterCpuTicks extends JSONOnlyRequest {
+    Int node_idx = new Int("node_idx", -1);
+
     @Override
     public RequestServer.API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
 
@@ -22,16 +26,42 @@ public class WaterMeter extends HTMLOnlyRequest {
       super.registered(version);
     }
 
+    private static class GetTicksTask extends DTask<GetTicksTask> {
+      private long[][] _cpuTicks;
+
+      public GetTicksTask() {
+        _cpuTicks = null;
+      }
+
+      @Override public void compute2() {
+        LinuxProcFileReader lpfr = new LinuxProcFileReader();
+        lpfr.read();
+        if (lpfr.valid()) {
+          _cpuTicks = lpfr.getCpuTicks();
+        }
+        else {
+          _cpuTicks = new long[0][0];
+        }
+
+        tryComplete();
+      }
+
+      @Override public byte priority() {
+        return H2O.MIN_HI_PRIORITY;
+      }
+    }
+
     @Override protected Response serve() {
-      long[][] cpuTicks;
-      LinuxProcFileReader lpfr = new LinuxProcFileReader();
-      lpfr.read();
-      if (lpfr.valid()) {
-        cpuTicks = lpfr.getCpuTicks();
+      if ((node_idx.value() < 0) || (node_idx.value() >= H2O.CLOUD.size())) {
+        throw new IllegalArgumentException("Illegal node_idx for this H2O cluster (must be from 0 to " + H2O.CLOUD.size() + ")");
       }
-      else {
-        cpuTicks = new long[0][0];
-      }
+
+      H2ONode node = H2O.CLOUD._memary[node_idx.value()];
+      GetTicksTask ppt = new GetTicksTask(); //same payload for all nodes
+      Log.trace("GetTicksTask starting to node " + node_idx.value() + "...");
+      new RPC<GetTicksTask>(node, ppt).call().get(); //blocking send
+      Log.trace("GetTicksTask completed to node " + node_idx.value());
+      long[][] cpuTicks = ppt._cpuTicks;
 
       JsonArray j = new JsonArray();
       for (long[] arr : cpuTicks) {
@@ -48,4 +78,3 @@ public class WaterMeter extends HTMLOnlyRequest {
     }
   }
 }
-
