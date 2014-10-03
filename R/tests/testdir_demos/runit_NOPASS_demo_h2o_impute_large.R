@@ -37,7 +37,6 @@ conn <- h2o.init(ip=myIP, port=myPort, startH2O=FALSE)
 
 # Uploading data file to h2o.
 air <- h2o.importFile(conn, filePath, "air")
-airCopy <- cp(air)  # make a copy so we can revert our imputations easily
 
 # Print dataset size.
 dim(air)
@@ -61,21 +60,21 @@ numNAs <- sum(is.na(air$DepTime))
 stopifnot(numNAs == 0)
 
 # revert imputations
-air <- cp(airCopy)
+air <- h2o.importFile(conn, filePath, "air")
 
 # impute the column in place using a grouping based on the Origin and Distance
 # NB: If the Origin and Distance produce groupings of NAs, then no imputation will be done (NAs will result).
 h2o.impute(air, .(DepTime), method = "median", groupBy = c("Dest"))
 
 # revert imputations
-air <- cp(airCopy)
+air <- h2o.importFile(conn, filePath, "air")
 air$TailNum <- as.factor(air$TailNum)
 
 # impute a factor column by the most common factor in that column
 h2o.impute(air, "TailNum", method = "mode")
 
 # revert imputations
-air <- cp(airCopy)
+air <- h2o.importFile(conn, filePath, "air")
 air$TailNum <- as.factor(air$TailNum)
 
 # impute a factor column using a grouping based on the Origin
