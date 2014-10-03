@@ -505,6 +505,15 @@ public class NewChunk extends Chunk {
     _ls = null;
     return res;
   }
+
+  private static long leRange(long lemin, long lemax){
+    if(lemin < 0 && lemax >= (Long.MAX_VALUE + lemin))
+      return Long.MAX_VALUE; // if overflow return 64 as the max possible value
+    long res = lemax - lemin;
+    assert res >= 0;
+    return res;
+  }
+
   private Chunk compress2() {
     // Check for basic mode info: all missing or all strings or mixed stuff
     byte mode = type();
@@ -645,8 +654,6 @@ public class NewChunk extends Chunk {
       long pow10lo = PrettyPrint.pow10i(xlo-xmin);
       lemin = llo*pow10lo;
       if( (lemin/pow10lo) != llo ) overflow = true;
-      if(lemin < 0 && lemax >= (Long.MAX_VALUE + lemin))
-        floatOverflow = true;
     }
 
     // Boolean column?
@@ -684,16 +691,17 @@ public class NewChunk extends Chunk {
     // wise we just flip to a float or double representation.
     if( overflow || (fpoint && floatOverflow) || -35 > xmin || xmin > 35 )
       return chunkD();
+    final long leRange = leRange(lemin,lemax);
     if( fpoint ) {
       if( (int)lemin == lemin && (int)lemax == lemax ) {
-        if(lemax-lemin < 255) // Fits in scaled biased byte?
+        if(leRange < 255) // Fits in scaled biased byte?
           return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),lemin,PrettyPrint.pow10(xmin));
-        if(lemax-lemin < 65535) { // we use signed 2B short, add -32k to the bias!
+        if(leRange < 65535) { // we use signed 2B short, add -32k to the bias!
           long bias = 32767 + lemin;
           return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),bias,PrettyPrint.pow10(xmin));
         }
       }
-      if(lemax-lemin < 4294967295l) {
+      if(leRange < 4294967295l) {
         long bias = 2147483647l + lemin;
         return new C4SChunk( bufX(bias,xmin,C4SChunk.OFF,2),bias,PrettyPrint.pow10(xmin));
       }
@@ -704,14 +712,14 @@ public class NewChunk extends Chunk {
     if(xmin == 0 &&  0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
       return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
     if( lemin < Integer.MIN_VALUE ) return new C8Chunk( bufX(0,0,0,3));
-    if( lemax-lemin < 255 ) {    // Span fits in a byte?
+    if( leRange < 255 ) {    // Span fits in a byte?
       if(0 <= min && max < 255 ) // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
       return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),lemin,PrettyPrint.pow10i(xmin));
     }
 
     // Compress column into a short
-    if( lemax-lemin < 65535 ) {               // Span fits in a biased short?
+    if( leRange < 65535 ) {               // Span fits in a biased short?
       if( xmin == 0 && Short.MIN_VALUE < lemin && lemax <= Short.MAX_VALUE ) // Span fits in an unbiased short?
         return new C2Chunk( bufX(0,0,C2Chunk.OFF,1));
       int bias = (int)(lemin-(Short.MIN_VALUE+1));
