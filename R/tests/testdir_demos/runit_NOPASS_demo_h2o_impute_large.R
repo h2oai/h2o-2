@@ -68,16 +68,14 @@ h2o.impute(air, .(DepTime), method = "median", groupBy = c("Dest"))
 
 # revert imputations
 air <- h2o.importFile(conn, filePath, "air")
-air$TailNum <- as.factor(air$TailNum)
 
 # impute a factor column by the most common factor in that column
-h2o.impute(air, "TailNum", method = "mode")
+h2o.impute(air, "TailNum", method = "mean")
 
 # revert imputations
 air <- h2o.importFile(conn, filePath, "air")
-air$TailNum <- as.factor(air$TailNum)
 
 # impute a factor column using a grouping based on the Origin
-h2o.impute(air, "TailNum", method = "mode", .(Month))
+h2o.impute(air, "TailNum", method = "median", .(Month))
 
 PASS_BANNER()
