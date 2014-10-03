@@ -650,6 +650,12 @@ public abstract class Log {
     Event e =  Event.make( t, Kind.DEBG, null, objects);
     write(e,false,true);
   }
+  /** Log a debug message to the log file and the store if the subsystem's flag is set. */
+  static public void trace(Object... objects) {
+    if (flag(Sys.WATER) == false) return;
+    Event e =  Event.make(Sys.WATER, Kind.TRAC, null, objects);
+    write(e,false,true);
+  }
   /** Temporary log statement. Search for references to make sure they have been removed. */
   static public void tmp(Object... objects) {
     info(objects);
