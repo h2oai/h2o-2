@@ -13,7 +13,11 @@ import codecs
 
 print "This test makes sure python creates a utf8 file, that is not a ascii file"
 print "apparently need to have at least one normal character otherwise the parse doesn't work right"
+print "I think i have some multi-byte utf8 in there now"
 
+# Interesting. Microsoft Word might introduce it's own super ascii/ (smart quotes)
+# 145, 146, 147, 148, 151
+# single quote (L/R), double quote (L/R), dash)
 
 # https://0xdata.atlassian.net/browse/HEX-1950
 # inconsistent handling of some utf-8 char encodings (NA vs not-NA)
@@ -39,11 +43,19 @@ print "apparently need to have at least one normal character otherwise the parse
 
 UTF16 = False
 UTF8 = True
+UTF8_MULTIBYTE = True
 
 if UTF8:
-    nonQuoteChoices = range(0x0, 0x100) # doesn't include last value ..allow 7f
+    # what about multi-byte UTF8
+    nonQuoteChoices = range(0x0, 0x100) # doesn't include last value ..allow ff
 else:  # ascii subset?
     nonQuoteChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
+
+
+if UTF8_MULTIBYTE:
+    # add some UTF8 multibyte, and restrict the choices to make sure we hit these
+    nonQuoteChoices = range(0x0, 0x40) # doesn't include last value ..allow 7f
+    nonQuoteChoices += [0x201c, 0x201d, 0x2018, 0x2019, 6000]
 
 nonQuoteChoices.remove(0x09) # is 9 bad..apparently can cause NA
 
@@ -73,7 +85,18 @@ nonQuoteChoices.remove(0x39) # 9
 # print nonQuoteChoices
 
 def generate_random_utf8_string(length=1):
-    return "".join(unichr(random.choice(nonQuoteChoices)) for i in range(length-1))
+        # want to handle more than 256 numbers
+        cList = []
+        for i in range(length):
+            # to go from hex 'string" to number
+            # cint = int('fd9b', 16)
+            r = random.choice(nonQuoteChoices)
+            c = unichr(r).encode('utf-8')
+            cList.append(c)
+            print 
+
+        # this is a random byte string now, of type string?
+        return "".join(cList)
 
 # Python details
 # The rules for converting a Unicode string into the ASCII encoding are simple; for each code point:
@@ -88,7 +111,7 @@ def generate_random_utf8_string(length=1):
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
-    if UTF8:
+    if UTF8 or UTF8_MULTIBYTE:
         dsf = codecs.open(csvPathname, encoding='utf-8', mode='w+')
     elif UTF16:
         dsf = codecs.open(csvPathname, encoding='utf-16', mode='w+')
@@ -97,14 +120,31 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
 
     for i in range(rowCount):
         if UTF16:
-            rowDataCsv = unichr(233) + unichr(0x0bf2) + unichr(3972) + unichr(6000) + unichr(13231)
+            # u = unichr(233) + unichr(0x0bf2) + unichr(3972) + unichr(6000) + unichr(13231)
+            # left and right single quotes
+            u = unichr(0x201c) + unichr(0x201d)
+            # preferred apostrophe (right single quote)
+            u = unichr(0x2019) 
+            u = unichr(0x2018) + unichr(6000) + unichr(0x2019)
+            # grave and acute?
+            # u = unichr(0x60) + unichr(0xb4)
+            # don't do this. grave with apostrophe http://www.cl.cam.ac.uk/~mgk25/ucs/quotes.html
+            # u = unichr(0x60) + unichr(0x27)
+            rowDataCsv = u
         else: # both ascii and utf-8 go here?
             rowData = []
             for j in range(colCount):
                 r = generate_random_utf8_string(length=2)
                 rowData.append(r)
             rowDataCsv = ",".join(rowData)
-        dsf.write(rowDataCsv + "\n")
+        print rowDataCsv
+        print "str:", repr(rowDataCsv), type(rowDataCsv)
+        decoded = rowDataCsv.decode('utf-8')
+        # this has the right length..multibyte utf8 are decoded 
+        print "utf8:", repr(decoded), type(decoded)
+        
+        # dsf.write(rowDataCsv + "\n")
+        dsf.write(decoded + "\n")
     dsf.close()
 
 class Basic(unittest.TestCase):
@@ -166,14 +206,23 @@ class Basic(unittest.TestCase):
         #**************************
         # for background knowledge; (print info)
         import unicodedata
-        u = unichr(233) + unichr(0x0bf2) + unichr(3972) + unichr(6000) + unichr(13231)
+        # u = unichr(233) + unichr(0x0bf2) + unichr(3972) + unichr(6000) + unichr(13231)
+        # left and right single quotes
+        u = unichr(0x201c) + unichr(0x201d)
+        # preferred apostrophe (right single quote)
+        u = unichr(0x2019) 
+        u = unichr(0x2018) + unichr(6000) + unichr(0x2019)
+        # grave and acute?
+        # u = unichr(0x60) + unichr(0xb4)
+        # don't do this. grave with apostrophe http://www.cl.cam.ac.uk/~mgk25/ucs/quotes.html
+        # u = unichr(0x60) + unichr(0x27)
 
         for i, c in enumerate(u):
             print i, '%04x' % ord(c), unicodedata.category(c),
             print unicodedata.name(c)
 
         # Get numeric value of second character
-        print unicodedata.numeric(u[1])
+        # print unicodedata.numeric(u[1])
         #**************************
 
 if __name__ == '__main__':
