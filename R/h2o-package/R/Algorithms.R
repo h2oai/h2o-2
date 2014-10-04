@@ -1,4 +1,130 @@
 # Model-building operations and algorithms
+# --------------------- Cox Proportional Hazards Model (COXPH) ---------------------- #
+# methods(class = "coxph")
+#   anova.coxph
+#   extractAIC.coxph   // done
+#   logLik.coxph       // done
+#   model.frame.coxph
+#   model.matrix.coxph
+#   predict.coxph
+#   print.coxph        // show done
+#   residuals.coxph
+#   summary.coxph      // done
+#   survfit.coxph      // done
+#   vcov.coxph         // done
+h2o.coxph.control <- function(lre = 9, iter.max = 20, ...)
+{
+  if (!is.numeric(lre) || length(lre) != 1L || is.na(lre) || lre <= 0)
+    stop("'lre' must be a positive number")
+
+  if (!is.numeric(iter.max) || length(iter.max) != 1L || is.na(iter.max) ||
+      iter.max < 1)
+    stop("'iter.max' must be a positive integer")
+
+  list(lre = lre, iter.max = as.integer(iter.max))
+}
+h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
+                      init = 0, control = h2o.coxph.control(...), ...)
+{
+  if (!is(data, "H2OParsedData"))
+    stop("'data' must be an H2O parsed dataset")
+
+  cnames <- colnames(data)
+  if (!is.character(x) || length(x) != 1L || !(x %in% cnames))
+    stop("'x' must be a character string specifying a column name from 'data'")
+
+  ny <- length(y)
+  if (!is.character(y) || ny < 2L || ny > 3L || !all(y %in% cnames))
+    stop("'y' must be a character vector of column names from 'data' ",
+         "specifying a (start, stop, event) triplet or (stop, event) couplet")
+
+  if (!is.character(key) && length(key) == 1L)
+    stop("'key' must be a character string")
+  if (nchar(key) > 0 && !grepl("^[a-zA-Z_][a-zA-Z0-9_.]*$", key))
+    stop("'key' must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
+  if (!nzchar(key)) {
+    key <- sprintf("Last.coxph.%d", .pkg.env$temp_count)
+    .pkg.env$temp_count <- (.pkg.env$temp_count + 1) %% .RESULT_MAX
+  }
+
+  ties <- match.arg(ties)
+
+  if (!is.numeric(init) || length(init) != 1L || !is.finite(init))
+    stop("'init' must be a numeric vector containing finite coefficient starting values")
+
+  job <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPH,
+                           destination_key  = key,
+                           source           = data@key,
+                           use_start_column = as.integer(ny == 3L),
+                           start_column     = y[1L],
+                           stop_column      = y[ny - 1L],
+                           event_column     = y[ny],
+                           x_column         = x,
+                           ties             = ties,
+                           init             = init,
+                           lre_min          = control$lre,
+                           iter_max         = control$iter.max)
+  job_key  <- job$job_key
+  dest_key <- job$destination_key
+  .h2o.__waitOnJob(data@h2o, job_key)
+  res      <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPHModelView,
+                                '_modelKey' = dest_key)
+  mcall <- match.call()
+  model <-
+    list(coefficients = structure(res[[3L]]$coef, names = x),
+         var          = matrix(res[[3L]]$var, 1L, 1L),
+         loglik       = c(res[[3L]]$null_loglik, res[[3L]]$loglik),
+         score        = res[[3L]]$score_test,
+         iter         = res[[3L]]$iter,
+         means        = structure(res[[3L]]$x_mean, names = x),
+         method       = ties,
+         n            = res[[3L]]$n,
+         nevent       = res[[3L]]$total_event,
+         wald.test    = structure(res[[3L]]$wald_test, names = x),
+         call         = mcall)
+  summary <-
+    list(call         = mcall,
+         n            = model$n,
+         loglik       = model$loglik,
+         nevent       = model$nevent,
+         coefficients = matrix(c(res[[3L]]$coef,  res[[3L]]$exp_coef,
+                                 res[[3L]]$se_coef, res[[3L]]$z_coef, NA_real_),
+                               nrow = 1L, ncol = 5L,
+                               dimnames =
+                               list(x,
+                                    c("coef", "exp(coef)", "se(coef)",
+                                      "z", "Pr(>|z|)"))),
+         conf.int     = matrix(c(res[[3L]]$exp_coef, res[[3L]]$exp_neg_coef,
+                                 NA_real_, NA_real_),
+                               nrow = 1L, ncol = 4L,
+                               dimnames =
+                               list(x,
+                               c("exp(coef)", "exp(-coef)",
+                                 "lower .95", "upper .95"))),
+         logtest      = c(test = res[[3L]]$loglik_test, df = 1, pvalue = NA_real_),
+         sctest       = c(test = res[[3L]]$score_test,  df = 1, pvalue = NA_real_),
+         rsq          = c(rsq  = res[[3L]]$rsq,     maxrsq = res[[3L]]$maxrsq),
+         waldtest     = c(test = res[[3L]]$wald_test,   df = 1, pvalue = NA_real_),
+         used.robust  = FALSE)
+  ok <- which((res[[3L]]$n_event + res[[3L]]$n_censor) > 0L)
+  survfit <-
+    list(n            = model$n,
+         time         = (res[[3L]]$min_time:res[[3L]]$max_time)[ok],
+         n.risk       = res[[3L]]$n_risk[ok],
+         n.event      = res[[3L]]$n_event[ok],
+         n.censor     = res[[3L]]$n_censor[ok],
+         surv         = res[[3L]]$surv[ok],
+         type         = ifelse(ny == 2L, "right", "counting"),
+         cumhaz       = res[[3L]]$cumhaz[ok],
+         std.err      = res[[3L]]$se_cumhaz[ok],
+         upper        = NULL,
+         lower        = NULL,
+         conf.type    = NULL,
+         conf.int     = NULL)
+  new("H2OCoxPHModel", key = key, data = data, model = model,
+      summary = summary, survfit = survfit)
+}
+
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
