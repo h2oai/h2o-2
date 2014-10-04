@@ -233,17 +233,21 @@ public class LinuxProcFileReader {
           break;
         }
 
+        // Copying algorithm from http://gee.cs.oswego.edu/dl/code/
+        // See perfbar.c in gtk_perfbar package.
         // int cpuNum = Integer.parseInt(m.group(1));
-        long cpuUserTicks    = Long.parseLong(m.group(2));
-        long cpuNiceTicks    = Long.parseLong(m.group(3));
-        long cpuSystemTicks  = Long.parseLong(m.group(4));
-        long cpuIdleTicks    = Long.parseLong(m.group(5));
-        long cpuIowaitTicks  = Long.parseLong(m.group(6));
-        long cpuIrqTicks     = Long.parseLong(m.group(7));
-        long cpuSoftirqTicks = Long.parseLong(m.group(8));
-        long cpuTotalUserTicks = cpuUserTicks + cpuNiceTicks;
-        long cpuOtherTicks = cpuIowaitTicks + cpuIrqTicks + cpuSoftirqTicks;
-        long[] oneCpuTicks = {cpuTotalUserTicks, cpuSystemTicks, cpuOtherTicks, cpuIdleTicks};
+        long cpuUserTicks = 0;
+        long cpuSystemTicks = 0;
+        long cpuOtherTicks = 0;
+        long cpuIdleTicks = 0;
+        cpuUserTicks    += Long.parseLong(m.group(2));
+        cpuOtherTicks   += Long.parseLong(m.group(3));
+        cpuSystemTicks  += Long.parseLong(m.group(4));
+        cpuIdleTicks    += Long.parseLong(m.group(5));
+        cpuOtherTicks   += Long.parseLong(m.group(6));
+        cpuSystemTicks  += Long.parseLong(m.group(7));
+        cpuSystemTicks  += Long.parseLong(m.group(8));
+        long[] oneCpuTicks = {cpuUserTicks, cpuSystemTicks, cpuOtherTicks, cpuIdleTicks};
         _cpuTicks.add(oneCpuTicks);
 
         line = reader.readLine();
