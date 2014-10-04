@@ -44,8 +44,10 @@ public class NetworkTest extends Func {
     microseconds = new double[msg_sizes.length][];
     microseconds_collective = new double[msg_sizes.length];
     NetworkTester nt = new NetworkTester(msg_sizes, microseconds, microseconds_collective, repeats, serial, collective);
+    Log.debug("Starting top-level NetworkTester...");
     H2O.submitTask(nt);
     nt.join();
+    Log.debug("NetworkTester top-level after join");
 
     // compute bandwidths from timing results
     bandwidths = new double[msg_sizes.length][];
@@ -62,6 +64,7 @@ public class NetworkTest extends Func {
       //broadcast and reduce the message to all nodes -> 2 x nodes
       bandwidths_collective[i] = ( 2*H2O.CLOUD.size()*msg_sizes[i] /*Bytes*/) / (microseconds_collective[i] / 1e6 /*Seconds*/) ;
     }
+    Log.debug("NetworkTest calculated bandwidths");
 
     // populate node names
     nodes = new String[H2O.CLOUD.size()];
@@ -70,6 +73,7 @@ public class NetworkTest extends Func {
     StringBuilder sb = new StringBuilder();
     toASCII(sb);
     Log.info(sb);
+    Log.debug("NetworkTester top-level completed");
   }
 
   // Helper class to run the actual test
@@ -91,6 +95,7 @@ public class NetworkTest extends Func {
     }
     @Override
     public void compute2() {
+      Log.debug("NetworkTester compute2 starting...");
       // serial comm
       if (serial) {
         for (int i = 0; i < microseconds.length; ++i) {
@@ -106,6 +111,7 @@ public class NetworkTest extends Func {
         Utils.div(microseconds_collective, 1e3f); //microseconds
       }
       tryComplete();
+      Log.debug("NetworkTester compute2 completed");
     }
   }
 
@@ -139,13 +145,17 @@ public class NetworkTest extends Func {
     final int siz = H2O.CLOUD.size();
     double[] times = new double[siz];
     for (int i = 0; i < siz; ++i) { //loop over compute nodes
+      Log.debug("NetworkTest send_recv_all starting PingPong to node " + i + "...");
       H2ONode node = H2O.CLOUD._memary[i];
       Timer t = new Timer();
       for (int l = 0; l < repeats; ++l) {
+        Log.debug("NetworkTest send_recv_all starting msg_size " + msg_size + " bytes, iteration "+ l +" of "+ repeats + " ...");
         PingPongTask ppt = new PingPongTask(payload); //same payload for all nodes
         new RPC<PingPongTask>(node, ppt).call().get(); //blocking send
+        Log.debug("NetworkTest send_recv_all completed iteration "+ l +" of "+ repeats);
       }
       times[i] = (double) t.nanos() / repeats;
+      Log.debug("NetworkTest send_recv_all completed PingPong to node " + i);
     }
     return times;
   }
@@ -169,15 +179,19 @@ public class NetworkTest extends Func {
    * @return Time in nanoseconds that it took
    */
   private static double send_recv_collective(int msg_size, int repeats) {
+    Log.debug("NetworkTest send_recv_collective starting...");
     byte[] payload = new byte[msg_size];
     new Random().nextBytes(payload);
     Vec v = Vec.makeConSeq(0., 1); //trivial Vec: 1 element with value 0.
 
     Timer t = new Timer();
     for (int l = 0; l < repeats; ++l) {
+      Log.debug("NetworkTest send_recv_collective starting msg_size " + msg_size + " bytes, iteration "+ l +" of "+ repeats + " ...");
       new CollectiveTask(payload).doAll(v); //same payload for all nodes
+      Log.debug("NetworkTest send_recv_collective completed iteration "+ l +" of "+ repeats);
     }
     v.remove(new Futures()).blockForPending();
+    Log.debug("NetworkTest send_recv_collective completed");
     return (double) t.nanos() / repeats;
   }
 

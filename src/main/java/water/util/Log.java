@@ -454,7 +454,7 @@ public abstract class Log {
       // HTLOG are requests from RequestServer that haven't been filtered out.
       // HTLOG requests should only come at INFO.
       e.sys = Sys.HTTPD;
-      String s = e.toString();
+      String s = "tid(" + Thread.currentThread().getId() + ") " + e.toString();
       org.apache.log4j.Logger httpdLogger = LogManager.getLogger("water.api.RequestServer");
       if (e.kind == Kind.INFO) {
         httpdLogger.info(s);
@@ -648,6 +648,12 @@ public abstract class Log {
   static public void debug(Sys t, Object... objects) {
     if (flag(t) == false) return;
     Event e =  Event.make( t, Kind.DEBG, null, objects);
+    write(e,false,true);
+  }
+  /** Log a debug message to the log file and the store if the subsystem's flag is set. */
+  static public void trace(Object... objects) {
+    if (flag(Sys.WATER) == false) return;
+    Event e =  Event.make(Sys.WATER, Kind.TRAC, null, objects);
     write(e,false,true);
   }
   /** Temporary log statement. Search for references to make sure they have been removed. */

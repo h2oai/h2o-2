@@ -48,6 +48,18 @@ public class ParserTest2 extends TestUtil {
     }
   }
 
+  @Test public void testOverflow(){
+    String [] data = new String[]{
+      "-5.81504",
+      "-4.77862e-13",
+      "3.42349",
+    };
+    double [][] exp = new double[][]{{-5.81504},{-4.77862e-13},{3.42349}};
+    StringBuilder sb = new StringBuilder();
+    for( String s : data ) sb.append(s).append("\n");
+    Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+    testParsed(k,exp);
+  }
   @Test public void testBasic() {
     String[] data = new String[] {
         "1|2|3\n1|2|3\n",

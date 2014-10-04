@@ -416,11 +416,18 @@ public final class H2O {
     Socket s = null;
     try {
       // using google's DNS server as an external IP to find
-      s = new Socket("8.8.8.8", 53);
+      // Add a timeout to the touch of google.
+      // https://0xdata.atlassian.net/browse/HEX-743
+      s = new Socket(); 
+      // only 3000 milliseconds before giving up
+      // Exceptions: IOException, SocketTimeoutException, plus two Illegal* exceptions
+      s.connect(new InetSocketAddress("8.8.8.8", 53), 3000); 
       m+="Using " + s.getLocalAddress() + "\n";
       return s.getLocalAddress();
     } catch( java.net.SocketException se ) {
       return null;           // No network at all?  (Laptop w/wifi turned off?)
+    } catch( java.net.SocketTimeoutException se ) {
+      return null;           // could be firewall?
     } catch( Throwable t ) {
       Log.err(t);
       return null;

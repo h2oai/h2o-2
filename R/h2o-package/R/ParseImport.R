@@ -224,7 +224,7 @@ h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "
   else
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
   rawData = new("H2ORawData", h2o=object, key=path)
-  if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, parser_type = parser_type) else rawData
+  if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names, parser_type = parser_type) else rawData
 }
 
 # ----------------------------------- File Parse Operations --------------------------------- #

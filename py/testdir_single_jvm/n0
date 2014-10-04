@@ -6,6 +6,7 @@
 ./n0.doit test_ddply_reals_plot.py
 ./n0.doit test_delete_all_keys.py
 ./n0.doit test_enum_multi_permission.py
+./n0.doit test_enums_with_0_NA.py
 ./n0.doit test_exec2_100_quantiles.py
 ./n0.doit test_exec2_append_cols.py
 ./n0.doit test_exec2_apply_phrases.py
@@ -22,6 +23,7 @@
 ./n0.doit test_exec2_enums_rand_cut.py
 ./n0.doit test_exec2_env_fail.py
 ./n0.doit test_exec2_env_pop_fail.py
+./n0.doit test_exec2_fast_locks.py
 ./n0.doit test_exec2_filter_slice.py
 ./n0.doit test_exec2_frame_fail.py
 ./n0.doit test_exec2_log_like_R.py
@@ -36,6 +38,7 @@
 ./n0.doit test_exec2_quant_cmp_uniform.py
 ./n0.doit test_exec2_quantile_bin_defeat.py
 ./n0.doit test_exec2_quantile_na_scalar.py
+./n0.doit test_exec2_R_arith.py
 ./n0.doit test_exec2_result_race.py
 ./n0.doit test_exec2_row_range.py
 ./n0.doit test_exec2_runif.py
@@ -106,7 +109,6 @@
 ./n0.doit test_GLM2_poisson_1.py
 ./n0.doit test_GLM2_poisson_fail.py
 ./n0.doit test_GLM2_poisson_goalies.py
-./n0.doit test_GLM2_poisson_normalize.py
 ./n0.doit test_GLM2_poisson_rand2.py
 ./n0.doit test_GLM2_poisson_timeout_fail.py
 ./n0.doit test_GLM2_princeton.py
@@ -134,6 +136,7 @@
 ./n0.doit test_KMeans_hastie_shuffle_fvec.py
 ./n0.doit test_KMeans_predict3.py
 ./n0.doit test_KMeans_twit_fvec.py
+./n0.doit test_libsvm.py
 ./n0.doit test_many_cols_enum.py
 ./n0.doit test_many_cols.py
 ./n0.doit test_nfold_frame_extract.py
@@ -198,7 +201,6 @@
 ./n0.doit test_rf_undecided_fail_fvec.py
 ./n0.doit test_SetupOneJVM14.py
 ./n0.doit test_simple.py
-./n0.doit test_small_parse_fvec.py
 ./n0.doit test_speedrf_big1_nopoll.py
 ./n0.doit test_speedrf_big1_overwrite_model.py
 ./n0.doit test_speedrf_change_data_key.py

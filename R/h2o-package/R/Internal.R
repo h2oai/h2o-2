@@ -104,8 +104,10 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_VIEWALL = "StoreView.json"
 .h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 .h2o.__DOMAIN_MAPPING = "2/DomainMapping.json"
+.h2o.__SET_DOMAIN = "2/SetDomains.json"
 .h2o.__PAGE_ALLMODELS = "2/Models.json"
 
+.h2o.__PAGE_IMPUTE= "2/Impute.json"
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
 .h2o.__PAGE_EXPORTFILES = "2/ExportFiles.json"
@@ -127,6 +129,9 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_ANOMALY = "2/Anomaly.json"
 .h2o.__PAGE_DEEPFEATURES = "2/DeepFeatures.json"
 
+.h2o.__PAGE_CoxPH = "2/CoxPH.json"
+.h2o.__PAGE_CoxPHProgress = "2/CoxPHProgressPage.json"
+.h2o.__PAGE_CoxPHModelView = "2/CoxPHModelView.json"
 .h2o.__PAGE_DRF = "2/DRF.json"
 .h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
 .h2o.__PAGE_DRFModelView = "2/DRFModelView.json"

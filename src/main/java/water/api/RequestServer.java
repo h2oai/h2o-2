@@ -3,6 +3,7 @@ package water.api;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
+import hex.CoxPH;
 import hex.CreateFrame;
 import hex.GridSearch.GridSearchProgress;
 import hex.InsertMissingValues;
@@ -98,6 +99,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Inspector()),     "Inspect",                "Data");
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
+    Request.addToNavbar(registerRequest(new Impute()),        "Impute",                 "Data");
     Request.addToNavbar(registerRequest(new FrameSplitPage()),"Split Frame",            "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
     Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
@@ -151,6 +153,7 @@ public class RequestServer extends NanoHTTPD {
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new hex.LR2());
+      registerRequest(new CoxPH());
       registerRequest(new ReBalance());
       registerRequest(new NFoldFrameExtractPage());
       registerRequest(new Console());
@@ -164,8 +167,10 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new SetLogLevel());
       registerRequest(new Debug());
       registerRequest(new UnlockKeys());
+      registerRequest(new WaterMeter());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
+      Request.addToNavbar(registerRequest(new CoxPH()),                "Cox Proportional Hazards", "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
       Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold Frame Extract", "Beta");
       Request.addToNavbar(registerRequest(new Console()),              "Console",              "Beta");
@@ -179,6 +184,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new SetLogLevel()),          "Set Log Level",        "Beta");
       Request.addToNavbar(registerRequest(new Debug()),                "Debug Dump (floods log file)","Beta");
       Request.addToNavbar(registerRequest(new UnlockKeys()),           "Unlock Keys (use with caution)","Beta");
+      Request.addToNavbar(registerRequest(new WaterMeter()),           "Water Meter",          "Beta");
     }
 
     registerRequest(new Up());
@@ -188,6 +194,8 @@ public class RequestServer extends NanoHTTPD {
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
     registerRequest(new Cancel());
+    registerRequest(new CoxPHModelView());
+    registerRequest(new CoxPHProgressPage());
     registerRequest(new DomainMapping());
     registerRequest(new DRFModelView());
     registerRequest(new DRFProgressPage());
@@ -248,6 +256,9 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new Models());
     registerRequest(new Frames());
     registerRequest(new ModelMetrics());
+
+    // WaterMeter support APIs
+    registerRequest(new WaterMeter.WaterMeterCpuTicks());
   }
 
   /**
@@ -384,6 +395,15 @@ public class RequestServer extends NanoHTTPD {
   void maybeLogRequest (String uri, String method, Properties parms) {
     boolean filterOutRepetitiveStuff = true;
 
+    String log = String.format("%-4s %s", method, uri);
+    for( Object arg : parms.keySet() ) {
+      String value = parms.getProperty((String) arg);
+      if( value != null && value.length() != 0 )
+        log += " " + arg + "=" + value;
+    }
+
+    Log.info_no_stdout(Sys.HTLOG, log);
+
     if (filterOutRepetitiveStuff) {
       if (uri.endsWith(".css")) return;
       if (uri.endsWith(".js")) return;
@@ -392,22 +412,11 @@ public class RequestServer extends NanoHTTPD {
       if (uri.startsWith("/Typeahead")) return;
       if (uri.startsWith("/2/Typeahead")) return;
       if (uri.endsWith("LogAndEcho.json")) return;
-    }
-
-    String log = String.format("%-4s %s", method, uri);
-    for( Object arg : parms.keySet() ) {
-      String value = parms.getProperty((String) arg);
-      if( value != null && value.length() != 0 )
-        log += " " + arg + "=" + value;
-    }
-
-    Log.info(Sys.HTLOG, log);
-
-    if (filterOutRepetitiveStuff) {
       if (uri.startsWith("/Cloud.json")) return;
       if (uri.contains("Progress")) return;
       if (uri.startsWith("/Jobs.json")) return;
       if (uri.startsWith("/Up.json")) return;
+      if (uri.startsWith("/2/WaterMeter")) return;
     }
 
     Log.info(Sys.HTTPD, log);
