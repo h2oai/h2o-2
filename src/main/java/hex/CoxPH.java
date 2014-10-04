@@ -1,6 +1,5 @@
 package hex;
 
-import jsr166y.CountedCompleter;
 import water.DKV;
 import water.Futures;
 import water.H2O;
@@ -169,227 +168,237 @@ public class CoxPH extends Job {
     }
   }
 
-  CoxPHModel coxph_model;
+  CoxPHModel model;
 
-  @Override public Response serve() {
-    if (use_start_column && !start_column.isInt())
-      throw new IllegalArgumentException("start time must be null or of type integer");
+  @Override
+  public void execImpl() {
+    try {
+      if (use_start_column && !start_column.isInt())
+        throw new IllegalArgumentException("start time must be null or of type integer");
 
-    if (!stop_column.isInt())
-      throw new IllegalArgumentException("stop time must be of type integer");
+      if (!stop_column.isInt())
+        throw new IllegalArgumentException("stop time must be of type integer");
 
-    if (!event_column.isInt() && !event_column.isEnum())
-      throw new IllegalArgumentException("event must be of type integer or factor");
+      if (!event_column.isInt() && !event_column.isEnum())
+        throw new IllegalArgumentException("event must be of type integer or factor");
 
-    if (Double.isNaN(lre_min) || lre_min <= 0)
-      throw new IllegalArgumentException("lre_min must be a positive number");
+      if (Double.isNaN(lre_min) || lre_min <= 0)
+        throw new IllegalArgumentException("lre_min must be a positive number");
 
-    if (iter_max < 1)
-      throw new IllegalArgumentException("iter_max must be a positive integer");
+      if (iter_max < 1)
+        throw new IllegalArgumentException("iter_max must be a positive integer");
 
-    long min_time;
-    if (use_start_column)
-      min_time = (long) start_column.min() + 1;
-    else
-      min_time = (long) stop_column.min();
-    int n_time = (int) (stop_column.max() - min_time + 1);
-    if (n_time > MAX_TIME_BINS)
-      throw new IllegalArgumentException("The time number of time points is " + n_time + "; allowed maximum is " + MAX_TIME_BINS);
+      long min_time;
+      if (use_start_column)
+        min_time = (long) start_column.min() + 1;
+      else
+        min_time = (long) stop_column.min();
+      int n_time = (int) (stop_column.max() - min_time + 1);
+      if (n_time > MAX_TIME_BINS)
+        throw new IllegalArgumentException("The time number of time points is " + n_time +
+                                           "; allowed maximum is " + MAX_TIME_BINS);
 
-    String[] names;
-    if (use_start_column) {
-      names = new String[4];
-      names[0] = source.names()[source.find(start_column)];
-      names[1] = source.names()[source.find(stop_column)];
-      names[2] = source.names()[source.find(event_column)];
-      names[3] = source.names()[source.find(x_column)];
-    } else {
-      names = new String[3];
-      names[0] = source.names()[source.find(stop_column)];
-      names[1] = source.names()[source.find(event_column)];
-      names[2] = source.names()[source.find(x_column)];
-    }
-    source = source.subframe(names);
+      String[] names;
+      if (use_start_column) {
+        names = new String[4];
+        names[0] = source.names()[source.find(start_column)];
+        names[1] = source.names()[source.find(stop_column)];
+        names[2] = source.names()[source.find(event_column)];
+        names[3] = source.names()[source.find(x_column)];
+      } else {
+        names = new String[3];
+        names[0] = source.names()[source.find(stop_column)];
+        names[1] = source.names()[source.find(event_column)];
+        names[2] = source.names()[source.find(x_column)];
+      }
+      source = source.subframe(names);
 
-    coxph_model = new CoxPHModel(this, dest(), source._key, source, null);
+      model = new CoxPHModel(this, dest(), source._key, source, null);
 
-    H2O.H2OCountedCompleter task = new H2O.H2OCountedCompleter() {
-      @Override
-      public void compute2() {
-        Vec[] cols = source.vecs();
+      H2O.H2OCountedCompleter task = new H2O.H2OCountedCompleter() {
+        @Override
+        public void compute2() {
+          Vec[] cols = source.vecs();
 
-        if (use_start_column) {
-          coxph_model.names_coef = source.names()[3];
-          coxph_model.min_time   = (long) start_column.min() + 1;
-        } else {
-          coxph_model.names_coef = source.names()[2];
-          coxph_model.min_time = (long) stop_column.min();
-        }
-        coxph_model.max_time     = (long) stop_column.max();
-        int n_time               = (int) (coxph_model.max_time - coxph_model.min_time + 1);
-        coxph_model.x_mean       = x_column.mean();
-        coxph_model.cumhaz       = MemoryManager.malloc8d(n_time);
-        coxph_model.se_cumhaz    = MemoryManager.malloc8d(n_time);
-        coxph_model.surv         = MemoryManager.malloc8d(n_time);
-        double[] se_term         = MemoryManager.malloc8d(n_time);
+          if (use_start_column) {
+            model.names_coef = source.names()[3];
+            model.min_time   = (long) start_column.min() + 1;
+          } else {
+            model.names_coef = source.names()[2];
+            model.min_time   = (long) stop_column.min();
+          }
+          model.max_time     = (long) stop_column.max();
+          int n_time         = (int) (model.max_time - model.min_time + 1);
+          model.x_mean       = x_column.mean();
+          model.cumhaz       = MemoryManager.malloc8d(n_time);
+          model.se_cumhaz    = MemoryManager.malloc8d(n_time);
+          model.surv         = MemoryManager.malloc8d(n_time);
+          double[] se_term   = MemoryManager.malloc8d(n_time);
 
-        int    i, t;
-        double step      = Double.NaN;
-        double oldCoef   = Double.NaN;
-        double oldLoglik = - Double.MAX_VALUE;
-        double newCoef   = init;
-        double newLoglik;
-        for (i = 0; i <= iter_max; i++) {
-          coxph_model.iter = i;
+          int i, t;
+          double step      = Double.NaN;
+          double oldCoef   = Double.NaN;
+          double oldLoglik = - Double.MAX_VALUE;
+          double newCoef   = init;
+          double newLoglik;
+          for (i = 0; i <= iter_max; i++) {
+            model.iter = i;
 
-          // Map & Reduce
-          CoxPHFitTask coxFit = new CoxPHFitTask(newCoef, coxph_model.min_time, n_time, use_start_column, coxph_model.x_mean).doAll(cols);
-          // Finalize
-          if (!use_start_column) {
-            for (t = n_time - 2; t >= 0; t--) {
-              coxFit.rcumsumRisk[t]   += coxFit.rcumsumRisk[t+1];
-              coxFit.rcumsumXRisk[t]  += coxFit.rcumsumXRisk[t+1];
-              coxFit.rcumsumXXRisk[t] += coxFit.rcumsumXXRisk[t+1];
+            // Map & Reduce
+            CoxPHFitTask coxFit = new CoxPHFitTask(newCoef, model.min_time, n_time,
+                                                   use_start_column, model.x_mean).doAll(cols);
+            // Finalize
+            if (!use_start_column) {
+              for (t = n_time - 2; t >= 0; t--) {
+                coxFit.rcumsumRisk[t]   += coxFit.rcumsumRisk[t + 1];
+                coxFit.rcumsumXRisk[t]  += coxFit.rcumsumXRisk[t + 1];
+                coxFit.rcumsumXXRisk[t] += coxFit.rcumsumXXRisk[t + 1];
+              }
             }
-          }
 
-          if (i == 0) {
-            coxph_model.n              = coxFit.n;
-            coxph_model.n_missing      = coxFit.n_missing;
-            for (t = 0; t < n_time; t++)
-              coxph_model.total_event += coxFit.countEvents[t];
-            coxph_model.n_risk         = coxFit.countRiskSet.clone();
-            coxph_model.n_event        = coxFit.countEvents.clone();
-            coxph_model.n_censor       = coxFit.countCensored.clone();
-            if (!use_start_column)
-              for (t = n_time - 2; t >= 0; t--)
-                coxph_model.n_risk[t] += coxph_model.n_risk[t+1];
-          }
-
-          newLoglik            = 0;
-          coxph_model.gradient = 0;
-          coxph_model.hessian  = 0;
-          switch (ties) {
-            case efron:
-              for (t = n_time - 1; t >= 0; t--) {
-                if (coxFit.countEvents[t] > 0) {
-                  newLoglik += coxFit.sumLogRiskEvents[t];
-                  coxph_model.gradient  += coxFit.sumXEvents[t];
-                  for (long e = 0; e < coxFit.countEvents[t]; e++) {
-                    double frac           = ((double) e) / ((double) coxFit.countEvents[t]);
-                    double term           = coxFit.rcumsumRisk[t]   - frac * coxFit.sumRiskEvents[t];
-                    double dterm          = coxFit.rcumsumXRisk[t]  - frac * coxFit.sumXRiskEvents[t];
-                    double d2term         = coxFit.rcumsumXXRisk[t] - frac * coxFit.sumXXRiskEvents[t];
-                    double dlogTerm       = dterm / term;
-                    newLoglik            -= Math.log(term);
-                    coxph_model.gradient -= dlogTerm;
-                    coxph_model.hessian  -= d2term / term - (dlogTerm * (dterm / term));
-                  }
-                }
-              }
-              break;
-            case breslow:
-              for (t = n_time - 1; t >= 0; t--) {
-                if (coxFit.countEvents[t] > 0) {
-                  newLoglik             += coxFit.sumLogRiskEvents[t];
-                  coxph_model.gradient  += coxFit.sumXEvents[t];
-                  double dlogTerm        = coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t];
-                  newLoglik             -= coxFit.countEvents[t] * Math.log(coxFit.rcumsumRisk[t]);
-                  coxph_model.gradient  -= coxFit.countEvents[t] * dlogTerm;
-                  coxph_model.hessian   -= coxFit.countEvents[t] *
-                    (((coxFit.rcumsumXXRisk[t] / coxFit.rcumsumRisk[t]) -
-                      (dlogTerm * (coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t]))));
-                }
-              }
-              break;
-            default:
-              throw new IllegalArgumentException("ties method must be either efron or breslow");
-          }
-
-          if (newLoglik > oldLoglik) {
             if (i == 0) {
-              coxph_model.null_loglik = newLoglik;
-              coxph_model.maxrsq      = 1 - Math.exp(2 * coxph_model.null_loglik / coxph_model.n);
-              coxph_model.score_test  = - coxph_model.gradient * coxph_model.gradient / coxph_model.hessian;
+              model.n              = coxFit.n;
+              model.n_missing      = coxFit.n_missing;
+              for (t = 0; t < n_time; t++)
+                model.total_event += coxFit.countEvents[t];
+              model.n_risk         = coxFit.countRiskSet.clone();
+              model.n_event        = coxFit.countEvents.clone();
+              model.n_censor       = coxFit.countCensored.clone();
+              if (!use_start_column)
+                for (t = n_time - 2; t >= 0; t--)
+                  model.n_risk[t] += model.n_risk[t + 1];
             }
-            coxph_model.coef          = newCoef;
-            coxph_model.exp_coef      = Math.exp(coxph_model.coef);
-            coxph_model.exp_neg_coef  = Math.exp(- coxph_model.coef);
-            coxph_model.var_coef      = - 1 / coxph_model.hessian;
-            coxph_model.se_coef       = Math.sqrt(coxph_model.var_coef);
-            coxph_model.z_coef        = coxph_model.coef / coxph_model.se_coef;
-            coxph_model.loglik        = newLoglik;
-            coxph_model.loglik_test   = - 2 * (coxph_model.null_loglik - coxph_model.loglik);
-            double diff_init          = coxph_model.coef - init;
-            coxph_model.wald_test     = (diff_init * diff_init) / coxph_model.var_coef;
-            coxph_model.rsq           = 1 - Math.exp(- coxph_model.loglik_test / coxph_model.n);
 
+            newLoglik      = 0;
+            model.gradient = 0;
+            model.hessian  = 0;
             switch (ties) {
               case efron:
-                for (t = 0; t < n_time; t++) {
-                  coxph_model.cumhaz[t]    = 0;
-                  coxph_model.se_cumhaz[t] = 0;
-                  se_term[t]               = 0;
-                  for (long e = 0; e < coxFit.countEvents[t]; e++) {
-                    double frac               = ((double) e) / ((double) coxFit.countEvents[t]);
-                    double haz                = 1 / (coxFit.rcumsumRisk[t] - frac * coxFit.sumRiskEvents[t]);
-                    coxph_model.cumhaz[t]    += haz;
-                    coxph_model.se_cumhaz[t] += haz * haz;
-                    se_term[t]               += (coxFit.rcumsumXRisk[t] - frac * coxFit.sumXRiskEvents[t]) * haz * haz;
+                for (t = n_time - 1; t >= 0; t--) {
+                  if (coxFit.countEvents[t] > 0) {
+                    newLoglik      += coxFit.sumLogRiskEvents[t];
+                    model.gradient += coxFit.sumXEvents[t];
+                    for (long e = 0; e < coxFit.countEvents[t]; e++) {
+                      double frac      = ((double) e) / ((double) coxFit.countEvents[t]);
+                      double term      = coxFit.rcumsumRisk[t]   - frac * coxFit.sumRiskEvents[t];
+                      double dterm     = coxFit.rcumsumXRisk[t]  - frac * coxFit.sumXRiskEvents[t];
+                      double d2term    = coxFit.rcumsumXXRisk[t] - frac * coxFit.sumXXRiskEvents[t];
+                      double dlogTerm  = dterm / term;
+                      newLoglik       -= Math.log(term);
+                      model.gradient  -= dlogTerm;
+                      model.hessian   -= d2term / term - (dlogTerm * (dterm / term));
+                    }
                   }
                 }
                 break;
               case breslow:
-                for (t = 0; t < n_time; t++) {
-                  coxph_model.cumhaz[t]    = coxFit.countEvents[t] / coxFit.rcumsumRisk[t];
-                  coxph_model.se_cumhaz[t] = coxFit.countEvents[t] / (coxFit.rcumsumRisk[t] * coxFit.rcumsumRisk[t]);
-                  se_term[t]               = (coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t]) * coxph_model.cumhaz[t];
+                for (t = n_time - 1; t >= 0; t--) {
+                  if (coxFit.countEvents[t] > 0) {
+                    newLoglik       += coxFit.sumLogRiskEvents[t];
+                    model.gradient  += coxFit.sumXEvents[t];
+                    double dlogTerm  = coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t];
+                    newLoglik       -= coxFit.countEvents[t] * Math.log(coxFit.rcumsumRisk[t]);
+                    model.gradient  -= coxFit.countEvents[t] * dlogTerm;
+                    model.hessian   -= coxFit.countEvents[t] *
+                      (((coxFit.rcumsumXXRisk[t] / coxFit.rcumsumRisk[t]) -
+                        (dlogTerm * (coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t]))));
+                  }
                 }
                 break;
               default:
                 throw new IllegalArgumentException("ties method must be either efron or breslow");
             }
 
-            for (t = 1; t < n_time; t++) {
-              coxph_model.cumhaz[t]    = coxph_model.cumhaz[t - 1] + coxph_model.cumhaz[t];
-              coxph_model.se_cumhaz[t] = coxph_model.se_cumhaz[t - 1] + coxph_model.se_cumhaz[t];
-              se_term[t]               = se_term[t - 1] + se_term[t];
-            }
+            if (newLoglik > oldLoglik) {
+              if (i == 0) {
+                model.null_loglik = newLoglik;
+                model.maxrsq      = 1 - Math.exp(2 * model.null_loglik / model.n);
+                model.score_test  = -  model.gradient * model.gradient / model.hessian;
+              }
+              model.coef          = newCoef;
+              model.exp_coef      = Math.exp(model.coef);
+              model.exp_neg_coef  = Math.exp(- model.coef);
+              model.var_coef      = - 1 / model.hessian;
+              model.se_coef       = Math.sqrt(model.var_coef);
+              model.z_coef        = model.coef / model.se_coef;
+              model.loglik        = newLoglik;
+              model.loglik_test   = - 2 * (model.null_loglik - model.loglik);
+              double diff_init    = model.coef - init;
+              model.wald_test     = (diff_init * diff_init) / model.var_coef;
+              model.rsq           = 1 - Math.exp(- model.loglik_test / model.n);
 
-            for (t = 0; t < n_time; t++) {
-              coxph_model.se_cumhaz[t] = Math.sqrt(coxph_model.se_cumhaz[t] + (se_term[t] * coxph_model.var_coef * se_term[t]));
-              coxph_model.surv[t]      = Math.exp(- coxph_model.cumhaz[t]);
-            }
+              switch (ties) {
+                case efron:
+                  for (t = 0; t < n_time; t++) {
+                    model.cumhaz[t]    = 0;
+                    model.se_cumhaz[t] = 0;
+                    se_term[t]         = 0;
+                    for (long e = 0; e < coxFit.countEvents[t]; e++) {
+                      double frac = ((double) e) / ((double) coxFit.countEvents[t]);
+                      double haz  = 1 / (coxFit.rcumsumRisk[t] - frac * coxFit.sumRiskEvents[t]);
+                      model.cumhaz[t]    += haz;
+                      model.se_cumhaz[t] += haz * haz;
+                      se_term[t]         += (coxFit.rcumsumXRisk[t] - frac * coxFit.sumXRiskEvents[t]) * haz * haz;
+                    }
+                  }
+                  break;
+                case breslow:
+                  for (t = 0; t < n_time; t++) {
+                    model.cumhaz[t]    = coxFit.countEvents[t] / coxFit.rcumsumRisk[t];
+                    model.se_cumhaz[t] = coxFit.countEvents[t] / (coxFit.rcumsumRisk[t] * coxFit.rcumsumRisk[t]);
+                    se_term[t]         = (coxFit.rcumsumXRisk[t] / coxFit.rcumsumRisk[t]) * model.cumhaz[t];
+                  }
+                  break;
+                default:
+                  throw new IllegalArgumentException("ties method must be either efron or breslow");
+              }
 
-            if (newLoglik == 0)
-              coxph_model.lre = - Math.log10(Math.abs(oldLoglik - newLoglik));
-            else
-              coxph_model.lre = - Math.log10(Math.abs((oldLoglik - newLoglik) / newLoglik));
-            if (coxph_model.lre >= lre_min)
-              break;
+              for (t = 1; t < n_time; t++) {
+                model.cumhaz[t]    = model.cumhaz[t - 1]    + model.cumhaz[t];
+                model.se_cumhaz[t] = model.se_cumhaz[t - 1] + model.se_cumhaz[t];
+                se_term[t]         = se_term[t - 1] + se_term[t];
+              }
 
-            step = coxph_model.gradient / coxph_model.hessian;
-            if (Double.isNaN(step) || Double.isInfinite(step))
-              break;
+              for (t = 0; t < n_time; t++) {
+                model.se_cumhaz[t] = Math.sqrt(model.se_cumhaz[t] + (se_term[t] * model.var_coef * se_term[t]));
+                model.surv[t]      = Math.exp(- model.cumhaz[t]);
+              }
 
-            oldCoef   = newCoef;
-            oldLoglik = newLoglik;
+              if (newLoglik == 0)
+                model.lre = - Math.log10(Math.abs(oldLoglik - newLoglik));
+              else
+                model.lre = - Math.log10(Math.abs((oldLoglik - newLoglik) / newLoglik));
+              if (model.lre >= lre_min)
+                break;
+
+              step = model.gradient / model.hessian;
+              if (Double.isNaN(step) || Double.isInfinite(step))
+                break;
+
+              oldCoef   = newCoef;
+              oldLoglik = newLoglik;
+            } else
+              step /= 2;
+
+            newCoef = oldCoef - step;
           }
-          else
-            step /= 2;
-
-          newCoef = oldCoef - step;
+          Futures fs = new Futures();
+          DKV.put(dest(), model, fs);
+          fs.blockForPending();
+          remove();
+          tryComplete();
         }
-        Futures fs = new Futures();
-        DKV.put(dest(), coxph_model, fs);
-        fs.blockForPending();
-        remove();
-        tryComplete();
-      }
-    };
-    start(task);
-    H2O.submitTask(task);
+      };
+      start(task);
+      H2O.submitTask(task);
+    } catch (Throwable t) {
+      t.printStackTrace();
+      cancel(t);
+    }
+  }
 
+  @Override public Response serve() {
+    execImpl();
     return CoxPHProgressPage.redirect(this, self(), dest());
   }
 
