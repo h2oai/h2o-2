@@ -121,11 +121,15 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     for i in range(rowCount):
         if UTF16:
             # u = unichr(233) + unichr(0x0bf2) + unichr(3972) + unichr(6000) + unichr(13231)
+
             # left and right single quotes
-            u = unichr(0x201c) + unichr(0x201d)
+            # u = unichr(0x201c) + unichr(0x201d)
+
             # preferred apostrophe (right single quote)
-            u = unichr(0x2019) 
+            # u = unichr(0x2019) 
+
             u = unichr(0x2018) + unichr(6000) + unichr(0x2019)
+
             # grave and acute?
             # u = unichr(0x60) + unichr(0xb4)
             # don't do this. grave with apostrophe http://www.cl.cam.ac.uk/~mgk25/ucs/quotes.html
@@ -137,11 +141,15 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
                 r = generate_random_utf8_string(length=2)
                 rowData.append(r)
             rowDataCsv = ",".join(rowData)
-        print rowDataCsv
-        print "str:", repr(rowDataCsv), type(rowDataCsv)
-        decoded = rowDataCsv.decode('utf-8')
-        # this has the right length..multibyte utf8 are decoded 
-        print "utf8:", repr(decoded), type(decoded)
+        if UTF16:
+            # we're already passing it unicode. no decoding needed
+            print "utf16:", repr(rowDataCsv), type(rowDataCsv)
+            decoded = rowDataCsv
+        else:
+            print "str:", repr(rowDataCsv), type(rowDataCsv)
+            decoded = rowDataCsv.decode('utf-8')
+            # this has the right length..multibyte utf8 are decoded 
+            print "utf8:" , repr(decoded), type(decoded)
         
         # dsf.write(rowDataCsv + "\n")
         dsf.write(decoded + "\n")
