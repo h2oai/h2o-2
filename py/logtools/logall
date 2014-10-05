@@ -3,7 +3,7 @@
 rm -fr savedir
 mkdir savedir
 
-FILES=*disk*
+FILES=*data1* *disk* *hadoop*
 for f in $FILES
 do
   echo "Processing $f file..."

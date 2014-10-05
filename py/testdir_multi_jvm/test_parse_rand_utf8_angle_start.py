@@ -11,12 +11,8 @@ import codecs
 # sandbox/syn_datasets/syn_7454586956682649267_1000x1.csv: UTF-8 Unicode text
 #sandbox/syn_datasets/syn_8233902282973358813_1000x1.csv: UTF-8 Unicode text
 
-print 'Maybe h2o is supposed to NA rows if they start with an unmatched "'
-print "For now, complain if numRows isn't what I generated"
-print
-print "We throw in double quotes to terminate the string randomly, along with random within the string"
-print "Will this change row/col? not sure. failing on numRows right now"
-print "allow for an extra col to be created relative to my one col expectation"
+print "Always start with right angle"
+print ""
 
 # Interesting. Microsoft Word might introduce it's own super ascii/ (smart quotes)
 # 145, 146, 147, 148, 151
@@ -50,7 +46,9 @@ ASCII = True
 UTF8_MULTIBYTE = False
 
 DOUBLE_QUOTE = True
-DOUBLE_QUOTE_END_RANDOM = True
+DOUBLE_QUOTE_END_RANDOM = False
+ANGLE_START_ALL = True
+RANDOM_EMPTY = True
 
 SINGLE_QUOTE = True
 
@@ -178,10 +176,18 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         # so that means the # of cols will be wrong? maybe allow it to be 1 more below
         # dsf.write(rowDataCsv + "\n")
         # maybe do it randomly
+
+        # random empty lines, plus DOUBLE_QUOTE_END_RANDOM will have random just double quote lines
+        if RANDOM_EMPTY and (random.randint(0,1)==1):
+            decoded = ""
+
+        if ANGLE_START_ALL: 
+            decoded = "<" + decoded
+
         if DOUBLE_QUOTE_END_RANDOM and (random.randint(0,1)==1): 
-            dsf.write(decoded + '"' + "\n")
-        else:
-            dsf.write(decoded + "\n")
+            decoded += '"'
+        
+        dsf.write(decoded + "\n")
 
     dsf.close()
 
@@ -203,7 +209,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_rand_utf8_unmatched_double(self):
+    def test_parse_rand_utf8_angle_start(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -232,7 +238,9 @@ class Basic(unittest.TestCase):
         
             print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
-            self.assertEqual(numRows, rowCount, msg='Wrong numRows likely due to unmatched " row going to NA: %s %s' % (numRows, rowCount))
+
+            # Don't check for now..going to get empty rows
+            # self.assertEqual(numRows, rowCount, msg='Wrong numRows likely due to unmatched " row going to NA: %s %s' % (numRows, rowCount))
             numCols = inspect['numCols']
 
             # because of our double quote termination hack above

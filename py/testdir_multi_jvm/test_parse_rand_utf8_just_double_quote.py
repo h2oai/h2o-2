@@ -50,7 +50,8 @@ ASCII = True
 UTF8_MULTIBYTE = False
 
 DOUBLE_QUOTE = True
-DOUBLE_QUOTE_END_RANDOM = True
+DOUBLE_QUOTE_END_RANDOM = False
+RANDOM_EMPTY = True
 
 SINGLE_QUOTE = True
 
@@ -178,6 +179,11 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         # so that means the # of cols will be wrong? maybe allow it to be 1 more below
         # dsf.write(rowDataCsv + "\n")
         # maybe do it randomly
+
+        # random empty lines, plus DOUBLE_QUOTE_END_RANDOM will have random just double quote lines
+        if RANDOM_EMPTY and (random.randint(0,1)==1):
+            decoded = ""
+
         if DOUBLE_QUOTE_END_RANDOM and (random.randint(0,1)==1): 
             dsf.write(decoded + '"' + "\n")
         else:
@@ -203,7 +209,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_rand_utf8_unmatched_double(self):
+    def test_parse_rand_utf8_just_double_quote(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -232,7 +238,9 @@ class Basic(unittest.TestCase):
         
             print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
-            self.assertEqual(numRows, rowCount, msg='Wrong numRows likely due to unmatched " row going to NA: %s %s' % (numRows, rowCount))
+
+            # Don't check for now..going to get empty rows
+            # self.assertEqual(numRows, rowCount, msg='Wrong numRows likely due to unmatched " row going to NA: %s %s' % (numRows, rowCount))
             numCols = inspect['numCols']
 
             # because of our double quote termination hack above
