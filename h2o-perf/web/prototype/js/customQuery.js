@@ -53,7 +53,7 @@ function showPerfGraphs(test_name, total_hosts, dt) {
             url: '../prototype/php/post2.php',
             type: 'POST',
             dataType: 'JSON',
-            data: 'test_name=' + test_name + '&ip=192.168.1.164&dt='+dt,
+            data: 'test_name=' + test_name + '&ip=172.16.2.164&dt='+dt,
             success: function(data) {
               console.log(data)
               if(data.data.length == 0) {
@@ -73,7 +73,7 @@ function showPerfGraphs(test_name, total_hosts, dt) {
                 url: '../prototype/php/post2.php',
                 type: 'POST',
                 dataType: 'JSON',
-                data: 'test_name=' + test_name + '&ip=192.168.1.16' + (i+1) + '&dt='+dt,
+                data: 'test_name=' + test_name + '&ip=172.16.2.16' + (i+1) + '&dt='+dt,
                 async: false,
                 success: function(data) {
                     if(data.data.length == 0) {
