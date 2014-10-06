@@ -238,7 +238,16 @@ public class NewChunk extends Chunk {
   }
 
   public final boolean isUUID(){return _ls != null && _ds != null; }
-  public final boolean sparse(){return _id != null;}
+  public final boolean sparse(){
+    if (_id != null) {
+      assert(sparseLen() <= _id.length);
+      return true;
+    }
+    else {
+      assert(sparseLen() == len());
+      return false;
+    }
+  }
 
   public void addZeros(int n){
     if(!sparse()) for(int i = 0; i < n; ++i)addNum(0,0);
