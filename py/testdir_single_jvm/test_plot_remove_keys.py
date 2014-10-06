@@ -1,9 +1,8 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_util, h2o_gbm
 
-H2O_SUPPORTS_OVER_500K_COLS = False
-
+print "Plot the time to remove a key vs parsed size"
 print "Stress the # of cols with fp reals here." 
 print "Can pick fp format but will start with just the first (e0)"
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel):
@@ -44,32 +43,25 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_fp_many_cols_fvec(self):
+    def test_plot_remove_keys(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        if H2O_SUPPORTS_OVER_500K_COLS:
-            tryList = [
-                (100, 200000, 'cG', 120, 120),
-                (100, 300000, 'cH', 120, 120),
-                (100, 400000, 'cI', 120, 120),
-                (100, 500000, 'cJ', 120, 120),
-                (100, 700000, 'cL', 120, 120),
-                (100, 800000, 'cM', 120, 120),
-                (100, 900000, 'cN', 120, 120),
-                (100, 1000000, 'cO', 120, 120),
-                (100, 1200000, 'cK', 120, 120),
-            ]
-        else:
-            print "Restricting number of columns tested to <=500,000"
-            tryList = [
-                (100, 50000, 'cG', 400, 400),
-            ]
+        tryList = [
+            (100000, 50, 'cG', 400, 400),
+            (200000, 50, 'cH', 400, 400),
+            (400000, 50, 'cI', 400, 400),
+            (800000, 50, 'cJ', 400, 400),
+            (1000000, 50, 'cK', 400, 400),
+        ]
         
+        xList = []
+        eList = []
+        fList = []
         for (rowCount, colCount, hex_key, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             NUM_CASES = h2o_util.fp_format()
-            sel = random.randint(0, NUM_CASES)
+            sel = random.randint(0, NUM_CASES-1)
             csvFilename = "syn_%s_%s_%s_%s.csv" % (SEEDPERFILE, sel, rowCount, colCount)
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
@@ -79,8 +71,9 @@ class Basic(unittest.TestCase):
             start = time.time()
             print csvFilename, "parse starting"
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
+            parseElapsed = time.time() - start
+            print "Parse only:", parseResult['destination_key'], "took", parseElapsed, "seconds"
             h2o.check_sandbox_for_errors()
-            print "Parse and summary:", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
             # We should be able to see the parse result?
             start = time.time()
@@ -97,6 +90,29 @@ class Basic(unittest.TestCase):
             self.assertEqual(inspect['numRows'], rowCount,
                 "parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
                 (inspect['numRows'], rowCount))
+
+            parsedBytes = inspect['byteSize']
+
+            node = h2o.nodes[0]
+            print "Deleting", hex_key, "at", node.http_addr, "Shouldn't matter what node the delete happens at..global?"
+            start = time.time()
+            node.remove_key(hex_key, timeoutSecs=30)
+            removeElapsed = time.time() - start
+            print "Deleting", hex_key, "took", removeElapsed, "seconds"
+
+            # xList.append(ntrees)
+            xList.append(parsedBytes)
+            eList.append(parseElapsed)
+            fList.append(removeElapsed)
+
+        # just plot the last one
+        if 1==1:
+            xLabel = 'parsedBytes'
+            eLabel = 'parseElapsed'
+            fLabel = 'removeElapsed'
+            eListTitle = ""
+            fListTitle = ""
+            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
 
 if __name__ == '__main__':
     h2o.unit_main()
