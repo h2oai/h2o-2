@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
             ("file_[1-2][0-9].dat.gz", 'c20', 400),
             ("file_[1-4][0-9].dat.gz", 'c40', 400),
             ("file_[1-8][0-9].dat.gz", 'c80', 400),
-            ("file_[1-2][1-8][0-9].dat.gz", 'c160', 800),
+            ("file_[1-2][1-8][0-9].dat.gz", 'c160', 1200),
         ]
         
         xList = []
