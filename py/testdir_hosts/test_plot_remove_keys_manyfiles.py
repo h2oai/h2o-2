@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
             ("file_[1-2][0-9].dat.gz", 'c20', 400),
             ("file_[1-4][0-9].dat.gz", 'c40', 400),
             ("file_[1-8][0-9].dat.gz", 'c80', 400),
-            ("file_[1-2][1-8][0-9].dat.gz", 'c160', 400),
+            ("file_[1-2][1-8][0-9].dat.gz", 'c160', 800),
         ]
         
         xList = []
@@ -51,19 +51,12 @@ class Basic(unittest.TestCase):
 
             # We should be able to see the parse result?
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs2)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
                 "    numCols:", "{:,}".format(inspect['numCols'])
-
-            # should match # of cols in header or ??
-            self.assertEqual(inspect['numCols'], colCount,
-                "parse created result with the wrong number of cols %s %s" % (inspect['numCols'], colCount))
-            self.assertEqual(inspect['numRows'], rowCount,
-                "parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
-                (inspect['numRows'], rowCount))
 
             parsedBytes = inspect['byteSize']
 
