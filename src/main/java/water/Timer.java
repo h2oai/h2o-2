@@ -11,13 +11,13 @@ public class Timer {
    * local variables. */
   private static final ThreadLocal<SimpleDateFormat> dateFormat = new ThreadLocal<SimpleDateFormat>() {
     @Override protected SimpleDateFormat initialValue() {
-      SimpleDateFormat format = new SimpleDateFormat("dd-MMM hh:mm:ss.SSS");
+      SimpleDateFormat format = new SimpleDateFormat("dd-MMM HH:mm:ss.SSS");
       return format;
     }
   };
   private static final ThreadLocal<SimpleDateFormat> shortFormat = new ThreadLocal<SimpleDateFormat>() {
     @Override protected SimpleDateFormat initialValue() {
-      SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss.SSS");
+      SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss.SSS");
       return format;
     }
   };
