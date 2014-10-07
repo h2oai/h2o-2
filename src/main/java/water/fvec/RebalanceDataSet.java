@@ -99,12 +99,13 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
     @Override public boolean logVerbose() { return false; }
 
     private void rebalanceChunk(Vec srcVec, Chunk chk){
+      Chunk srcRaw = null;
       try {
         NewChunk dst = new NewChunk(chk);
         dst._len = dst._sparseLen = 0;
         int rem = chk._len;
         while (rem > 0 && dst._len < chk._len) {
-          Chunk srcRaw = srcVec.chunkForRow(chk._start + dst._len);
+          srcRaw = srcVec.chunkForRow(chk._start + dst._len);
           NewChunk src = new NewChunk((srcRaw));
           src = srcRaw.inflate_impl(src);
           assert src._len == srcRaw._len;
@@ -136,7 +137,7 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
         assert dst._len == chk._len : "len2 = " + dst._len + ", _len = " + chk._len;
         dst.close(dst.cidx(), _fs);
       } catch(RuntimeException t){
-        Log.err("got exception while rebalancing chunk " + chk);
+        Log.err("got exception while rebalancing chunk " + srcRaw == null?"null":srcRaw.getClass().getSimpleName());
         throw t;
       }
     }

@@ -78,59 +78,39 @@ public class NewChunk extends Chunk {
   }
 
   public Iterator<Value> values(int fromIdx, int toIdx){
-    try {
-      final int lId, gId;
-      final int to = Math.min(toIdx, _len);
+    final int lId, gId;
+    final int to = Math.min(toIdx, _len);
+    if (sparse()) {
+      int x = Arrays.binarySearch(_id, 0, _sparseLen, fromIdx);
+      if (x < 0) x = -x - 1;
+      lId = x;
+      gId = x == _sparseLen ? _len : _id[x];
+    } else
+      lId = gId = fromIdx;
+    final Value v = new Value(lId, gId);
+    final Value next = new Value(lId, gId);
+    return new Iterator<Value>() {
+      @Override
+      public final boolean hasNext() {
+        return next._gId < to;
+      }
 
-      if (sparse()) {
-        int x = Arrays.binarySearch(_id, 0, _sparseLen, fromIdx);
-        if (x < 0) x = -x - 1;
-        lId = x;
-        gId = x == _sparseLen ? _len : _id[x];
-      } else
-        lId = gId = fromIdx;
-      final Value v = new Value(lId, gId);
-      final Value next = new Value(lId, gId);
-      return new Iterator<Value>() {
-        @Override
-        public final boolean hasNext() {
-          return next._gId < to;
-        }
+      @Override
+      public final Value next() {
+        if (!hasNext()) throw new NoSuchElementException();
+        v._gId = next._gId;
+        v._lId = next._lId;
+        next._lId++;
+        if (sparse()) next._gId = next._lId < _sparseLen ? _id[next._lId] : _len;
+        else next._gId++;
+        return v;
+      }
 
-        @Override
-        public final Value next() {
-          if (!hasNext()) throw new NoSuchElementException();
-          v._gId = next._gId;
-          v._lId = next._lId;
-          next._lId++;
-          if (sparse()) next._gId = next._lId < _sparseLen ? _id[next._lId] : _len;
-          else next._gId++;
-          return v;
-        }
-
-        @Override
-        public void remove() {
-          throw new UnsupportedOperationException();
-        }
-      };
-    }catch(RuntimeException t){
-      try {
-        StringBuilder sb = new StringBuilder("NewChunk: got exception during values() call, _len = " + _len + " _sparseLen = " + _sparseLen + " _isSparse = " + isSparse() + ", isDouble = " + (_ds != null) + "\n");
-        // print first 10 elems
-        for (int i = 0; i < Math.min(len(),10); ++i)
-          sb.append(i + ": rowId = " + (_id == null ? i : _id[i]) + ", value = " + (_ds != null ? (_ds[i]) : (_ls[i] + " e" + _xs[i])) + "\n");
-        // print last 10
-        if(len() > 10) {
-          sb.append("...");
-          for(int i = Math.max(10,len()-10); i < len(); ++i)
-            sb.append(i + ": rowId = " + (_id == null ? i : _id[i]) + ", value = " + (_ds != null ? (_ds[i]) : (_ls[i] + " e" + _xs[i])) + "\n");
-        }
-        Log.err(sb.toString());
-      } catch(Throwable tt){
-        Log.err(tt);
-      } // just in case there is a bug in my printout, don't mask original exception!
-      throw t;
-    }
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 
 
@@ -238,16 +218,7 @@ public class NewChunk extends Chunk {
   }
 
   public final boolean isUUID(){return _ls != null && _ds != null; }
-  public final boolean sparse(){
-    if (_id != null) {
-      assert(sparseLen() <= _id.length);
-      return true;
-    }
-    else {
-      assert(sparseLen() == len());
-      return false;
-    }
-  }
+  public final boolean sparse(){return _id != null;}
 
   public void addZeros(int n){
     if(!sparse()) for(int i = 0; i < n; ++i)addNum(0,0);
