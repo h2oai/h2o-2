@@ -72,7 +72,7 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
   mcall <- match.call()
   model <-
     list(coefficients = structure(res[[3L]]$coef, names = x),
-         var          = matrix(res[[3L]]$var, 1L, 1L),
+         var          = matrix(res[[3L]]$var_coef, 1L, 1L),
          loglik       = c(res[[3L]]$null_loglik, res[[3L]]$loglik),
          score        = res[[3L]]$score_test,
          iter         = res[[3L]]$iter,

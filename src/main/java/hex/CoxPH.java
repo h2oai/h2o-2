@@ -17,10 +17,6 @@ import water.fvec.Vec;
 import water.util.Utils;
 
 public class CoxPH extends Job {
-  // This Request supports the HTML 'GET' command, and this is the help text
-  // for GET.
-  static final String DOC_GET = "Cox Proportional Hazards Model with 1 predictor";
-
   @API(help="Data Frame",        required=true,  filter=Default.class, json=true)
   public Frame source;
 
@@ -55,7 +51,7 @@ public class CoxPH extends Job {
 
   private class CoxPHVecSelect extends VecSelect { CoxPHVecSelect() { super("source"); } }
 
-  public static enum CoxPHTies { efron, breslow; }
+  public static enum CoxPHTies { efron, breslow }
 
   private void checkArguments() {
     if (use_start_column && !start_column.isInt())
@@ -108,65 +104,71 @@ public class CoxPH extends Job {
     @API(help = "model parameters", json = true)
     final private CoxPH parameters;
     @API(help = "names of coefficients")
-    String names_coef;   // vector
+    String names_coef;     // vector
     @API(help = "coefficients")
-    double coef;         // vector
+    double coef;           // vector
     @API(help = "exp(coefficients)")
-    double exp_coef;     // vector
+    double exp_coef;       // vector
     @API(help = "exp(-coefficients)")
-    double exp_neg_coef; // vector
+    double exp_neg_coef;   // vector
     @API(help = "se(coefficients)")
-    double se_coef;      // vector
+    double se_coef;        // vector
     @API(help = "z-score")
-    double z_coef;       // vector
+    double z_coef;         // vector
     @API(help = "var(coefficients)")
-    double var_coef;     // matrix
+    double var_coef;       // matrix
     @API(help = "null log-likelihood")
-    double null_loglik;  // scalar
+    double null_loglik;    // scalar
     @API(help = "log-likelihood")
-    double loglik;       // scalar
+    double loglik;         // scalar
     @API(help = "log-likelihood test stat")
-    double loglik_test;  // scalar
+    double loglik_test;    // scalar
     @API(help = "Wald test stat")
-    double wald_test;    // scalar
+    double wald_test;      // scalar
     @API(help = "Score test stat")
-    double score_test;   // scalar
+    double score_test;     // scalar
     @API(help = "R-square")
-    double rsq;          // scalar
+    double rsq;            // scalar
     @API(help = "Maximum R-square")
-    double maxrsq;       // scalar
+    double maxrsq;         // scalar
     @API(help = "gradient")
-    double gradient;     // vector
+    double gradient;       // vector
     @API(help = "Hessian")
-    double hessian;      // matrix
+    double hessian;        // matrix
     @API(help = "log relative error")
-    double lre;          // scalar
+    double lre;            // scalar
     @API(help = "number of iterations")
-    int iter;            // scalar
+    int iter;              // scalar
     @API(help = "mean of x column")
-    double x_mean;       // scalar
+    double x_mean;         // scalar
     @API(help = "n")
-    long n;              // scalar
+    long n;                // scalar
     @API(help = "number of rows with missing values")
-    long n_missing;      // scalar
+    long n_missing;        // scalar
     @API(help = "total events")
-    long total_event;    // scalar
+    long total_event;      // scalar
     @API(help = "minimum time")
-    long min_time;       // scalar
+    long min_time;         // scalar
     @API(help = "maximum time")
-    long max_time;       // scalar
+    long max_time;         // scalar
     @API(help = "number at risk")
-    long[] n_risk;       // vector
+    long[] n_risk;         // vector
     @API(help = "number of events")
-    long[] n_event;      // vector
+    long[] n_event;        // vector
     @API(help = "number of censored obs")
-    long[] n_censor;     // vector
+    long[] n_censor;       // vector
+    @API(help = "baseline cumulative hazard")
+    double[] cumhaz_0;     // vector
+    @API(help = "component of var(cumhaz)")
+    double[] var_cumhaz_1; // vector
+    @API(help = "component of var(cumhaz)")
+    double[] var_cumhaz_2; // vector
     @API(help = "cumulative hazard")
-    double[] cumhaz;     // vector
+    double[] cumhaz;       // vector
     @API(help = "se(cumulative hazard)")
-    double[] se_cumhaz;  // vector
+    double[] se_cumhaz;    // vector
     @API(help = "survival function")
-    double[] surv;       // vector
+    double[] surv;         // vector
 
     public CoxPHModel(CoxPH job, Key selfKey, Key dataKey, Frame fr, float[] priorClassDist) {
       super(selfKey, dataKey, fr, priorClassDist);
@@ -196,6 +198,9 @@ public class CoxPH extends Job {
       max_time     = (long) stop_column.max();
       int n_time   = (int) (max_time - min_time + 1);
       x_mean       = x_column.mean();
+      cumhaz_0     = MemoryManager.malloc8d(n_time);
+      var_cumhaz_1 = MemoryManager.malloc8d(n_time);
+      var_cumhaz_2 = MemoryManager.malloc8d(n_time);
       cumhaz       = MemoryManager.malloc8d(n_time);
       se_cumhaz    = MemoryManager.malloc8d(n_time);
       surv         = MemoryManager.malloc8d(n_time);
@@ -276,42 +281,48 @@ public class CoxPH extends Job {
       rsq           = 1 - Math.exp(- loglik_test / n);
     }
 
-    protected void calcSurvfit(CoxPHMRTask coxMR, double[] se_term) {
+    protected void calcCumhaz_0(CoxPHMRTask coxMR) {
       switch (parameters.ties) {
         case efron:
-          for (int t = 0; t < cumhaz.length; t++) {
-            cumhaz[t]    = 0;
-            se_cumhaz[t] = 0;
-            se_term[t]   = 0;
+          for (int t = 0; t < cumhaz_0.length; t++) {
+            cumhaz_0[t]     = 0;
+            var_cumhaz_1[t] = 0;
+            var_cumhaz_2[t] = 0;
             for (long e = 0; e < coxMR.countEvents[t]; e++) {
-              double frac   = ((double) e) / ((double) coxMR.countEvents[t]);
-              double haz    = 1 / (coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t]);
-              cumhaz[t]    += haz;
-              se_cumhaz[t] += haz * haz;
-              se_term[t]   += (coxMR.rcumsumXRisk[t] - frac * coxMR.sumXRiskEvents[t]) * haz * haz;
+              double frac      = ((double) e) / ((double) coxMR.countEvents[t]);
+              double haz       = 1 / (coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t]);
+              cumhaz_0[t]     += haz;
+              var_cumhaz_1[t] += haz * haz;
+              var_cumhaz_2[t] += (coxMR.rcumsumXRisk[t] - frac * coxMR.sumXRiskEvents[t]) * haz * haz;
             }
           }
           break;
         case breslow:
-          for (int t = 0; t < cumhaz.length; t++) {
-            cumhaz[t]    = coxMR.countEvents[t] / coxMR.rcumsumRisk[t];
-            se_cumhaz[t] = coxMR.countEvents[t] / (coxMR.rcumsumRisk[t] * coxMR.rcumsumRisk[t]);
-            se_term[t]   = (coxMR.rcumsumXRisk[t] / coxMR.rcumsumRisk[t]) * cumhaz[t];
+          for (int t = 0; t < cumhaz_0.length; t++) {
+            cumhaz_0[t]     = coxMR.countEvents[t] / coxMR.rcumsumRisk[t];
+            var_cumhaz_1[t] = coxMR.countEvents[t] / (coxMR.rcumsumRisk[t] * coxMR.rcumsumRisk[t]);
+            var_cumhaz_2[t] = (coxMR.rcumsumXRisk[t] / coxMR.rcumsumRisk[t]) * cumhaz_0[t];
           }
           break;
         default:
           throw new IllegalArgumentException("ties method must be either efron or breslow");
       }
 
-      for (int t = 1; t < cumhaz.length; t++) {
-        cumhaz[t]    = cumhaz[t - 1]    + cumhaz[t];
-        se_cumhaz[t] = se_cumhaz[t - 1] + se_cumhaz[t];
-        se_term[t]   = se_term[t - 1]   + se_term[t];
+      for (int t = 1; t < cumhaz_0.length; t++) {
+        cumhaz_0[t]     = cumhaz_0[t - 1]     + cumhaz_0[t];
+        var_cumhaz_1[t] = var_cumhaz_1[t - 1] + var_cumhaz_1[t];
+        var_cumhaz_2[t] = var_cumhaz_2[t - 1] + var_cumhaz_2[t];
       }
+    }
 
-      for (int t = 0; t < cumhaz.length; t++) {
-        se_cumhaz[t] = Math.sqrt(se_cumhaz[t] + (se_term[t] * var_coef * se_term[t]));
-        surv[t]      = Math.exp(- cumhaz[t]);
+    protected void calcSurvfit(double x_new) {
+      double x_centered = x_new - x_mean;
+      double risk_new = Math.exp(coef * x_centered);
+      for (int t = 0; t < cumhaz_0.length; t++) {
+        double gamma  = x_centered * cumhaz_0[t] - var_cumhaz_2[t];
+        cumhaz[t]     = risk_new * cumhaz_0[t];
+        se_cumhaz[t]  = risk_new * Math.sqrt(var_cumhaz_1[t] + (gamma * var_coef * gamma));
+        surv[t]       = Math.exp(- cumhaz[t]);
       }
     }
 
@@ -320,23 +331,29 @@ public class CoxPH extends Job {
 
       sb.append("<h4>Data</h4>");
       sb.append("<table class='table table-striped table-bordered table-condensed'><col width=\"25%\"><col width=\"75%\">");
-      sb.append("<tr><th>Number of Complete Cases</th><td>"           + n           + "</td></tr>");
-      sb.append("<tr><th>Number of Non Complete Cases</th><td>"       + n_missing   + "</td></tr>");
-      sb.append("<tr><th>Number of Events in Complete Cases</th><td>" + total_event + "</td></tr>");
+      sb.append("<tr><th>Number of Complete Cases</th><td>");          sb.append(n);          sb.append("</td></tr>");
+      sb.append("<tr><th>Number of Non Complete Cases</th><td>");      sb.append(n_missing);  sb.append("</td></tr>");
+      sb.append("<tr><th>Number of Events in Complete Cases</th><td>");sb.append(total_event);sb.append("</td></tr>");
       sb.append("</table>");
 
       sb.append("<h4>Coefficients</h4>");
       sb.append("<table class='table table-striped table-bordered table-condensed'>");
       sb.append("<tr><th></th><td>coef</td><td>exp(coef)</td><td>se(coef)</td><td>z</td></tr>");
-      sb.append("<tr><th>" + names_coef + "</th><td>" + coef + "</td><td>" + exp_coef + "</td><td>" + se_coef + "</td><td>" + z_coef + "</td></tr>");
+      sb.append("<tr><th>");sb.append(names_coef);sb.append("</th><td>");sb.append(coef);   sb.append("</td><td>");
+                            sb.append(exp_coef);  sb.append("</td><td>");sb.append(se_coef);sb.append("</td><td>");
+                            sb.append(z_coef);    sb.append("</td></tr>");
       sb.append("</table>");
 
       sb.append("<h4>Model Statistics</h4>");
       sb.append("<table class='table table-striped table-bordered table-condensed'><col width=\"15%\"><col width=\"85%\">");
-      sb.append("<tr><th>Rsquare</th><td>" + String.format("%.3f", rsq) + " (max possible = " + String.format("%.3f", maxrsq) + ")</td></tr>");
-      sb.append("<tr><th>Likelihood ratio test</th><td>" + String.format("%.2f", loglik_test) + " on 1 df</td></tr>");
-      sb.append("<tr><th>Wald test            </th><td>" + String.format("%.2f", wald_test)   + " on 1 df</td></tr>");
-      sb.append("<tr><th>Score (logrank) test </th><td>" + String.format("%.2f", score_test)  + " on 1 df</td></tr>");
+      sb.append("<tr><th>Rsquare</th><td>");sb.append(String.format("%.3f", rsq));
+      sb.append(" (max possible = ");       sb.append(String.format("%.3f", maxrsq));sb.append(")</td></tr>");
+      sb.append("<tr><th>Likelihood ratio test</th><td>");sb.append(String.format("%.2f", loglik_test));
+      sb.append(" on 1 df</td></tr>");
+      sb.append("<tr><th>Wald test            </th><td>");sb.append(String.format("%.2f", wald_test));
+      sb.append(" on 1 df</td></tr>");
+      sb.append("<tr><th>Score (logrank) test </th><td>");sb.append(String.format("%.2f", score_test));
+      sb.append(" on 1 df</td></tr>");
       sb.append("</table>");
     }
 
@@ -361,26 +378,18 @@ public class CoxPH extends Job {
         public void compute2() {
           Vec[] cols = source.vecs();
 
-          int n_time       = model.cumhaz.length;
+          int n_time       = model.cumhaz_0.length;
           double step      = Double.NaN;
           double oldCoef   = Double.NaN;
           double oldLoglik = - Double.MAX_VALUE;
           double newCoef   = init;
-          double[] se_term = MemoryManager.malloc8d(model.se_cumhaz.length);
           for (int i = 0; i <= iter_max; i++) {
             model.iter = i;
 
-            // Map & Reduce
+            // Map, Reduce & Finalize
             CoxPHMRTask coxMR = new CoxPHMRTask(newCoef, model.min_time, n_time,
                                                 use_start_column, model.x_mean).doAll(cols);
-            // Finalize
-            if (!use_start_column) {
-              for (int t = n_time - 2; t >= 0; t--) {
-                coxMR.rcumsumRisk[t]   += coxMR.rcumsumRisk[t + 1];
-                coxMR.rcumsumXRisk[t]  += coxMR.rcumsumXRisk[t + 1];
-                coxMR.rcumsumXXRisk[t] += coxMR.rcumsumXXRisk[t + 1];
-              }
-            }
+            coxMR.finish();
 
             if (i == 0)
               model.calcCounts(coxMR);
@@ -388,7 +397,7 @@ public class CoxPH extends Job {
             double newLoglik = model.calcLoglik(coxMR);
             if (newLoglik > oldLoglik) {
               model.calcModelStats(newCoef, newLoglik);
-              model.calcSurvfit(coxMR, se_term);
+              model.calcCumhaz_0(coxMR);
 
               if (newLoglik == 0)
                 model.lre = - Math.log10(Math.abs(oldLoglik - newLoglik));
@@ -408,6 +417,8 @@ public class CoxPH extends Job {
 
             newCoef = oldCoef - step;
           }
+          model.calcSurvfit(model.x_mean);
+
           Futures fs = new Futures();
           DKV.put(dest(), model, fs);
           fs.blockForPending();
@@ -549,6 +560,16 @@ public class CoxPH extends Job {
       Utils.add(rcumsumRisk,      that.rcumsumRisk);
       Utils.add(rcumsumXRisk,     that.rcumsumXRisk);
       Utils.add(rcumsumXXRisk,    that.rcumsumXXRisk);
+    }
+
+    protected void finish() {
+      if (!_use_start_column) {
+        for (int t = rcumsumRisk.length - 2; t >= 0; t--) {
+          rcumsumRisk[t]   += rcumsumRisk[t + 1];
+          rcumsumXRisk[t]  += rcumsumXRisk[t + 1];
+          rcumsumXXRisk[t] += rcumsumXXRisk[t + 1];
+        }
+      }
     }
   }
 }
