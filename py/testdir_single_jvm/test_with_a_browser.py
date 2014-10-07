@@ -19,7 +19,7 @@ class Basic(unittest.TestCase):
             # hdfs_name_node='10.78.14.235:9000', hdfs_version='0.20.2', 
             aws_credentials='/home/kevin/.ec2/AwsCredentials.properties',
             hdfs_config="/home/kevin/.ec2/core-site.xml",
-            java_heap_GB=20, base_port=54321,
+            java_heap_GB=12, base_port=54321,
             java_extra_args='-XX:+PrintGCDetails')
             
         else:

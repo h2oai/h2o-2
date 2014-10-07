@@ -37,8 +37,14 @@ class Basic(unittest.TestCase):
         for c in cAll:
 
             for i in range(10):
-                # race between remove and import?
+                # interesting. this will pass ../.. to h2o which is legal for h2o
+                # but if this is run on a remote machine, we were assuming matching absolute paths
+                # not relative to a current wd. I suppose we should test ../.. relative paths
+                # but it would be local machine only (means you can't use this with -cj config.json ??
                 csvPathname = h2o.find_file('smalldata/jira/v-3.csv')
+                # http://172.16.2.222:54321/2/ImportFiles2.json?path=../../smalldata/jira/v-3.csv
+
+                # race between remove and import?
                 h2o.nodes[0].remove_all_keys()
                 importResult = h2o.nodes[0].import_files(csvPathname, timeoutSecs=15)
                 h2o.verboseprint(h2o.dump_json(importResult))
