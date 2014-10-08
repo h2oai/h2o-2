@@ -57,9 +57,9 @@ spectra_low <- vars[seq(2671,3579,by=10)] # cheap way of binning: just take ever
 spectra_low_all <- vars[seq(2671,3579,by=1)]
 spectra_low_lots <- vars[seq(2671,3579,by=5)]
 extra <- vars[3580:3595]
-predictors <- c(spectra_hi, spectra_omit, spectra_low, extra)
-allpredictors <- c(spectra_hi_all, spectra_omit, spectra_low_all, extra)
-lotspredictors <- c(spectra_hi_lots, spectra_omit, spectra_low_lots, extra)
+predictors <- c(spectra_hi, spectra_low, extra)
+allpredictors <- c(spectra_hi_all, spectra_low_all, extra)
+lotspredictors <- c(spectra_hi_lots, spectra_low_lots, extra)
 targets <- vars[3596:3600]
 
 
@@ -88,11 +88,11 @@ for (resp in 1:length(targets)) {
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 28 ## submission index
-blend = T
+submission = 29 ## submission index
+blend = F
 
 ## Settings
-n_loop <- 1
+n_loop <- 10
 n_fold <- 5 # must be <= 5!!
 ensemble = (n_loop > 1) # only used if blend = F and submit = T
 
@@ -109,16 +109,16 @@ for (resp in 1:length(targets)) {
       
       # run grid search with n-fold cross-validation
       gridmodel <- 
-        h2o.deeplearning(x = allpredictors,
+        h2o.deeplearning(x = predictors,
                          y = targets[resp],
-                         data = train_hex1,
+                         data = train_hex,
                          nfolds = n_fold,
                          classification = F,
                          score_training_samples = 0,
                          score_validation_samples = 0,
                          score_duty_cycle = 0.1,
                          score_interval = 5,
-                         force_load_balance=F,
+                         force_load_balance=T,
                          single_node_mode=F,
                          activation="Rectifier", hidden = c(300,300,300), epochs=1000, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 50000
   #                       activation="RectifierWithDropout", hidden_dropout_ratios = c(0.1,0.1), 
@@ -208,11 +208,11 @@ for (resp in 1:length(targets)) {
             #             valid_resp <- response_folds[[2]]
             
             #train_data <- train_hex
-             if (nn==3) train_data <- train_hex1
-            if (nn==4) train_data <- train_hex2
-            if (nn==5) train_data <- train_hex3
-             if (nn==1) train_data <- train_hex4
-             if (nn==2) train_data <- train_hex5
+            if (nn==1) train_data <- train_hex1
+            if (nn==2) train_data <- train_hex2
+            if (nn==3) train_data <- train_hex3
+            if (nn==4) train_data <- train_hex4
+            if (nn==5) train_data <- train_hex5
             
             splits <- h2o.splitFrame(train_data, ratios = 1.-1./n_fold, shuffle=T)
             train <- splits[[1]]
@@ -335,11 +335,11 @@ for (resp in 1:length(targets)) {
             #             train_resp <- response_folds[[1]]
             #             valid_resp <- response_folds[[2]]
             
-            if (nn==2) train_data <- train_hex1
-            if (nn==3) train_data <- train_hex2
-            if (nn==4) train_data <- train_hex3
-            if (nn==5) train_data <- train_hex4
-            if (nn==1) train_data <- train_hex5
+            if (nn==1) train_data <- train_hex1
+            if (nn==2) train_data <- train_hex2
+            if (nn==3) train_data <- train_hex3
+            if (nn==4) train_data <- train_hex4
+            if (nn==5) train_data <- train_hex5
 
             splits <- h2o.splitFrame(train_data, ratios = 1.-1./n_fold, shuffle=T)
             train <- splits[[1]]
@@ -474,7 +474,7 @@ for (resp in 1:length(targets)) {
         #cat("\nStitched together (cross-check, used for blending):", mean((blend_holdout_train_preds - y)^2), "\n")
         
       } #blend
-      else {
+      else { # no blend
         if (!ensemble) {
           # build final model on full training data with hardcoded parameters
           model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_hardcoded"), data = train_hex, classification = F, score_training_samples = 0, force_load_balance=T,
@@ -498,34 +498,29 @@ for (resp in 1:length(targets)) {
         } # no ensemble
         else {
           for (n in 1:n_loop) {
-            
-            model <- h2o.deeplearning(x = allpredictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop), data = train_hex, classification = F, force_load_balance=F,
-                                      activation="Rectifier", hidden = c(50,50,50), epochs = 200, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000)
-            
-            
-#             #ensemble model on full training data without holdout validation
-#             if (resp == 1 | resp == 4)
-#             model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop), 
-#                                       data = train_hex,
-#                                       classification = F, 
-#                                       score_training_samples = 0,
-#                                       score_validation_samples = 0,
-#                                       score_duty_cycle = 0,
-#                                       force_load_balance=F,
-#                                       override_with_best_model=T,
-#                                       activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)   
-#             else if (resp == 3 | resp ==5)
-#               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F)
-#             else
-#               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop), 
-#                                         data = train_hex,
-#                                         classification = F, 
-#                                         score_training_samples = 0,
-#                                         score_validation_samples = 0,
-#                                         score_duty_cycle = 0,
-#                                         force_load_balance=F,
-#                                         override_with_best_model=T,
-#                                         activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)                           
+            #ensemble model on full training data without holdout validation
+            if (resp == 1 | resp == 5 | resp == 4)
+            model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop),
+                                      data = train_hex,
+                                      classification = F,
+                                      score_training_samples = 0,
+                                      score_validation_samples = 0,
+                                      score_duty_cycle = 0,
+                                      force_load_balance=F,
+                                      override_with_best_model=T,
+                                      activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)
+            else
+              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop),
+                                        data = train_hex,
+                                        classification = F,
+                                        score_training_samples = 0,
+                                        score_validation_samples = 0,
+                                        score_duty_cycle = 0,
+                                        force_load_balance=F,
+                                        override_with_best_model=T,
+                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)
+
+
             test_preds <- h2o.predict(model, test_hex)
 
             # transform back
@@ -535,7 +530,6 @@ for (resp in 1:length(targets)) {
 
             if (n == 1) {
               test_preds_blend = test_preds
-              #if (resp==3 | resp==5) break #no need for ensemble for GLM
             } else {
               test_preds_blend <- cbind(test_preds_blend, test_preds[,1])
             }
