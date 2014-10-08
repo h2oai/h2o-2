@@ -52,14 +52,16 @@ vars <- colnames(train_hex)
 spectra_hi <- vars[seq(2,2500,by=10)] # cheap way of binning: just take every 10-th column
 spectra_hi_all <- vars[seq(2,2500,by=1)]
 spectra_hi_lots <- vars[seq(2,2500,by=5)]
-spectra_omit <- vars[seq(2501,2670,by=10)] # cheap way of binning: just take every 10-th column
+spectra_omit <- vars[seq(2501,2670,by=1)] # cheap way of binning: just take every 10-th column
 spectra_low <- vars[seq(2671,3579,by=10)] # cheap way of binning: just take every 10-th column
 spectra_low_all <- vars[seq(2671,3579,by=1)]
 spectra_low_lots <- vars[seq(2671,3579,by=5)]
 extra <- vars[3580:3595]
-predictors <- c(spectra_hi, spectra_low, extra)
-allpredictors <- c(spectra_hi_all, spectra_low_all, extra)
-lotspredictors <- c(spectra_hi_lots, spectra_low_lots, extra)
+
+predictors <- c(spectra_hi_all, spectra_omit, spectra_low_all, extra)
+
+allpredictors <- c(spectra_hi_all, spectra_omit, spectra_low_all, extra)
+lotspredictors <- c(spectra_hi_lots, spectra_omit, spectra_low_lots, extra)
 targets <- vars[3596:3600]
 
 
@@ -88,11 +90,11 @@ for (resp in 1:length(targets)) {
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 29 ## submission index
+submission = 30 ## submission index
 blend = F
 
 ## Settings
-n_loop <- 10
+n_loop <- 1
 n_fold <- 5 # must be <= 5!!
 ensemble = (n_loop > 1) # only used if blend = F and submit = T
 
@@ -508,7 +510,7 @@ for (resp in 1:length(targets)) {
                                       score_duty_cycle = 0,
                                       force_load_balance=F,
                                       override_with_best_model=T,
-                                      activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)
+                                      activation="Rectifier", hidden = c(100,100,100), epochs = 1000, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)
             else
               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop),
                                         data = train_hex,
@@ -518,7 +520,7 @@ for (resp in 1:length(targets)) {
                                         score_duty_cycle = 0,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)
+                                        activation="Rectifier", hidden = c(100,100,100), epochs = 1000, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)
 
 
             test_preds <- h2o.predict(model, test_hex)
@@ -620,3 +622,29 @@ print(Sys.info())
 
 #GOAL: 1/5*(sqrt(0.06)+sqrt(0.64)+sqrt(0.15)+sqrt(0.07)+sqrt(0.09))
 #CURRENT 0.42: 1/5*(sqrt(0.10)+sqrt(0.77)+sqrt(0.122)+sqrt(0.063)+sqrt(0.117))
+# 
+# install.packages("e1071")
+# library(e1071)
+# 
+# train <- read.csv("./training.csv",header=TRUE,stringsAsFactors=FALSE)
+# test <- read.csv("./sorted_test.csv",header=TRUE,stringsAsFactors=FALSE)
+# 
+# submission <- test[,1]
+# 
+# labels <- train[,c("Ca","P","pH","SOC","Sand")]
+# 
+# train <- train[,2:3579]
+# test <- test[,2:3579]
+# 
+# svms <- lapply(1:ncol(labels),
+#                function(i)
+#                {
+#                  svm(train,labels[,i],cost=10000,scale=FALSE)
+#                })
+# 
+# predictions <- sapply(svms,predict,newdata=test)
+# 
+# colnames(predictions) <- c("Ca","P","pH","SOC","Sand")
+# submission <- cbind(PIDN=submission,predictions)
+# 
+# write.csv(submission,"beating_benchmark.csv",row.names=FALSE,quote=FALSE)
