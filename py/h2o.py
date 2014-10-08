@@ -1712,6 +1712,19 @@ class H2O(object):
         verboseprint("\ninsert_missing_values result:", dump_json(a))
         return a
 
+    def impute(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'source': None,
+            'column': None,
+            'method': None, # mean, mode, median
+            'group_by': None, # comma separated column names
+        }
+        browseAlso = kwargs.pop('browseAlso', False)
+        check_params_update_kwargs(params_dict, kwargs, 'impute', print_params=True)
+        a = self.__do_json_request('2/Impute.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nimpute result:", dump_json(a))
+        return a
+
     def frame_split(self, timeoutSecs=120, **kwargs):
         params_dict = {
             'source': None,
