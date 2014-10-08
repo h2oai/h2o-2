@@ -49,7 +49,7 @@ vars <- colnames(train_hex)
 #predictors <- vars[1:784] 
 #targets <- vars[785]
 
-spectra_hi <- vars[seq(2,2500,by=10)] # cheap way of binning: just take every 10-th column
+spectra_hi <- vars[seq(2,2500,by=25)] # cheap way of binning: just take every 25-th column
 spectra_hi_all <- vars[seq(2,2500,by=1)]
 spectra_hi_lots <- vars[seq(2,2500,by=5)]
 spectra_omit <- vars[seq(2501,2670,by=1)] # cheap way of binning: just take every 10-th column
@@ -58,14 +58,14 @@ spectra_low_all <- vars[seq(2671,3579,by=1)]
 spectra_low_lots <- vars[seq(2671,3579,by=5)]
 extra <- vars[3580:3595]
 
-predictors <- c(spectra_hi_all, spectra_omit, spectra_low_all, extra)
+predictors <- c(spectra_hi, spectra_low, extra)
 
 allpredictors <- c(spectra_hi_all, spectra_omit, spectra_low_all, extra)
 lotspredictors <- c(spectra_hi_lots, spectra_omit, spectra_low_lots, extra)
 targets <- vars[3596:3600]
 
 
-transform = c(F,T,F,F,F)
+transform = c(F,F,F,F,F)
 
 # Transform data
 offsets <- vector("numeric", length=length(targets))
@@ -90,11 +90,11 @@ for (resp in 1:length(targets)) {
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 30 ## submission index
-blend = F
+submission = 31 ## submission index
+blend = T
 
 ## Settings
-n_loop <- 1
+n_loop <- 5
 n_fold <- 5 # must be <= 5!!
 ensemble = (n_loop > 1) # only used if blend = F and submit = T
 
@@ -362,8 +362,8 @@ for (resp in 1:length(targets)) {
                                         force_load_balance=F,
                                         override_with_best_model=T,
                                         #activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000
-                                        #activation="Rectifier", hidden = c(800,800,800), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000  0.10    
-                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000 #0.10
+                                        activation="Rectifier", hidden = c(800,800,800), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000  #0.10
+                                        #activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000 #0.10
                                         #activation="Rectifier", hidden = c(800,800,800),epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000     #0.08
                                         #activation="Rectifier", hidden = c(20,20,20), epochs = 200, l1 = 0, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 1, train_samples_per_iteration = 1000  #0.10 nice   
                                       )
@@ -378,7 +378,7 @@ for (resp in 1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.77
+                                        activation="Rectifier", hidden = c(300,300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)
             
             else if (resp == 3) #pH
 #               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) #0.12
@@ -393,7 +393,7 @@ for (resp in 1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.16
+                                        activation="Rectifier", hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)
             else if (resp == 4) #SOC
               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
                                         data = train,
@@ -405,7 +405,7 @@ for (resp in 1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.06                          
+                                        activation="Rectifier", hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)
              else if (resp == 5) #Sand
 #               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) # 0.116
 
@@ -419,8 +419,8 @@ for (resp in 1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.12
- 
+                                        activation="Rectifier", hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)
+
             ## Use the model and store results
             train_preds <- h2o.predict(model, train)
             valid_preds <- h2o.predict(model, valid)
@@ -467,8 +467,8 @@ for (resp in 1:length(targets)) {
             cat("\nRMSE on training dataset for", targets[resp], ":", sqrt(msetrain), "\n")
             cat("\nMSE on holdout validation dataset for", targets[resp], ":", msevalid, "\n")
             cat("\nRMSE on holdout validation dataset for", targets[resp], ":", sqrt(msevalid), "\n")   
-          } 
-        }
+          } # nn fold
+        } # n loop
         holdout_valid_se[resp] <- holdout_valid_se[resp]/n_loop
         holdout_valid_mse[resp] <- holdout_valid_se[resp]/nrow(train_hex) ## total number of (cross-)validation rows = # training rows
         cat("\nOverall", n_fold, "-fold cross-validated MSE on training dataset for", targets[resp], ":", holdout_valid_mse[resp], "\n")
@@ -546,7 +546,7 @@ for (resp in 1:length(targets)) {
       sink(paste0(path_output, "/submission_", submission, "_", targets[resp], "_score"))
       print(model)
       sink()
-    } else if (!ensemble) {
+    } else {
       cat("\nOverall", n_fold, "-fold cross-validated MSE on training dataset:", holdout_valid_mse, "\n")
       cat("\nOverall", n_fold, "-fold cross-validated RMSE on training dataset:", sqrt(holdout_valid_mse), "\n")
       cat("\nOverall", n_fold, "-fold cross-validated CMRMSE on training dataset:", mean(sqrt(holdout_valid_mse)), "\n")
@@ -619,6 +619,11 @@ print(Sys.info())
 #Overall 5 -fold cross-validated MSE on training dataset: 0.09116863 1.079429 0.1673652 0.07868158 0.1491798 #submission 26, same as 24, rotated train shuffles, cv score 0.4833481
 #Overall 5 -fold cross-validated MSE on training dataset: 0.07162816 1.150291 0.1680577 0.08794933 0.1489059 #submission 27, same as 26, rotated one more, cv score 0.486
 #Overall 5 -fold cross-validated MSE on training dataset: 0.1125352 0.8863004 0.1437713 0.07582662 0.132544 #submission 28, with log-transform for P, cv score 0.459
+#Overall 5 -fold cross-validated MSE on training dataset: 0.08975365 0.1575689 0.1751598 0.07799052 0.1228687 # submission 31, same as submission 20, but with 5x 5-fold cv, shuffled datasets, cv score: 0.3489707, scored 0.58!!
+#Overall 5 -fold cross-validated MSE on training dataset: 0.09185992 0.8122152 0.1776434 0.06928164 0.1204961 # submission 31 again, had log-transformed P mixed up, cv score 0.4472
+
+#Try next: more epochs (100 instead of 50)
+#Try: log-transform for P
 
 #GOAL: 1/5*(sqrt(0.06)+sqrt(0.64)+sqrt(0.15)+sqrt(0.07)+sqrt(0.09))
 #CURRENT 0.42: 1/5*(sqrt(0.10)+sqrt(0.77)+sqrt(0.122)+sqrt(0.063)+sqrt(0.117))
