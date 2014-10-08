@@ -359,6 +359,13 @@ def clean_sandbox_stdout_stderr():
             verboseprint("cleaning", f)
             os.remove(f)
 
+def clean_sandbox_doneToLine():
+    if os.path.exists(LOG_DIR):
+        files = []
+        # glob.glob returns an iterator
+        for f in glob.glob(LOG_DIR + '/*doneToLine*'):
+            verboseprint("cleaning", f)
+            os.remove(f)
 
 def tmp_file(prefix='', suffix='', tmp_dir=None):
     if not tmp_dir:
@@ -869,7 +876,11 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
         pass
 
     check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
+    # get rid of all those pesky line marker files. Unneeded now
+    clean_sandbox_doneToLine()
     nodeList[:] = []
+
+
 
 # don't need any more?
 # Used before to make sure cloud didn't go away between unittest defs
@@ -2581,7 +2592,12 @@ class H2O(object):
         # now unzip the files in that directory
         for zname in nameList:
             resultList = h2o_util.flat_unzip(logDir + "/" + zname, logDir)
-            print "logDir:", logDir, "resultList:", resultList
+
+        print ""
+        for logfile in resultList:
+            numLines = sum(1 for line in open(logfile))
+            print "logDir:", logDir, "resultList:", resultList, "Lines:", numLines
+        print ""
         return resultList
 
 
