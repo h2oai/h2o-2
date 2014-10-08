@@ -111,7 +111,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=300)
             numRows = inspect['numRows']
             numCols = inspect['numCols']
-            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols, pollTimeoutSecs=120, timeoutSecs=300)
+            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols, timeoutSecs=300)
             h2o_cmd.infoFromSummary(summary)
 
 
