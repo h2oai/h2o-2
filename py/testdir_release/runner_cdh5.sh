@@ -74,7 +74,7 @@ chmod +x /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
 EA=" -ea"
-UDP_DROP=" -random_udp_drop"
+# UDP_DROP=" -random_udp_drop"
 UDP_DROP=""
 echo "port: start looking at 55821. Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port)"
 echo "yarn jar $CDH5_YARN_JAR water.hadoop.h2odriver -jt $CDH5_YARN_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH5_YARN_HEAP -nodes $CDH5_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node $EA $UDP_DROP" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh

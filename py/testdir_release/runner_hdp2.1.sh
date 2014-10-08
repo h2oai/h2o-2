@@ -84,7 +84,8 @@ EA=""
 # does this has to be greater than the # of jvms? it's a total, not a per jvm total?
 # THREADS=" -nthreads 8"
 # THREADS=" -nthreads 200"
-DROP=" -random_udp_drop"
+# DROP=" -random_udp_drop"
+DROP=""
 echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $HDP_HEAP -nodes $HDP_NODES -output $HDFS_OUTPUT -notify h2o_one_node $EA $DROP" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # Usage: h2odriver
