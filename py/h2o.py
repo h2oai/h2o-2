@@ -329,6 +329,7 @@ def handleRemoveError(func, path, exc):
 LOG_DIR = get_sandbox_name()
 
 def clean_sandbox():
+    IS_THIS_FASTER = True
     if os.path.exists(LOG_DIR):
 
         # shutil.rmtree hangs if symlinks in the dir? (in syn_datasets for multifile parse)
@@ -338,11 +339,25 @@ def clean_sandbox():
             os.remove(f)
 
         # shutil.rmtree fails to delete very long filenames on Windoze
-        #shutil.rmtree(LOG_DIR)
+        ### shutil.rmtree(LOG_DIR)
         # was this on 3/5/13. This seems reliable on windows+cygwin
+        # I guess I changed back to rmtree below with something to retry, then ignore, remove errors. 
+        # is it okay now on windows+cygwin?
         ### os.system("rm -rf "+LOG_DIR)
-        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+        print "Removing", LOG_DIR, "(if slow, might be old ice dir spill files)"
+        start = time.time()
+        if IS_THIS_FASTER:
+            try:
+                os.system("rm -rf "+LOG_DIR)
+            except OSError:
+                pass
+        else:
+            shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+
+        elapsed = time.time() - start
+        print "Took %s secs to remove %s" % (elapsed, LOG_DIR)
         # it should have been removed, but on error it might still be there
+
     if not os.path.exists(LOG_DIR):
         os.mkdir(LOG_DIR)
 
@@ -2593,11 +2608,11 @@ class H2O(object):
         for zname in nameList:
             resultList = h2o_util.flat_unzip(logDir + "/" + zname, logDir)
 
-        print ""
+        print "\nlogDir:", logDir
         for logfile in resultList:
             numLines = sum(1 for line in open(logfile))
-            print "logDir:", logDir, "resultList:", resultList, "Lines:", numLines
-        print ""
+            print logfile, "Lines:", numLines
+        print
         return resultList
 
 

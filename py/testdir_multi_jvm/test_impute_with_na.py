@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         global SEED
         SEED = h2o.setup_random_seed()
 
-        if (localhost):
+        if localhost:
             h2o.build_cloud(3, java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
@@ -90,7 +90,6 @@ class Basic(unittest.TestCase):
             if len(missingValuesList) != numCols:
                 raise Exception ("Why is missingValuesList not right afer ToEnum2?: %s %s" % (enumColList, missingValuesList))
 
-            expected = .1 * numRows
             for mv in missingValuesList:
                 self.assertAlmostEqual(mv, expectedMissing, delta=0.1 * mv, msg='mv %s is not approx. expected %s' % (mv, expectedMissing))
 
