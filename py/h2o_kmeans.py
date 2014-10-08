@@ -62,7 +62,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, predictKey, **kwargs
     kmeansResult = kmeans
 
     predictResult = h2o.nodes[0].generate_predictions(data_key=parseResult['destination_key'], model_key=model_key, destination_key=predictKey)
-    summaryResult = h2o.nodes[0].summary_page(key=predictKey)
+    summaryResult = h2o.nodes[0].summary_page(key=predictKey, timeoutSecs=120)
     hcnt = summaryResult['summaries'][0]['hcnt'] # histogram
     rows_per_cluster = hcnt
     # FIX! does the cluster order/naming match, compared to cluster variances
