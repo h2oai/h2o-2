@@ -18,7 +18,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
 
         if (localhost):
-            h2o.build_cloud(java_heap_GB=4)
+            h2o.build_cloud(3, java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -106,7 +106,23 @@ class Basic(unittest.TestCase):
             print "Do the columns in random order"
 
 
-            shuffledColList = range(0,55)
+            # don't do the enum cols ..impute doesn't support right?
+            if AVOID_BUG:
+                shuffledColList = range(0,49) # 0 to 48
+                execExpr = '%s = %s[,1:49]' % (hex_key2, hex_key2)
+                h2e.exec_expr(execExpr=execExpr, timeoutSecs=10)
+                # summaryResult = h2o_cmd.runSummary(key=hex_key2)
+                # h2o_cmd.infoFromSummary(summaryResult)
+                inspect = h2o_cmd.runInspect(key=hex_key2)
+                numCols = inspect['numCols']
+                missingValuesList = h2o_cmd.infoFromInspect(inspect)
+                print "missingValuesList after impute:", missingValuesList
+                if len(missingValuesList) != 49:
+                    raise Exception ("expected missing values in all cols after pruning enum cols: %s" % missingValuesList)
+            else:
+                shuffledColList = range(0,55) # 0 to 54
+            
+            origInspect = inspect
             random.shuffle(shuffledColList)
 
             for column in shuffledColList: 
@@ -135,12 +151,27 @@ class Basic(unittest.TestCase):
             numRows2 = inspect['numRows']
             numCols2 = inspect['numCols']
             self.assertEqual(numRows, numRows2, "imput shouldn't have changed frame numRows: %s %s" % (numRows, numRows2))
+
+            
             self.assertEqual(numCols, numCols2, "imput shouldn't have changed frame numCols: %s %s" % (numCols, numCols2))
+
+
+            # check that the mean didn't change for the col
+            # the enum cols with mode, we'll have to think of something else
 
             missingValuesList = h2o_cmd.infoFromInspect(inspect)
             print "missingValuesList after impute:", missingValuesList
             if missingValuesList:
                 raise Exception ("Not expecting any missing values after imputing all cols: %s" % missingValuesList)
+            
+            cols = inspect['cols']
+            origCols = origInspect['cols']
+            for i, (c, oc) in enumerate(zip(cols, origCols)):
+                # I suppose since we impute to either median or mean, we can't assume the mean stays the same
+                # but for this tolerance it's okay (maybe a different dataset, that wouldn't be true
+                h2o_util.approxEqual(c['mean'], oc['mean'], tol=0.000000001, 
+                    msg="col %i original mean: %s not equal to mean after impute: %s" % (i, c['mean'], oc['mean']))
+
 
 if __name__ == '__main__':
     h2o.unit_main()
