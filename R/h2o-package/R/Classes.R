@@ -124,9 +124,23 @@ extractAIC.H2OCoxPHModel <- function(fit, scale, k = 2, ...)
 logLik.H2OCoxPHModel <- function(object, ...)
   get("logLik.coxph", getNamespace("survival"))(object@model, ...)
 
-survfit.H2OCoxPHModel <- function(formula, ...)
-  structure(c(formula@survfit, call = match.call()),
-            class = c("survfit.H2OCoxPHModel", "survfit.coxph", "survfit"))
+survfit.H2OCoxPHModel <- function(formula, newdata, ...) {
+  if (missing(newdata))
+    newdata <- as.data.frame(as.list(formula@model$means))
+  if (is.data.frame(newdata))
+    capture.output(newdata <- as.h2o(formula@data@h2o, newdata, header = TRUE))
+  pred <- as.matrix(h2o.predict(formula, newdata)[,-1L])
+  cnms <- colnames(pred)
+  colnames(pred) <- NULL
+  ch <- grep("^cumhaz_", cnms)
+  drop <- (nrow(pred) == 1L)
+  res <- formula@survfit
+  res$cumhaz  <- pred[,  ch, drop = drop]
+  res$surv    <- exp(- res$cumhaz)
+  res$std.err <- pred[, -ch, drop = drop]
+  class(res) <- c("survfit.H2OCoxPHModel", "survfit.coxph", "survfit")
+  res
+}
 
 vcov.H2OCoxPHModel <- function(object, ...)
   get("vcov.coxph", getNamespace("survival"))(object@model, ...)

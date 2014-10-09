@@ -27,7 +27,7 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
 
 # H2OCoxPHModel summary functions
 \S4method{summary}{H2OCoxPHModel}(object, ...)
-\S3method{survfit}{H2OCoxPHModel}(formula, ...)
+\S3method{survfit}{H2OCoxPHModel}(formula, newdata, ...)
 
 # H2OCoxPHModel extractor functions
 \S3method{extractAIC}{H2OCoxPHModel}(fit, scale, k = 2, ...)
@@ -56,6 +56,8 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
   \item{iter.max}{A positive integer denoting the maximum number of iterations
     to allow for convergence in \code{h2o.coxph}.}
   \item{object, formula, fit}{An object of class \code{H2OCoxPHModel}.}
+  \item{newdata}{An optional \code{\linkS4class{H2OParsedData}} object
+    containing a new data set.}
   \item{scale}{An optional number that specifies the scale parameter of the
     model.}
   \item{k}{An optional number specifying the weight for the equivalent

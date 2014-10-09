@@ -14,6 +14,7 @@ import water.api.DocGen;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.fvec.Vec.CollectDomain;
 import water.util.Utils;
 
 public class CoxPH extends Job {
@@ -52,50 +53,6 @@ public class CoxPH extends Job {
   private class CoxPHVecSelect extends VecSelect { CoxPHVecSelect() { super("source"); } }
 
   public static enum CoxPHTies { efron, breslow }
-
-  private void checkArguments() {
-    if (use_start_column && !start_column.isInt())
-      throw new IllegalArgumentException("start time must be null or of type integer");
-
-    if (!stop_column.isInt())
-      throw new IllegalArgumentException("stop time must be of type integer");
-
-    if (!event_column.isInt() && !event_column.isEnum())
-      throw new IllegalArgumentException("event must be of type integer or factor");
-
-    if (Double.isNaN(lre_min) || lre_min <= 0)
-      throw new IllegalArgumentException("lre_min must be a positive number");
-
-    if (iter_max < 1)
-      throw new IllegalArgumentException("iter_max must be a positive integer");
-
-    long min_time;
-    if (use_start_column)
-      min_time = (long) start_column.min() + 1;
-    else
-      min_time = (long) stop_column.min();
-    int n_time = (int) (stop_column.max() - min_time + 1);
-    if (n_time > MAX_TIME_BINS)
-      throw new IllegalArgumentException("The time number of time points is " + n_time +
-          "; allowed maximum is " + MAX_TIME_BINS);
-  }
-
-  private Frame getSubframe() {
-    String[] names;
-    if (use_start_column) {
-      names = new String[4];
-      names[0] = source.names()[source.find(start_column)];
-      names[1] = source.names()[source.find(stop_column)];
-      names[2] = source.names()[source.find(event_column)];
-      names[3] = source.names()[source.find(x_column)];
-    } else {
-      names = new String[3];
-      names[0] = source.names()[source.find(stop_column)];
-      names[1] = source.names()[source.find(event_column)];
-      names[2] = source.names()[source.find(x_column)];
-    }
-    return source.subframe(names);
-  }
 
   public static class CoxPHModel extends Model implements Job.Progress {
     static final int API_WEAVER = 1; // This file has auto-generated doc & JSON fields
@@ -151,6 +108,8 @@ public class CoxPH extends Job {
     long min_time;         // scalar
     @API(help = "maximum time")
     long max_time;         // scalar
+    @API(help = "time")
+    long[] time;           // vector
     @API(help = "number at risk")
     long[] n_risk;         // vector
     @API(help = "number of events")
@@ -163,15 +122,10 @@ public class CoxPH extends Job {
     double[] var_cumhaz_1; // vector
     @API(help = "component of var(cumhaz)")
     double[] var_cumhaz_2; // vector
-    @API(help = "cumulative hazard")
-    double[] cumhaz;       // vector
-    @API(help = "se(cumulative hazard)")
-    double[] se_cumhaz;    // vector
-    @API(help = "survival function")
-    double[] surv;         // vector
 
-    public CoxPHModel(CoxPH job, Key selfKey, Key dataKey, Frame fr, float[] priorClassDist) {
-      super(selfKey, dataKey, fr, priorClassDist);
+    public CoxPHModel(CoxPH job, Key selfKey, Key dataKey, String names[], String domains[][],
+                      float[] priorClassDist, float[] modelClassDist) {
+      super(selfKey, dataKey, names, domains, priorClassDist, modelClassDist);
       parameters = (CoxPH) job.clone();
     }
 
@@ -182,9 +136,40 @@ public class CoxPH extends Job {
     @Override
     public float progress() { return (float) iter / (float) get_params().iter_max; }
 
+    // For use in super.scoreImpl
+    @Override
+    public String[] classNames() {
+      String[] names = new String[nclasses()];
+      for (int i = 0; i < time.length; i++) {
+        long t = time[i];
+        names[i]               = "cumhaz_"    + t;
+        names[i + time.length] = "se_cumhaz_" + t;
+      }
+      return names;
+    }
+    @Override
+    public boolean isClassifier() { return false; }
+    @Override
+    public int nclasses() { return 2 * time.length; }
+
     @Override
     protected float[] score0(double[] data, float[] preds) {
-      throw H2O.unimpl();
+      double x_new = data[0];
+      if (Double.isNaN(x_new))
+        x_new = x_mean;
+      int n_time = time.length;
+      double x_centered = x_new - x_mean;
+      double risk_new = Math.exp(coef * x_centered);
+      preds[0] = Float.NaN;
+      for (int t = 0; t < n_time; t++) {
+        int i = t + 1;
+        double gamma     = x_centered * cumhaz_0[t] - var_cumhaz_2[t];
+        double cumhaz_1    = risk_new * cumhaz_0[t];
+        double se_cumhaz_1 = risk_new * Math.sqrt(var_cumhaz_1[t] + (gamma * var_coef * gamma));
+        preds[i]           = (float) cumhaz_1;
+        preds[i + n_time]  = (float) se_cumhaz_1;
+      }
+      return preds;
     }
 
     protected void initStats(Frame source, Vec start_column, Vec stop_column, Vec x_column) {
@@ -196,24 +181,31 @@ public class CoxPH extends Job {
         min_time   = (long) stop_column.min();
       }
       max_time     = (long) stop_column.max();
-      int n_time   = (int) (max_time - min_time + 1);
       x_mean       = x_column.mean();
+      int n_time   = new CollectDomain(stop_column).doAll(stop_column).domain().length;
+      time         = MemoryManager.malloc8(n_time);
+      n_risk       = MemoryManager.malloc8(n_time);
+      n_event      = MemoryManager.malloc8(n_time);
+      n_censor     = MemoryManager.malloc8(n_time);
       cumhaz_0     = MemoryManager.malloc8d(n_time);
       var_cumhaz_1 = MemoryManager.malloc8d(n_time);
       var_cumhaz_2 = MemoryManager.malloc8d(n_time);
-      cumhaz       = MemoryManager.malloc8d(n_time);
-      se_cumhaz    = MemoryManager.malloc8d(n_time);
-      surv         = MemoryManager.malloc8d(n_time);
     }
 
     protected void calcCounts(CoxPHMRTask coxMR) {
-      n              = coxMR.n;
-      n_missing      = coxMR.n_missing;
-      for (int t = 0; t < coxMR.countEvents.length; t++)
+      n         = coxMR.n;
+      n_missing = coxMR.n_missing;
+      int nz = 0;
+      for (int t = 0; t < coxMR.countEvents.length; t++) {
         total_event += coxMR.countEvents[t];
-      n_risk         = coxMR.countRiskSet.clone();
-      n_event        = coxMR.countEvents.clone();
-      n_censor       = coxMR.countCensored.clone();
+        if (coxMR.countEvents[t] > 0 || coxMR.countCensored[t] > 0) {
+          time[nz]     = min_time + t;
+          n_risk[nz]   = coxMR.countRiskSet[t];
+          n_event[nz]  = coxMR.countEvents[t];
+          n_censor[nz] = coxMR.countCensored[t];
+          nz++;
+        }
+      }
       if (!parameters.use_start_column)
         for (int t = n_risk.length - 2; t >= 0; t--)
           n_risk[t] += n_risk[t + 1];
@@ -282,26 +274,33 @@ public class CoxPH extends Job {
     }
 
     protected void calcCumhaz_0(CoxPHMRTask coxMR) {
+      int nz = 0;
       switch (parameters.ties) {
         case efron:
-          for (int t = 0; t < cumhaz_0.length; t++) {
-            cumhaz_0[t]     = 0;
-            var_cumhaz_1[t] = 0;
-            var_cumhaz_2[t] = 0;
-            for (long e = 0; e < coxMR.countEvents[t]; e++) {
-              double frac      = ((double) e) / ((double) coxMR.countEvents[t]);
-              double haz       = 1 / (coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t]);
-              cumhaz_0[t]     += haz;
-              var_cumhaz_1[t] += haz * haz;
-              var_cumhaz_2[t] += (coxMR.rcumsumXRisk[t] - frac * coxMR.sumXRiskEvents[t]) * haz * haz;
+          for (int t = 0; t < coxMR.countEvents.length; t++) {
+            if (coxMR.countEvents[t] > 0 || coxMR.countCensored[t] > 0) {
+              cumhaz_0[nz]     = 0;
+              var_cumhaz_1[nz] = 0;
+              var_cumhaz_2[nz] = 0;
+              for (long e = 0; e < coxMR.countEvents[t]; e++) {
+                double frac       = ((double) e) / ((double) coxMR.countEvents[t]);
+                double haz        = 1 / (coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t]);
+                cumhaz_0[nz]     += haz;
+                var_cumhaz_1[nz] += haz * haz;
+                var_cumhaz_2[nz] += (coxMR.rcumsumXRisk[t] - frac * coxMR.sumXRiskEvents[t]) * haz * haz;
+              }
+              nz++;
             }
           }
           break;
         case breslow:
-          for (int t = 0; t < cumhaz_0.length; t++) {
-            cumhaz_0[t]     = coxMR.countEvents[t] / coxMR.rcumsumRisk[t];
-            var_cumhaz_1[t] = coxMR.countEvents[t] / (coxMR.rcumsumRisk[t] * coxMR.rcumsumRisk[t]);
-            var_cumhaz_2[t] = (coxMR.rcumsumXRisk[t] / coxMR.rcumsumRisk[t]) * cumhaz_0[t];
+          for (int t = 0; t < coxMR.countEvents.length; t++) {
+            if (coxMR.countEvents[t] > 0 || coxMR.countCensored[t] > 0) {
+              cumhaz_0[nz]     = coxMR.countEvents[t] / coxMR.rcumsumRisk[t];
+              var_cumhaz_1[nz] = coxMR.countEvents[t] / (coxMR.rcumsumRisk[t] * coxMR.rcumsumRisk[t]);
+              var_cumhaz_2[nz] = (coxMR.rcumsumXRisk[t] / coxMR.rcumsumRisk[t]) * cumhaz_0[nz];
+              nz++;
+            }
           }
           break;
         default:
@@ -315,15 +314,30 @@ public class CoxPH extends Job {
       }
     }
 
-    protected void calcSurvfit(double x_new) {
+    public Frame makeSurvfit(Key key, double x_new) {
+      if (Double.isNaN(x_new))
+        x_new = x_mean;
+      int n_time = time.length;
+      Vec[] vecs = Vec.makeNewCons((long) n_time, 4, 0, null);
+      Vec timevec   = vecs[0];
+      Vec cumhaz    = vecs[1];
+      Vec se_cumhaz = vecs[2];
+      Vec surv      = vecs[3];
       double x_centered = x_new - x_mean;
       double risk_new = Math.exp(coef * x_centered);
-      for (int t = 0; t < cumhaz_0.length; t++) {
-        double gamma  = x_centered * cumhaz_0[t] - var_cumhaz_2[t];
-        cumhaz[t]     = risk_new * cumhaz_0[t];
-        se_cumhaz[t]  = risk_new * Math.sqrt(var_cumhaz_1[t] + (gamma * var_coef * gamma));
-        surv[t]       = Math.exp(- cumhaz[t]);
+      for (int t = 0; t < n_time; t++) {
+        double gamma    = x_centered * cumhaz_0[t] - var_cumhaz_2[t];
+        double cumhaz_1 = risk_new * cumhaz_0[t];
+        timevec.set(t,   time[t]);
+        cumhaz.set(t,    cumhaz_1);
+        se_cumhaz.set(t, risk_new * Math.sqrt(var_cumhaz_1[t] + (gamma * var_coef * gamma)));
+        surv.set(t,      Math.exp(- cumhaz_1));
       }
+      Frame fr = new Frame(key, new String[] {"time", "cumhaz", "se_cumhaz", "surv"}, vecs);
+      Futures fs = new Futures();
+      DKV.put(key, fr, fs);
+      fs.blockForPending();
+      return fr;
     }
 
     public void generateHTML(String title, StringBuilder sb) {
@@ -361,104 +375,136 @@ public class CoxPH extends Job {
     }
   }
 
-  CoxPHModel model;
+  private CoxPHModel model;
 
   @Override
-  public void execImpl() {
-    try {
-      checkArguments();
+  protected void init() {
+    super.init();
 
-      source = getSubframe();
+    if (use_start_column && !start_column.isInt())
+      throw new IllegalArgumentException("start time must be null or of type integer");
 
-      model = new CoxPHModel(this, dest(), source._key, source, null);
-      model.initStats(source, start_column, stop_column, x_column);
+    if (!stop_column.isInt())
+      throw new IllegalArgumentException("stop time must be of type integer");
 
-      H2O.H2OCountedCompleter task = new H2O.H2OCountedCompleter() {
-        @Override
-        public void compute2() {
-          Vec[] cols = source.vecs();
+    if (!event_column.isInt() && !event_column.isEnum())
+      throw new IllegalArgumentException("event must be of type integer or factor");
 
-          int n_time       = model.cumhaz_0.length;
-          double step      = Double.NaN;
-          double oldCoef   = Double.NaN;
-          double oldLoglik = - Double.MAX_VALUE;
-          double newCoef   = init;
-          for (int i = 0; i <= iter_max; i++) {
-            model.iter = i;
+    if (Double.isNaN(lre_min) || lre_min <= 0)
+      throw new IllegalArgumentException("lre_min must be a positive number");
 
-            // Map, Reduce & Finalize
-            CoxPHMRTask coxMR = new CoxPHMRTask(newCoef, model.min_time, n_time,
-                                                use_start_column, model.x_mean).doAll(cols);
-            coxMR.finish();
+    if (iter_max < 1)
+      throw new IllegalArgumentException("iter_max must be a positive integer");
 
-            if (i == 0)
-              model.calcCounts(coxMR);
+    long min_time;
+    if (use_start_column)
+      min_time = (long) start_column.min() + 1;
+    else
+      min_time = (long) stop_column.min();
 
-            double newLoglik = model.calcLoglik(coxMR);
-            if (newLoglik > oldLoglik) {
-              model.calcModelStats(newCoef, newLoglik);
-              model.calcCumhaz_0(coxMR);
+    int n_time = (int) (stop_column.max() - min_time + 1);
+    if (n_time < 1)
+      throw new IllegalArgumentException("start times must be strictly less than stop times");
+    if (n_time > MAX_TIME_BINS)
+      throw new IllegalArgumentException("number of distinct stop times is " + n_time +
+                                         "; maximum number allowed is " + MAX_TIME_BINS);
 
-              if (newLoglik == 0)
-                model.lre = - Math.log10(Math.abs(oldLoglik - newLoglik));
-              else
-                model.lre = - Math.log10(Math.abs((oldLoglik - newLoglik) / newLoglik));
-              if (model.lre >= lre_min)
-                break;
-
-              step = model.gradient / model.hessian;
-              if (Double.isNaN(step) || Double.isInfinite(step))
-                break;
-
-              oldCoef   = newCoef;
-              oldLoglik = newLoglik;
-            } else
-              step /= 2;
-
-            newCoef = oldCoef - step;
-          }
-          model.calcSurvfit(model.x_mean);
-
-          Futures fs = new Futures();
-          DKV.put(dest(), model, fs);
-          fs.blockForPending();
-          remove();
-          tryComplete();
-        }
-      };
-      start(task);
-      H2O.submitTask(task);
-    } catch (Throwable t) {
-      t.printStackTrace();
-      cancel(t);
-    }
+    source = getSubframe();
+    Frame fr = source.subframe(new String[] {source.names()[0], source.names()[source.numCols() - 1]});
+    model = new CoxPHModel(this, dest(), source._key, fr.names(), fr.domains(), null, null);
+    model.initStats(source, start_column, stop_column, x_column);
   }
 
-  @Override public Response serve() {
-    execImpl();
+  @Override
+  protected void execImpl() {
+    Vec[] cols = source.vecs();
+
+    int n_time       = (int) (model.max_time - model.min_time + 1);
+    double step      = Double.NaN;
+    double oldCoef   = Double.NaN;
+    double oldLoglik = - Double.MAX_VALUE;
+    double newCoef   = init;
+    for (int i = 0; i <= iter_max; i++) {
+      model.iter = i;
+
+      // Map, Reduce & Finalize
+      CoxPHMRTask coxMR = new CoxPHMRTask(newCoef, model.min_time, n_time, use_start_column, model.x_mean).doAll(cols);
+      coxMR.finish();
+
+      if (i == 0)
+        model.calcCounts(coxMR);
+
+      double newLoglik = model.calcLoglik(coxMR);
+      if (newLoglik > oldLoglik) {
+        model.calcModelStats(newCoef, newLoglik);
+        model.calcCumhaz_0(coxMR);
+
+        if (newLoglik == 0)
+          model.lre = - Math.log10(Math.abs(oldLoglik - newLoglik));
+        else
+          model.lre = - Math.log10(Math.abs((oldLoglik - newLoglik) / newLoglik));
+        if (model.lre >= lre_min)
+          break;
+
+        step = model.gradient / model.hessian;
+        if (Double.isNaN(step) || Double.isInfinite(step))
+          break;
+
+        oldCoef   = newCoef;
+        oldLoglik = newLoglik;
+      } else
+        step /= 2;
+
+        newCoef = oldCoef - step;
+    }
+
+    Futures fs = new Futures();
+    DKV.put(dest(), model, fs);
+    fs.blockForPending();
+  }
+
+  @Override
+  protected Response redirect() {
     return CoxPHProgressPage.redirect(this, self(), dest());
   }
 
-  public static class CoxPHMRTask extends MRTask2<CoxPHMRTask> {
+  private Frame getSubframe() {
+    String[] names;
+    if (use_start_column) {
+      names = new String[4];
+      names[0] = source.names()[source.find(x_column)];
+      names[1] = source.names()[source.find(start_column)];
+      names[2] = source.names()[source.find(stop_column)];
+      names[3] = source.names()[source.find(event_column)];
+    } else {
+      names = new String[3];
+      names[0] = source.names()[source.find(x_column)];
+      names[1] = source.names()[source.find(stop_column)];
+      names[2] = source.names()[source.find(event_column)];
+    }
+    return source.subframe(names);
+  }
+
+  protected static class CoxPHMRTask extends MRTask2<CoxPHMRTask> {
     private final double  _beta;
     private final int     _n_time;
     private final long    _min_time;
     private final boolean _use_start_column;
     private final double  _x_mean;
 
-    long     n;
-    long     n_missing;
-    long[]   countRiskSet;
-    long[]   countCensored;
-    long[]   countEvents;
-    double[] sumXEvents;
-    double[] sumRiskEvents;
-    double[] sumXRiskEvents;
-    double[] sumXXRiskEvents;
-    double[] sumLogRiskEvents;
-    double[] rcumsumRisk;
-    double[] rcumsumXRisk;
-    double[] rcumsumXXRisk;
+    protected long     n;
+    protected long     n_missing;
+    protected long[]   countRiskSet;
+    protected long[]   countCensored;
+    protected long[]   countEvents;
+    protected double[] sumXEvents;
+    protected double[] sumRiskEvents;
+    protected double[] sumXRiskEvents;
+    protected double[] sumXXRiskEvents;
+    protected double[] sumLogRiskEvents;
+    protected double[] rcumsumRisk;
+    protected double[] rcumsumXRisk;
+    protected double[] rcumsumXXRisk;
 
     CoxPHMRTask(final double beta, final long min_time, final int n_time, final boolean use_start_column,
                 final double x_mean) {
@@ -469,19 +515,14 @@ public class CoxPH extends Job {
       _x_mean           = x_mean;
     }
 
-    @Override public void map(Chunk[] cols) {
-      Chunk start, stop, events, xs;
-      if (_use_start_column) {
-        start  = cols[0];
-        stop   = cols[1];
-        events = cols[2];
-        xs     = cols[3];
-      } else {
-        start  = null;
-        stop   = cols[0];
-        events = cols[1];
-        xs     = cols[2];
-      }
+    @Override
+    public void map(Chunk[] cols) {
+      Chunk xs     = cols[0];
+      Chunk start  = null;
+      if (_use_start_column)
+            start  = cols[cols.length - 3];
+      Chunk stop   = cols[cols.length - 2];
+      Chunk events = cols[cols.length - 1];
 
       int i, t, t1 = -1, t2;
       long start_i, stop_i, event_i;
@@ -511,7 +552,7 @@ public class CoxPH extends Job {
           if (_use_start_column) {
             start_i = start.at80(i);
             if (start_i >= stop_i)
-              throw new IllegalArgumentException("start values must be strictly less than stop values");
+              throw new IllegalArgumentException("start times must be strictly less than stop times");
             t1 = (int) ((start_i + 1) - _min_time);
           }
           x_i = xs.at0(i) - _x_mean;
@@ -546,7 +587,8 @@ public class CoxPH extends Job {
       }
     }
 
-    @Override public void reduce(CoxPHMRTask that) {
+    @Override
+    public void reduce(CoxPHMRTask that) {
       n         += that.n;
       n_missing += that.n_missing;
       Utils.add(countRiskSet,     that.countRiskSet);

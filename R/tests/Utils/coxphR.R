@@ -60,12 +60,12 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
   checkEquals(survfitCoxPH.r$n.event,  survfitCoxPH.h2o$n.event)
   checkEquals(survfitCoxPH.r$n.censor, survfitCoxPH.h2o$n.censor)
   checkEquals(survfitCoxPH.r$surv,     survfitCoxPH.h2o$surv,
-              tolerance = tolerance)
+              tolerance = sqrt(tolerance))
   checkEquals(survfitCoxPH.r$type,     survfitCoxPH.h2o$type)
   checkEquals(survfitCoxPH.r$cumhaz,   survfitCoxPH.h2o$cumhaz,
-              tolerance = tolerance)
+              tolerance = sqrt(tolerance))
   checkEquals(survfitCoxPH.r$std.err,  survfitCoxPH.h2o$std.err,
-              tolerance = tolerance)
+              tolerance = sqrt(tolerance))
 
   checkEquals(coef(myCoxPH.r),       coef(myCoxPH.h2o), tolerance = tolerance)
   checkEquals(coef(summaryCoxPH.r)[,-5L],  coef(summaryCoxPH.h2o)[,-5L],
