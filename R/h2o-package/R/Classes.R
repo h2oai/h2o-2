@@ -1340,6 +1340,31 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
 
+# setMethod("hist", "H2OParsedData", function(object))
+hist.H2OParsedData <- function(x, freq = TRUE, ...){
+  if(ncol(x) > 1) stop("object needs to be a single column H2OParsedData object")
+  if(is.factor(x)) stop("object needs to numeric")
+  if(!is.logical(freq)) stop("freq needs to be a boolean")
+  res <- .h2o.__remoteSend(x@h2o, .h2o.__PAGE_SUMMARY2, source=x@key)
+  summary <- res$summaries[[1]]
+  rows = nrow(x)
+  hstart = summary$hstart
+  hstep = summary$hstep
+  breaks = as.numeric(summary$hbrk)
+  counts = summary$hcnt
+  
+  object = list()
+  object$breaks = append(breaks,values = hstart - hstep, after = 0)
+  object$counts = counts
+  object$density = (counts/(rows*hstep))
+  object$mids = breaks[1:length(breaks)-1]+(hstep/2)
+  object$xname = names(x)
+  object$equidist = freq
+  class(object) = "histogram"
+  plot(object)
+  object
+}
+
 quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7, ...) {
   if((numCols = ncol(x)) != 1) stop("quantile only operates on a single column")
   if(is.factor(x)) stop("factors are not allowed")

@@ -329,6 +329,7 @@ def handleRemoveError(func, path, exc):
 LOG_DIR = get_sandbox_name()
 
 def clean_sandbox():
+    IS_THIS_FASTER = True
     if os.path.exists(LOG_DIR):
 
         # shutil.rmtree hangs if symlinks in the dir? (in syn_datasets for multifile parse)
@@ -338,11 +339,25 @@ def clean_sandbox():
             os.remove(f)
 
         # shutil.rmtree fails to delete very long filenames on Windoze
-        #shutil.rmtree(LOG_DIR)
+        ### shutil.rmtree(LOG_DIR)
         # was this on 3/5/13. This seems reliable on windows+cygwin
+        # I guess I changed back to rmtree below with something to retry, then ignore, remove errors. 
+        # is it okay now on windows+cygwin?
         ### os.system("rm -rf "+LOG_DIR)
-        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+        print "Removing", LOG_DIR, "(if slow, might be old ice dir spill files)"
+        start = time.time()
+        if IS_THIS_FASTER:
+            try:
+                os.system("rm -rf "+LOG_DIR)
+            except OSError:
+                pass
+        else:
+            shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+
+        elapsed = time.time() - start
+        print "Took %s secs to remove %s" % (elapsed, LOG_DIR)
         # it should have been removed, but on error it might still be there
+
     if not os.path.exists(LOG_DIR):
         os.mkdir(LOG_DIR)
 
@@ -359,6 +374,13 @@ def clean_sandbox_stdout_stderr():
             verboseprint("cleaning", f)
             os.remove(f)
 
+def clean_sandbox_doneToLine():
+    if os.path.exists(LOG_DIR):
+        files = []
+        # glob.glob returns an iterator
+        for f in glob.glob(LOG_DIR + '/*doneToLine*'):
+            verboseprint("cleaning", f)
+            os.remove(f)
 
 def tmp_file(prefix='', suffix='', tmp_dir=None):
     if not tmp_dir:
@@ -869,7 +891,11 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
         pass
 
     check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
+    # get rid of all those pesky line marker files. Unneeded now
+    clean_sandbox_doneToLine()
     nodeList[:] = []
+
+
 
 # don't need any more?
 # Used before to make sure cloud didn't go away between unittest defs
@@ -1710,6 +1736,19 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'insert_missing_values', print_params=True)
         a = self.__do_json_request('2/InsertMissingValues.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\ninsert_missing_values result:", dump_json(a))
+        return a
+
+    def impute(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'source': None,
+            'column': None,
+            'method': None, # mean, mode, median
+            'group_by': None, # comma separated column names
+        }
+        browseAlso = kwargs.pop('browseAlso', False)
+        check_params_update_kwargs(params_dict, kwargs, 'impute', print_params=True)
+        a = self.__do_json_request('2/Impute.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nimpute result:", dump_json(a))
         return a
 
     def frame_split(self, timeoutSecs=120, **kwargs):
@@ -2568,7 +2607,12 @@ class H2O(object):
         # now unzip the files in that directory
         for zname in nameList:
             resultList = h2o_util.flat_unzip(logDir + "/" + zname, logDir)
-            print "logDir:", logDir, "resultList:", resultList
+
+        print "\nlogDir:", logDir
+        for logfile in resultList:
+            numLines = sum(1 for line in open(logfile))
+            print logfile, "Lines:", numLines
+        print
         return resultList
 
 

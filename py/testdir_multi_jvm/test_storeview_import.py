@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3)
+            h2o.build_cloud(1)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -34,10 +34,15 @@ class Basic(unittest.TestCase):
             trialStart = time.time()
 
             # PARSE****************************************
+            importResult = h2i.import_only(bucket='home-0xdiag-datasets', path="*", timeoutSecs=timeoutSecs)
+            print h2o.dump_json(importResult)
+            storeViewResult = h2o_cmd.runStoreView(timeoutSecs=30)
+            # print h2o.dump_json(storeViewResult)
+
             hex_key = csvFilename + "_" + str(trial) + ".hex"
             print "parse start on:", csvFilename
             start = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname,
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
                 hex_key=hex_key, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
