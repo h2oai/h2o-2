@@ -139,7 +139,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new NetworkTest()), "Network Test",             "Admin");
-    Request.addToNavbar(registerRequest(new WaterMeter()),  "Water Meter",              "Admin");
+    Request.addToNavbar(registerRequest(new WaterMeterPerfbar()),  "Water Meter (Perfbar)",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials
@@ -258,7 +258,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new ModelMetrics());
 
     // WaterMeter support APIs
-    registerRequest(new WaterMeter.WaterMeterCpuTicks());
+    registerRequest(new WaterMeterPerfbar.WaterMeterCpuTicks());
   }
 
   /**

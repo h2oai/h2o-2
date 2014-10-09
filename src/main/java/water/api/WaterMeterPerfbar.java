@@ -8,9 +8,15 @@ import water.util.Log;
 /**
  * Redirect to water meter page.
  */
-public class WaterMeter extends HTMLOnlyRequest {
+public class WaterMeterPerfbar extends HTMLOnlyRequest {
   protected String build(Response response) {
-    return "<meta http-equiv=\"refresh\" content=\"0; url=watermeter/index.html\">";
+    return "" +
+            "<div class='container' id='perfbarContainer'>" +
+            "<script>" +
+            "var PB_LINEOFTEXT_BACKGROUND_COLOR = \"#fff\";" +
+            "</script>" +
+            "<script src=\"watermeter/perfbar.js\"></script>" +
+            "</div>";
   }
 
   public static class WaterMeterCpuTicks extends JSONOnlyRequest {
