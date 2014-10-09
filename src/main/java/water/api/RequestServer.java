@@ -139,6 +139,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new NetworkTest()), "Network Test",             "Admin");
+    Request.addToNavbar(registerRequest(new WaterMeterPerfbar()),  "Water Meter (Perfbar)",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials
@@ -168,7 +169,6 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new SetLogLevel());
       registerRequest(new Debug());
       registerRequest(new UnlockKeys());
-      registerRequest(new WaterMeter());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new CoxPH()),                "Cox Proportional Hazards", "Beta");
@@ -185,7 +185,6 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new SetLogLevel()),          "Set Log Level",        "Beta");
       Request.addToNavbar(registerRequest(new Debug()),                "Debug Dump (floods log file)","Beta");
       Request.addToNavbar(registerRequest(new UnlockKeys()),           "Unlock Keys (use with caution)","Beta");
-      Request.addToNavbar(registerRequest(new WaterMeter()),           "Water Meter",          "Beta");
     }
 
     registerRequest(new Up());
@@ -259,7 +258,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new ModelMetrics());
 
     // WaterMeter support APIs
-    registerRequest(new WaterMeter.WaterMeterCpuTicks());
+    registerRequest(new WaterMeterPerfbar.WaterMeterCpuTicks());
   }
 
   /**
