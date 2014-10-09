@@ -2,7 +2,7 @@ package water.api;
 
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 import water.*;
 import water.Request2.TypeaheadKey;
 import water.api.Request.Filter;

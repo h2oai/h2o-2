@@ -1,7 +1,7 @@
 
 package water.api;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class TestPoll extends Request {
   // not isolated to the context, don't care

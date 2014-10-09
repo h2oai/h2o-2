@@ -16,10 +16,10 @@
 package hex.rng;
 
 
+import water.util.Utils;
+
 import java.util.Random;
 import java.util.concurrent.locks.ReentrantLock;
-
-import water.util.Utils;
 
 /**
  * <p>
@@ -89,7 +89,6 @@ public class MersenneTwisterRNG extends Random {
    * @param seedInts  The seed data used to initialise the RNG.
    */
   public MersenneTwisterRNG(int... seedInts) {
-
     // This section is translated from the init_genrand code in the C version.
     mt[0] = BOOTSTRAP_SEED;
     for( mtIndex = 1; mtIndex < N; mtIndex++ ) {
@@ -100,16 +99,18 @@ public class MersenneTwisterRNG extends Random {
     // This section is translated from the init_by_array code in the C version.
     int i = 1;
     int j = 0;
-    for( int k = Math.max(N, seedInts.length); k > 0; k-- ) {
+    for( int k = Math.max(N, SEEDS.length); k > 0; k-- ) {
+      int jseeds = (j == 0 || j == 1) ? seedInts[j] : SEEDS[j];
+
       mt[i] = (mt[i] ^ ((mt[i - 1] ^ (mt[i - 1] >>> 30)) * SEED_FACTOR1))
-          + seedInts[j] + j;
+          + jseeds + j;
       i++;
       j++;
       if( i >= N ) {
         mt[0] = mt[N - 1];
         i = 1;
       }
-      if( j >= seedInts.length ) {
+      if( j >= SEEDS.length ) {
         j = 0;
       }
     }

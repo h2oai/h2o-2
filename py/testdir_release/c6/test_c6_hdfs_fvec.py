@@ -36,7 +36,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "hhp.unbalanced.data.gz",
             # has duplicated col name
             # "hhp2.os.noisy.0_1.data",
-            "hhp2.os.noisy.9_4.data",
+            # "hhp2.os.noisy.9_4.data",
             "hhp_9_14_12.data",
             "leads.csv",
             "prostate_long_1G.csv",
@@ -56,8 +56,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # we have two cdh's though. I guess we're going to use whatever got setup
         # h2o.nodes[0].use_maprfs = False
         # h2o.nodes[0].use_hdfs = True
-        # h2o.nodes[0].hdfs_version = 'cdh3'
-        # h2o.nodes[0].hdfs_name_node = '192.168.1.176'
+        # h2o.nodes[0].hdfs_version = 'cdh4'
+        # h2o.nodes[0].hdfs_name_node = '172.16.2.176'
 
         h2o.setup_benchmark_log()
 
@@ -85,7 +85,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "Loading", csvFilename, 'from hdfs'
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs,
-                doSummary=True, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
+                doSummary=False, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
             print "parse result:", parseResult['destination_key']

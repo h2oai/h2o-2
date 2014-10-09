@@ -9,10 +9,8 @@ import java.util.zip.ZipOutputStream;
 
 import water.*;
 import water.util.*;
-import water.util.Log.LogStr;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class LogView extends Request {
   @Override protected Response serve() {
@@ -37,6 +35,8 @@ public class LogView extends Request {
   static class LogDownload extends Request {
 
     @Override public water.NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
+      Log.info("\nCollecting logs.");
+
       // collect nodes' logs
       LogCollectorTask collector = new LogCollectorTask();
       collector.invokeOnAllNodes();

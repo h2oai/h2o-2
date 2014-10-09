@@ -11,7 +11,7 @@ an H\ :sub:`2`\ O multi-node cluster. Begin by locating a set of hosts to make u
 **STEP 1**
 
 To download H\ :sub:`2`\ O, including the .jar, go to
-the H\ :sub:`2`\ O `downloads page <http://0xdata.com/downloadtable/>`_ and choose the version that is right for your environment. 
+the H\ :sub:`2`\ O `downloads page <http://0xdata.com/download/>`_ and choose the version that is right for your environment.
 
 
 **STEP 2**

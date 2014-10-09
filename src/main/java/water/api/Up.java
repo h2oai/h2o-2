@@ -1,6 +1,6 @@
 package water.api;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 import water.util.Log;
 
 public class Up extends Request {

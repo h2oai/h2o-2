@@ -13,7 +13,7 @@
 Returns a \linkS4class{H2OModel} object of the class corresponding to the type of model built. Ex: A saved model built using GLM will return a \linkS4class{H2OGLMModel} object.
 }
 \seealso{
-\code{\link{h2o.saveModel}, \linkS4class{H2OModel}}
+\code{\link{h2o.saveModel},\link{h2o.saveAll}, \link{h2o.loadAll}, \linkS4class{H2OModel}}
 }
 \examples{
 \dontrun{

@@ -1,7 +1,7 @@
 
 package water.api;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class Upload extends HTMLOnlyRequest {
   @Override

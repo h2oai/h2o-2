@@ -1,6 +1,6 @@
 package water.api;
 
-import com.google.gson.*;
+import dontweave.gson.*;
 import org.apache.commons.math3.util.Pair;
 import water.*;
 import water.api.Models.ModelSummary;

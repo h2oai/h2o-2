@@ -1,6 +1,7 @@
 package water.util;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,6 +34,8 @@ public class LinuxProcFileReader {
 
   private int _processNumOpenFds = -1;
 
+  private ArrayList<long[]> _cpuTicks = null;
+
   /**
    * Constructor.
    */
@@ -53,6 +56,21 @@ public class LinuxProcFileReader {
    * @return ticks this process was running.
    */
   public long getProcessTotalTicks() { assert _processTotalTicks > 0;  return _processTotalTicks; }
+
+  /**
+   * Array of ticks.
+   * [cpu number][tick type]
+   *
+   * tick types are:
+   *
+   * [0] user ticks
+   * [1] system ticks
+   * [2] other ticks (i/o)
+   * [3] idle ticks
+   *
+   * @return ticks array for each cpu of the system.
+   */
+  public long[][] getCpuTicks()      { assert _cpuTicks != null;       return _cpuTicks.toArray(new long[0][0]); }
 
   /**
    * @return resident set size (RSS) of this process.
@@ -188,18 +206,52 @@ public class LinuxProcFileReader {
       BufferedReader reader = new BufferedReader(new StringReader(s));
       String line = reader.readLine();
 
-      Pattern p = Pattern.compile("cpu\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+).*");
-      Matcher m = p.matcher(line);
-      boolean b = m.matches();
-      if (! b) {
-        return;
+      // Read aggregate cpu values
+      {
+        Pattern p = Pattern.compile("cpu\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+).*");
+        Matcher m = p.matcher(line);
+        boolean b = m.matches();
+        if (!b) {
+          return;
+        }
+
+        long systemUserTicks = Long.parseLong(m.group(1));
+        long systemNiceTicks = Long.parseLong(m.group(2));
+        long systemSystemTicks = Long.parseLong(m.group(3));
+        _systemIdleTicks = Long.parseLong(m.group(4));
+        _systemTotalTicks = systemUserTicks + systemNiceTicks + systemSystemTicks + _systemIdleTicks;
       }
 
-      long systemUserTicks   = Long.parseLong(m.group(1));
-      long systemNiceTicks   = Long.parseLong(m.group(2));
-      long systemSystemTicks = Long.parseLong(m.group(3));
-      _systemIdleTicks   = Long.parseLong(m.group(4));
-      _systemTotalTicks = systemUserTicks + systemNiceTicks + systemSystemTicks + _systemIdleTicks;
+      // Read individual cpu values
+      _cpuTicks = new ArrayList<long[]>();
+      line = reader.readLine();
+      while (line != null) {
+        Pattern p = Pattern.compile("cpu(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+).*");
+        Matcher m = p.matcher(line);
+        boolean b = m.matches();
+        if (! b) {
+          break;
+        }
+
+        // Copying algorithm from http://gee.cs.oswego.edu/dl/code/
+        // See perfbar.c in gtk_perfbar package.
+        // int cpuNum = Integer.parseInt(m.group(1));
+        long cpuUserTicks = 0;
+        long cpuSystemTicks = 0;
+        long cpuOtherTicks = 0;
+        long cpuIdleTicks = 0;
+        cpuUserTicks    += Long.parseLong(m.group(2));
+        cpuOtherTicks   += Long.parseLong(m.group(3));
+        cpuSystemTicks  += Long.parseLong(m.group(4));
+        cpuIdleTicks    += Long.parseLong(m.group(5));
+        cpuOtherTicks   += Long.parseLong(m.group(6));
+        cpuSystemTicks  += Long.parseLong(m.group(7));
+        cpuSystemTicks  += Long.parseLong(m.group(8));
+        long[] oneCpuTicks = {cpuUserTicks, cpuSystemTicks, cpuOtherTicks, cpuIdleTicks};
+        _cpuTicks.add(oneCpuTicks);
+
+        line = reader.readLine();
+      }
     }
     catch (Exception xe) {}
   }
@@ -328,5 +380,6 @@ public class LinuxProcFileReader {
     System.out.println("System total ticks: " + lpfr.getSystemTotalTicks());
     System.out.println("Process total ticks: " + lpfr.getProcessTotalTicks());
     System.out.println("Process RSS: " + lpfr.getProcessRss());
+    System.out.println("Number of cpus: " + lpfr.getCpuTicks().length);
   }
 }

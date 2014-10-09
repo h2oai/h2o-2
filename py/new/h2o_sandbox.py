@@ -47,7 +47,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
         for filename in fileList1:
             # for h2o on hadoop, in the common unit test stuff, we download zipped logs from h2o
             # at the end and expand them. They will be in sandbox like this, because of the names h2o creates
-            # in the zip (I flatten it in sandbox): h2o_192.168.1.178_54321.log
+            # in the zip (I flatten it in sandbox): h2o_172.16.2.178_54321.log
             # So look for that pattern too!
             if re.search('h2o.*stdout|h2o.*stderr|h2o\..*\.log', filename) and not re.search('doneToLine', filename):
                 fileList.append(filename)

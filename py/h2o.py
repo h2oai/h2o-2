@@ -201,6 +201,7 @@ ipaddr_from_cmd_line = None
 config_json = None
 debugger = False
 random_udp_drop = False
+force_tcp = False
 random_seed = None
 beta_features = True
 sleep_at_tear_down = False
@@ -328,6 +329,7 @@ def handleRemoveError(func, path, exc):
 LOG_DIR = get_sandbox_name()
 
 def clean_sandbox():
+    IS_THIS_FASTER = True
     if os.path.exists(LOG_DIR):
 
         # shutil.rmtree hangs if symlinks in the dir? (in syn_datasets for multifile parse)
@@ -337,11 +339,25 @@ def clean_sandbox():
             os.remove(f)
 
         # shutil.rmtree fails to delete very long filenames on Windoze
-        #shutil.rmtree(LOG_DIR)
+        ### shutil.rmtree(LOG_DIR)
         # was this on 3/5/13. This seems reliable on windows+cygwin
+        # I guess I changed back to rmtree below with something to retry, then ignore, remove errors. 
+        # is it okay now on windows+cygwin?
         ### os.system("rm -rf "+LOG_DIR)
-        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+        print "Removing", LOG_DIR, "(if slow, might be old ice dir spill files)"
+        start = time.time()
+        if IS_THIS_FASTER:
+            try:
+                os.system("rm -rf "+LOG_DIR)
+            except OSError:
+                pass
+        else:
+            shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+
+        elapsed = time.time() - start
+        print "Took %s secs to remove %s" % (elapsed, LOG_DIR)
         # it should have been removed, but on error it might still be there
+
     if not os.path.exists(LOG_DIR):
         os.mkdir(LOG_DIR)
 
@@ -358,6 +374,13 @@ def clean_sandbox_stdout_stderr():
             verboseprint("cleaning", f)
             os.remove(f)
 
+def clean_sandbox_doneToLine():
+    if os.path.exists(LOG_DIR):
+        files = []
+        # glob.glob returns an iterator
+        for f in glob.glob(LOG_DIR + '/*doneToLine*'):
+            verboseprint("cleaning", f)
+            os.remove(f)
 
 def tmp_file(prefix='', suffix='', tmp_dir=None):
     if not tmp_dir:
@@ -868,7 +891,11 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
         pass
 
     check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
+    # get rid of all those pesky line marker files. Unneeded now
+    clean_sandbox_doneToLine()
     nodeList[:] = []
+
+
 
 # don't need any more?
 # Used before to make sure cloud didn't go away between unittest defs
@@ -1499,6 +1526,9 @@ class H2O(object):
     def netstat(self):
         return self.__do_json_request('Network.json')
 
+    def linux_info(self, timeoutSecs=30):
+        return self.__do_json_request("CollectLinuxInfo.json", timeout=timeoutSecs)
+
     def jstack(self, timeoutSecs=30):
         return self.__do_json_request("JStack.json", timeout=timeoutSecs)
 
@@ -1706,6 +1736,19 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'insert_missing_values', print_params=True)
         a = self.__do_json_request('2/InsertMissingValues.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\ninsert_missing_values result:", dump_json(a))
+        return a
+
+    def impute(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'source': None,
+            'column': None,
+            'method': None, # mean, mode, median
+            'group_by': None, # comma separated column names
+        }
+        browseAlso = kwargs.pop('browseAlso', False)
+        check_params_update_kwargs(params_dict, kwargs, 'impute', print_params=True)
+        a = self.__do_json_request('2/Impute.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nimpute result:", dump_json(a))
         return a
 
     def frame_split(self, timeoutSecs=120, **kwargs):
@@ -1978,6 +2021,47 @@ class H2O(object):
         a = self.__do_json_request('2/QuantilesPage.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nquantiles result:", dump_json(a))
         return a
+
+    def anomaly(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+        noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source': None,
+            'dl_autoencoder_model': None,
+            'thresh': -1,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'anomaly', print_params)
+        a = self.__do_json_request('2/Anomaly.json', timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+
+        verboseprint("\nanomaly result:", dump_json(a))
+        return a
+
+    def deep_features(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+        noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source': None,
+            'dl_model': None,
+            'layer': -1,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'deep_features', print_params)
+        a = self.__do_json_request('2/DeepFeatures.json', timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+
+        verboseprint("\ndeep_features result:", dump_json(a))
+        return a
+
 
     def naive_bayes(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
         noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
@@ -2512,15 +2596,25 @@ class H2O(object):
         nameList = z.namelist()
         # the first is the h2ologs dir name.
         h2oLogDir = logDir + "/" + nameList.pop(0)
+        print "h2oLogDir:", h2oLogDir
+        print "logDir:", logDir
 
         # it's a zip of zipped files
+        # first unzip it
         z = zipfile.ZipFile(StringIO.StringIO(r.content))
         z.extractall(logDir)
         # unzipped file should be in LOG_DIR now
+        # now unzip the files in that directory
         for zname in nameList:
             resultList = h2o_util.flat_unzip(logDir + "/" + zname, logDir)
-            print "resultList:", resultList
+
+        print "\nlogDir:", logDir
+        for logfile in resultList:
+            numLines = sum(1 for line in open(logfile))
+            print logfile, "Lines:", numLines
+        print
         return resultList
+
 
     # kwargs used to pass many params
     def GLM_shared(self, key,
@@ -2748,7 +2842,11 @@ class H2O(object):
             print "You can attach debugger at port %s for jvm at %s:%s" % (debuggerPort, a, b)
             args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=%s' % debuggerPort]
 
-        args += ["-ea"]
+        if self.disable_assertions:
+            print "WARNING: h2o is running with assertions disabled"
+        else:
+            args += ["-ea"]
+            
 
         if self.use_maprfs:
             args += ["-Djava.library.path=/opt/mapr/lib"]
@@ -2829,6 +2927,9 @@ class H2O(object):
         if self.random_udp_drop or random_udp_drop:
             args += ['--random_udp_drop']
 
+        if self.force_tcp:
+            args += ['--force_tcp']
+
         if self.disable_h2o_log:
             args += ['--nolog']
 
@@ -2841,13 +2942,13 @@ class H2O(object):
                  use_this_ip_addr=None, port=54321, capture_output=True,
                  use_debugger=None, classpath=None,
                  use_hdfs=False, use_maprfs=False,
-                 # hdfs_version="cdh4", hdfs_name_node="192.168.1.151",
-                 # hdfs_version="cdh3", hdfs_name_node="192.168.1.176",
+                 # hdfs_version="cdh4", hdfs_name_node="172.16.2.151",
+                 # hdfs_version="cdh4", hdfs_name_node="172.16.2.176",
                  hdfs_version=None, hdfs_name_node=None, hdfs_config=None,
                  aws_credentials=None,
                  use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None,
                  use_home_for_ice=False, node_id=None, username=None,
-                 random_udp_drop=False,
+                 random_udp_drop=False, force_tcp=False,
                  redirect_import_folder_to_s3_path=None,
                  redirect_import_folder_to_s3n_path=None,
                  disable_h2o_log=False,
@@ -2855,13 +2956,15 @@ class H2O(object):
                  h2o_remote_buckets_root=None,
                  delete_keys_at_teardown=False,
                  cloud_name=None,
+                 disable_assertions=None,
+                 sandbox_ignore_errors=False,
     ):
 
         if use_hdfs:
             # see if we can touch a 0xdata machine
             try:
                 # long timeout in ec2...bad
-                a = requests.get('http://192.168.1.176:80', timeout=1)
+                a = requests.get('http://172.16.2.176:80', timeout=1)
                 hdfs_0xdata_visible = True
             except:
                 hdfs_0xdata_visible = False
@@ -2869,13 +2972,13 @@ class H2O(object):
             # different defaults, depending on where we're running
             if hdfs_name_node is None:
                 if hdfs_0xdata_visible:
-                    hdfs_name_node = "192.168.1.176"
+                    hdfs_name_node = "172.16.2.176"
                 else: # ec2
                     hdfs_name_node = "10.78.14.235:9000"
 
             if hdfs_version is None:
                 if hdfs_0xdata_visible:
-                    hdfs_version = "cdh3"
+                    hdfs_version = "cdh4"
                 else: # ec2
                     hdfs_version = "0.20.2"
 
@@ -2928,15 +3031,17 @@ class H2O(object):
         # don't want multiple reports from tearDown and tearDownClass
         # have nodes[0] remember (0 always exists)
         self.sandbox_error_was_reported = False
-        self.sandbox_ignore_errors = False
+        self.sandbox_ignore_errors = sandbox_ignore_errors
 
         self.random_udp_drop = random_udp_drop
+        self.force_tcp = force_tcp
         self.disable_h2o_log = disable_h2o_log
 
         # this dumps stats from tests, and perf stats while polling to benchmark.log
         self.enable_benchmark_log = enable_benchmark_log
         self.h2o_remote_buckets_root = h2o_remote_buckets_root
         self.delete_keys_at_teardown = delete_keys_at_teardown
+        self.disable_assertions = disable_assertions
 
         if cloud_name:
             self.cloud_name = cloud_name
@@ -3049,7 +3154,7 @@ class LocalH2O(H2O):
 #*****************************************************************
 class RemoteHost(object):
     def upload_file(self, f, progress=None):
-        # FIX! we won't find it here if it's hdfs://192.168.1.151/ file
+        # FIX! we won't find it here if it's hdfs://172.16.2.151/ file
         f = find_file(f)
         if f not in self.uploaded:
             start = time.time()

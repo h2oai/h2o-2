@@ -2,7 +2,7 @@
 \alias{h2o.saveModel}
 \title{Save a H2OModel object to disk.}
 \description{Save a H2OModel object to a disk and can be loaded back into H2O using h2o.loadModel.}
-\usage{h2o.saveModel(object, dir="", name="", save_cv = FALSE, force=FALSE)}
+\usage{h2o.saveModel(object, dir="", name="", save_cv = TRUE, force=FALSE)}
 
 \arguments{
   \item{object}{ An \code{\linkS4class{H2OModel}} object.}
@@ -16,7 +16,7 @@
 Returns path of model object saved.
 }
 \seealso{
-\code{\link{h2o.loadModel}, \linkS4class{H2OModel}}
+\code{\link{h2o.saveAll}, \link{h2o.loadModel}, \link{h2o.loadAll}, \linkS4class{H2OModel}}
 }
 \examples{
 \dontrun{

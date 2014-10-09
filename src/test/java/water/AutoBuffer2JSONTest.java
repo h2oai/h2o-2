@@ -2,7 +2,7 @@ package water;
 
 import org.junit.*;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 import water.api.DocGen;
 import water.api.Request.API;

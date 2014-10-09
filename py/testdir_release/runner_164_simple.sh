@@ -19,7 +19,7 @@ then
     echo "The possibilities should be relatively static over time"
     echo "Could be problems if other threads also using that user on these machines at same time"
     echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 \
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.164 \
          'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
 
 
@@ -64,7 +64,7 @@ DOIT=../testdir_single_jvm/n0.doit
 
 # $DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
 $DOIT c1/test_c1_rel.py || true
-# $DOIT c2/test_c2_rel.py || true
+# $DOIT c2/test_c2_fvec.py || true
 # $DOIT c3/test_c3_rel.py || true
 # $DOIT c4/test_c4_four_billion_rows_fvec.py || true
 # $DOIT c6/test_c6_hdfs_fvec.py || true
@@ -84,8 +84,8 @@ then
 fi
 ps aux | grep four_hour_cloud
 
-# test_c2_rel has about 11 subtests inside it, that will be tracked individually by jenkins
-# ../testdir_single_jvm/n0.doit test_c2_rel || true
+# test_c2_fvec has about 11 subtests inside it, that will be tracked individually by jenkins
+# ../testdir_single_jvm/n0.doit test_c2_fvec || true
 # We don't want the jenkins job to complete until we kill it, so the cloud stays alive for debug
 # also prevents us from overrunning ourselves with cloud building
 # If we don't wait, the cloud will get torn down.

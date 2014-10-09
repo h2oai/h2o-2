@@ -111,8 +111,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=300)
             numRows = inspect['numRows']
             numCols = inspect['numCols']
-            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols, 
-                timeoutSecs=300)
+            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols, timeoutSecs=300)
             h2o_cmd.infoFromSummary(summary)
 
 
@@ -181,10 +180,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print "predict sorted(size2):", sorted(size2)
                 print h2o.nodes[0].http_addr
                 print h2o.nodes[0].port
-
-            if 1==1: # debug
-                print "sleeping"
-                h2o.sleep(3600)
 
             clusters = model["centers"]
             cluster_variances = model["within_cluster_variances"]

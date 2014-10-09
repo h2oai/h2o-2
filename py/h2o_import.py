@@ -233,9 +233,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
           
         folderURI = 'nfs:/' + folderPath
         if importParentDir:
-            importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
+            finalImportString = folderPath
         else:
-            importResult = node.import_files(folderPath + "/" + pattern, timeoutSecs=timeoutSecs)
+            finalImportString = folderPath + "/" + pattern
+        importResult = node.import_files(finalImportString, timeoutSecs=timeoutSecs)
 
     else:
         if bucket is not None and re.match("/", head):
@@ -250,15 +251,12 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         else:
             folderOffset = head
 
-        print "\nimport_only:", h2o.python_test_name, schema, "uses", schema + "://" + folderOffset + "/" + pattern
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
         n = h2o.nodes[0]
         if schema=='s3' or node.redirect_import_folder_to_s3_path:
-            # FIX! hack for now...when we change import folder to import s3, point to unique bucket name for h2o
-            # should probably deal with this up in the bucket resolution 
-            # this may change other cases, but smalldata should only exist as a "bucket" for us?
+            # this is just like s3n now? i.e. we can point down inside the s3 bucket like s3n?
             folderOffset = re.sub("smalldata", "h2o-smalldata", folderOffset)
             folderURI = "s3://" + folderOffset
             if not n.aws_credentials:
@@ -267,9 +265,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
 
             if importParentDir:
-                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
+                finalImportString = folderURI
             else:
-                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                finalImportString = folderURI + "/" + pattern
+            importResult = node.import_files(finalImportString, timeoutSecs=timeoutSecs)
 
         elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
             # FIX! hack for now...when we change import folder to import s3, point to unique bucket name for h2o
@@ -284,9 +283,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 print "ERROR: Something was missing for s3n on the java -jar cmd line when the cloud was built"
             folderURI = "s3n://" + folderOffset
             if importParentDir:
-                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
+                finalImportString = folderURI
             else:
-                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                finalImportString = folderURI + "/" + pattern
+            importResult = node.import_files(finalImportString, timeoutSecs=timeoutSecs)
 
         elif schema=='maprfs':
             if not n.use_maprfs:
@@ -302,9 +302,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 # folderURI = "maprfs:///" + folderOffset
                 folderURI = "maprfs:/" + folderOffset
             if importParentDir:
-                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
+                finalImportString = folderURI
             else:
-                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                finalImportString = folderURI + "/" + pattern
+            importResult = node.import_files(finalImportString, timeoutSecs=timeoutSecs)
 
         elif schema=='hdfs':
             # check that some state from the cloud building time was right
@@ -322,13 +323,17 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 # this is different than maprfs? normally we specify the name though
                 folderURI = "hdfs://" + folderOffset
             if importParentDir:
-                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
+                finalImportString = folderURI
             else:
-                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                finalImportString = folderURI + "/" + pattern
+            importResult = node.import_files(finalImportString, timeoutSecs=timeoutSecs)
 
         else: 
             raise Exception("schema not understood: %s" % schema)
 
+    print "\nimport_only:", h2o.python_test_name, schema, "uses", finalImportString
+    # FIX! why are we returning importPattern here..it's different than finalImportString if we import a folder?
+    # is it used for key matching by others?
     importPattern = folderURI + "/" + pattern
     return (importResult, importPattern)
 

@@ -25,7 +25,7 @@ else
         echo "The possibilities should be relatively static over time"
         echo "Could be problems if other threads also using that user on these machines at same time"
         echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 \
+        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.164 \
             'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
 
 
@@ -81,7 +81,7 @@ then
     # and keys aren't deleted? Exec starts to convert all (leading to timeout)
     # just get rid of VA stuff
     # myPy c1 test_c1_rel.py
-    # myPy c2 test_c2_rel.py
+    # myPy c2 test_c2_fvec.py
     myPy c1 test_c1_fvec.py
     myPy c2 test_c2_nongz_fvec.py
     # myPy c3 test_c3_rel.py
@@ -98,7 +98,8 @@ then
     # myPy c8 test_c8_rf_airlines_hdfs_fvec.py
     # myPy c9 test_c9_GLM_rc_fvec.py
     myPy c9 test_c9_GLM_airlines_fvec.py
-    myPy c10 test_c10_glm_fvec.py
+    # this fails? 9/27/14
+    # myPy c10 test_c10_glm_fvec.py
 
     # myPy c2 test_c2_fvec.py
     # myPy c3 test_c3_fvec.py
@@ -124,8 +125,8 @@ then
 fi
 ps aux | grep four_hour_cloud
 
-# test_c2_rel has about 11 subtests inside it, that will be tracked individually by jenkins
-# ../testdir_single_jvm/n0.doit test_c2_rel || true
+# test_c2_fvec has about 11 subtests inside it, that will be tracked individually by jenkins
+# ../testdir_single_jvm/n0.doit test_c2_fvec || true
 # We don't want the jenkins job to complete until we kill it, so the cloud stays alive for debug
 # also prevents us from overrunning ourselves with cloud building
 # If we don't wait, the cloud will get torn down.

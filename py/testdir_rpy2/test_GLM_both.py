@@ -2,7 +2,7 @@ import unittest, time, sys
 sys.path.extend(['.','..','py'])
 import copy
 
-print "Needs numpy, rpy2, and R installed. Run on 192.168.171-175"
+print "Needs numpy, rpy2, and R installed. Run on 172.16.271-175"
 # FIX! maybe should update to build_cloud_with_hosts to run on 171-175?
 
 import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_import as h2i

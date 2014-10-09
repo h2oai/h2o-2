@@ -1218,7 +1218,7 @@ def usage():
     print("                  'failed.txt' file from the output directory).")
     print("")
     print("    --testgroup   Test a group of tests by function:")
-    print("                  pca, glm, kmeans, gbm, rf, deeplearning, algos, golden, munging")
+    print("                  pca, coxph, glm, kmeans, gbm, rf, deeplearning, algos, golden, munging")
     print("")
     print("    --testsize    Sizes (and by extension length) of tests to run:")
     print("                  s=small (seconds), m=medium (a minute or two), l=large (longer)")

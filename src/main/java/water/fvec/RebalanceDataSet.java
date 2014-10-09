@@ -99,20 +99,21 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
     @Override public boolean logVerbose() { return false; }
 
     private void rebalanceChunk(Vec srcVec, Chunk chk){
+      Chunk srcRaw = null;
       try {
         NewChunk dst = new NewChunk(chk);
         dst._len = dst._sparseLen = 0;
         int rem = chk._len;
         while (rem > 0 && dst._len < chk._len) {
-          Chunk srcRaw = srcVec.chunkForRow(chk._start + dst._len);
+          srcRaw = srcVec.chunkForRow(chk._start + dst._len);
           NewChunk src = new NewChunk((srcRaw));
           src = srcRaw.inflate_impl(src);
           assert src._len == srcRaw._len;
           int srcFrom = (int) (chk._start + dst._len - src._start);
           // check if the result is sparse (not exact since we only take subset of src in general)
-          if ((src.sparse() && dst.sparse()) || (src._len + dst._len < NewChunk.MIN_SPARSE_RATIO * (src._len + dst._len))) {
-            src.set_sparse(src._sparseLen);
-            dst.set_sparse(dst._sparseLen);
+          if ((src.sparse() && dst.sparse()) || ((src.sparseLen() + dst.sparseLen()) * NewChunk.MIN_SPARSE_RATIO < (src.len() + dst.len()))) {
+            src.set_sparse(src.sparseLen());
+            dst.set_sparse(dst.sparseLen());
           }
           final int srcTo = srcFrom + rem;
           int off = srcFrom - 1;
@@ -136,7 +137,7 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
         assert dst._len == chk._len : "len2 = " + dst._len + ", _len = " + chk._len;
         dst.close(dst.cidx(), _fs);
       } catch(RuntimeException t){
-        Log.err("got exception while rebalancing chunk " + chk);
+        Log.err("got exception while rebalancing chunk " + srcRaw == null?"null":srcRaw.getClass().getSimpleName());
         throw t;
       }
     }

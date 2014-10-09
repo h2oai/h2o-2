@@ -38,7 +38,7 @@ echo ""
 
 #*******************************************************************************
 # don't always remove..other users may have stuff he doesn't want to re-install
-cat <<!  > /tmp/init_R_stuff.sh
+cat <<!  > /tmp/init_R_stuff.sh; chmod 777 /tmp/init_R_stuff.sh
     echo "Rebuilding ~/.Renviron and ~/.Rprofile for $USER"
     # Set CRAN mirror to a default location
     rm -f ~/.Renviron
@@ -168,10 +168,19 @@ echo "sudo apt-get install liblapack-dev"
 
 echo ""
 echo "If rgl didn't install because of GL/gl.h in ubuntu, do this install first"
-echo "sudo apt-get install r-base-dev xorg-dev libglu1-mesa-dev"
+echo "sudo apt-get install r-base-dev xorg-dev libglu1-mesa-dev mesa-common-dev"
 echo "or maybe"
 echo "sudo apt-get build-dep r-cran-rgl"
 echo ""
 echo "If it complained about no package named 'h2o' you need to do a make"
 
-
+# configure: error: missing required header GL/gl.h 
+# normally means you haven't installed the -dev version of a package, in this case GL.
+# 
+# On my system, GL/gl.h is owned by mesa-common-dev
+# 
+# $ dpkg -S /usr/include/GL/gl.h
+# mesa-common-dev: /usr/include/GL/gl.h
+# 
+# which would have been installed with apt-get install mesa-common-dev or 
+# via some GUI magic.

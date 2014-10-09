@@ -30,7 +30,7 @@ if (! failed) {
 }
 
 h2o_r_package_file <- NULL
-dir_to_search = normalizePath("../../../target/R")
+dir_to_search = normalizePath("../../../target/R", winslash = "/")
 files = dir(dir_to_search)
 for (i in 1:length(files)) {
     f = files[i]
@@ -50,8 +50,10 @@ for (i in 1:length(files)) {
 #    stop(paste("H2O package not found in", dir_to_search))
 # }
 
-# install.packages(paste(dir_to_search, h2o_r_package_file, sep="/"), repos = NULL, type = "source")
-install.packages("h2o", repos = c(H2O = paste("file://", dir_to_search, sep=""), getOption("repos")))
+install.packages("h2o",
+                 repos = c(H2O = paste0(ifelse(.Platform$OS.type == "windows", "file:", "file://"),
+                                        dir_to_search),
+                           getOption("repos")))
 library(h2o)
 h2o.init(ip            = ipPort[[1]], 
          port          = ipPort[[2]], 

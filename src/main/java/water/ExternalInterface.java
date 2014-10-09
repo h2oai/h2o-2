@@ -1,6 +1,6 @@
 package water;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 import java.io.InputStream;
 
 /**

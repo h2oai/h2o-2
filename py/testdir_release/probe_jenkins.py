@@ -15,7 +15,7 @@ def my_urlopen(url):
     return urlopen(url)
 
 print "\nget all projects"
-req = urlopen('http://192.168.1.164:8080/api/json')
+req = urlopen('http://172.16.2.164:8080/api/json')
 res = req.read()
 data = loads(res)
 print_json(data.keys())

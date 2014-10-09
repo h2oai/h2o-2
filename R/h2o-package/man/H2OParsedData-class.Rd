@@ -80,7 +80,7 @@
 \alias{h2o<-,H2OParsedData,H2OParsedData-method}
 \alias{h2o<-,H2OParsedData,numeric-method}
 \alias{head,H2OParsedData-method}
-\alias{histograms,H2OParsedData-method}
+\alias{hist,H2OParsedData-method}
 \alias{ifelse,H2OParsedData-method}
 \alias{is.factor,H2OParsedData-method}
 \alias{is.na,H2OParsedData-method}

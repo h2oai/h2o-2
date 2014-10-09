@@ -6,7 +6,7 @@ import java.util.TimerTask;
 import water.H2O;
 import water.UDPRebooted;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class Shutdown extends Request {
 

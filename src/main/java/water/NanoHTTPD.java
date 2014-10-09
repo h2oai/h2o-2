@@ -279,6 +279,7 @@ public class NanoHTTPD
     static final int MAX_HEADER_BUFFER_SIZE = 1 << 16; // 64k
     public void run() {
       try {
+        long startMillis = System.currentTimeMillis();
         InputStream is = new BufferedInputStream(mySocket.getInputStream());
         is.mark(MAX_HEADER_BUFFER_SIZE);
 
@@ -425,7 +426,7 @@ public class NanoHTTPD
         if ( r == null )
           sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: Serve() returned a null response." );
         else
-          sendResponse( r.status, r.mimeType, r.header, r.data );
+          sendResponse( startMillis, r.status, r.mimeType, r.header, r.data );
 
         in.close();
         is.close();
@@ -649,8 +650,17 @@ public class NanoHTTPD
      */
     private void sendError( String status, String msg ) throws InterruptedException
     {
+      String s = "         HTTP_status: " + status;
+      Log.info_no_stdout(Sys.HTLOG, s);
       sendResponse( status, MIME_PLAINTEXT, null, new ByteArrayInputStream( msg.getBytes()));
       throw new InterruptedException();
+    }
+
+    private void sendResponse( long startMillis, String status, String mime, Properties header, InputStream data ) {
+      long deltaMillis = System.currentTimeMillis() - startMillis;
+      String s = "         HTTP_status: " + status + ", millis: " + deltaMillis;
+      Log.info_no_stdout(Sys.HTLOG, s);
+      sendResponse(status, mime, header, data);
     }
 
     /**

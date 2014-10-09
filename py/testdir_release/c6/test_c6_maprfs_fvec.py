@@ -35,7 +35,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "hhp.unbalanced.data.gz",
             # duplicate column header "A"
             # "hhp2.os.noisy.0_1.data",
-            "hhp2.os.noisy.9_4.data",
+            # "hhp2.os.noisy.9_4.data",
             "hhp_9_14_12.data",
             "leads.csv",
             "prostate_long_1G.csv",
@@ -45,7 +45,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # h2o.nodes[0].use_maprfs = True
         # h2o.nodes[0].use_hdfs = False
         # h2o.nodes[0].hdfs_version = 'mapr3.0.1',
-        # h2o.nodes[0].hdfs_name_node = '192.168.1.171:7222'
+        # h2o.nodes[0].hdfs_name_node = '172.16.2.171:7222'
 
         h2o.setup_benchmark_log()
 
@@ -93,7 +93,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "Loading", csvFilename, 'from maprfs'
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs, pollTimeoutSecs=360,
-                doSummary=True, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
+                doSummary=False, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
             print "parse result:", parseResult['destination_key']

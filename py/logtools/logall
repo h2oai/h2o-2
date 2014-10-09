@@ -1,0 +1,35 @@
+
+# save logs here
+rm -fr savedir
+mkdir savedir
+
+FILES=*data1* *disk* *hadoop*
+for f in $FILES
+do
+  echo "Processing $f file..."
+  cd $f
+  LONGPATH=`find .`
+  for l in $LONGPATH
+    do
+      echo ""
+      echo "logfile: $l"
+      # tail -n 20 $l
+      # to get filename prefix
+      #egrep -i '(error|java)' $l /dev/null
+
+      # is it a file
+      if [[ -f $l ]]
+      then
+        # if egrep -i '(error|java)' $l
+        if egrep -q -i 'INFO' $l 
+        then
+          echo "$f/$l"
+          cp "$l" ../savedir
+          echo ""
+        fi
+      fi
+    done
+
+done
+echo "now do this (scrapes created sandbox dir):"
+echo "python ~/h2o/py/h2o_sandbox.py"

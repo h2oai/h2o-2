@@ -2,6 +2,7 @@ import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 
+RANDOM_UDP_DROP = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -25,14 +26,14 @@ class Basic(unittest.TestCase):
 
         trialMax = 2
         for tryHeap in [24]:
-            print "\n", tryHeap,"GB heap, 1 jvm per host, import 192.168.1.176 hdfs, then parse"
+            print "\n", tryHeap,"GB heap, 1 jvm per host, import mr-0x6 hdfs, then parse"
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(node_count=1, java_heap_GB=tryHeap,
-                    use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
+                h2o.build_cloud(base_port=55930, java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP,
+                    use_hdfs=True, hdfs_name_node='mr-0x6', hdfs_version='cdh4')
             else:
-                h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
-                    use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
+                h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP,
+                    use_hdfs=True, hdfs_name_node='mr-0x6', hdfs_version='cdh4')
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
             # h2o.nodes[0].sandboxIgnoreErrors = True
@@ -42,9 +43,8 @@ class Basic(unittest.TestCase):
             for trial in range(trialMax):
                 hex_key = csvFilename + "_" + str(trial) + ".hex"
                 csvFilePattern = 'file_1.dat.gz'
-                # "key": "hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
+                # "key": "hdfs://172.16.2.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
 
-                time.sleep(5)
                 csvPathname = importFolderPath + "/" + csvFilePattern
                 start = time.time()
                 parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,

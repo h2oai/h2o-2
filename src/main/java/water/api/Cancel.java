@@ -4,7 +4,7 @@ import water.Job;
 import water.Key;
 import water.util.RString;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class Cancel extends Request {
   // TODO use ExistingJobKey (check other places)

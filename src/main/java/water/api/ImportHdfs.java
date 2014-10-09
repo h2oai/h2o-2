@@ -11,8 +11,8 @@ import water.DKV;
 import water.persist.PersistHdfs;
 import water.util.Log;
 
-import com.google.gson.*;
-import com.google.gson.internal.Streams;
+import dontweave.gson.*;
+import dontweave.gson.internal.Streams;
 
 public class ImportHdfs extends Request {
   public class PathArg extends TypeaheadInputText<String> {

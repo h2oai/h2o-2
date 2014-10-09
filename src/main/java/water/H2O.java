@@ -416,16 +416,23 @@ public final class H2O {
     Socket s = null;
     try {
       // using google's DNS server as an external IP to find
-      s = new Socket("8.8.8.8", 53);
+      // Add a timeout to the touch of google.
+      // https://0xdata.atlassian.net/browse/HEX-743
+      s = new Socket(); 
+      // only 3000 milliseconds before giving up
+      // Exceptions: IOException, SocketTimeoutException, plus two Illegal* exceptions
+      s.connect(new InetSocketAddress("8.8.8.8", 53), 3000); 
       m+="Using " + s.getLocalAddress() + "\n";
       return s.getLocalAddress();
     } catch( java.net.SocketException se ) {
       return null;           // No network at all?  (Laptop w/wifi turned off?)
+    } catch( java.net.SocketTimeoutException se ) {
+      return null;           // could be firewall?
     } catch( Throwable t ) {
       Log.err(t);
       return null;
     } finally {
-      Log.warn(m);
+      Log.info(m);
       Utils.close(s);
     }
   }
@@ -922,6 +929,11 @@ public final class H2O {
    * as the only member.
    */
   private static void startLocalNode() {
+    // Print this first, so if any network stuff is affected it's clear this is going on.
+    if (OPT_ARGS.random_udp_drop != null) {
+      Log.warn("Debugging option RANDOM UDP DROP is ENABLED, make sure you really meant it");
+    }
+
     // Figure self out; this is surprisingly hard
     initializeNetworkSockets();
     // Do not forget to put SELF into the static configuration (to simulate
@@ -1188,7 +1200,7 @@ public final class H2O {
         try {
           H2O.CLOUD_DGRAM.send(bb, h2o._key);
         } catch( IOException e ) {
-          Log.err("Multicast Error to "+h2o, e);
+          Log.warn("Multicast Error to "+h2o+e);
         }
       }
     }

@@ -1,6 +1,6 @@
 package water.api;
 
-import com.google.gson.*;
+import dontweave.gson.*;
 import java.util.*;
 import water.*;
 import water.fvec.Frame;

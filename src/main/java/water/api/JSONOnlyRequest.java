@@ -1,7 +1,7 @@
 
 package water.api;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 import java.util.Properties;
 import water.NanoHTTPD;
 

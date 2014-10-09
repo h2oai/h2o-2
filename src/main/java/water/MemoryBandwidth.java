@@ -42,7 +42,7 @@ public class MemoryBandwidth {
   // memory bandwidth in bytes / second
   double run_benchmark() {
     // use the lesser of 40MB or 10% of Heap
-    final long M = Math.min(10000000l, Runtime.getRuntime().maxMemory()/10);
+    final long M = Math.min(10000000l, Runtime.getRuntime().maxMemory()/40);
     int[] vals = MemoryManager.malloc4((int)M);
     double total;
     int repeats = 20;

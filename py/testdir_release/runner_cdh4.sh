@@ -23,8 +23,8 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # I suppose we could just have a test verify the request cloud size, after building
 CDH4_JOBTRACKER=172.16.2.177:8021
 
-CDH4_NODES=2
-CDH4_HEAP=4g
+CDH4_NODES=3
+CDH4_HEAP=14g
 
 CDH4_JAR=h2odriver_cdh4.jar
 NAME_NODE=172.16.2.176
@@ -61,7 +61,7 @@ REMOTE_SSH_USER_WITH_JAVA="$REMOTE_SSH_USER $SET_JAVA_HOME"
 
 #*****HERE' WHERE WE START H2O ON HADOOP*******************************************
 rm -f /tmp/h2o_on_hadoop_$REMOTE_IP.sh
-echo "$SET_JAVA_HOME" > /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "$SET_JAVA_HOME" > /tmp/h2o_on_hadoop_$REMOTE_IP.sh; chmod 777 /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 echo "cd /home/0xcustomer" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 # h2o_one_node is the file created by the h2odriver
 echo "rm -fr h2o_one_node" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
@@ -72,7 +72,7 @@ chmod +x /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
 echo "port: start looking at 55821. Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port)"
-echo "yarn jar $CDH4_JAR water.hadoop.h2odriver -jt $CDH4_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH4_HEAP -nodes $CDH4_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "yarn jar $CDH4_JAR water.hadoop.h2odriver -jt $CDH4_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH4_HEAP -nodes $CDH4_NODES -output $HDFS_OUTPUT -notify h2o_one_node -ea" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # copy the script, just so we have it there too
 $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
@@ -122,10 +122,10 @@ cp -f h2o_one_node sandbox
 # 
 # echo "Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
 # echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
-# echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
-# for mr in 111 112 113 114 115 116 117 118 119 120
+# echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh4) might be using"
+# for mr in 171 172 173 174 175 176 177 178 179 180
 # do
-#     ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'
+#     ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr 'cd /mnt/0xcustomer-datasets'
 # done
 
 # We now have the h2o-nodes.json, that means we started the jvms
@@ -153,7 +153,10 @@ myPy() {
 # myPy c1 test_c1_rel.py
 
 # worked
-myPy c2 test_c2_rel.py
+myPy c2 test_c2_fvec.py
+myPy c6 test_c6_hdfs_fvec.py
+myPy c9 test_c9_GLM_airlines_hdfs_multi.py
+
 # myPy c3 test_c3_rel.py
 # test_c8_rf_airlines_hdfs_fvec.py
 # test_c4_four_billion_rows_fvec.py
@@ -162,7 +165,6 @@ myPy c2 test_c2_rel.py
 # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
 
 # have to update this to poit to the right hdfs?
-# myPy c6 test_c6_hdfs_fvec.py
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.

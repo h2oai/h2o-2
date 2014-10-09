@@ -88,7 +88,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                         -2, //auto-tune
                                         -1, //N epochs per iteration
                                         0, //1 epoch per iteration
-                                        rng.nextInt(100), // <1 epoch per iteration
+                                        rng.nextInt(200), // <1 epoch per iteration
                                         500, //>1 epoch per iteration
                                 }) {
                                   DeepLearningModel model1 = null, model2 = null;
@@ -147,7 +147,8 @@ public class DeepLearningProstateTest extends TestUtil {
                                       }
 
                                       model1 = UKV.get(dest_tmp);
-                                      Assert.assertTrue(p.train_samples_per_iteration <= 0 || model1.epoch_counter > epochs || Math.abs(model1.epoch_counter - epochs)/epochs < 0.1);
+                                      assert( ((p.train_samples_per_iteration <= 0 || p.train_samples_per_iteration >= frame.numRows()) && model1.epoch_counter > epochs)
+                                              || Math.abs(model1.epoch_counter - epochs)/epochs < 0.20 );
 
                                       if (n_folds != 0)
                                       // test HTML of cv models
