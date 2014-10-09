@@ -477,7 +477,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
   public double sparsity_beta = 0;
 
-//  @API(help = "Maximum size of input layer (Experimental)", filter= Default.class, json = true)
+  @API(help = "Maximum dimensionality of data (size of input layer). Uses feature hashing (Experimental).", filter= Default.class, json = true)
   public int max_input_layer_size = Integer.MAX_VALUE;
 
   public enum MissingValuesHandling {
@@ -539,6 +539,7 @@ public class DeepLearning extends Job.ValidatedJob {
           "autoencoder",
           "average_activation",
           "sparsity_beta",
+          "max_input_layer_size",
   };
 
   // the following parameters can be modified when restarting from a checkpoint

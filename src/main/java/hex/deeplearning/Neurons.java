@@ -2,11 +2,14 @@ package hex.deeplearning;
 
 import hex.FrameTask;
 import hex.deeplearning.DeepLearning.Loss;
+import org.apache.hadoop.util.hash.Hash;
+import org.apache.hadoop.util.hash.MurmurHash;
 import water.Iced;
 import water.MemoryManager;
 import water.api.Request.API;
 import water.util.Utils;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 
 /**
@@ -700,33 +703,55 @@ public abstract class Neurons {
      * @param cats Array of indices, the first numcat values are the input layer unit (==column) indices for the non-zero categorical values
      *             (This allows this array to be re-usable by the caller, without re-allocating each time)
      */
-    static float[] matrix = null;
     public void setInput(long seed, final double[] nums, final int numcat, final int[] cats) {
       _a = _dvec;
       Arrays.fill(_a.raw(), 0f);
 
       // random projection from fullN down to max_input_layer_size
       if (params.max_input_layer_size < _dinfo.fullN()) {
-        final int N = _dinfo.fullN();
-        final int M = params.max_input_layer_size;
-        assert(_a.size() == M);
-        DenseVector orig = new DenseVector(N);
-        for (int i = 0; i < numcat; ++i) orig.set(cats[i], 1f);
-        for (int i = 0; i < nums.length; ++i)
-          orig.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f /*Always do MeanImputation during scoring*/ : (float) nums[i]);
-        if (matrix == null) {
+        final boolean random_projection = false;
+        final boolean hash_trick = true;
+        if (random_projection) {
+          final int N = _dinfo.fullN();
+          final int M = params.max_input_layer_size;
+          assert (_a.size() == M);
+
+          //expensive
+          DenseVector orig = new DenseVector(N);
+          for (int i = 0; i < numcat; ++i) orig.set(cats[i], 1f);
+          for (int i = 0; i < nums.length; ++i)
+            orig.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f /*Always do MeanImputation during scoring*/ : (float) nums[i]);
+
+          // Random projections based on http://users.soe.ucsc.edu/~optas/papers/jl.pdf
           Random rng = new Random(params.seed);
-          matrix = new float[N*M];
-          for (int i = 0; i<M; ++i) {
-            for (int j = 0; j<N; ++j) {
-              matrix[i*N+j] = rng.nextFloat();
+          for (int i = 0; i < M; ++i) {
+            for (int j = 0; j < N; ++j) {
+              final float rnd = rng.nextFloat();
+              float val = 0;
+              if (rnd < 1. / 6.) val = (float) Math.sqrt(3);
+              if (rnd > 5. / 6.) val = -(float) Math.sqrt(3);
+              _a.add(i, orig.get(j) * val);
             }
           }
-        }
-        for (int i = 0; i<M; ++i) {
-          for (int j = 0; j<N; ++j) {
-            _a.add(i, orig.get(j) * matrix[i*N+j]);
+        } else if (hash_trick) {
+          // Use hash trick for categorical features
+          final int M = params.max_input_layer_size;
+          assert (_a.size() == M);
+          // hash N-nums.length down to M-nums.length = cM (#categorical slots - always use all numerical features)
+          final int cM = M - nums.length;
+          if (cM <= 0) throw new IllegalArgumentException("max_input_layer_size must be at least " + (nums.length + 1));
+
+          assert (_a.size() == M);
+//          Hash murmur = MurmurHash.getInstance();
+          for (int i = 0; i < numcat; ++i) {
+//            ByteBuffer buf = ByteBuffer.allocate(4);
+//            int hashval = murmur.hash(buf.putInt(cats[i]).array(), 4, (int)params.seed); // turn horizontalized categorical integer into another integer, based on seed
+            int hashval = cats[i] ^ (int)params.seed; // turn horizontalized categorical integer into another integer, based on seed
+            _a.add(Math.abs(hashval % cM), 1f); // restrict to limited range
           }
+          for (int i = 0; i < nums.length; ++i)
+            _a.set(cM + i, Double.isNaN(nums[i]) ? 0f /*Always do MeanImputation during scoring*/ : (float) nums[i]);
+
         }
       } else {
         for (int i = 0; i < numcat; ++i) _a.set(cats[i], 1f);
