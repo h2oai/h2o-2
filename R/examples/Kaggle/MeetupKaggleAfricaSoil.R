@@ -11,13 +11,13 @@ test_hex <- h2o.importFile(h2oServer, path = path_test)
 
 # group variables
 vars <- colnames(train_hex)
-spectra <- vars[seq(2,3579,by=10)] # "poor man's dimensionality reduction": take every 10-th column of spectral data
+spectra <- vars[seq(2,3579,by=20)] # "poor man's dimensionality reduction": take every N-th column of spectral data
 extra <- vars[3580:3595]
 targets <- vars[3596:3600]
 predictors <- c(spectra, extra)
 
 ## Settings
-ensemble_size <- 5
+ensemble_size <- 1
 n_fold = 5
 
 # Scoring helpers
@@ -30,26 +30,28 @@ for (resp in 1:length(targets)) {
   cat("\n\nNow training and cross-validating a DL model for", targets[resp], "...\n")
   
   # run grid search with n-fold cross-validation
-  # Note: n-fold holdout sets are consecutive (1/n-th) pieces of the file -> consider global shuffle!
+  # Note: n-fold holdout sets are consecutive (1/n-th) pieces of the file -> consider global shuffle unless n is large!
   cvmodel <-
     h2o.deeplearning(x = predictors,
                      y = targets[resp],
                      data = train_hex,
                      nfolds = n_fold,
                      classification = F,
-                     activation=c("Rectifier"),
-                     #hidden = list(c(50,50,50,50),c(100,100,100)),
-                     hidden = c(50,50,50),
-                     epochs = 500,
-                     l1 = c(1e-5),
-                     l2 = c(0),
-                     train_samples_per_iteration = 10000
+                     activation="RectifierWithDropout",
+                     hidden = c(100,100,100), 
+                     hidden_dropout_ratios = c(0.0,0.0,0.0),   
+                     epochs = 50, 
+                     l1 = c(0,1e-5), 
+                     l2 = c(0,1e-5), 
+                     rho = 0.99, 
+                     epsilon = 1e-8, 
+                     train_samples_per_iteration = -2
     )
   #print(cvmodel)
   
   # gather/compute cross-validation errors
-  #MSE <- cvmodel@sumtable[[1]]$prediction_error   #If cvmodel is a grid search model
-  MSE <- cvmodel@model$valid_sqr_error    #If cvmodel is not a grid search model
+  MSE <- cvmodel@sumtable[[1]]$prediction_error   #If cvmodel is a grid search model
+  #MSE <- cvmodel@model$valid_sqr_error            #If cvmodel is not a grid search model
 
   RMSE <- sqrt(MSE)
   CMRMSE <- CMRMSE + RMSE #column-mean-RMSE
@@ -62,8 +64,8 @@ for (resp in 1:length(targets)) {
   cat("\nCross-validated CMRMSE so far:", CMRMSE/resp)
     
   cat("\n\nTaking parameters from grid search winner for", targets[resp], "...\n")
-  #p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
-  p <- cvmodel@model$params    #If cvmodel is not a grid search model
+  p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
+  #p <- cvmodel@model$params   #If cvmodel is not a grid search model
   
   #print(p)
   
@@ -78,9 +80,12 @@ for (resp in 1:length(targets)) {
                        classification = F,
                        activation = p$activation,
                        hidden = p$hidden, 
+                       hidden_dropout_ratios = p$hidden_dropout_ratios,
                        epochs = p$epochs,
                        l1 = p$l1,
-                       l2 = p$l2, 
+                       l2 = p$l2,
+                       rho = p$rho,
+                       epsilon = p$epsilon,
                        train_samples_per_iteration = p$train_samples_per_iteration)
     
     # Aggregate ensemble model predictions
