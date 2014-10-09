@@ -90,7 +90,7 @@ for (resp in 1:length(targets)) {
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 31 ## submission index
+submission = 32 ## submission index
 blend = T
 
 ## Settings
@@ -104,7 +104,7 @@ errs = 0
 cv_preds <- matrix(0, nrow = nrow(train_hex), ncol = 1)
 holdout_valid_se <- matrix(0, nrow = 1, ncol = length(targets))
 holdout_valid_mse <- matrix(0, nrow = 1, ncol = length(targets))
-for (resp in 1:length(targets)) {
+for (resp in 2){ #1:length(targets)) {
   if (validation) {
     if (grid) {
       cat("\n\nNow running grid search for ", targets[resp], "...\n")
@@ -378,7 +378,7 @@ for (resp in 1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(300,300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)
+                                        activation="Rectifier", hidden = c(300,300,300,300), epochs = 1000, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 5000)
             
             else if (resp == 3) #pH
 #               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) #0.12
@@ -621,9 +621,8 @@ print(Sys.info())
 #Overall 5 -fold cross-validated MSE on training dataset: 0.1125352 0.8863004 0.1437713 0.07582662 0.132544 #submission 28, with log-transform for P, cv score 0.459
 #Overall 5 -fold cross-validated MSE on training dataset: 0.08975365 0.1575689 0.1751598 0.07799052 0.1228687 # submission 31, same as submission 20, but with 5x 5-fold cv, shuffled datasets, cv score: 0.3489707, scored 0.58!!
 #Overall 5 -fold cross-validated MSE on training dataset: 0.09185992 0.8122152 0.1776434 0.06928164 0.1204961 # submission 31 again, had log-transformed P mixed up, cv score 0.4472
-
-#Try next: more epochs (100 instead of 50)
-#Try: log-transform for P
+#Try: log-transform for P.  Goes from 0.812 to 0.893 -> Didn't help!
+#Try: #submission 1+32: Mix of submission 1 (all but P) and submission 32: 1000 epochs for P instead of 50 and run on 10 nodes, MSE for P goes from 0.812 to 0.76924 -> helps a little
 
 #GOAL: 1/5*(sqrt(0.06)+sqrt(0.64)+sqrt(0.15)+sqrt(0.07)+sqrt(0.09))
 #CURRENT 0.42: 1/5*(sqrt(0.10)+sqrt(0.77)+sqrt(0.122)+sqrt(0.063)+sqrt(0.117))
