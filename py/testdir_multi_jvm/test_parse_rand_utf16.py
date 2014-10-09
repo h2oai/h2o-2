@@ -46,42 +46,42 @@ UTF8_MULTIBYTE = False
 
 if UTF8:
     # what about multi-byte UTF8
-    nonQuoteChoices = range(0x0, 0x100) # doesn't include last value ..allow ff
+    ordinalChoices = range(0x0, 0x100) # doesn't include last value ..allow ff
 else:  # ascii subset?
-    nonQuoteChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
+    ordinalChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
 
 
 if UTF8_MULTIBYTE:
     # add some UTF8 multibyte, and restrict the choices to make sure we hit these
-    nonQuoteChoices = range(0x0, 0x40) # doesn't include last value ..allow 7f
-    nonQuoteChoices += [0x201c, 0x201d, 0x2018, 0x2019, 6000]
+    ordinalChoices = range(0x0, 0x40) # doesn't include last value ..allow 7f
+    ordinalChoices += [0x201c, 0x201d, 0x2018, 0x2019, 6000]
 
-nonQuoteChoices.remove(0x09) # is 9 bad..apparently can cause NA
+ordinalChoices.remove(0x09) # is 9 bad..apparently can cause NA
 
-nonQuoteChoices.remove(0x00) # nul
-nonQuoteChoices.remove(0x0d) # cr
-nonQuoteChoices.remove(0x0a) # lf
-nonQuoteChoices.remove(0x01) # hiveseparator
+ordinalChoices.remove(0x00) # nul
+ordinalChoices.remove(0x0d) # cr
+ordinalChoices.remove(0x0a) # lf
+ordinalChoices.remove(0x01) # hiveseparator
 
 # smaller range, avoiding 0-1f control chars
-# nonQuoteChoices = range(0x20, 0x7f) # doesn't include last value
-nonQuoteChoices.remove(0x3b) # semicolon
-nonQuoteChoices.remove(0x20) # space
-nonQuoteChoices.remove(0x22) # double quote
-# nonQuoteChoices.remove(0x27) # apostrophe. should be legal if single quotes not enabled
-nonQuoteChoices.remove(0x2c) # comma
+# ordinalChoices = range(0x20, 0x7f) # doesn't include last value
+ordinalChoices.remove(0x3b) # semicolon
+ordinalChoices.remove(0x20) # space
+ordinalChoices.remove(0x22) # double quote
+# ordinalChoices.remove(0x27) # apostrophe. should be legal if single quotes not enabled
+ordinalChoices.remove(0x2c) # comma
 
-nonQuoteChoices.remove(0x30) # 0
-nonQuoteChoices.remove(0x31) # 1
-nonQuoteChoices.remove(0x32) # 2
-nonQuoteChoices.remove(0x33) # 3
-nonQuoteChoices.remove(0x34) # 4
-nonQuoteChoices.remove(0x35) # 5
-nonQuoteChoices.remove(0x36) # 6
-nonQuoteChoices.remove(0x37) # 7
-nonQuoteChoices.remove(0x38) # 8
-nonQuoteChoices.remove(0x39) # 9
-# print nonQuoteChoices
+ordinalChoices.remove(0x30) # 0
+ordinalChoices.remove(0x31) # 1
+ordinalChoices.remove(0x32) # 2
+ordinalChoices.remove(0x33) # 3
+ordinalChoices.remove(0x34) # 4
+ordinalChoices.remove(0x35) # 5
+ordinalChoices.remove(0x36) # 6
+ordinalChoices.remove(0x37) # 7
+ordinalChoices.remove(0x38) # 8
+ordinalChoices.remove(0x39) # 9
+# print ordinalChoices
 
 def generate_random_utf8_string(length=1):
         # want to handle more than 256 numbers
@@ -89,7 +89,7 @@ def generate_random_utf8_string(length=1):
         for i in range(length):
             # to go from hex 'string" to number
             # cint = int('fd9b', 16)
-            r = random.choice(nonQuoteChoices)
+            r = random.choice(ordinalChoices)
             c = unichr(r).encode('utf-8')
             cList.append(c)
             print 
