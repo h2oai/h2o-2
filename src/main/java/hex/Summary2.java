@@ -982,7 +982,7 @@ public class Summary2 extends Iced {
       sb.append("</tr>");
       sb.append("<tr><th>Value</th>");
       for (double pv : stats.pctile)
-        sb.append("<td>" + Utils.p2d(pv) + "</td>");
+        sb.append("<td>" + pv + "</td>");
       sb.append("</tr>");
       sb.append("</table>");
       sb.append("</div>");

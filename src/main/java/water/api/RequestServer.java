@@ -127,6 +127,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new AUC()),         "AUC",                      "Score");
     Request.addToNavbar(registerRequest(new HitRatio()),    "HitRatio",                 "Score");
     Request.addToNavbar(registerRequest(new PCAScore()),    "PCAScore",                 "Score");
+    Request.addToNavbar(registerRequest(new GainsLiftTable()),"Gains/Lift Table (Beta)","Score");
     Request.addToNavbar(registerRequest(new Steam()),    "Multi-model Scoring (Beta)", "Score");
 
     // Admin

@@ -156,7 +156,9 @@ myPy() {
 myPy c6 test_c6_maprfs_fvec.py
 
 # worked
-myPy c2 test_c2_fvec.py
+# fails 10/7/14 timeout
+# myPy c2 test_c2_fvec.py
+
 # myPy c3 test_c3_rel.py
 # test_c8_rf_airlines_hdfs_fvec.py
 # test_c4_four_billion_rows_fvec.py

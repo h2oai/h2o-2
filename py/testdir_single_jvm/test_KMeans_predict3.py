@@ -243,6 +243,7 @@ class Basic(unittest.TestCase):
             [38, 50, 62],
             [22, 31, 97], # let this bad one be legal?
             [24, 29, 97], # let this bad one be legal?
+            [24, 30, 96], # let this bad one be legal?
         ]
         sortedSize = sorted(size)
         if sortedSize not in expectedSizes:

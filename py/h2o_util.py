@@ -361,7 +361,8 @@ def flat_unzip(my_zip, my_dir):
             target = file(os.path.join(my_dir, filename), "wb")
             with source, target:
                 shutil.copyfileobj(source, target)
-                resultList.append(target)
+                # update to have resultList just be the pathname
+                resultList.append(os.path.abspath(target.name))
             source.close()
             target.close()
     return resultList

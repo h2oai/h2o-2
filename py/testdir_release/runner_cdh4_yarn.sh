@@ -26,8 +26,8 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # hack! use the old port
 CDH4_YARN_JOBTRACKER=172.16.2.177:8021
 
-CDH4_YARN_NODES=2
-CDH4_YARN_HEAP=4g
+CDH4_YARN_NODES=3
+CDH4_YARN_HEAP=14g
 
 CDH4_YARN_JAR=h2odriver_cdh4_yarn.jar
 NAME_NODE=172.16.2.176

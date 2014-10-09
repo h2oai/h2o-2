@@ -36,10 +36,10 @@ if [[ $USER != 'jenkins' ]]; then
 fi
 
 # if the directory doesn't exist complain
-TEST=$1
+TESTBASE=$(basename "$1" .py)
 ARCHIVE=$SANDBOX
 ARCHIVE+="_"
-ARCHIVE+=$TEST
+ARCHIVE+=$TESTBASE
 
 # remove the target copy directory if it exists
 # echo $1

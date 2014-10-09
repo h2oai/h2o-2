@@ -23,8 +23,8 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # I suppose we could just have a test verify the request cloud size, after building
 CDH4_JOBTRACKER=172.16.2.177:8021
 
-CDH4_NODES=2
-CDH4_HEAP=8g
+CDH4_NODES=3
+CDH4_HEAP=14g
 
 CDH4_JAR=h2odriver_cdh4.jar
 NAME_NODE=172.16.2.176
