@@ -23,7 +23,7 @@ Returns the mean squared error as a continuous real numeric.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.glm = prostate.glm = h2o.glm(x = c("RACE","PSA","DCAPS"), y = "AGE", 

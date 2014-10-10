@@ -14,7 +14,7 @@ Returns a data frame in the R environment. Note that this call establishes the d
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.data.frame <- as.data.frame(prostate.hex)

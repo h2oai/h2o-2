@@ -21,6 +21,6 @@ h2o.logAndEcho(conn, message)
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 h2o.logAndEcho(localH2O, "Test log and echo method.")
 }

@@ -42,7 +42,7 @@ An object of class \code{\linkS4class{H2OParsedData}}, representing the dataset 
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.raw = h2o.importFile(localH2O, path = prosPath, parse = FALSE)
 # Do not modify prostate.csv on disk at this point!

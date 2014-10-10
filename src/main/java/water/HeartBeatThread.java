@@ -114,15 +114,19 @@ public class HeartBeatThread extends Thread {
         hb._system_idle_ticks = lpfr.getSystemIdleTicks();
         hb._system_total_ticks = lpfr.getSystemTotalTicks();
         hb._process_total_ticks = lpfr.getProcessTotalTicks();
-	hb._process_num_open_fds = lpfr.getProcessNumOpenFds();
+        hb._process_num_open_fds = lpfr.getProcessNumOpenFds();
       }
       else {
         hb._system_idle_ticks = -1;
         hb._system_total_ticks = -1;
         hb._process_total_ticks = -1;
-	hb._process_num_open_fds = -1;
+        hb._process_num_open_fds = -1;
       }
       hb._cpus_allowed = lpfr.getProcessCpusAllowed();
+      if (H2O.OPT_ARGS.nthreads < hb._cpus_allowed) {
+        hb._cpus_allowed = H2O.OPT_ARGS.nthreads;
+      }
+      hb._nthreads = H2O.OPT_ARGS.nthreads;
       hb._pid = lpfr.getProcessID();
 
       // Announce what Cloud we think we are in.

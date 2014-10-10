@@ -17,7 +17,7 @@
 \examples{
 
 library(h2o)
-localH2O <- h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 # randomly repalce 50 rows in each column of the iris dataset with NA
 ds <- iris

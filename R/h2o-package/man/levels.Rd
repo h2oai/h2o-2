@@ -20,7 +20,7 @@ Returns a list containing one entry for each unique value found in the column of
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 levels(iris.hex[,5])

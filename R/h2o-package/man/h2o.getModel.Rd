@@ -20,7 +20,7 @@ Returns an object that is a subclass of \code{\linkS4class{H2OModel}}.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 iris.hex <- as.h2o(localH2O, iris, "iris.hex")
 model <- h2o.randomForest(x = 1:4, y = 5, data = iris.hex)
