@@ -84,6 +84,7 @@ http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 For more information see: http://docs.0xdata.com
 }
 \examples{
+# -- CRAN examples begin --
 library(h2o)
 localH2O = h2o.init()
 
@@ -95,6 +96,7 @@ independent <- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst",
 dependent <- "runoffnew"
 h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 3, interaction.depth = 3, 
   n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
+# -- CRAN examples end --
 
 \dontrun{
 # Run multinomial classification GBM on australia data 

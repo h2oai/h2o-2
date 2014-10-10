@@ -97,12 +97,14 @@ An object of class \code{\linkS4class{H2ODeepLearningModel}} with slots key, dat
 }
 
 \examples{
+# -- CRAN examples begin --
 library(h2o)
 localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", 
                  hidden = c(10, 10), epochs = 5)
+# -- CRAN examples end --
 
 \dontrun{
 # DeepLearning variable importance
