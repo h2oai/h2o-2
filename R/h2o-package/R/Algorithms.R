@@ -42,10 +42,8 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
     stop("'key' must be a character string")
   if (nchar(key) > 0 && !grepl("^[a-zA-Z_][a-zA-Z0-9_.]*$", key))
     stop("'key' must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
-  if (!nzchar(key)) {
-    key <- sprintf("Last.coxph.%d", .pkg.env$temp_count)
-    .pkg.env$temp_count <- (.pkg.env$temp_count + 1) %% .RESULT_MAX
-  }
+  if (!nzchar(key))
+    key <- .h2o.__uniqID("CoxPHModel")
 
   ties <- match.arg(ties)
 
@@ -72,7 +70,7 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
   mcall <- match.call()
   model <-
     list(coefficients = structure(res[[3L]]$coef, names = x),
-         var          = matrix(res[[3L]]$var, 1L, 1L),
+         var          = matrix(res[[3L]]$var_coef, 1L, 1L),
          loglik       = c(res[[3L]]$null_loglik, res[[3L]]$loglik),
          score        = res[[3L]]$score_test,
          iter         = res[[3L]]$iter,
@@ -88,39 +86,37 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
          loglik       = model$loglik,
          nevent       = model$nevent,
          coefficients = matrix(c(res[[3L]]$coef,  res[[3L]]$exp_coef,
-                                 res[[3L]]$se_coef, res[[3L]]$z_coef, NA_real_),
+                                 res[[3L]]$se_coef, res[[3L]]$z_coef,
+                                 1 - pchisq(res[[3L]]$z_coef^2, 1)),
                                nrow = 1L, ncol = 5L,
                                dimnames =
                                list(x,
                                     c("coef", "exp(coef)", "se(coef)",
                                       "z", "Pr(>|z|)"))),
-         conf.int     = matrix(c(res[[3L]]$exp_coef, res[[3L]]$exp_neg_coef,
-                                 NA_real_, NA_real_),
-                               nrow = 1L, ncol = 4L,
-                               dimnames =
-                               list(x,
-                               c("exp(coef)", "exp(-coef)",
-                                 "lower .95", "upper .95"))),
-         logtest      = c(test = res[[3L]]$loglik_test, df = 1, pvalue = NA_real_),
-         sctest       = c(test = res[[3L]]$score_test,  df = 1, pvalue = NA_real_),
+         conf.int     = NULL,
+         logtest      = c(test = res[[3L]]$loglik_test, df = 1,
+                          pvalue = 1 - pchisq(res[[3L]]$loglik_test, 1)),
+         sctest       = c(test = res[[3L]]$score_test,  df = 1,
+                          pvalue = 1 - pchisq(res[[3L]]$score_test, 1)),
          rsq          = c(rsq  = res[[3L]]$rsq,     maxrsq = res[[3L]]$maxrsq),
-         waldtest     = c(test = res[[3L]]$wald_test,   df = 1, pvalue = NA_real_),
+         waldtest     = c(test = res[[3L]]$wald_test,   df = 1,
+                          pvalue = 1 - pchisq(res[[3L]]$wald_test, 1)),
          used.robust  = FALSE)
-  ok <- which((res[[3L]]$n_event + res[[3L]]$n_censor) > 0L)
   survfit <-
     list(n            = model$n,
-         time         = (res[[3L]]$min_time:res[[3L]]$max_time)[ok],
-         n.risk       = res[[3L]]$n_risk[ok],
-         n.event      = res[[3L]]$n_event[ok],
-         n.censor     = res[[3L]]$n_censor[ok],
-         surv         = res[[3L]]$surv[ok],
+         time         = res[[3L]]$time,
+         n.risk       = res[[3L]]$n_risk,
+         n.event      = res[[3L]]$n_event,
+         n.censor     = res[[3L]]$n_censor,
+         surv         = NULL,
          type         = ifelse(ny == 2L, "right", "counting"),
-         cumhaz       = res[[3L]]$cumhaz[ok],
-         std.err      = res[[3L]]$se_cumhaz[ok],
+         cumhaz       = NULL,
+         std.err      = NULL,
          upper        = NULL,
          lower        = NULL,
          conf.type    = NULL,
-         conf.int     = NULL)
+         conf.int     = NULL,
+         call         = NULL)
   new("H2OCoxPHModel", key = key, data = data, model = model,
       summary = summary, survfit = survfit)
 }
@@ -1249,10 +1245,12 @@ h2o.predict <- function(object, newdata) {
   if( missing(newdata) ) newdata <- object@data
   if(class(newdata) != "H2OParsedData") stop('newdata must be a H2O dataset')
   
-  if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2ONBModel", "H2ODeepLearningModel", "H2OSpeeDRFModel")) {
+  if(class(object) %in% c("H2OCoxPHModel", "H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2ONBModel",
+                          "H2ODeepLearningModel", "H2OSpeeDRFModel")) {
     # Set randomized prediction key
-    key_prefix = switch(class(object), "H2OGBMModel" = "GBMPredict", "H2OKMeansModel" = "KMeansPredict",
-                        "H2ODRFModel" = "DRFPredict", "H2OGLMModel" = "GLM2Predict", "H2ONBModel" = "NBPredict",
+    key_prefix = switch(class(object), "H2OCoxPHModel" = "CoxPHPredict", "H2OGBMModel" = "GBMPredict",
+                        "H2OKMeansModel" = "KMeansPredict", "H2ODRFModel" = "DRFPredict",
+                        "H2OGLMModel" = "GLM2Predict", "H2ONBModel" = "NBPredict",
                         "H2ODeepLearningModel" = "DeepLearningPredict", "H2OSpeeDRFModel" = "SpeeDRFPredict")
     rand_pred_key = .h2o.__uniqID(key_prefix)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)

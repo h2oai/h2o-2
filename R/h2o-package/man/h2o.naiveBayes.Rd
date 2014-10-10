@@ -50,7 +50,7 @@ For more information see: http://docs.0xdata.com
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 # Build naive Bayes classifier with categorical predictors
 votesPath = system.file("extdata", "housevotes.csv", package="h2o")

@@ -20,7 +20,7 @@ Returns an object of class \code{\linkS4class{H2OParsedData}}.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 h2o.ls(localH2O)

@@ -24,7 +24,7 @@ WARNING: Files located on the H2O server may be very large! Make sure you have e
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 irisPath = system.file("extdata", "iris_wheader.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 

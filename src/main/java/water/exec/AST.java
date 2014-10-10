@@ -1,17 +1,15 @@
 package water.exec;
 
+import water.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+
 import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
-
-import water.*;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.NewChunk;
-import water.fvec.Vec;
-import water.util.Log;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -565,7 +563,7 @@ class ASTAssign extends AST {
                 }
               }
             }
-          }.doAll(ary.numCols(), ary.add("rep_vec",v));
+          }.doAll(ary.add("rep_vec",v));
           UKV.remove(v._key);
           UKV.remove(ary.remove(ary.numCols()-1)._key);
 

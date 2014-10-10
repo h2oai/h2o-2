@@ -45,7 +45,7 @@ Tibshirani, R., Walther, G. and Hastie, T. (2000). Estimating the number of clus
 # Currently still in beta, so don't automatically run example
 \dontrun{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE)
+localH2O = h2o.init(beta = TRUE)
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.gapStatistic(iris.hex, K.max = 10, B = 100)

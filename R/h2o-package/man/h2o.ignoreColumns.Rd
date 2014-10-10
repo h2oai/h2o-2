@@ -15,7 +15,7 @@ h2o.ignoreColumns(data, max_na = 0.2)
 \examples{
 \dontrun{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 airlinesURL = "https://s3.amazonaws.com/h2o-airlines-unpacked/allyears2k.csv"
 airlines.hex = h2o.importFile(localH2O, path = airlinesURL, key = "airlines.hex")
 h2o.ignoreColumns(airlines.hex)

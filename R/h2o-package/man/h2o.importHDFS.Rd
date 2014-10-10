@@ -60,7 +60,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 # This is an example of how to import files from HDFS.
 # The user must modify the path to his or her specific HDFS path for this example to run.
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 iris.hex = h2o.importHDFS(localH2O, path = paste("hdfs://192.168.1.161", 
   "datasets/runit/iris_wheader.csv", sep = "/"), parse = TRUE)
 class(iris.hex)

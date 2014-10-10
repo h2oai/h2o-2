@@ -89,6 +89,7 @@ public class Cloud extends Request2 {
         cloudHealthy = false;
       }
       node.addProperty("cpus_allowed", hb._cpus_allowed);
+      node.addProperty("nthreads", hb._nthreads);
       node.addProperty("PID", hb._pid);
 
       JsonArray fjth = new JsonArray();

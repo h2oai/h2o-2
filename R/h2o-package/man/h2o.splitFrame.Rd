@@ -21,7 +21,7 @@ Returns a list of objects of class \code{\linkS4class{H2OParsedData}}, each corr
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 iris.split = h2o.splitFrame(iris.hex, ratios = c(0.2, 0.5))

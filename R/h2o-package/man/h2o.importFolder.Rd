@@ -57,7 +57,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 \examples{
 \dontrun{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 myPath = system.file("extdata", "prostate_folder", package = "h2o")
 prostate_all.hex = h2o.importFolder(localH2O, path = myPath)
 class(prostate_all.hex)

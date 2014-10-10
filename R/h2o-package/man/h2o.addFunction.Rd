@@ -32,6 +32,6 @@ This method is intended to be used in conjunction with \code{\link{ddply.H2OPars
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 h2o.addFunction(localH2O, function(x) { 2*x + 5 }, "simpleFun")
 }

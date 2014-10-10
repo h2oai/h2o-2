@@ -416,11 +416,11 @@ def find_key(pattern=None):
 # None should be same as no pattern
 def delete_keys(node=None, pattern=None, timeoutSecs=120):
     if not node: node = h2o.nodes[0]
+
     kwargs = {'filter': pattern}
     deletedCnt = 0
     triedKeys = []
     while True:
-
         # FIX! h2o is getting a bad store_view NPE stack trace if I grabe all the 
         # keys at the end of a test, prior to removing. Just grab 20 at a time like h2o 
         # used to do for me. Maybe the keys are changing state, and going slower will eliminate the race
@@ -458,10 +458,12 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
 
 # if pattern is used, don't use the heavy h2o method
 def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
-    time.sleep(5)
     # TEMP: change this to remove_all_keys which ignores locking and removes keys?
     # getting problems when tests fail in multi-test-on-one-h2o-cluster runner*sh tests
     if not node: node = h2o.nodes[0]
+    # unlock all keys first to make sure broken keys get removed
+    node.unlock()
+
     totalDeletedCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff
     # this will be interesting if the others don't have a complete set
