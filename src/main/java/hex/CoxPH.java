@@ -154,21 +154,24 @@ public class CoxPH extends Job {
 
     @Override
     protected float[] score0(double[] data, float[] preds) {
-      double x_new = data[0];
-      if (Double.isNaN(x_new))
-        x_new = x_mean;
       int n_time = time.length;
-      double x_centered = x_new - x_mean;
-      double risk_new = Math.exp(coef * x_centered);
-      preds[0] = Float.NaN;
-      for (int t = 0; t < n_time; t++) {
-        int i = t + 1;
-        double gamma     = x_centered * cumhaz_0[t] - var_cumhaz_2[t];
-        double cumhaz_1    = risk_new * cumhaz_0[t];
-        double se_cumhaz_1 = risk_new * Math.sqrt(var_cumhaz_1[t] + (gamma * var_coef * gamma));
-        preds[i]           = (float) cumhaz_1;
-        preds[i + n_time]  = (float) se_cumhaz_1;
+      double x_new = data[0];
+      if (Double.isNaN(x_new)) {
+        for (int i = 1; i <= 2 * n_time; i++)
+          preds[i] = Float.NaN;
+      } else {
+        double x_centered = x_new - x_mean;
+        double risk_new = Math.exp(coef * x_centered);
+        for (int t = 0; t < n_time; t++) {
+          int i = t + 1;
+          double gamma     = x_centered * cumhaz_0[t] - var_cumhaz_2[t];
+          double cumhaz_1    = risk_new * cumhaz_0[t];
+          double se_cumhaz_1 = risk_new * Math.sqrt(var_cumhaz_1[t] + (gamma * var_coef * gamma));
+          preds[i]           = (float) cumhaz_1;
+          preds[i + n_time]  = (float) se_cumhaz_1;
+        }
       }
+      preds[0] = Float.NaN;
       return preds;
     }
 
