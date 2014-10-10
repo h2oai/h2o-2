@@ -66,8 +66,10 @@ def main(argv):
 
     # Run tests
     perf_runner.run_tests()
+    print "Finished running all tests"
 
     # Alerts
+    print "Running Alerts Rollup"
     ( Alerter(order=10, names=perf_runner.names) ).alert() #  Parens around Alerter to make explicit that alert() is non-static
 
 if __name__ == "__main__":
