@@ -25,7 +25,7 @@ Note that resulting values are in milliseconds and not the seconds stored by the
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 dates = c("Fri Jan 10 00:00:00 1969 -0800",
           "Tue Jan 10 04:00:00 2068 -0800",
           "Mon Dec 30 01:00:00 2002 -0800",

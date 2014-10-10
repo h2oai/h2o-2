@@ -14,7 +14,7 @@ Returns a matrix in the R environment. Note that this call establishes the data 
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.matrix <- as.matrix(prostate.hex)

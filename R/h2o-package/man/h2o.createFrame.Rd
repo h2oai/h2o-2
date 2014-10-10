@@ -35,7 +35,7 @@ Returns an H2O data frame.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE)
+localH2O = h2o.init(beta = TRUE)
 myframe = h2o.createFrame(localH2O, 'myframekey', rows = 1000, cols = 10, 
                           seed = -12301283, randomize = TRUE, value = 0, real_range = 2.0,
                           categorical_fraction = 0.2, factors = 100, 

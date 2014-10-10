@@ -75,7 +75,7 @@ An object of class \code{\linkS4class{H2OCoxPHModel}}.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 library(survival)
 bladder.hex <- as.h2o(localH2O, bladder, key = "bladder.hex")
