@@ -3,7 +3,7 @@
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
 h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
-                     beta = FALSE, assertion = TRUE, license = NULL, nthreads = 2, max_mem_size = NULL, min_mem_size = NULL,
+                     beta = FALSE, assertion = TRUE, license = NULL, nthreads = -2, max_mem_size = NULL, min_mem_size = NULL,
                      ice_root = NULL, strict_version_check = TRUE) {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
@@ -37,20 +37,39 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
   # myUpURL = paste("http://", ip, ":", port, "/Up.json", sep="")
   myUpURL = paste("http://", ip, ":", port, sep="")
   myURL = paste("http://", ip, ":", port, sep="")
+  warnNthreads = FALSE
   if(!url.exists(myUpURL)) {
     if(!startH2O)
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip == "localhost" || ip == "127.0.0.1") {
       cat("\nH2O is not running yet, starting it now...\n")
-      .h2o.startJar(nthreads, max_memory = max_mem_size, min_memory = min_mem_size, beta = beta, assertion = assertion, forceDL = forceDL, license = license, ice_root = ice_root)
-      count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
-      if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
-    } else stop("Can only start H2O launcher if IP address is localhost.")
+
+      if (nthreads == -2) {
+        warnNthreads = TRUE
+        nthreads = 2
+      }
+
+      .h2o.startJar(nthreads = nthreads, max_memory = max_mem_size, min_memory = min_mem_size, beta = beta, assertion = assertion, forceDL = forceDL, license = license, ice_root = ice_root)
+
+      count = 0;
+      while(!url.exists(myURL) && (count < 60)) {
+        Sys.sleep(1);
+        count = count + 1
+      }
+
+      if (!url.exists(myURL)) {
+        stop("H2O failed to start, stopping execution.")
+      }
+    } else {
+      stop("Can only start H2O launcher if IP address is localhost.")
+    }
   }
-  cat("Successfully connected to", myURL, "\n")
+
+  cat("Successfully connected to", myURL, "\n\n")
   H2Oserver = new("H2OClient", ip = ip, port = port)
   # Sys.sleep(0.5)    # Give cluster time to come up
-  h2o.clusterInfo(H2Oserver); cat("\n")
+  h2o.clusterInfo(H2Oserver)
+  cat("\n")
 
   if((verH2O = .h2o.__version(H2Oserver)) != (verPkg = packageVersion("h2o"))) {
     message = sprintf("Version mismatch! H2O is running version %s but R package is version %s", verH2O, toString(verPkg))
@@ -60,6 +79,14 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
     else {
       warning(message)
     }
+  }
+
+  if (warnNthreads) {
+    cat("Note:  As started, H2O is limited to the CRAN default of 2 CPUs.\n")
+    cat("       Shut down and restart H2O as shown below to use all your CPUs.\n")
+    cat("           > h2o.shutdown(localH2O)\n")
+    cat("           > localH2O = h2o.init(nthreads = -1)\n")
+    cat("\n")
   }
 
   assign("SERVER", H2Oserver, .pkg.env)
@@ -152,13 +179,8 @@ h2o.clusterStatus <- function(client) {
     "'localH2O', for example):\n",
     "    > localH2O = h2o.init()\n",
     "\n",
-    "For H2O package documentation, first call init() and then ask for help:\n",
-    "    > localH2O = h2o.init()\n",
+    "For H2O package documentation, ask for help:\n",
     "    > ??h2o\n",
-    "\n",
-    "To stop H2O you must explicitly call shutdown (either from R, as shown\n",
-    "here, or from the Web UI):\n",
-    "    > h2o.shutdown(localH2O)\n",
     "\n",
     "After starting H2O, you can use the Web UI at http://localhost:54321\n",
     "For more information visit http://docs.0xdata.com\n",
