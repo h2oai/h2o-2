@@ -70,7 +70,10 @@ def main(argv):
 
     # Alerts
     print "Running Alerts Rollup"
-    ( Alerter(order=10, names=perf_runner.names) ).alert() #  Parens around Alerter to make explicit that alert() is non-static
+    try:
+        ( Alerter(order=10, names=perf_runner.names) ).alert() #  Parens around Alerter to make explicit that alert() is non-static
+    except:
+        print "Failed to write Alerts.txt"
 
 if __name__ == "__main__":
     main(sys.argv)
