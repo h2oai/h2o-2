@@ -1326,6 +1326,41 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
 
+strsplit <- function(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE) {
+  if (inherits(x, "H2OParsedData")) { UseMethod("strsplit")
+  } else base::strsplit(x, split, fixed, perl, useBytes)
+}
+
+tolower <- function(x) if (inherits(x, "H2OParsedData")) UseMethod("tolower") else base::tolower(x)
+toupper <- function(x) if (inherits(x, "H2OParsedData")) UseMethod("toupper") else base::toupper(x)
+
+tolower.H2OParsedData <- function(x) {
+  expr <- paste("tolower(", x@key, ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
+
+toupper.H2OParsedData <- function(x) {
+  expr <- paste("toupper(", x@key, ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
+
+strsplit.H2OParsedData<-
+function(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE) {
+  if (missing(split)) split <- ' '
+  if (split == "") stop("Empty split argument is unsupported")
+  expr <- paste("strsplit(", paste(x@key, deparse(eval(split, envir = parent.frame())), sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
+
 # setMethod("hist", "H2OParsedData", function(object))
 hist.H2OParsedData <- function(x, freq = TRUE, ...){
   if(ncol(x) > 1) stop("object needs to be a single column H2OParsedData object")
