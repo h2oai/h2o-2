@@ -197,7 +197,7 @@ function(formula, newdata, conf.int = 0.95,
     res$conf.int  <- conf.int
   }
 
-  class(res) <- c("survfit.H2OCoxPHModel", "survfit.coxph", "survfit")
+  class(res) <- c("survfit.H2OCoxPHModel", "survfit.cox", "survfit")
   res
 }
 

@@ -85,7 +85,7 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
   checkEquals(vcov(myCoxPH.r),       vcov(myCoxPH.h2o),
               tolerance = tolerance)
 
-  invisible()
+  invisible(TRUE)
 }
 
 checkCoxPHSurvfit <- function(survfitCoxPH.h2o, survfitCoxPH.r, tolerance = 1e-8, ...) {
@@ -118,4 +118,6 @@ checkCoxPHSurvfit <- function(survfitCoxPH.h2o, survfitCoxPH.r, tolerance = 1e-8
               check.attributes = FALSE)
   checkEquals(survfitCoxPH.r$conf.type, survfitCoxPH.h2o$conf.type)
   checkEquals(survfitCoxPH.r$conf.int,  survfitCoxPH.h2o$conf.int)
+
+  invisible(TRUE)
 }
