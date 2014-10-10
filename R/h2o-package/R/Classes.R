@@ -1434,12 +1434,7 @@ function(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE) {
   return(res)
 }
 
-gsub <- function(pattern, replacement, x, ignore.case = FALSE, perl = FALSE, fixed = FALSE, useBytes = FALSE) {
-    if (inherits(x, "H2OParsedData")) { UseMethod("gsub")
-    } else base::gsub(pattern, replacement, x, ignore.case, perl, fixed, useBytes)
-}
-
-gsub.H2OParsedData <- function(pattern, replacement, x, ignore.case = FALSE) {
+h2o.gsub <- function(pattern, replacement, x, ignore.case = FALSE) {
   expr <- paste("gsub(", paste(deparse(eval(pattern, envir = parent.frame())), deparse(eval(replacement, envir = parent.frame())), x@key, as.numeric(ignore.case), sep = ","), ")", sep = "")
   res <- .h2o.__exec2(x@h2o, expr)
   res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
