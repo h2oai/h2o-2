@@ -386,13 +386,25 @@ http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.h
 }
 
 .h2o.downloadJar <- function(branch, version, overwrite = FALSE) {
-  # if(missing(branch)) branch <- packageDescription("h2o")$Branch
-  if(missing(branch))
-    branch <- readLines(paste(.h2o.pkg.path, "branch.txt", sep = .Platform$file.sep))
-  if(missing(version)) version <- packageVersion("h2o")[1,4]
+  if (is.null(.h2o.pkg.path)) {
+    pkg_path = dirname(system.file(".", package = "h2o"))
+  } else {
+    pkg_path = .h2o.pkg.path
+  }
+
+  if (missing(branch)) {
+    branchFile = paste(pkg_path, "branch.txt", sep = .Platform$file.sep)
+    branch <- readLines(branchFile)
+  }
+
+  if (missing(version)) {
+    buildnumFile = paste(pkg_path, "buildnum.txt", sep = .Platform$file.sep)
+    version <- readLines(buildnumFile)
+  }
+
   if(!is.logical(overwrite)) stop("overwrite must be TRUE or FALSE")
   
-  dest_folder <- paste(.h2o.pkg.path, "java", sep = .Platform$file.sep)
+  dest_folder <- paste(pkg_path, "java", sep = .Platform$file.sep)
   if(!file.exists(dest_folder)) dir.create(dest_folder)
   dest_file <- paste(dest_folder, "h2o.jar", sep = .Platform$file.sep)
   
