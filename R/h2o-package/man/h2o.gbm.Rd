@@ -85,7 +85,7 @@ For more information see: http://docs.0xdata.com
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 # Run regression GBM on australia.hex data 
 ausPath = system.file("extdata", "australia.csv", package="h2o")

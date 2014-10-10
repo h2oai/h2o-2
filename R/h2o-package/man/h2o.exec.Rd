@@ -21,7 +21,7 @@ A \code{\linkS4class{H2OParsedData}} object containing the result of the express
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 hex <- as.h2o(localH2O, iris)
 res1 = h2o.exec(hex[,1] + hex[,2])
 head(res1)

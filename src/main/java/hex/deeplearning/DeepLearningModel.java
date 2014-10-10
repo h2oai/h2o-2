@@ -319,7 +319,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       final int layers=get_params().hidden.length;
       // units (# neurons for each layer)
       units = new int[layers+2];
-      units[0] = num_input;
+      units[0] = Math.min(get_params().max_input_layer_size, num_input);
       System.arraycopy(get_params().hidden, 0, units, 1, layers);
       units[layers+1] = num_output;
       // weights (to connect layers)
@@ -1524,7 +1524,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 "classification error on training data").generate(sb);
 
         // Plot validation error
-        if (get_params().validation != null) {
+        if (error.validation) {
           for (int i=0; i<err.length; ++i) {
             err[i] = (float)errors[i].valid_err;
           }
@@ -1545,7 +1545,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 "regression error on training data").generate(sb);
 
         // Plot validation MSE
-        if (get_params().validation != null) {
+        if (error.validation) {
           for (int i=0; i<err.length; ++i) {
             err[i] = (float)errors[i+1].valid_mse;
           }

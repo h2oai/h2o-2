@@ -26,8 +26,9 @@ h2o.coxph(x, y, data, key = "", ties = c("efron", "breslow"),
 h2o.coxph.control(lre = 9, iter.max = 20, ...)
 
 # H2OCoxPHModel summary functions
-\S4method{summary}{H2OCoxPHModel}(object, ...)
-\S3method{survfit}{H2OCoxPHModel}(formula, ...)
+\S4method{summary}{H2OCoxPHModel}(object, conf.int = 0.95, scale = 1, ...)
+\S3method{survfit}{H2OCoxPHModel}(formula, newdata, conf.int = 0.95,
+        conf.type = c("log", "log-log", "plain", "none"), ...)
 
 # H2OCoxPHModel extractor functions
 \S3method{extractAIC}{H2OCoxPHModel}(fit, scale, k = 2, ...)
@@ -56,6 +57,12 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
   \item{iter.max}{A positive integer denoting the maximum number of iterations
     to allow for convergence in \code{h2o.coxph}.}
   \item{object, formula, fit}{An object of class \code{H2OCoxPHModel}.}
+  \item{newdata}{An optional \code{\linkS4class{H2OParsedData}} object
+    containing a new data set.}
+  \item{conf.int}{An optional number that specifies the confidence interval
+    level.}
+  \item{conf.type}{An optional string that specifies the confidence interval
+    type.}
   \item{scale}{An optional number that specifies the scale parameter of the
     model.}
   \item{k}{An optional number specifying the weight for the equivalent
@@ -75,7 +82,7 @@ An object of class \code{\linkS4class{H2OCoxPHModel}}.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 library(survival)
 bladder.hex <- as.h2o(localH2O, bladder, key = "bladder.hex")

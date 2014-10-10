@@ -8,5 +8,5 @@ Download H2O jar file and Start H2O cloud before examples run (for H2O developer
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 }

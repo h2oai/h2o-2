@@ -24,7 +24,7 @@ Returns an \code{\linkS4class{H2OParsedData}} object that represents the dataset
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 summary(iris.hex)

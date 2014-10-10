@@ -3,6 +3,7 @@ package water.api;
 import hex.FrameSplitter;
 
 import java.util.Arrays;
+import java.util.Random;
 
 import water.*;
 import water.fvec.Frame;
@@ -33,6 +34,9 @@ public class FrameSplitPage extends Func {
   @API(help = "Shuffle rows before splitting", required = false, filter = Default.class)
   public boolean shuffle = false;
 
+  @API(help = "Seed for reproducible shuffling.", required = false, filter = Default.class)
+  public long seed = new Random().nextLong();
+
   @API(help = "Keys for each split partition.")
   public Key[] split_keys;
 
@@ -62,7 +66,7 @@ public class FrameSplitPage extends Func {
     Frame frame = source;
     if (shuffle) {
       // FIXME: switch to global shuffle
-      frame = MRUtils.shuffleFramePerChunk(Utils.generateShuffledKey(frame._key), frame, 12);
+      frame = MRUtils.shuffleFramePerChunk(Utils.generateShuffledKey(frame._key), frame, seed);
       frame.delete_and_lock(null).unlock(null); // save frame to DKV
       // delete frame on the end
       gtrash(frame);

@@ -11,8 +11,6 @@ import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.util.RString;
 
-import java.util.Random;
-
 /**
  * Rebalance a Frame
  */
@@ -23,11 +21,8 @@ public class ReBalance extends Request2 {
   @Request.API(help = "Frame to rebalance", required = true, filter = Request.Default.class, json=true)
   public Frame source;
 
-  @Request.API(help = "Random number seed", filter = Request.Default.class, json=true)
-  public long seed = new Random().nextLong();
-
   @Request.API(help = "Key for rebalanced frame", filter = Request.Default.class, json=true)
-  public String after = source != null ? source._key.toString() + ".balanced" : null;
+  public Key after = source != null ? Key.make(source._key.toString() + ".balanced") : null;
 
   @Request.API(help = "Number of chunks", filter = Request.Default.class, json=true)
   public int chunks = H2O.CLOUD.size() * H2O.NUMCPUS * 4;
@@ -36,9 +31,8 @@ public class ReBalance extends Request2 {
     if( source==null ) throw new IllegalArgumentException("Missing frame to rebalance!");
     try {
       if (chunks > source.numRows()) throw new IllegalArgumentException("Cannot create more than " + source.numRows() + " chunks.");
-      if( after==null ) after = source._key.toString() + ".balanced";
-      final Key newKey = Key.make(after);
-      RebalanceDataSet rb = new RebalanceDataSet(source, newKey, chunks);
+      if( after==null ) after = Key.make(source._key.toString() + ".balanced");
+      RebalanceDataSet rb = new RebalanceDataSet(source, after, chunks);
       H2O.submitTask(rb);
       rb.join();
       return RequestBuilders.Response.done(this);
@@ -48,13 +42,13 @@ public class ReBalance extends Request2 {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    if (UKV.get(Key.make(after))==null) {
+    if (UKV.get(after)==null) {
       return false;
     }
     RString aft = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
     aft.replace("key", after);
     DocGen.HTML.section(sb, "Rebalancing done. Frame '" + aft.toString()
-            + "' now has " + ((Frame)UKV.get(Key.make(after))).anyVec().nChunks()
+            + "' now has " + ((Frame)UKV.get(after)).anyVec().nChunks()
             + " chunks (source: " + source.anyVec().nChunks() + ").");
     return true;
   }

@@ -558,7 +558,7 @@ public final class H2O {
     private final int _cap;
     FJWThrFact( int cap ) { _cap = cap; }
     @Override public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
-      int cap = _cap==-1 ? OPT_ARGS.nthreads : _cap;
+      int cap = 4 * NUMCPUS;
       return pool.getPoolSize() <= cap ? new FJWThr(pool) : null;
     }
   }
@@ -566,7 +566,13 @@ public final class H2O {
   // A standard FJ Pool, with an expected priority level.
   static class ForkJoinPool2 extends ForkJoinPool {
     final int _priority;
-    private ForkJoinPool2(int p, int cap) { super(NUMCPUS,new FJWThrFact(cap),null,p<MIN_HI_PRIORITY); _priority = p; }
+    private ForkJoinPool2(int p, int cap) {
+      super((OPT_ARGS == null || OPT_ARGS.nthreads <= 0) ? NUMCPUS : OPT_ARGS.nthreads,
+            new FJWThrFact(cap),
+            null,
+            p<MIN_HI_PRIORITY);
+      _priority = p;
+    }
     private H2OCountedCompleter poll2() { return (H2OCountedCompleter)pollSubmission(); }
   }
 
@@ -694,7 +700,7 @@ public final class H2O {
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
-    public int    nthreads=4*NUMCPUS; // Max number of F/J threads in each low-priority batch queue
+    public int    nthreads=NUMCPUS; // desired F/J parallelism level for low priority queues.
     public String license; // License file
     public String h = null;
     public String help = null;

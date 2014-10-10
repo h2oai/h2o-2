@@ -121,6 +121,8 @@ public class RequestServer extends NanoHTTPD {
 
     // FVec scoring
     Request.addToNavbar(registerRequest(new Predict()),     "Predict",                  "Score");
+    // survival curve generation
+    registerRequest(new CoxPHSurvfit());
     // only for glm to allow for overriding of lambda_submodel
     registerRequest(new GLMPredict());
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",     "Score");

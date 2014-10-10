@@ -55,7 +55,7 @@ Hadley Wickham (2011). The Split-Apply-Combine Strategy for Data Analysis. Journ
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 # Import iris dataset to H2O
 irisPath = system.file("extdata", "iris_wheader.csv", package = "h2o")

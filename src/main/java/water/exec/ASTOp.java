@@ -175,6 +175,9 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTfindInterval());
     putPrefix(new ASTPrint ());
     putPrefix(new ASTLs    ());
+    putPrefix(new ASTStrSplit());
+    putPrefix(new ASTToLower());
+    putPrefix(new ASTToUpper());
   }
   static private boolean isReserved(String fn) {
     return UNI_INFIX_OPS.containsKey(fn) || BIN_INFIX_OPS.containsKey(fn) || PREFIX_OPS.containsKey(fn);
@@ -761,6 +764,118 @@ class ASTasDate extends ASTOp {
       }
     }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
     env.poppush(2, fr2, null);
+  }
+}
+
+class ASTStrSplit extends ASTOp {
+  ASTStrSplit() { super(new String[]{"strsplit", "x", "split"},
+          new Type[]{Type.ARY, Type.ARY, Type.STR},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "strsplit"; }
+  @Override ASTOp make() { return new ASTStrSplit(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    String split = env.popStr();
+    Frame fr = env.ary(-1);
+    if (fr.numCols() != 1) throw new IllegalArgumentException("strsplit requires a single column.");
+    split = split.isEmpty() ? "" : split;
+    final String[]   old_domains = fr.anyVec().domain();
+    final String[][] new_domains = newDomains(old_domains, split);
+    final String[]   col_names   = new String[new_domains.length];
+    for (int i = 1; i <= col_names.length; ++i)
+      col_names[i-1] = "C"+i;
+
+    final String regex = split;
+    Frame fr2 = new MRTask2() {
+      @Override public void map(Chunk[] cs, NewChunk[] ncs) {
+        Chunk c = cs[0];
+        for (int i = 0; i < c._len; ++i) {
+          int idx = (int)c.at0(i);
+          String s = old_domains[idx];
+          String[] ss = s.split(regex);
+          int cnt = 0;
+          for (int j = 0; j < ss.length; ++j) {
+            int n_idx = Arrays.asList(new_domains[cnt]).indexOf(ss[j]);
+            if (n_idx == -1) ncs[cnt++].addNA();
+            else ncs[cnt++].addNum(n_idx);
+          }
+          if (cnt < ncs.length)
+            for (; cnt < ncs.length; ++cnt) ncs[cnt].addNA();
+        }
+      }
+    }.doAll(col_names.length, fr).outputFrame(col_names, new_domains);
+
+    env.poppush(2, fr2, null);
+  }
+
+  private String[][] newDomains(String[] domains, String regex) {
+    ArrayList<HashSet<String>> strs = new ArrayList<HashSet<String>>();
+    for (String domain : domains) {
+      String[] news = domain.split(regex);
+      for (int i = 0; i < news.length; ++i) {
+        if (strs.size() == i) {
+          HashSet<String> x = new HashSet<String>();
+          x.add(news[i]);
+          strs.add(x);
+        } else {
+          HashSet<String> x = strs.get(i);
+          x.add(news[i]);
+          strs.set(i, x);
+        }
+      }
+    }
+    String[][] doms = new String[strs.size()][];
+    for (int i = 0; i < strs.size(); ++i) {
+      HashSet<String> x = strs.get(i);
+      doms[i] = new String[x.size()];
+      for (int j = 0; j < x.size(); ++j)
+        doms[i][j] = (String)x.toArray()[j];
+    }
+    return doms;
+  }
+}
+
+class ASTToLower extends ASTUniPrefixOp {
+
+  @Override String opStr() { return "tolower"; }
+  @Override ASTOp make() { return new ASTToLower(); }
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if( !env.isAry() ) { throw new IllegalArgumentException("tolower only operates on a single vector!"); }
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("tolower only takes a single column of data. Got "+ fr.numCols()+" columns.");
+    String skey = env.key();
+    String[] new_dom = fr.anyVec().domain();
+    for (int i = 0; i < new_dom.length; ++i)
+      new_dom[i] = new_dom[i].toLowerCase(Locale.ENGLISH);
+
+    Frame fr2 = new Frame(fr._names, fr.vecs());
+    fr2.anyVec()._domain = new_dom;
+    env.subRef(fr,skey);
+    env.pop();
+    env.push(fr2);
+  }
+}
+
+class ASTToUpper extends ASTUniPrefixOp {
+
+  @Override String opStr() { return "toupper"; }
+  @Override ASTOp make() { return new ASTToUpper(); }
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if( !env.isAry() ) { throw new IllegalArgumentException("toupper only operates on a single vector!"); }
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("toupper only takes a single column of data. Got "+ fr.numCols()+" columns.");
+    String skey = env.key();
+    String[] new_dom = fr.anyVec().domain();
+    for (int i = 0; i < new_dom.length; ++i)
+      new_dom[i] = new_dom[i].toUpperCase(Locale.ENGLISH);
+
+    Frame fr2 = new Frame(fr._names, fr.vecs());
+    fr2.anyVec()._domain = new_dom;
+    env.subRef(fr,skey);
+    env.pop();
+    env.push(fr2);
   }
 }
 

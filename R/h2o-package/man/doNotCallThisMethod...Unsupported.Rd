@@ -22,7 +22,7 @@ doNotCallThisMethod...Unsupported(h2o, key)
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 hex <- as.h2o(localH2O, iris)
 m <- h2o.randomForest(x = 1:4, y = 5, data = hex)
 doNotCallThisMethod...Unsupported(localH2O, m@key)

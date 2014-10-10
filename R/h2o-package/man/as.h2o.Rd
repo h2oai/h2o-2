@@ -36,7 +36,7 @@ Converts an R object to an H2O Parsed data object.
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 data(iris)
 summary(iris)
