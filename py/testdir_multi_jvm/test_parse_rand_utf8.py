@@ -28,37 +28,37 @@ print "is char 0x00 treated as NA? skip"
 
 # hive separator is 0xa? ..down in the control chars I think
 # tab is 0x9, so that's excluded
-nonQuoteChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
+ordinalChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
 
-nonQuoteChoices.remove(0x09) # is 9 bad
+ordinalChoices.remove(0x09) # is 9 bad
 
-nonQuoteChoices.remove(0x00) # nul
-nonQuoteChoices.remove(0x0d) # cr
-nonQuoteChoices.remove(0x0a) # lf
-nonQuoteChoices.remove(0x01) # hiveseparator
+ordinalChoices.remove(0x00) # nul
+ordinalChoices.remove(0x0d) # cr
+ordinalChoices.remove(0x0a) # lf
+ordinalChoices.remove(0x01) # hiveseparator
 
 # smaller range, avoiding 0-1f control chars
-# nonQuoteChoices = range(0x20, 0x7f) # doesn't include last value
-nonQuoteChoices.remove(0x3b) # semicolon
-nonQuoteChoices.remove(0x20) # space
-nonQuoteChoices.remove(0x22) # double quote
-# nonQuoteChoices.remove(0x27) # apostrophe. should be legal if single quotes not enabled
-nonQuoteChoices.remove(0x2c) # comma
+# ordinalChoices = range(0x20, 0x7f) # doesn't include last value
+ordinalChoices.remove(0x3b) # semicolon
+ordinalChoices.remove(0x20) # space
+ordinalChoices.remove(0x22) # double quote
+# ordinalChoices.remove(0x27) # apostrophe. should be legal if single quotes not enabled
+ordinalChoices.remove(0x2c) # comma
 
-nonQuoteChoices.remove(0x30) # 0
-nonQuoteChoices.remove(0x31) # 1
-nonQuoteChoices.remove(0x32) # 2
-nonQuoteChoices.remove(0x33) # 3
-nonQuoteChoices.remove(0x34) # 4
-nonQuoteChoices.remove(0x35) # 5
-nonQuoteChoices.remove(0x36) # 6
-nonQuoteChoices.remove(0x37) # 7
-nonQuoteChoices.remove(0x38) # 8
-nonQuoteChoices.remove(0x39) # 9
-# print nonQuoteChoices
+ordinalChoices.remove(0x30) # 0
+ordinalChoices.remove(0x31) # 1
+ordinalChoices.remove(0x32) # 2
+ordinalChoices.remove(0x33) # 3
+ordinalChoices.remove(0x34) # 4
+ordinalChoices.remove(0x35) # 5
+ordinalChoices.remove(0x36) # 6
+ordinalChoices.remove(0x37) # 7
+ordinalChoices.remove(0x38) # 8
+ordinalChoices.remove(0x39) # 9
+# print ordinalChoices
 
 def generate_random_utf8_string(length=1):
-    return "".join(unichr(random.choice(nonQuoteChoices)) for i in range(length-1))
+    return "".join(unichr(random.choice(ordinalChoices)) for i in range(length-1))
 
 # Python details
 # The rules for converting a Unicode string into the ASCII encoding are simple; for each code point:

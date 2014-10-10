@@ -51,11 +51,24 @@ if UTF8:
 else:  # ascii subset?
     ordinalChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
 
-
 if UTF8_MULTIBYTE:
+    # 000000 - 00007f 1byte
+    # 000080 - 00009f 2byte
+    # 0000a0 - 0003ff 2byte
+    # 000400 - 0007ff 2byte
+    # 000800 - 003fff 3byte
+    # 004000 - 00ffff 3byte
+    # 010000 - 03ffff 3byte
+    # 040000 - 10ffff 4byte
     # add some UTF8 multibyte, and restrict the choices to make sure we hit these
-    ordinalChoices = range(0x0, 0x40) # doesn't include last value ..allow 7f
-    ordinalChoices += [0x201c, 0x201d, 0x2018, 0x2019, 6000]
+    ordinalChoices  = range(0x000000,0x00007f) # 1byte
+    ordinalChoices += range(0x000080,0x00009f) # 2byte
+    ordinalChoices += range(0x0000a0,0x0003ff) # 2byte
+    ordinalChoices += range(0x000400,0x0007ff) # 2byte
+    ordinalChoices += range(0x000800,0x003fff) # 3byte
+    ordinalChoices += range(0x004000,0x00ffff) # 3byte
+    ordinalChoices += range(0x010000,0x03ffff) # 3byte
+    ordinalChoices += range(0x040000,0x10ffff) # 4byte
 
 ordinalChoices.remove(0x09) # is 9 bad..apparently can cause NA
 
@@ -138,7 +151,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         else: # both ascii and utf-8 go here?
             rowData = []
             for j in range(colCount):
-                r = generate_random_utf8_string(length=2)
+                r = generate_random_utf8_string(length=1)
                 rowData.append(r)
             rowDataCsv = ",".join(rowData)
         if UTF16:
@@ -173,7 +186,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_rand_utf8_file(self):
+    def test_parse_rand_utf8_multibyte(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [

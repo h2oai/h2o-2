@@ -10,7 +10,7 @@ exprList = [
         'h=c(1); h = xorsum(r1[,1])',
         ]
 
-ROWS = 3
+ROWS = 100000
 #********************************************************************************
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE):
     dsf = open(csvPathname, 'w')
