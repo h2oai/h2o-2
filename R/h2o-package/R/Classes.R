@@ -1464,7 +1464,7 @@ hist.H2OParsedData <- function(x, freq = TRUE, ...){
   object$equidist = freq
   class(object) = "histogram"
   plot(object)
-  object
+  invisible(object)
 }
 
 quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7, ...) {
