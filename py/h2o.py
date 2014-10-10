@@ -1630,14 +1630,20 @@ class H2O(object):
         verboseprint("\n to_int result:", dump_json(a))
         return a
 
+    def unlock(self):
+        a = self.__do_json_request('2/UnlockKeys.json', params=None)
+        return a
+
     # There is also a RemoveAck in the browser, that asks for confirmation from
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
     # after parse
     def remove_key(self, key, timeoutSecs=120):
         a = self.__do_json_request('Remove.json',
-                                   params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
+            params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
+        self.unlock()
         return a
+
 
     # this removes all keys!
     def remove_all_keys(self, timeoutSecs=120):
