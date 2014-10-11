@@ -583,6 +583,7 @@ public class DeepLearning extends Job.ValidatedJob {
               || arg._name.equals("replicate_training_data")
               || arg._name.equals("balance_classes")
               || arg._name.equals("n_folds")
+              || arg._name.equals("autoencoder")
               || arg._name.equals("checkpoint")) {
         arg.setRefreshOnChange();
       }
@@ -678,6 +679,12 @@ public class DeepLearning extends Job.ValidatedJob {
     if(arg._name.equals("override_with_best_model") && n_folds != 0) {
       arg.disable("Only without n-fold cross-validation.", inputArgs);
       override_with_best_model = false;
+    }
+    if(arg._name.equals("average_activation") && !autoencoder) {
+      arg.disable("Only for autoencoder.", inputArgs);
+    }
+    if(arg._name.equals("sparsity_beta") && !autoencoder) {
+      arg.disable("Only for autoencoder.", inputArgs);
     }
   }
 
