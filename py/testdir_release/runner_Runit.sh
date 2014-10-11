@@ -102,10 +102,10 @@ echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 mySetup() {
     # we setup .Renviron and delete the old local library if it exists
     # then make the R_LIB_USERS dir
-    # creates /tmp/libPaths.cmd
-    rm -f /tmp/libPaths.cmd
+    # creates /tmp/libPaths.$USER.cmd
+    rm -f /tmp/libPaths.$USER.cmd
     ./Rsetup.sh
-    cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
+    cmd="R -f /tmp/libPaths.$USER.cmd --args $CLOUD_IP:$CLOUD_PORT"
     echo "Running this cmd:"
     echo $cmd
     # it's gotten long now because of all the installs

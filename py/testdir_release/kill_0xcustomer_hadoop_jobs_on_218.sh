@@ -45,7 +45,7 @@ remote_kill() {
 }
 
 # hdp2.1
-remote_setup mr-0xd7
+remote_setup mr-0xd8-precise1
 # shouldn't it kill more than one at a time?
 remote_kill
 
