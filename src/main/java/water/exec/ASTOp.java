@@ -179,6 +179,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTToLower());
     putPrefix(new ASTToUpper());
     putPrefix(new ASTGSub());
+    putPrefix(new ASTStrSub());
   }
   static private boolean isReserved(String fn) {
     return UNI_INFIX_OPS.containsKey(fn) || BIN_INFIX_OPS.containsKey(fn) || PREFIX_OPS.containsKey(fn);
@@ -898,6 +899,32 @@ class ASTGSub extends ASTOp {
     for (int i = 0; i < doms.length; ++i)
       doms[i] = ignore_case ? doms[i].toLowerCase(Locale.ENGLISH).replaceAll(pattern, replacement)
                             : doms[i].replaceAll(pattern, replacement);
+
+    Frame fr2 = new Frame(fr.names(), fr.vecs());
+    fr2.anyVec()._domain = doms;
+    env.subRef(fr, skey);
+    env.poppush(1, fr2, null);
+  }
+}
+
+class ASTStrSub extends ASTOp {
+  ASTStrSub() { super(new String[]{"sub", "pattern", "replacement", "x", "ignore.case"},
+          new Type[]{Type.ARY, Type.STR, Type.STR, Type.ARY, Type.DBL},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "sub"; }
+  @Override ASTOp make() { return new ASTStrSub(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final boolean ignore_case = env.popDbl() == 1;
+    String skey = env.key();
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("sub works on a single column at a time.");
+    final String replacement = env.popStr();
+    final String pattern = env.popStr();
+    String[] doms = fr.anyVec().domain().clone();
+    for (int i = 0; i < doms.length; ++i)
+      doms[i] = ignore_case ? doms[i].toLowerCase(Locale.ENGLISH).replaceFirst(pattern, replacement)
+              : doms[i].replaceFirst(pattern, replacement);
 
     Frame fr2 = new Frame(fr.names(), fr.vecs());
     fr2.anyVec()._domain = doms;
