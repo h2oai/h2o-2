@@ -707,13 +707,14 @@ public abstract class Neurons {
       _a = _dvec;
       Arrays.fill(_a.raw(), 0f);
 
-      // random projection from fullN down to max_input_layer_size
-      if (params.max_input_layer_size < _dinfo.fullN()) {
+      // random projection from fullN down to max_categorical_features
+      if (params.max_categorical_features < _dinfo.fullN() - _dinfo._nums) {
+        assert(nums.length == _dinfo._nums);
+        final int M = nums.length + params.max_categorical_features;
         final boolean random_projection = false;
         final boolean hash_trick = true;
         if (random_projection) {
           final int N = _dinfo.fullN();
-          final int M = params.max_input_layer_size;
           assert (_a.size() == M);
 
           //expensive
@@ -735,11 +736,9 @@ public abstract class Neurons {
           }
         } else if (hash_trick) {
           // Use hash trick for categorical features
-          final int M = params.max_input_layer_size;
           assert (_a.size() == M);
           // hash N-nums.length down to M-nums.length = cM (#categorical slots - always use all numerical features)
-          final int cM = M - nums.length;
-          if (cM <= 0) throw new IllegalArgumentException("max_input_layer_size must be at least " + (nums.length + 1));
+          final int cM = params.max_categorical_features;
 
           assert (_a.size() == M);
           Hash murmur = MurmurHash.getInstance();
@@ -754,7 +753,7 @@ public abstract class Neurons {
 
         }
       } else {
-        for (int i = 0; i < numcat; ++i) _a.set(cats[i], 1f);
+        for (int i = 0; i < numcat; ++i) _a.set(cats[i], 1f); // one-hot encode categoricals
         for (int i = 0; i < nums.length; ++i)
           _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f /*Always do MeanImputation during scoring*/ : (float) nums[i]);
       }
