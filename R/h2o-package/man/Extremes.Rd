@@ -26,7 +26,7 @@ Returns the maximum or minimum over all the input arguments. For a \code{\linkS4
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 ausPath = system.file("extdata", "australia.csv", package = "h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath, key = "australia.hex")
 min(australia.hex)

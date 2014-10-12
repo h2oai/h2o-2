@@ -32,7 +32,7 @@ None.  (The function will stop if it fails.)
 \examples{
 \dontrun{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.exportFile(iris.hex, path = "/path/on/h2o/server/filesystem/iris.csv")

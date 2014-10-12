@@ -76,7 +76,7 @@ This method standardizes the data, obtains the first \code{ncomp} principal comp
 \examples{
 \dontrun{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 # Run PCR on Prostate Data
 prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 

@@ -57,7 +57,7 @@ h2o.clusterInfo <- function(client) {
   cat("    H2O cluster allowed cores: ", allowedCPU, "\n")
   cat("    H2O cluster healthy:       ", clusterHealth, "\n")
   
-  cpusLimited = sapply(nodeInfo, function(x) { x[['num_cpus']] > 1 && x[['cpus_allowed']] == 1 })
+  cpusLimited = sapply(nodeInfo, function(x) { x[['num_cpus']] > 1 && x[['nthreads']] != 1 && x[['cpus_allowed']] == 1 })
   if(any(cpusLimited))
     warning("Number of CPU cores allowed is limited to 1 on some nodes.  To remove this limit, set environment variable 'OPENBLAS_MAIN_FREE=1' before starting R.")
 }

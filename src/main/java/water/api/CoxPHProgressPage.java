@@ -7,7 +7,12 @@ import water.UKV;
 public class CoxPHProgressPage extends Progress2 {
   /** Return {@link water.api.RequestBuilders.Response} for finished job. */
   @Override protected Response jobDone(final Key dest) {
-    return CoxPHModelView.redirect(this, dest);
+    Response resp;
+    if (UKV.get(dest) == null)
+      resp = Response.error("start times must be strictly less than stop times");
+    else
+      resp = CoxPHModelView.redirect(this, dest);
+    return resp;
   }
 
   public static Response redirect(Request req, Key jobkey, Key dest) {

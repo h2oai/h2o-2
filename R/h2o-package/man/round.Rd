@@ -30,7 +30,7 @@ Returns a \code{\linkS4class{H2OParsedData}} object with each entry rounded as s
 
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 iris.data = iris.hex[,1:3]

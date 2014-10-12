@@ -106,8 +106,27 @@ setMethod("show", "H2OCoxPHModelSummary", function(object)
 print.survfit.H2OCoxPHModel <- function(x, ...)
   suppressWarnings(NextMethod("print"))
 
-setMethod("summary","H2OCoxPHModel", function(object, ...)
-  new("H2OCoxPHModelSummary", summary = object@summary))
+setMethod("summary","H2OCoxPHModel",
+function(object, conf.int = 0.95, scale = 1, ...) {
+  res <- new("H2OCoxPHModelSummary", summary = object@summary)
+  if (conf.int == 0)
+    res@summary$conf.int <- NULL
+  else {
+    z <- qnorm((1 + conf.int)/2, 0, 1)
+    coef <- scale * res@summary$coefficients[,    "coef",  drop = TRUE]
+    se   <- scale * res@summary$coefficients[, "se(coef)", drop = TRUE]
+    shift <- z * se
+    res@summary$conf.int <-
+      matrix(c(exp(coef), exp(- coef), exp(coef - shift), exp(coef + shift)),
+             nrow = 1L, ncol = 4L,
+             dimnames =
+             list(rownames(res@summary$coefficients),
+                  c("exp(coef)", "exp(-coef)",
+                    sprintf("lower .%.0f", 100 * conf.int),
+                    sprintf("upper .%.0f", 100 * conf.int))))
+  }
+  res
+})
 
 coef.H2OCoxPHModel        <- function(object, ...) object@model$coefficients
 coef.H2OCoxPHModelSummary <- function(object, ...) object@summary$coefficients
@@ -124,9 +143,63 @@ extractAIC.H2OCoxPHModel <- function(fit, scale, k = 2, ...)
 logLik.H2OCoxPHModel <- function(object, ...)
   get("logLik.coxph", getNamespace("survival"))(object@model, ...)
 
-survfit.H2OCoxPHModel <- function(formula, ...)
-  structure(c(formula@survfit, call = match.call()),
-            class = c("survfit.H2OCoxPHModel", "survfit.coxph", "survfit"))
+survfit.H2OCoxPHModel <-
+function(formula, newdata, conf.int = 0.95,
+         conf.type = c("log", "log-log", "plain", "none"), ...) {
+  if (missing(newdata))
+    newdata <- as.data.frame(as.list(formula@model$means))
+  if (is.data.frame(newdata))
+    capture.output(newdata <- as.h2o(formula@data@h2o, newdata, header = TRUE))
+  conf.type <- match.arg(conf.type)
+
+  pred <- as.matrix(h2o.predict(formula, newdata)[,-1L])
+  nms <- colnames(pred)
+  dimnames(pred) <- NULL
+  ch <- grep("^cumhaz_", nms)
+  drop <- (nrow(pred) == 1L)
+
+  res <- formula@survfit
+  if (drop) {
+    res$cumhaz  <- pred[,  ch, drop = TRUE]
+    res$std.err <- pred[, -ch, drop = TRUE]
+  } else {
+    res$cumhaz  <- t(pred[,  ch, drop = FALSE])
+    res$std.err <- t(pred[, -ch, drop = FALSE])
+  }
+  res$surv <- exp(- res$cumhaz)
+
+  if (conf.type != "none")
+    z <- qnorm(1 - (1 - conf.int)/2, 0, 1)
+  switch (conf.type,
+          "plain" = {
+            shift <- z * res$std.err * res$surv
+            upper <- res$surv + shift
+            lower <- res$surv - shift
+          },
+          "log" = {
+            center <- log(res$surv)
+            shift  <- z * res$std.err
+            upper  <- exp(center + shift)
+            lower  <- exp(center - shift)
+          },
+          "log-log" = {
+            center <- log(- log(res$surv))
+            shift  <- z * res$std.err/log(res$surv)
+            shift[is.nan(shift)] <- 0
+            upper  <- exp(- exp(center + shift))
+            lower  <- exp(- exp(center - shift))
+          }
+  )
+  if (conf.type != "none") {
+    res$upper <- pmin(pmax(upper, 0), 1)
+    res$lower <- pmin(pmax(lower, 0), 1)
+    res$conf.type <- conf.type
+    res$conf.int  <- conf.int
+  }
+
+  class(res) <- c("survfit.H2OCoxPHModel", "survfit.cox", "survfit")
+  res
+}
 
 vcov.H2OCoxPHModel <- function(object, ...)
   get("vcov.coxph", getNamespace("survival"))(object@model, ...)
@@ -1326,6 +1399,57 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
 
+strsplit <- function(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE) {
+  if (inherits(x, "H2OParsedData")) { UseMethod("strsplit")
+  } else base::strsplit(x, split, fixed, perl, useBytes)
+}
+
+tolower <- function(x) if (inherits(x, "H2OParsedData")) UseMethod("tolower") else base::tolower(x)
+toupper <- function(x) if (inherits(x, "H2OParsedData")) UseMethod("toupper") else base::toupper(x)
+
+tolower.H2OParsedData <- function(x) {
+  expr <- paste("tolower(", x@key, ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
+
+toupper.H2OParsedData <- function(x) {
+  expr <- paste("toupper(", x@key, ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
+
+strsplit.H2OParsedData<-
+function(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE) {
+  if (missing(split)) split <- ' '
+  if (split == "") stop("Empty split argument is unsupported")
+  expr <- paste("strsplit(", paste(x@key, deparse(eval(split, envir = parent.frame())), sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
+
+h2o.gsub <- function(pattern, replacement, x, ignore.case = FALSE) {
+  expr <- paste("gsub(", paste(deparse(eval(pattern, envir = parent.frame())), deparse(eval(replacement, envir = parent.frame())), x@key, as.numeric(ignore.case), sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
+
+h2o.sub <- function(pattern, replacement, x, ignore.case = FALSE) {
+  expr <- paste("sub(", paste(deparse(eval(pattern, envir = parent.frame())), deparse(eval(replacement, envir = parent.frame())), x@key, as.numeric(ignore.case), sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
+
 # setMethod("hist", "H2OParsedData", function(object))
 hist.H2OParsedData <- function(x, freq = TRUE, ...){
   if(ncol(x) > 1) stop("object needs to be a single column H2OParsedData object")
@@ -1348,7 +1472,7 @@ hist.H2OParsedData <- function(x, freq = TRUE, ...){
   object$equidist = freq
   class(object) = "histogram"
   plot(object)
-  object
+  invisible(object)
 }
 
 quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7, ...) {

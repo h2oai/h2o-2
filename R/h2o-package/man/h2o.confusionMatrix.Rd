@@ -23,7 +23,7 @@ Returns a confusion matrix with the actual value counts along the rows and the p
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.gbm = h2o.gbm(x = 3:9, y = 2, data = prostate.hex)

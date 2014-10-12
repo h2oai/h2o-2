@@ -54,7 +54,7 @@ The signs of the columns of the rotation matrix are arbitrary, and so may differ
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 australia.pca = h2o.prcomp(data = australia.hex, standardize = TRUE)

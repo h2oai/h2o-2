@@ -27,7 +27,7 @@ Arguments to be passed to methods, such as graphical parameters (see \code{\link
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 # Run GBM classification on prostate.csv
 prosPath = system.file("extdata", "prostate.csv", package = "h2o")

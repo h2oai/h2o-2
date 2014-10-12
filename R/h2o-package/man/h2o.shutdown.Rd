@@ -36,7 +36,7 @@ Users must call h2o.shutdown explicitly in order to shut down the local H2O inst
 # Don't run automatically to prevent accidentally shutting down a cloud
 \dontrun{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 h2o.shutdown(localH2O)
 }
 }

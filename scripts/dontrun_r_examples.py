@@ -12,7 +12,8 @@ import shutil
 
 STATE_NONE = 1
 STATE_IN_EXAMPLES = 2
-STATE_IN_DONTRUN = 3
+STATE_IN_CRAN_EXAMPLES = 3
+STATE_IN_DONTRUN = 4
 
 
 class Example:
@@ -46,7 +47,6 @@ class Example:
 
         self.set_state(STATE_NONE)
 
-        examples_lines = 0
         found_examples = False
         injected_dontrun = False
         found_dontrun = False
@@ -59,8 +59,7 @@ class Example:
         while (len(s) > 0):
             self.lineno = self.lineno + 1
 
-            if (self.state == STATE_IN_EXAMPLES):
-                examples_lines = examples_lines + 1
+            # print "s is:", s
 
             match_groups = re.search(r"^\\examples{", s)
             if (match_groups is not None):
@@ -74,13 +73,35 @@ class Example:
                 s = f.readline()
                 continue
 
+            match_groups = re.search(r"-- CRAN examples begin --", s)
+            if (match_groups is not None):
+                if (self.state != STATE_IN_EXAMPLES):
+                    self.parse_error("CRAN examples must be in examples")
+                self.state = STATE_IN_CRAN_EXAMPLES
+
+                self.emit_line(s)
+                s = f.readline()
+                continue
+
+            match_groups = re.search(r"-- CRAN examples end --", s)
+            if (match_groups is not None):
+                if (self.state != STATE_IN_CRAN_EXAMPLES):
+                    self.parse_error("CRAN examples end must be in CRAN examples")
+                self.set_state(STATE_IN_EXAMPLES)
+
+                self.emit_line(s)
+                s = f.readline()
+                continue
+
+            if (self.state == STATE_IN_CRAN_EXAMPLES):
+                self.emit_line(s)
+                s = f.readline()
+                continue
+
             match_groups = re.search(r"^\\dontrun{", s)
             if (match_groups is not None):
                 if (self.state != STATE_IN_EXAMPLES):
                     self.parse_error("dontrun must be in examples")
-
-                #if (examples_lines != 1):
-                #    self.parse_error("dontrun must be on the first line in examples")
 
                 if (found_dontrun):
                     self.parse_error("only one dontrun section is supported")
@@ -118,8 +139,11 @@ class Example:
                 self.parse_error("extra stuff after dontrun close brace")
 
             if ((self.state == STATE_IN_EXAMPLES) and not injected_dontrun and not found_dontrun):
-                self.inject_line("\dontrun{")
-                injected_dontrun = True
+                # Skip blank lines, but insert a dontrun block if there is content.
+                match_groups = re.match(r"^\s*$", s)
+                if (match_groups is None):
+                    self.inject_line("\dontrun{")
+                    injected_dontrun = True
 
             self.emit_line(s)
             s = f.readline()

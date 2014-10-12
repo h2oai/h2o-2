@@ -8,13 +8,13 @@ Rebalance a H2O data frame
 Rebalance (repartition) an existing H2O data set into given number of chunks (per Vec), for load-balancing across multiple threads or nodes. Does not alter data.
 }
 \usage{
-  h2o.rebalance(data, key, chunks)
+  h2o.rebalance(data, chunks, key)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{data}{An \code{\linkS4class{H2OParsedData}} object representing the dataset to rebalance.}
-  \item{key}{Destination key for rebalanced \code{\linkS4class{H2OParsedData}} object. }
   \item{chunks}{A numeric value indicating how many chunks to rebalance the dataset into. Suggested: Around 4 chunks per CPU core.}
+  \item{key}{Destination key for rebalanced \code{\linkS4class{H2OParsedData}} object. }
 }
 \value{
 Returns the rebalanced object of class \code{\linkS4class{H2OParsedData}}.
