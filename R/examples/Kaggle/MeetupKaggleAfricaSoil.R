@@ -1,10 +1,10 @@
 library(h2o)
 
 # Connect to H2O server (On server(s), run 'java -jar h2o.jar -Xmx4G -port 43322 -name AfricaSoil' first)
-#h2oServer <- h2o.init(ip="mr-0xd1", port = 43322)
+h2oServer <- h2o.init(ip="mr-0xd1", port = 43322)
 
 # Launch H2O directly on localhost
-h2oServer <- h2o.init()
+#h2oServer <- h2o.init()
 
 # Import data
 path_train <- "/home/arno/kaggle_africasoil/data/training.csv.gz"
@@ -15,13 +15,13 @@ test_hex <- h2o.importFile(h2oServer, path = path_test)
 
 # Group variables
 vars <- colnames(train_hex)
-spectra <- vars[seq(2,3579,by=20)] # "poor man's dimensionality reduction": take every N-th column of spectral data
+spectra <- vars[seq(2,3579,by=5)] # "poor man's dimensionality reduction": take every N-th column of spectral data
 extra <- vars[3580:3595]
 targets <- vars[3596:3600]
 predictors <- c(spectra, extra)
 
 ## Settings
-ensemble_size <- 2
+ensemble_size <- 20
 n_fold = 3
 
 # LB score of 0.439
@@ -38,27 +38,41 @@ for (resp in 1:length(targets)) {
   cat("\n\nNow training and cross-validating a DL model for", targets[resp], "...\n")
   
   # Run grid search with n-fold cross-validation
-  cvmodel <-
-    h2o.deeplearning(x = predictors,
-                     y = targets[resp],
-                     data = train_hex,
-                     nfolds = n_fold,
-                     classification = F,
-                     activation="RectifierWithDropout",
-                     hidden = c(100,100),
-                     hidden_dropout_ratios = c(0.0,0.0),
-                     input_dropout_ratio = 0,
-                     epochs = 100,
-                     l1 = c(0,1e-5), 
-                     l2 = c(0,1e-5), 
-                     rho = 0.99, 
-                     epsilon = 1e-8, 
-                     train_samples_per_iteration = -2
+#   cvmodel <- h2o.deeplearning(x = predictors, y = targets[resp], data = train_hex, nfolds = n_fold, classification = F, activation="RectifierWithDropout", input_dropout_ratio = 0, hidden_dropout_ratios = c(0.0,0.0), train_samples_per_iteration = -2,
+#                      hidden = c(300,300), epochs = c(100), l1 = c(0,1e-6,1e-4), l2 = c(0,1e-6,1e-4), rho = c(0.90,0.95), epsilon = c(1e-6,1e-8)
+#     )
+  
+# #CMRMSE XXXX
+#     cvmodel <- h2o.deeplearning(x = predictors, y = targets[resp], data = train_hex, nfolds = n_fold, classification = F, activation="RectifierWithDropout", input_dropout_ratio = 0, hidden_dropout_ratios = c(0.0,0.0,0.0), train_samples_per_iteration = -2,
+#                                 hidden = c(300,300,300), epochs = 200, l1 = 1e-5, rho = 0.99, epsilon = 1e-8
+#     )
+
+#CMRMSE 0.59659 with 10-fold
+#CMRMSE 0.68750 with 3-fold
+  if (resp == 1) #Ca 0.15 MSE
+    cvmodel <- h2o.deeplearning(x = predictors, y = targets[resp], data = train_hex, nfolds = n_fold, classification = F, activation="RectifierWithDropout", input_dropout_ratio = 0, hidden_dropout_ratios = c(0.0,0.0), train_samples_per_iteration = -2,
+                                hidden = c(300,300), epochs = c(100), l1 = c(0), l2 = c(1e-6), rho = c(0.90), epsilon = c(1e-8)
+    )
+  else if (resp == 2) #P 1.16 MSE
+    cvmodel <- h2o.deeplearning(x = predictors, y = targets[resp], data = train_hex, nfolds = n_fold, classification = F, activation="RectifierWithDropout", input_dropout_ratio = 0, hidden_dropout_ratios = c(0.0,0.0), train_samples_per_iteration = -2,
+                                hidden = c(300,300), epochs = c(100), l1 = c(1e-4), l2 = c(0), rho = c(0.95), epsilon = c(1e-8)
+    )
+  else if (resp == 3) #pH 0.28 MSE
+    cvmodel <- h2o.deeplearning(x = predictors, y = targets[resp], data = train_hex, nfolds = n_fold, classification = F, activation="RectifierWithDropout", input_dropout_ratio = 0, hidden_dropout_ratios = c(0.0,0.0), train_samples_per_iteration = -2,
+                                hidden = c(300,300), epochs = c(100), l1 = c(0), l2 = c(1e-6), rho = c(0.95), epsilon = c(1e-8)
+    )
+  else if (resp == 4) #SOC 0.23 MSE
+    cvmodel <- h2o.deeplearning(x = predictors, y = targets[resp], data = train_hex, nfolds = n_fold, classification = F, activation="RectifierWithDropout", input_dropout_ratio = 0, hidden_dropout_ratios = c(0.0,0.0), train_samples_per_iteration = -2,
+                                hidden = c(300,300), epochs = c(100), l1 = c(1e-6), l2 = c(0), rho = c(0.90), epsilon = c(1e-6)
+    )
+  else if (resp == 5) #Sand 0.26 MSE
+    cvmodel <- h2o.deeplearning(x = predictors, y = targets[resp], data = train_hex, nfolds = n_fold, classification = F, activation="RectifierWithDropout", input_dropout_ratio = 0, hidden_dropout_ratios = c(0.0,0.0), train_samples_per_iteration = -2,
+                                hidden = c(300,300), epochs = c(100), l1 = c(1e-4), l2 = c(1e-4), rho = c(0.90), epsilon = c(1e-8)
     )
 
   ## Collect cross-validation error
-  MSE <- cvmodel@sumtable[[1]]$prediction_error   #If cvmodel is a grid search model
-  #MSE <- cvmodel@model$valid_sqr_error            #If cvmodel is not a grid search model
+  #MSE <- cvmodel@sumtable[[1]]$prediction_error   #If cvmodel is a grid search model
+  MSE <- cvmodel@model$valid_sqr_error            #If cvmodel is not a grid search model
   RMSE <- sqrt(MSE)
   CMRMSE <- CMRMSE + RMSE #column-mean-RMSE
   MSEs[resp] <- MSE
@@ -68,8 +82,8 @@ for (resp in 1:length(targets)) {
   cat("\nCross-validated CMRMSE so far:", CMRMSE/resp)
     
   cat("\n\nTaking parameters from grid search winner for", targets[resp], "...\n")
-  p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
-  #p <- cvmodel@model$params   #If cvmodel is not a grid search model
+  #p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
+  p <- cvmodel@model$params   #If cvmodel is not a grid search model
 
   ## Build an ensemble model on full training data
   for (n in 1:ensemble_size) {
@@ -103,6 +117,7 @@ for (resp in 1:length(targets)) {
   ## Now create submission
   cat (paste0("\n Number of ensemble models: ", ncol(test_preds_blend)))
   ensemble_average <- matrix("ensemble_average", nrow = nrow(test_preds_blend), ncol = 1)
+  ensemble_contributions <- as.data.frame(test_preds_blend)
   ensemble_average <- rowMeans(as.data.frame(test_preds_blend)) # Simple ensemble average, consider blending/stacking
   ensemble_average <- as.data.frame(ensemble_average)
   
