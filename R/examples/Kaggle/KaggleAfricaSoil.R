@@ -4,7 +4,7 @@ install.packages("h2o", repos=(c("file:///Users/arno/h2o/target/R", getOption("r
 #install.packages("h2o", repos=(c("file:///home/arno/h2o/target/R", getOption("repos"))))
 
 suppressMessages(library(h2o))
-localH2O <- h2o.init(ip="mr-0xd1", port = 53322)
+localH2O <- h2o.init(ip="mr-0xd1", port = 43322)
 #localH2O <- h2o.init(max_mem_size = '8g', beta=T)
 
 #suppressMessages(if (!require(h2o)) install.packages("caret"))
@@ -49,11 +49,11 @@ vars <- colnames(train_hex)
 #predictors <- vars[1:784] 
 #targets <- vars[785]
 
-spectra_hi <- vars[seq(2,2500,by=25)] # cheap way of binning: just take every 25-th column
+spectra_hi <- vars[seq(2,2500,by=5)] # cheap way of binning: just take every 5-th column
 spectra_hi_all <- vars[seq(2,2500,by=1)]
 spectra_hi_lots <- vars[seq(2,2500,by=5)]
 spectra_omit <- vars[seq(2501,2670,by=1)] # cheap way of binning: just take every 10-th column
-spectra_low <- vars[seq(2671,3579,by=10)] # cheap way of binning: just take every 10-th column
+spectra_low <- vars[seq(2671,3579,by=5)] # cheap way of binning: just take every 10-th column
 spectra_low_all <- vars[seq(2671,3579,by=1)]
 spectra_low_lots <- vars[seq(2671,3579,by=5)]
 extra <- vars[3580:3595]
@@ -90,12 +90,12 @@ for (resp in 1:length(targets)) {
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 32 ## submission index
+submission = 33 ## submission index
 blend = T
 
 ## Settings
 n_loop <- 5
-n_fold <- 5 # must be <= 5!!
+n_fold <- 10
 ensemble = (n_loop > 1) # only used if blend = F and submit = T
 
 ## Train a DL model
@@ -104,7 +104,7 @@ errs = 0
 cv_preds <- matrix(0, nrow = nrow(train_hex), ncol = 1)
 holdout_valid_se <- matrix(0, nrow = 1, ncol = length(targets))
 holdout_valid_mse <- matrix(0, nrow = 1, ncol = length(targets))
-for (resp in 2){ #1:length(targets)) {
+for (resp in 1:length(targets)) {
   if (validation) {
     if (grid) {
       cat("\n\nNow running grid search for ", targets[resp], "...\n")
@@ -120,7 +120,7 @@ for (resp in 2){ #1:length(targets)) {
                          score_validation_samples = 0,
                          score_duty_cycle = 0.1,
                          score_interval = 5,
-                         force_load_balance=T,
+                         force_load_balance=F,
                          single_node_mode=F,
                          activation="Rectifier", hidden = c(300,300,300), epochs=1000, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 50000
   #                       activation="RectifierWithDropout", hidden_dropout_ratios = c(0.1,0.1), 
@@ -150,7 +150,7 @@ for (resp in 2){ #1:length(targets)) {
                          score_validation_samples = 0,
                          score_duty_cycle = 1,
                          score_interval = 1e-1,
-                         force_load_balance=T,
+                         force_load_balance=F,
                          activation="Rectifier", hidden = c(100,100,100), epochs = 500, l1 = 1e-5, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 10000
         )
       print(cvmodel)
@@ -210,15 +210,21 @@ for (resp in 2){ #1:length(targets)) {
             #             valid_resp <- response_folds[[2]]
             
             #train_data <- train_hex
-            if (nn==1) train_data <- train_hex1
-            if (nn==2) train_data <- train_hex2
-            if (nn==3) train_data <- train_hex3
-            if (nn==4) train_data <- train_hex4
-            if (nn==5) train_data <- train_hex5
+            if (nn%%5==1) train_data <- train_hex1
+            if (nn%%5==2) train_data <- train_hex2
+            if (nn%%5==3) train_data <- train_hex3
+            if (nn%%5==4) train_data <- train_hex4
+            if (nn%%5==0) train_data <- train_hex5
             
-            splits <- h2o.splitFrame(train_data, ratios = 1.-1./n_fold, shuffle=T)
-            train <- splits[[1]]
-            valid <- splits[[2]]
+            if (nn<=5) {
+              splits <- h2o.splitFrame(train_data, ratios = 1.-1./n_fold, shuffle=T)
+              train <- splits[[1]]
+              valid <- splits[[2]]
+            } else {
+              splits <- h2o.splitFrame(train_data, ratios = 1./n_fold, shuffle=T)
+              train <- splits[[2]]
+              valid <- splits[[1]]
+            }
             train_resp <- train[,targets[resp]]
             valid_resp <- valid[,targets[resp]]
             
@@ -337,15 +343,21 @@ for (resp in 2){ #1:length(targets)) {
             #             train_resp <- response_folds[[1]]
             #             valid_resp <- response_folds[[2]]
             
-            if (nn==1) train_data <- train_hex1
-            if (nn==2) train_data <- train_hex2
-            if (nn==3) train_data <- train_hex3
-            if (nn==4) train_data <- train_hex4
-            if (nn==5) train_data <- train_hex5
+            if (nn%%5==1) train_data <- train_hex1
+            if (nn%%5==2) train_data <- train_hex2
+            if (nn%%5==3) train_data <- train_hex3
+            if (nn%%5==4) train_data <- train_hex4
+            if (nn%%5==0) train_data <- train_hex5
 
-            splits <- h2o.splitFrame(train_data, ratios = 1.-1./n_fold, shuffle=T)
-            train <- splits[[1]]
-            valid <- splits[[2]]
+            if (nn<=5) {
+              splits <- h2o.splitFrame(train_data, ratios = 1.-1./n_fold, shuffle=T)
+              train <- splits[[1]]
+              valid <- splits[[2]]
+            } else {
+              splits <- h2o.splitFrame(train_data, ratios = 1./n_fold, shuffle=T)
+              train <- splits[[2]]
+              valid <- splits[[1]]
+            }
             train_resp <- train[,targets[resp]]
             valid_resp <- valid[,targets[resp]]
 
@@ -361,8 +373,9 @@ for (resp in 2){ #1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
+                                        activation="Rectifier", hidden = c(300,300), epochs = c(100), l1 = c(0), l2 = c(1e-6), rho = c(0.90), epsilon = c(1e-8)
                                         #activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000
-                                        activation="Rectifier", hidden = c(800,800,800), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000  #0.10
+                                        #activation="Rectifier", hidden = c(800,800,800), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000  #0.10
                                         #activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000 #0.10
                                         #activation="Rectifier", hidden = c(800,800,800),epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000     #0.08
                                         #activation="Rectifier", hidden = c(20,20,20), epochs = 200, l1 = 0, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 1, train_samples_per_iteration = 1000  #0.10 nice   
@@ -378,7 +391,10 @@ for (resp in 2){ #1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(300,300,300,300), epochs = 1000, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 5000)
+                                        activation="Rectifier", 
+                                        hidden = c(300,300), epochs = c(100), l1 = c(1e-4), l2 = c(0), rho = c(0.95), epsilon = c(1e-8)
+                                        #hidden = c(300,300,300,300), epochs = 1000, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 5000
+                                        )
             
             else if (resp == 3) #pH
 #               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) #0.12
@@ -393,7 +409,10 @@ for (resp in 2){ #1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)
+                                        activation="Rectifier", 
+                                        hidden = c(300,300), epochs = c(100), l1 = c(0), l2 = c(1e-6), rho = c(0.95), epsilon = c(1e-8)
+                                        #hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
+                                        )
             else if (resp == 4) #SOC
               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
                                         data = train,
@@ -405,7 +424,10 @@ for (resp in 2){ #1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)
+                                        activation="Rectifier",
+                                        hidden = c(300,300), epochs = c(100), l1 = c(1e-6), l2 = c(0), rho = c(0.90), epsilon = c(1e-6)
+                                        #hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
+                                        )
              else if (resp == 5) #Sand
 #               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) # 0.116
 
@@ -419,7 +441,10 @@ for (resp in 2){ #1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)
+                                        activation="Rectifier",
+                                        #hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
+                                        hidden = c(300,300), epochs = c(100), l1 = c(1e-4), l2 = c(1e-4), rho = c(0.90), epsilon = c(1e-8)
+                                        )
 
             ## Use the model and store results
             train_preds <- h2o.predict(model, train)
@@ -623,6 +648,7 @@ print(Sys.info())
 #Overall 5 -fold cross-validated MSE on training dataset: 0.09185992 0.8122152 0.1776434 0.06928164 0.1204961 # submission 31 again, had log-transformed P mixed up, cv score 0.4472
 #Try: log-transform for P.  Goes from 0.812 to 0.893 -> Didn't help!
 #Try: #submission 1+32: Mix of submission 1 (all but P) and submission 32: 1000 epochs for P instead of 50 and run on 10 nodes, MSE for P goes from 0.812 to 0.76924 -> helps a little
+#Over 10-fold cv: 0.08584288 0.8234492 0.2522184 0.09721899 0.1120842 #submission 33, every 5-th point, and take winning parameters from grid search for 300,300 with 100 epochs, 10-fold cv CMRMSE: 0.4698467 LB: 0.44366
 
 #GOAL: 1/5*(sqrt(0.06)+sqrt(0.64)+sqrt(0.15)+sqrt(0.07)+sqrt(0.09))
 #CURRENT 0.42: 1/5*(sqrt(0.10)+sqrt(0.77)+sqrt(0.122)+sqrt(0.063)+sqrt(0.117))
