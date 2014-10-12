@@ -22,7 +22,7 @@
 \textsc{\small{Arno Candel \hspace{40pt} Viraj Parmar}}
 \\
 \bigskip
-\textsc{September 2014}
+\textsc{October 2014}
 \end{center}
 
 \tableofcontents
@@ -594,6 +594,7 @@ head(test_recon.hex)
 \item \texttt{replicate\_training\_data}:  Replicate the entire training dataset onto every node for faster training on small datasets. Default is true.
 \item \texttt{single\_node\_mode}:  Run on a single node for fine-tuning of model parameters. Can be useful for faster convergence during checkpoint resumes after training on a very large count of nodes (for fast initial convergence). Default is false.
 \item \texttt{shuffle\_training\_data}: Enable shuffling of training data (on each node). This option is recommended if training data is replicated on N nodes, and the number of training samples per iteration is close to N times the dataset size, where all nodes train will (almost) all the data. It is automatically enabled if the number of training samples per iteration is set to -1 (or to N times the dataset size or larger), otherwise it is disabled by default.
+\item \texttt{max\_categorical\_features}:  Max. number of categorical features, enforced via hashing (Experimental).
 \end{itemize}
 
 

@@ -27,10 +27,10 @@ class Basic(unittest.TestCase):
 
         print "Remember, the parse only deletes what got parsed. We import the folder. So we double import. That should work now"
         tryList = [
-            ("file_1[0-9].dat.gz", 'c10', 400),
-            ("file_[1-2][0-9].dat.gz", 'c20', 400),
-            ("file_[1-4][0-9].dat.gz", 'c40', 400),
-            ("file_[1-8][0-9].dat.gz", 'c80', 400),
+            ("file_1[0-9].dat.gz", 'c10', 600),
+            ("file_[1-2][0-9].dat.gz", 'c20', 600),
+            ("file_[1-4][0-9].dat.gz", 'c40', 600),
+            ("file_[1-8][0-9].dat.gz", 'c80', 600),
             # don't do this case. timesout at 300 sec on polling with 172-180
             # ("file_[1-2][1-8][0-9].dat.gz", 'c160', 1200),
         ]

@@ -43,7 +43,7 @@ else
         echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
         echo "okay to ls the top level here...no secret info..do all the machines we might be using"
 
-        for mr in 161 164 180
+        for mr in 164 180
         do
             ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr \
                 'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
