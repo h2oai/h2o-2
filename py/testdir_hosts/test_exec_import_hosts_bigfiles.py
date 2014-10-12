@@ -4,21 +4,23 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 zeroList = [
-        'Result0 = 0',
+        'Result.hex = c(0)',
+        'Result0.hex = c(0)',
+        'Result1.hex = c(0)',
+        'Result2.hex = c(0)',
+        'Result3.hex = c(0)',
+        'Result4.hex = c(0)',
 ]
 
 exprList = [
-        'Result<n>.hex = log(<keyX>[<col1>])',
-        'Result<n>.hex = randomBitVector(19,0,123) + Result<n-1>.hex',
-        'Result<n>.hex = randomFilter(<keyX>,<col1>,<row>)',
-        'Result<n>.hex = factor(<keyX>[<col1>])',
-        'Result<n>.hex = slice(<keyX>[<col1>],<row>)',
-        'Result<n>.hex = colSwap(<keyX>,<col1>,(<keyX>[2]==0 ? 54321 : 54321))',
-        'Result<n>.hex = <keyX>[<col1>]',
-        'Result<n>.hex = min(<keyX>[<col1>])',
-        'Result<n>.hex = max(<keyX>[<col1>]) + Result<n-1>.hex',
-        'Result<n>.hex = mean(<keyX>[<col1>]) + Result<n-1>.hex',
-        'Result<n>.hex = sum(<keyX>[<col1>]) + Result.hex',
+        'Result<n>.hex = log(<keyX>[,<col1>])',
+        'Result<n>.hex = factor(<keyX>[,<col1>])',
+        'Result<n>.hex = <keyX>[,<col1>]',
+        # this makes a scalar if not added to a column?
+        'Result<n>.hex = min(<keyX>[,<col1>]) + Result<n-1>.hex',
+        'Result<n>.hex = max(<keyX>[,<col1>]) + Result<n-1>.hex',
+        'Result<n>.hex = mean(<keyX>[,<col1>]) + Result<n-1>.hex',
+        'Result<n>.hex = sum(<keyX>[,<col1>]) + Result.hex',
     ]
 
 def exec_list(exprList, lenNodes, csvFilename, hex_key):
@@ -37,20 +39,6 @@ def exec_list(exprList, lenNodes, csvFilename, hex_key):
                 execResultInspect = h2e.exec_expr(h2o.nodes[nodeX], execExpr, 
                     resultKey="Result"+str(trial)+".hex", timeoutSecs=60)
 
-                eri0 = execResultInspect[0]
-                eri1 = execResultInspect[1]
-                columns = eri0.pop('cols')
-                columnsDict = columns[0]
-                print "\nexecResult columns[0]:", h2o.dump_json(columnsDict)
-                print "\nexecResult [0]:", h2o.dump_json(eri0)
-                print "\nexecResult [1] :", h2o.dump_json(eri1)
-                
-                min = columnsDict["min"]
-                h2o.verboseprint("min: ", min, "trial:", trial)
-                ### self.assertEqual(float(min), float(trial),"what can we check here")
-
-                ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                # slows things down to check every iteration, but good for isolation
                 h2o.check_sandbox_for_errors()
                 print "Trial #", trial, "completed\n"
                 trial += 1
@@ -99,8 +87,7 @@ class Basic(unittest.TestCase):
         for (csvFilename, hex_key) in csvFilenameList:
             csvPathname = importFolderPath + "/" + csvFilename
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, 
-                timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseResult['response']['time']
+                retryDelaySecs=3, timeoutSecs=2000)
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename

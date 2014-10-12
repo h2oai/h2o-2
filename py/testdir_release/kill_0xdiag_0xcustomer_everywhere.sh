@@ -6,9 +6,9 @@ sleep 3
 #****************************************************************************
 # got the private id from 180
 # use 0xcustomer to kill 0xdiag
-ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.161 /usr/bin/pkill -u 0xcustomer
-ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.162 /usr/bin/pkill -u 0xcustomer
-ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.163 /usr/bin/pkill -u 0xcustomer
+# ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.161 /usr/bin/pkill -u 0xcustomer
+# ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.162 /usr/bin/pkill -u 0xcustomer
+# ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.163 /usr/bin/pkill -u 0xcustomer
 ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.164 /usr/bin/pkill -u 0xcustomer
 
 ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.171 /usr/bin/pkill -u 0xcustomer
