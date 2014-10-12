@@ -90,11 +90,11 @@ for (resp in 1:length(targets)) {
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 33 ## submission index
+submission = 34 ## submission index
 blend = T
 
 ## Settings
-n_loop <- 5
+n_loop <- 1
 n_fold <- 10
 ensemble = (n_loop > 1) # only used if blend = F and submit = T
 
@@ -373,7 +373,7 @@ for (resp in 1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(300,300), epochs = c(100), l1 = c(0), l2 = c(1e-6), rho = c(0.90), epsilon = c(1e-8)
+                                        activation="Rectifier", hidden = c(300,300), epochs = c(100), l1 = c(0), l2 = c(1e-6), rho = c(0.90), epsilon = c(1e-8) #0.08584288 5x10-fold
                                         #activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000
                                         #activation="Rectifier", hidden = c(800,800,800), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000  #0.10
                                         #activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000 #0.10
@@ -392,28 +392,30 @@ for (resp in 1:length(targets)) {
                                         force_load_balance=F,
                                         override_with_best_model=T,
                                         activation="Rectifier", 
-                                        hidden = c(300,300), epochs = c(100), l1 = c(1e-4), l2 = c(0), rho = c(0.95), epsilon = c(1e-8)
+                                        hidden = c(300,300), epochs = c(100), l1 = c(1e-4), l2 = c(0), rho = c(0.95), epsilon = c(1e-8) #0.8234492 5x10-fold
                                         #hidden = c(300,300,300,300), epochs = 1000, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 5000
                                         )
             
             else if (resp == 3) #pH
-#               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) #0.12
+              model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) #0.109 10-fold
            
-              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-                                        data = train,
-                                        validation = valid,
-                                        classification = F, 
-                                        score_training_samples = 0,
-                                        score_validation_samples = 0,
-                                        score_duty_cycle = 1,
-                                        score_interval = 0.1,
-                                        force_load_balance=F,
-                                        override_with_best_model=T,
-                                        activation="Rectifier", 
-                                        hidden = c(300,300), epochs = c(100), l1 = c(0), l2 = c(1e-6), rho = c(0.95), epsilon = c(1e-8)
-                                        #hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
-                                        )
+#               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn),
+#                                         data = train,
+#                                         validation = valid,
+#                                         classification = F,
+#                                         score_training_samples = 0,
+#                                         score_validation_samples = 0,
+#                                         score_duty_cycle = 1,
+#                                         score_interval = 0.1,
+#                                         force_load_balance=F,
+#                                         override_with_best_model=T,
+#                                         activation="Rectifier",
+#                                         hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000
+#                                         #hidden = c(300,300), epochs = c(100), l1 = c(0), l2 = c(1e-6), rho = c(0.95), epsilon = c(1e-8) #0.25 5x10-fold
+#                                         #hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
+#                                         )
             else if (resp == 4) #SOC
+              #model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F) #0.128
               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
                                         data = train,
                                         validation = valid,
@@ -425,7 +427,7 @@ for (resp in 1:length(targets)) {
                                         force_load_balance=F,
                                         override_with_best_model=T,
                                         activation="Rectifier",
-                                        hidden = c(300,300), epochs = c(100), l1 = c(1e-6), l2 = c(0), rho = c(0.90), epsilon = c(1e-6)
+                                        hidden = c(300,300), epochs = c(100), l1 = c(1e-6), l2 = c(0), rho = c(0.90), epsilon = c(1e-6) #0.09721899 5x10-fold
                                         #hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
                                         )
              else if (resp == 5) #Sand
@@ -443,7 +445,7 @@ for (resp in 1:length(targets)) {
                                         override_with_best_model=T,
                                         activation="Rectifier",
                                         #hidden = c(300,300,300), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
-                                        hidden = c(300,300), epochs = c(100), l1 = c(1e-4), l2 = c(1e-4), rho = c(0.90), epsilon = c(1e-8)
+                                        hidden = c(300,300), epochs = c(100), l1 = c(1e-4), l2 = c(1e-4), rho = c(0.90), epsilon = c(1e-8) #0.1120842 5x10-fold
                                         )
 
             ## Use the model and store results
@@ -648,7 +650,9 @@ print(Sys.info())
 #Overall 5 -fold cross-validated MSE on training dataset: 0.09185992 0.8122152 0.1776434 0.06928164 0.1204961 # submission 31 again, had log-transformed P mixed up, cv score 0.4472
 #Try: log-transform for P.  Goes from 0.812 to 0.893 -> Didn't help!
 #Try: #submission 1+32: Mix of submission 1 (all but P) and submission 32: 1000 epochs for P instead of 50 and run on 10 nodes, MSE for P goes from 0.812 to 0.76924 -> helps a little
-#Over 10-fold cv: 0.08584288 0.8234492 0.2522184 0.09721899 0.1120842 #submission 33, every 5-th point, and take winning parameters from grid search for 300,300 with 100 epochs, 10-fold cv CMRMSE: 0.4698467 LB: 0.44366
+#Overall 5x10-fold cross-validated MSE on training dataset: 0.08584288 0.8234492 0.2522184 0.09721899 0.1120842 #submission 33, every 5-th point, and take winning parameters from grid search for 300,300 with 100 epochs, 10-fold cv CMRMSE: 0.4698467 LB: 0.44366
+#Overall 5x10-fold cross-validated MSE on training dataset: 0.08584288 0.8234492 0.1090233 0.09721899 0.1120842 #submission 34, same as 33, but use glm for pH cv score: 0.4354 RMSE: 0.2929896 0.9074410 0.3301868 0.3117996 0.3347898 LB: 0.45977
+# pH using GLM: 0.1090233
 
 #GOAL: 1/5*(sqrt(0.06)+sqrt(0.64)+sqrt(0.15)+sqrt(0.07)+sqrt(0.09))
 #CURRENT 0.42: 1/5*(sqrt(0.10)+sqrt(0.77)+sqrt(0.122)+sqrt(0.063)+sqrt(0.117))
