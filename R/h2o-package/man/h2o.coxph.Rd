@@ -72,6 +72,18 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
 \value{
 An object of class \code{\linkS4class{H2OCoxPHModel}}.
 }
+\references{
+Andersen, P. and Gill, R. (1982).
+Cox's regression model for counting processes, a large sample study.
+\emph{Annals of Statistics} \bold{10}, 1100-1120.
+
+Harrell, Jr. F.E., Regression Modeling Strategies: With Applications
+to Linear Models, Logistic Regression, and Survival Analysis.
+Springer-Verlag, 2001.
+
+Therneau, T., Grambsch, P., Modeling Survival Data: Extending the Cox Model.
+Springer-Verlag, 2000.
+}
 \seealso{
 \code{\link[survival]{coxph}},
 \code{\link[survival]{summary.coxph}},

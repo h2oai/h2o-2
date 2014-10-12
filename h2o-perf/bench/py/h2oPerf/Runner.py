@@ -108,55 +108,58 @@ class PerfRunner:
 
         # Do _one_ test at a time
         while len(self.tests_not_started) > 0:
-            test = self.tests_not_started.pop(0)
-            if "multinode" in test.test_name:
-                print
-                print "Skipping multinode test " + test.test_name
-                print
-                continue
-            print
-            print "Beginning test " + test.test_name
-            print
-            isEC2 = test.aws
-            # xmx = test.heap_bytes_per_node
-            # ip = test.ip
-            base_port = test.port
-            nodes_in_cloud = test.total_nodes
-            hosts_in_cloud = test.hosts  # this will be used to support multi-machine / aws
-            #build h2os... regardless of aws.. just takes host configs and attempts to upload jar then launch
-
-            if isEC2:
-                raise Exception("Unimplemented: AWS support coming soon.")
-
-            cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port,
-                             self.output_dir, isEC2, test.remote_hosts)
-            self.cloud.append(cloud)
             try:
-                PerfUtils.start_cloud(self, test.remote_hosts)
-                test.port = self.cloud[0].get_port()
-                test.test_run = TableRow("test_run", self.perfdb)
-                test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
-                p = self.begin_sys_profiling(test.test_name)
-                contamination = test.do_test(self)
-                test.test_run.row['start_epoch_ms'] = test.start_ms
-                test.test_run.row['end_epoch_ms'] = test.end_ms
-                test.test_run.row['test_name'] = test.test_name
-                test.test_run.row["contaminated"] = contamination[0]
-                test.test_run.row["contamination_message"] = contamination[1]
-                test.test_run.update(True)
-                p.terminate()
-                print "Successfully stopped profiler..."
-                PerfUtils.stop_cloud(self, test.remote_hosts)
-                self.cloud.pop(0)
-                self.perfdb.this_test_run_id += 1
+                test = self.tests_not_started.pop(0)
+                if "multinode" in test.test_name:
+                    print
+                    print "Skipping multinode test " + test.test_name
+                    print
+                    continue
+                print
+                print "Beginning test " + test.test_name
+                print
+                isEC2 = test.aws
+                # xmx = test.heap_bytes_per_node
+                # ip = test.ip
+                base_port = test.port
+                nodes_in_cloud = test.total_nodes
+                hosts_in_cloud = test.hosts  # this will be used to support multi-machine / aws
+                #build h2os... regardless of aws.. just takes host configs and attempts to upload jar then launch
+
+                if isEC2:
+                    raise Exception("Unimplemented: AWS support coming soon.")
+
+                cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port,
+                                 self.output_dir, isEC2, test.remote_hosts)
+                self.cloud.append(cloud)
+                try:
+                    PerfUtils.start_cloud(self, test.remote_hosts)
+                    test.port = self.cloud[0].get_port()
+                    test.test_run = TableRow("test_run", self.perfdb)
+                    test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
+                    p = self.begin_sys_profiling(test.test_name)
+                    contamination = test.do_test(self)
+                    test.test_run.row['start_epoch_ms'] = test.start_ms
+                    test.test_run.row['end_epoch_ms'] = test.end_ms
+                    test.test_run.row['test_name'] = test.test_name
+                    test.test_run.row["contaminated"] = contamination[0]
+                    test.test_run.row["contamination_message"] = contamination[1]
+                    test.test_run.update(True)
+                    p.terminate()
+                    print "Successfully stopped profiler..."
+                    PerfUtils.stop_cloud(self, test.remote_hosts)
+                    self.cloud.pop(0)
+                    self.perfdb.this_test_run_id += 1
+                except:
+                    print "Exception caught:"
+                    print '-' * 60
+                    traceback.print_exc(file=sys.stdout)
+                    print '-' * 60
+                    PerfUtils.stop_cloud(self, test.remote_hosts)
+                    self.cloud.pop(0)
+                    self.perfdb.this_test_run_id += 1
             except:
-                print "Exception caught:"
-                print '-' * 60
-                traceback.print_exc(file=sys.stdout)
-                print '-' * 60
-                PerfUtils.stop_cloud(self, test.remote_hosts)
-                self.cloud.pop(0)
-                self.perfdb.this_test_run_id += 1
+                print "Could not do the test!"
 
     def begin_sys_profiling(self, test_name):
         this_path = os.path.dirname(os.path.realpath(__file__))

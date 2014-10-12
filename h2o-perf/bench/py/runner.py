@@ -66,9 +66,14 @@ def main(argv):
 
     # Run tests
     perf_runner.run_tests()
+    print "Finished running all tests"
 
     # Alerts
-    ( Alerter(order=10, names=perf_runner.names) ).alert() #  Parens around Alerter to make explicit that alert() is non-static
+    print "Running Alerts Rollup"
+    try:
+        ( Alerter(order=10, names=perf_runner.names) ).alert() #  Parens around Alerter to make explicit that alert() is non-static
+    except:
+        print "Failed to write Alerts.txt"
 
 if __name__ == "__main__":
     main(sys.argv)

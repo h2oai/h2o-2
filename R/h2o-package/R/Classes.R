@@ -197,7 +197,7 @@ function(formula, newdata, conf.int = 0.95,
     res$conf.int  <- conf.int
   }
 
-  class(res) <- c("survfit.H2OCoxPHModel", "survfit.coxph", "survfit")
+  class(res) <- c("survfit.H2OCoxPHModel", "survfit.cox", "survfit")
   res
 }
 
@@ -1442,6 +1442,14 @@ h2o.gsub <- function(pattern, replacement, x, ignore.case = FALSE) {
   return(res)
 }
 
+h2o.sub <- function(pattern, replacement, x, ignore.case = FALSE) {
+  expr <- paste("sub(", paste(deparse(eval(pattern, envir = parent.frame())), deparse(eval(replacement, envir = parent.frame())), x@key, as.numeric(ignore.case), sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
+
 # setMethod("hist", "H2OParsedData", function(object))
 hist.H2OParsedData <- function(x, freq = TRUE, ...){
   if(ncol(x) > 1) stop("object needs to be a single column H2OParsedData object")
@@ -1464,7 +1472,7 @@ hist.H2OParsedData <- function(x, freq = TRUE, ...){
   object$equidist = freq
   class(object) = "histogram"
   plot(object)
-  object
+  invisible(object)
 }
 
 quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7, ...) {
