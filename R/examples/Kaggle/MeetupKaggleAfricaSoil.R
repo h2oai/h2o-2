@@ -4,7 +4,7 @@ library(h2o)
 #h2oServer <- h2o.init(ip="mr-0xd1", port = 43322)
 
 # Launch H2O directly on localhost
-h2oServer <- h2o.init()
+h2oServer <- h2o.init(nthreads = -1) # use all cores
 
 # Import data
 path_train <- "/home/arno/kaggle_africasoil/data/training.csv.gz"
