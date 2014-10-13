@@ -23,7 +23,6 @@ class Basic(unittest.TestCase):
             ]
 
         trialMax = 1
-        base_port = 54321
         tryHeap = 28
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
@@ -37,11 +36,10 @@ class Basic(unittest.TestCase):
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
+                h2o.build_cloud(2,java_heap_GB=tryHeap, 
                     enable_benchmark_log=True)
             else:
-                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap/2, base_port=base_port, 
-                    enable_benchmark_log=True)
+                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap/2, enable_benchmark_log=True)
 
             for trial in range(trialMax):
                 csvPathname = importFolderPath + "/" + csvFilepattern

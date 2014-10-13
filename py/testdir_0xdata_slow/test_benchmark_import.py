@@ -130,7 +130,6 @@ class Basic(unittest.TestCase):
         # split out the pattern match and the filename used for the hex
         trialMax = 1
         # rebuild the cloud for each file
-        base_port = 54321
         tryHeap = 28
         # can fire a parse off and go wait on the jobs queue (inspect afterwards is enough?)
         DO_GLM = False
@@ -158,20 +157,15 @@ class Basic(unittest.TestCase):
         for i, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
-                    # java_extra_args=jea,
+                h2o.build_cloud(2,java_heap_GB=tryHeap, # java_extra_args=jea,
                     enable_benchmark_log=True)
 
             else:
-                h2o_hosts.build_cloud_with_hosts(base_port=base_port, 
-                    # java_extra_args=jea,
+                h2o_hosts.build_cloud_with_hosts( # java_extra_args=jea,
                     enable_benchmark_log=True)
 
             # pop open a browser on the cloud
             ### h2b.browseTheCloud()
-
-            # to avoid sticky ports?
-            ### base_port += 2
 
             for trial in range(trialMax):
                 csvPathname = importFolderPath + "/" + csvFilepattern

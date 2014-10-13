@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(base_port=59300, java_heap_GB=4, random_udp_drop=RANDOM_UDP_DROP,
+            h2o.build_cloud(java_heap_GB=4, random_udp_drop=RANDOM_UDP_DROP,
                 use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='mr-0x6')
         else:
             h2o_hosts.build_cloud_with_hosts(random_udp_drop=RANDOM_UDP_DROP)
