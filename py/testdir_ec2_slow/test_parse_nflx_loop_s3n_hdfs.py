@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
                 
                 # jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
                 # jea = "-Dh2o.find-ByteBuffer-leaks=true"
-                h2o_hosts.build_cloud_with_hosts(h2oPerNode, java_heap_GB=tryHeap, base_port=54326,
+                h2o_hosts.build_cloud_with_hosts(h2oPerNode, java_heap_GB=tryHeap, 
                     # java_extra_args=jea,
                     enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10)
                 # don't raise exception if we find something bad in h2o stdout/stderr?

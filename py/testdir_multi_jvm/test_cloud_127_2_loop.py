@@ -9,7 +9,6 @@ class Basic(unittest.TestCase):
         h2o.check_sandbox_for_errors()
 
     def testCloud(self):
-        base_port = 54300
         ports_per_node = 2
 
         print "\nTest was written because seeing a bigger cloud than we want sometimes"
@@ -27,16 +26,11 @@ class Basic(unittest.TestCase):
                 ### h2o.build_cloud(use_this_ip_addr="192.168.0.37",
                 # this intermittently fails
                 h2o.build_cloud(use_this_ip_addr="127.0.0.1", 
-                    node_count=tryNodes, base_port=base_port, java_heap_GB=1,
-                    timeoutSecs=15, retryDelaySecs=2)
+                    node_count=tryNodes, java_heap_GB=1, timeoutSecs=15, retryDelaySecs=2)
                 print "trial #%d: Build cloud of %d in %d secs" % (trial, tryNodes, (time.time() - start)) 
 
                 h2o.verify_cloud_size()
                 h2o.tear_down_cloud()
-
-                # increment the base_port to avoid sticky ports when we do another
-                # we only use two ports now?
-                ### base_port += ports_per_node * tryNodes
 
 if __name__ == '__main__':
     h2o.unit_main()
