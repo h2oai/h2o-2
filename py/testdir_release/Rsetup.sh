@@ -67,10 +67,10 @@ fi
 # but maybe it was installed in another library (site library)
 # make sure it's removed, so the install installs the new (latest) one
 
-rm -f /tmp/libPaths.cmd
+rm -f /tmp/libPaths.$USER.cmd
 if [[ $REMOVE_H2O_PACKAGES -eq 1 || $CREATE_FILES_ONLY -eq 1 ]]
 then 
-    cat <<!  >> /tmp/libPaths.cmd
+    cat <<!  >> /tmp/libPaths.$USER.cmd
 .libPaths()
 myPackages = rownames(installed.packages())
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
@@ -88,7 +88,7 @@ fi
 
 if [[ $INSTALL_R_PACKAGES -eq 1 || $CREATE_FILES_ONLY -eq 1 ]]
 then 
-    cat <<!  >> /tmp/libPaths.cmd
+    cat <<!  >> /tmp/libPaths.$USER.cmd
 # make the install conditional. Don't install if it's already there
 # update if allready there?
 usePackage <- function(p) {
@@ -144,14 +144,14 @@ fi
 # if Jenkins is running this, doing execute it..he'll execute it to logs for stdout/stderr
 if [ $CREATE_FILES_ONLY -eq 0 ]
 then
-    R -f /tmp/libPaths.cmd
+    R -f /tmp/libPaths.$USER.cmd
 else
     echo "If you want to setup R packages the RUnit tests use, like jenkins..then enter the next line at the command prompt"
     echo "Doesn't cover h2o package. Okay for the Runit test to handle that"
     echo ""
-    echo "    R -f /tmp/libPaths.cmd"
+    echo "    R -f /tmp/libPaths.$USER.cmd"
     echo ""
-    echo "Otherwise, I did nothing here, except create /tmp/libPaths.cmd"
+    echo "Otherwise, I did nothing here, except create /tmp/libPaths.$USER.cmd"
 fi
 
 echo "If RCurl didn't install, you probably need libcurl-devel. ('sudo yum install libcurl-devel' on centos). libcurl not enough?"

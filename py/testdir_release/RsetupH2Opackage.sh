@@ -8,8 +8,8 @@ which R
 R --version | egrep -i '(version|platform)'
 echo ""
 
-rm -f /tmp/libPaths.cmd
-cat <<!  >> /tmp/libPaths.cmd
+rm -f /tmp/libPaths.$USER.cmd
+cat <<!  >> /tmp/libPaths.$USER.cmd
 .libPaths()
 myPackages = rownames(installed.packages())
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
@@ -18,5 +18,5 @@ if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 install.packages("h2o", repos=(c("file:~/h2o/target/R", getOption("repos"))))
 !
-R -f /tmp/libPaths.cmd
+R -f /tmp/libPaths.$USER.cmd
 

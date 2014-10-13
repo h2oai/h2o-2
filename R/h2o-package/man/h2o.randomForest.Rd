@@ -86,12 +86,14 @@ of the following components:
 }
 
 \examples{
+# -- CRAN examples begin --
 # Run an RF model on iris data
 library(h2o)
 localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 h2o.randomForest(y = 5, x = c(2,3,4), data = iris.hex, ntree = 50, depth = 100)
+# -- CRAN examples end --
 
 \dontrun{
 # RF variable importance

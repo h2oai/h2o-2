@@ -6,7 +6,7 @@ Connects to a running H2O instance and checks the local H2O R package is the cor
 \usage{
 h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx, 
          beta = FALSE, assertion = TRUE, license = NULL,
-         nthreads = 2, max_mem_size, min_mem_size,
+         nthreads = -2, max_mem_size, min_mem_size,
          ice_root = NULL, strict_version_check = TRUE)}
 
 \arguments{
@@ -18,7 +18,7 @@ h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
   \item{beta}{(Optional) A logical value indicating whether H2O should be launch in beta mode.  This value is only used when R starts H2O.}
   \item{assertion}{(Optional) A logical value indicating whether H2O should be launched with assertions enabled. Used mainly for error checking and debugging purposes.  This value is only used when R starts H2O.}
   \item{license}{(Optional) A string value specifying the full path of the license file.  This value is only used when R starts H2O.}
-  \item{nthreads}{(Optional) Number of threads in the thread pool.  This relates very closely to the number of CPUs used.  Setting to 0 or less is equivalent to setting to the number of CPUs on the host.  This value is only used when R starts H2O. }
+  \item{nthreads}{(Optional) Number of threads in the thread pool.  This relates very closely to the number of CPUs used.  -2 means use the CRAN default of 2 CPUs.  -1 means use all CPUs on the host.  A positive integer specifies the number of CPUs directly.  This value is only used when R starts H2O. }
   \item{max_mem_size}{(Optional) A string specifying the maximum size, in bytes, of the memory allocation pool to H2O. This value must a multiple of 1024 greater than 2MB. Append the letter m or M to indicate megabytes, or g or G to indicate gigabytes.  This value is only used when R starts H2O. }
   \item{min_mem_size}{(Optional) A string specifying the minimum size, in bytes, of the memory allocation pool to H2O. This value must a multiple of 1024 greater than 2MB. Append the letter m or M to indicate megabytes, or g or G to indicate gigabytes.  This value is only used when R starts H2O. }
   \item{ice_root}{(Optional) A directory specifying where H2O should write log files and spill to disk (if needed).  Default is tempdir().  This value is only used when R starts H2O.}

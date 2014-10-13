@@ -4,9 +4,9 @@ echo "jenkins causes these, since he dispatches h2o as either. So he needs to cl
 
 #****************************************************************************
 # got the private id from 180
-ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.161 rm -f -r /home/0xcustomer/ice*
-ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.162 rm -f -r /home/0xcustomer/ice*
-ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.163 rm -f -r /home/0xcustomer/ice*
+# ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.161 rm -f -r /home/0xcustomer/ice*
+# ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.162 rm -f -r /home/0xcustomer/ice*
+# ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.163 rm -f -r /home/0xcustomer/ice*
 ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.164 rm -f -r /home/0xcustomer/ice*
 
 # dead now
@@ -23,9 +23,9 @@ ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.180 rm -f -r /home/0x
 
 #****************************************************************************
 # got the private id from 180
-ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@172.16.2.161 rm -f -r /home/0xdiag/ice*
-ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@172.16.2.162 rm -f -r /home/0xdiag/ice*
-ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@172.16.2.163 rm -f -r /home/0xdiag/ice*
+# ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@172.16.2.161 rm -f -r /home/0xdiag/ice*
+# ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@172.16.2.162 rm -f -r /home/0xdiag/ice*
+# ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@172.16.2.163 rm -f -r /home/0xdiag/ice*
 ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@172.16.2.164 rm -f -r /home/0xdiag/ice*
 
 ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@172.16.2.171 rm -f -r /home/0xdiag/ice*

@@ -43,7 +43,7 @@ else
         echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
         echo "okay to ls the top level here...no secret info..do all the machines we might be using"
 
-        for mr in 161 164 180
+        for mr in 164 180
         do
             ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr \
                 'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
@@ -102,10 +102,10 @@ echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 mySetup() {
     # we setup .Renviron and delete the old local library if it exists
     # then make the R_LIB_USERS dir
-    # creates /tmp/libPaths.cmd
-    rm -f /tmp/libPaths.cmd
+    # creates /tmp/libPaths.$USER.cmd
+    rm -f /tmp/libPaths.$USER.cmd
     ./Rsetup.sh
-    cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
+    cmd="R -f /tmp/libPaths.$USER.cmd --args $CLOUD_IP:$CLOUD_PORT"
     echo "Running this cmd:"
     echo $cmd
     # it's gotten long now because of all the installs

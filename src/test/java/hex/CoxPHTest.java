@@ -48,7 +48,7 @@ public class CoxPHTest extends TestUtil {
       job.event_column     = fr.vec("event");
       job.x_column         = fr.vec("age");
       job.ties             = CoxPHTies.efron;
-      job.execImpl();
+      job.fork();
       job.get();
       model = DKV.get(modelKey).get();
       testHTML(model);
@@ -87,7 +87,7 @@ public class CoxPHTest extends TestUtil {
       job.event_column     = fr.vec("event");
       job.x_column         = fr.vec("age");
       job.ties             = CoxPHTies.breslow;
-      job.execImpl();
+      job.fork();
       job.get();
       model = DKV.get(modelKey).get();
       testHTML(model);
@@ -126,7 +126,7 @@ public class CoxPHTest extends TestUtil {
       job.event_column     = fr.vec("event");
       job.x_column         = fr.vec("age");
       job.ties             = CoxPHTies.efron;
-      job.execImpl();
+      job.fork();
       job.get();
       model = DKV.get(modelKey).get();
       testHTML(model);
@@ -165,7 +165,7 @@ public class CoxPHTest extends TestUtil {
       job.event_column     = fr.vec("event");
       job.x_column         = fr.vec("age");
       job.ties             = CoxPHTies.breslow;
-      job.execImpl();
+      job.fork();
       job.get();
       model = DKV.get(modelKey).get();
       testHTML(model);

@@ -40,6 +40,7 @@ build_rh2o:
 	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2o-DESCRIPTION.template > h2o-package/DESCRIPTION
 	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2o-package.template > h2o-package/man/h2o-package.Rd
 	echo '$(BUILD_BRANCH)' > h2o-package/inst/branch.txt
+	echo '$(BUILD_NUMBER)' > h2o-package/inst/buildnum.txt
 	echo 'https://github.com/0xdata/h2o' > h2o-package/inst/source_code_repository_info.txt
 ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
@@ -115,6 +116,7 @@ clean:
 	rm -f h2o_package.pdf
 	rm -f h2o-package/man/h2o-package.Rd
 	rm -f h2o-package/inst/branch.txt
+	rm -f h2o-package/inst/buildnum.txt
 	rm -fr h2o-package/inst/java
 	rm -f h2o_*.tar.gz
 	rm -f h2o_*.tgz

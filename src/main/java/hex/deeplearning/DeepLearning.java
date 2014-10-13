@@ -477,8 +477,8 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
   public double sparsity_beta = 0;
 
-  @API(help = "Maximum dimensionality of data (size of input layer). Uses feature hashing (Experimental).", filter= Default.class, json = true)
-  public int max_input_layer_size = Integer.MAX_VALUE;
+  @API(help = "Max. number of categorical features, enforced via hashing (Experimental).", filter= Default.class, lmin = 1, json = true)
+  public int max_categorical_features = Integer.MAX_VALUE;
 
   public enum MissingValuesHandling {
     Skip, MeanImputation
@@ -539,7 +539,7 @@ public class DeepLearning extends Job.ValidatedJob {
           "autoencoder",
           "average_activation",
           "sparsity_beta",
-          "max_input_layer_size",
+          "max_categorical_features",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
@@ -583,6 +583,7 @@ public class DeepLearning extends Job.ValidatedJob {
               || arg._name.equals("replicate_training_data")
               || arg._name.equals("balance_classes")
               || arg._name.equals("n_folds")
+              || arg._name.equals("autoencoder")
               || arg._name.equals("checkpoint")) {
         arg.setRefreshOnChange();
       }
@@ -678,6 +679,12 @@ public class DeepLearning extends Job.ValidatedJob {
     if(arg._name.equals("override_with_best_model") && n_folds != 0) {
       arg.disable("Only without n-fold cross-validation.", inputArgs);
       override_with_best_model = false;
+    }
+    if(arg._name.equals("average_activation") && !autoencoder) {
+      arg.disable("Only for autoencoder.", inputArgs);
+    }
+    if(arg._name.equals("sparsity_beta") && !autoencoder) {
+      arg.disable("Only for autoencoder.", inputArgs);
     }
   }
 
@@ -932,6 +939,7 @@ public class DeepLearning extends Job.ValidatedJob {
     // reason for the error message below is that validation might not have the same horizontalized features as the training data (or different order)
     if (autoencoder && validation != null) throw new UnsupportedOperationException("Cannot specify a validation dataset for auto-encoder.");
     if (autoencoder && activation == Activation.Maxout) throw new UnsupportedOperationException("Maxout activation is not supported for auto-encoder.");
+    if (max_categorical_features < 1) throw new IllegalArgumentException("max_categorical_features must be at least " + 1);
 
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {

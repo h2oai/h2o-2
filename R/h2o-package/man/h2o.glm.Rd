@@ -111,6 +111,7 @@ The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing
 \code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 \examples{
+# -- CRAN examples begin --
 library(h2o)
 localH2O = h2o.init()
 
@@ -126,6 +127,7 @@ myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.1,
         lambda_search = FALSE, use_all_factor_levels = FALSE, variable_importances = FALSE, 
         higher_accuracy = FALSE)
+# -- CRAN examples end --
 
 \dontrun{
 # GLM variable importance
