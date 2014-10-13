@@ -105,6 +105,25 @@ cv_preds <- matrix(0, nrow = nrow(train_hex), ncol = 1)
 holdout_valid_se <- matrix(0, nrow = 1, ncol = length(targets))
 holdout_valid_mse <- matrix(0, nrow = 1, ncol = length(targets))
 for (resp in 2:2) { #length(targets)) {
+  
+  ## Clear H2O Cluster
+  
+  library(stringr)
+  
+  ls_temp <- h2o.ls(localH2O)
+  for (n_ls in 1:nrow(ls_temp)) {
+    if (str_detect(ls_temp[n_ls, 1], "DeepLearning")) {
+      h2o.rm(localH2O, keys = as.character(ls_temp[n_ls, 1]))
+    } else if (str_detect(ls_temp[n_ls, 1], "GLM")) {
+      h2o.rm(localH2O, keys = as.character(ls_temp[n_ls, 1]))
+    } else if (str_detect(ls_temp[n_ls, 1], "GBM")) {
+      h2o.rm(localH2O, keys = as.character(ls_temp[n_ls, 1]))
+    } else if (str_detect(ls_temp[n_ls, 1], "Last.value")) {
+      h2o.rm(localH2O, keys = as.character(ls_temp[n_ls, 1]))
+    }
+  }
+  
+  
   if (validation) {
     if (grid) {
       cat("\n\nNow running grid search for ", targets[resp], "...\n")
