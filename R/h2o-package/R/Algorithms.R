@@ -124,7 +124,7 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
-                    n.bins = 100, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
+                    n.bins = 20, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
   args <- .verify_dataxy(data, x, y)
   
   if(!is.character(key)) stop("key must be of class character")
@@ -978,7 +978,7 @@ h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.
 
 # ----------------------------------- Random Forest --------------------------------- #
 h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, depth=20, mtries = -1, sample.rate=2/3,
-                             nbins=100, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1,
+                             nbins=20, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1,
                              balance.classes=FALSE, max.after.balance.size=5, doGrpSplit=TRUE, verbose = FALSE,
                              oobee = TRUE, stat.type = "ENTROPY", type = "fast") {
   if (type == "fast") {
