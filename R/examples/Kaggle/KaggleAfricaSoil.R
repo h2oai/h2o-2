@@ -65,7 +65,7 @@ lotspredictors <- c(spectra_hi_lots, spectra_omit, spectra_low_lots, extra)
 targets <- vars[3596:3600]
 
 
-transform = c(F,F,F,F,F)
+transform = c(F,T,F,F,F)
 
 # Transform data
 offsets <- vector("numeric", length=length(targets))
@@ -90,11 +90,11 @@ for (resp in 1:length(targets)) {
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 34 ## submission index
+submission = 35 ## submission index
 blend = T
 
 ## Settings
-n_loop <- 1
+n_loop <- 5
 n_fold <- 10
 ensemble = (n_loop > 1) # only used if blend = F and submit = T
 
@@ -104,7 +104,7 @@ errs = 0
 cv_preds <- matrix(0, nrow = nrow(train_hex), ncol = 1)
 holdout_valid_se <- matrix(0, nrow = 1, ncol = length(targets))
 holdout_valid_mse <- matrix(0, nrow = 1, ncol = length(targets))
-for (resp in 1:length(targets)) {
+for (resp in 2:2) { #length(targets)) {
   if (validation) {
     if (grid) {
       cat("\n\nNow running grid search for ", targets[resp], "...\n")
@@ -653,6 +653,8 @@ print(Sys.info())
 #Overall 5x10-fold cross-validated MSE on training dataset: 0.08584288 0.8234492 0.2522184 0.09721899 0.1120842 #submission 33, every 5-th point, and take winning parameters from grid search for 300,300 with 100 epochs, 10-fold cv CMRMSE: 0.4698467 LB: 0.44366
 #Overall 5x10-fold cross-validated MSE on training dataset: 0.08584288 0.8234492 0.1090233 0.09721899 0.1120842 #submission 34, same as 33, but use glm for pH cv score: 0.4354 RMSE: 0.2929896 0.9074410 0.3301868 0.3117996 0.3347898 LB: 0.45977
 # pH using GLM: 0.1090233
+#Overall 5x10-fold cross-validated MSE on training dataset: 0.08584288 0.8167192 0.1090233 0.09721899 0.1120842 #submission 35, same as 34, but use log for P cv score: 0.4346 RMSE: 0.2929896 0.9037252 0.3301868 0.3117996 0.3347898 LB: 0.47375
+
 
 #GOAL: 1/5*(sqrt(0.06)+sqrt(0.64)+sqrt(0.15)+sqrt(0.07)+sqrt(0.09))
 #CURRENT 0.42: 1/5*(sqrt(0.10)+sqrt(0.77)+sqrt(0.122)+sqrt(0.063)+sqrt(0.117))
