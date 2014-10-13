@@ -5,17 +5,20 @@ How R Scripts Call H\ :sub:`2`\ O GLM
 The following diagram shows the different software layers involved
 when a user runs an R program that starts a GLM on H2O.
 
-The left side shows the steps that run the the R process, and the
+The left side shows the steps that run the the R process and the
 right side shows the steps that run in the H2O cloud.  The top layer
-is the TCP/IP network code that actually lets the two processes
+is the TCP/IP network code that enables the two processes to
 communicate with each other.
 
-The solid line shows an R->H2O request, and the dashed line shows
+The solid line shows an R->H2O request and the dashed line shows
 the response for that request.
 
-In the R program, the different components are the R script itself,
-the H2O R package, dependent packages (RCurl, rjson), and the R core
-runtime itself.
+In the R program, the different components are: 
+
+	* the R script itself
+	* the H2O R package
+	* dependent packages (RCurl, rjson)
+	* the R core runtime
 
 .. image:: PngGen/pictures/start_glm_from_r.png
    :width: 90 %
@@ -24,8 +27,8 @@ runtime itself.
 |
 
 The following diagram shows the R program retrieving the resulting GLM
-model.  (Not shown is the GLM model itself executing subtasks within
-H2O and depositing the result into the K/V store.  Also not shown is R
+model.  (Not shown: the GLM model executing subtasks within
+H2O and depositing the result into the K/V store or R
 polling the /Jobs.json URL for the GLM model to complete.)
 
 .. image:: PngGen/pictures/retrieve_glm_result_from_r.png
@@ -53,10 +56,9 @@ the big data object inside H2O.
 
 The H2O R package overloads generic operations like 'summary' and '+'
 with this new H2OParsedData class.  The R core parser makes callbacks
-into the H2O R package, and these operations then get shipped over an
-HTTP connection to the H2O cloud.
+into the H2O R package, and these operations get sent to the H2O cloud over an
+HTTP connection.
 
-The H2O cloud performs the big data operation (say '+' on two columns
+The H2O cloud performs the big data operation (for example, '+' on two columns
 of a dataset imported into H2O) and returns a reference to the result.
-This reference is stored in a new H2OParsedData S4 object inside the
-R program.
+This reference is stored in a new H2OParsedData S4 object inside R.

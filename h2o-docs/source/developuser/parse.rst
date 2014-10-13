@@ -1,15 +1,15 @@
 Parse Overview
 ==============
 
-(Since HDFS is very popular, this example illustrates that data
-source.  H2O does support other sources of data, however.)
+Since HDFS is the most commonly used format, this example illustrates that data
+source.  However, H2O does support other sources of data.
 
-The parse process typically moves data as much as twice during
+The parse process typically moves data twice during
 ingestion.
 
-The first movement of the data occurs when the data is read from disk
+The first movement of the data occurs when the data is read from the disk
 (an f-chunk in the diagram below) and copied across the network to the
-H2O node that requested the particular piece of data from the
+H2O node requesting the specified data from the
 filesystem.
 
 .. image:: PngGen/pictures/DataIngestion.png
@@ -18,8 +18,8 @@ filesystem.
 |
 |
 
-The data is then moved a second time from the H2O node where the raw
-data gets parsed to the H2O node where the compressed data will reside
+The data is moved a second time from the H2O node, where the raw
+data is parsed, to the H2O node, where the compressed data will reside
 in a Fluid Vector chunk (a p-chunk in the diagram below).
 
 .. image:: PngGen/pictures/Parse.png
