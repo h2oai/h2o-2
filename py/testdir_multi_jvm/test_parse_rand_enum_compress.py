@@ -4,6 +4,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
 
 
+USE_NA = True
 DO_WITH_INT = False
 REPORT_OUTPUT = False
 REPORT_LAST_ENUM_INDICES = False
@@ -76,13 +77,19 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, scale=1,
         # use this to calcuate a output (that's dependent on inputs in some repeatable way)
         riIndexSum = 0
         for col in range(colCount):
-            riIndex = robj.randint(0, howManyEnumsToUse-1)
-            if REPORT_OUTPUT:
-                riIndexSum += riIndex
+            # put in a small number of NAs (1%)
+            if USE_NA and robj.randint(0,99)==0:
+                riIndex = None
+                riIndexSum += 0 # don't change
+                rowData.append('')
+            else:
+                riIndex = robj.randint(0, howManyEnumsToUse-1)
+                if REPORT_OUTPUT:
+                    riIndexSum += riIndex
 
-            rowData.append(enumList[riIndex])
-            if REPORT_LAST_ENUM_INDICES:
-                rowIndex.append(riIndex)
+                rowData.append(enumList[riIndex])
+                if REPORT_LAST_ENUM_INDICES:
+                    rowIndex.append(riIndex)
 
         # output column
         # make the output column match odd/even row mappings.
@@ -178,7 +185,7 @@ class Basic(unittest.TestCase):
 
                 print "\n" + csvFilename
                 (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                    h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
+                    h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=not USE_NA)
 
 if __name__ == '__main__':
     h2o.unit_main()
