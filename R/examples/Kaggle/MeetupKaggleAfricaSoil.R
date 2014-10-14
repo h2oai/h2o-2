@@ -99,7 +99,7 @@ for (resp in 1:length(targets)) {
                        epsilon = p$epsilon,
                        train_samples_per_iteration = p$train_samples_per_iteration,
                        reproducible = p$reproducible,
-                       seed = p$seed
+                       seed = p$seed + n
                        )
     
     ## Aggregate ensemble model predictions
