@@ -34,7 +34,7 @@ USED_HOSTNAMES = [
 # maximum number of ports a job uses 10 = 5 jvms * 2 ports per h2o jvm (current max known)
 PORTS_PER_SLOT = 10
 DEFAULT_BASE_PORT = 54340
-MAX_EXECUTOR = 8
+EXECUTOR_NUM = 8
 
 def jenkins_h2o_port_allocate():
     """
@@ -59,8 +59,9 @@ def jenkins_h2o_port_allocate():
     else:
         executor = 1 # jenkins starts with 1
 
-    if executor<1 or executor>MAX_EXECUTOR:
-        raise Exception("executor: %s looks wrong. Expecting 1-8 jenkins executors on a machine")
+    print "jenkins EXECUTOR_NUMBER:", executor
+    if executor<0 or executor>=EXECUTOR_NUM:
+        raise Exception("executor: %s wrong? Expecting 1-8 jenkins executors on a machine (0-7 exp.)" % executor)
 
     hostname = socket.gethostname()
     hostnameIndex = USED_HOSTNAMES.index(hostname)
@@ -71,11 +72,11 @@ def jenkins_h2o_port_allocate():
         print "WARNING: this hostname: %s isn't in my list. You should add it?" % hostname
         print "Will use default base port"
     else:
-        h2oPortOffset = PORTS_PER_SLOT * ((executor-1) + hostnameIndex)
+        h2oPortOffset = PORTS_PER_SLOT * (executor + hostnameIndex)
         h2oPort += h2oPortOffset
 
-    print "Possible h2o base_port range is %s to %s" % (DEFAULT_BASE_PORT, h2oPort + (PORTS_PER_SLOT * MAX_EXECUTOR) - 1)
-    print "Possible h2o ports used ranged is %s to %s" % (DEFAULT_BASE_PORT, h2oPort + (PORTS_PER_SLOT * MAX_EXECUTOR))
+    print "Possible h2o base_port range is %s to %s" % (DEFAULT_BASE_PORT, h2oPort + (PORTS_PER_SLOT * EXECUTOR_NUM) - 1)
+    print "Possible h2o ports used ranged is %s to %s" % (DEFAULT_BASE_PORT, h2oPort + (PORTS_PER_SLOT * EXECUTOR_NUM))
     print "want to 'export H2O_PORT=%s" % h2oPort
     print "want to 'export H2O_PORT_OFFSET=%s # legacy" % h2oPortOffset
 
