@@ -4,6 +4,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
 
 
+DO_SUMMARY = False # summary slow for some reason
 USE_NA = True
 DO_WITH_INT = False
 REPORT_OUTPUT = False
@@ -134,7 +135,7 @@ class Basic(unittest.TestCase):
         n = 1000000
         if h2o.long_test_case:
             repeat = 1000 
-            scale = 10 # scale up the # of rows
+            scale = 100 # scale up the # of rows
             tryList = [
                 (n*scale, 3, 'cI', 300), 
                 (n*scale, 3, 'cI', 300), 
@@ -180,7 +181,7 @@ class Basic(unittest.TestCase):
                 lastcolsHistory.append(lastcols)
 
                 parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key,
-                    timeoutSecs=30, separator=colSepInt)
+                    timeoutSecs=30, separator=colSepInt, doSummary=DO_SUMMARY)
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 
                 inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
