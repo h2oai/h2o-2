@@ -167,7 +167,7 @@ def get_base_port(base_port):
         # (54321, 54323, 54325 and 54327 are used in testdir_single_jvm)
         # if we're running multi-node with a config json, then obviously the gap needs to be cognizant 
         # of the number of nodes
-        print "H2O_PORT_OFFSET", a
+        verboseprint("H2O_PORT_OFFSET", a)
         if a<8 or a>500:
             raise Exception("H2O_PORT_OFFSET % os env variable should be either not set, or between 8 and 500" % a)
 
@@ -175,7 +175,7 @@ def get_base_port(base_port):
     if os.environ.has_key("H2O_PORT"):
         # this will fail if it's not an integer
         b = int(os.environ["H2O_PORT"])
-        print "H2O_PORT", a
+        verboseprint("H2O_PORT", a)
         if b<54321 or b>54999:
             raise Exception("H2O_PORT %s os env variable should be either not set, or between 54321 and 54999." % b)
 
