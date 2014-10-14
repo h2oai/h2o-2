@@ -77,6 +77,11 @@ if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 # this will only remove from the first library in .libPaths()
 # may need permission to remove from other libraries
 # remove from all possible locations in .libPaths()
+
+# if this if succeeds, but the remove fails not finding h2o
+# it's likely because h2o was installed as root, and you're not root
+# or some permission problem like that. go to the paths in .libPaths()
+# outside of R and rm -r, if so.
 if ("h2o" %in% rownames(installed.packages())) { 
     remove.packages("h2o",.libPaths()[1]) 
     remove.packages("h2o",.libPaths()[2]) 

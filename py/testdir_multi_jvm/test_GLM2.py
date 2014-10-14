@@ -27,7 +27,7 @@ class GLMTest(unittest.TestCase):
         kwargs['alpha'] = 0
         kwargs['lambda'] = 0
         kwargs['response'] = 'CAPSULE'
-        glmResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=10, **kwargs)
+        glmResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=20, **kwargs)
 
         (warnings, clist, intercept) = h2o_glm.simpleCheckGLM(self, glmResult, None, **kwargs)
         cstring = "".join([("%.5e  " % c) for c in clist])

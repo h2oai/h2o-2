@@ -93,7 +93,7 @@ class Basic(unittest.TestCase):
                 rb_key = "rb_%s" % hex_key
                 start = time.time()
                 print "Rebalancing %s to %s with %s chunks" % (hex_key, rb_key, REBALANCE_CHUNKS)
-                rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, seed=SEEDPERFILE, chunks=REBALANCE_CHUNKS)
+                rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, chunks=REBALANCE_CHUNKS)
                 elapsed = time.time() - start
                 print "rebalance end on ", csvFilename, 'took', elapsed, 'seconds'
             else:
