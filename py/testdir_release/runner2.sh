@@ -30,7 +30,7 @@ then
     do
         # only do older dirs, to avoid collisions on running jobs
         ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr  \
-        'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
+        'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; timeout 5 ls /mnt/0xcustomer-datasets'
     done
 
     python ../four_hour_cloud.py -cj pytest_config-jenkins-176-180.json &

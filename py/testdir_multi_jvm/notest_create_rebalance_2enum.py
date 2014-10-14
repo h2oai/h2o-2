@@ -87,7 +87,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             print "Rebalancing %s to %s with %s chunks" % (hex_key, rb_key, REBALANCE_CHUNKS)
             SEEDPERFILE = random.randint(0, sys.maxint)
-            rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, seed=SEEDPERFILE, chunks=REBALANCE_CHUNKS)
+            rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, chunks=REBALANCE_CHUNKS)
             elapsed = time.time() - start
             print "rebalance end on ", hex_key, 'to', rb_key, 'took', elapsed, 'seconds',\
 
