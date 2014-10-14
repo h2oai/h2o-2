@@ -6,8 +6,8 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2
 
 SPEEDRF = False
 MULTINOMIAL = 2
-DO_WITH_INT = True
-ENUMS = 3
+DO_WITH_INT = False
+ENUMS = 100
 ENUMLIST = ['bacaa', 'cbcbcacd', 'dccdbda', 'efg', 'hij', 'jkl']
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
@@ -15,7 +15,7 @@ def random_enum(randChars, maxEnumSize):
     r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
     return r
 
-def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=10):
+def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=1000):
     if DO_WITH_INT:
         enumList = range(listSize)
     else:
