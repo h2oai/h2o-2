@@ -31,7 +31,8 @@ def exec_list(exprList, lenNodes, csvFilename, hex_key):
             for exprTemplate in exprList:
                 # do each expression at a random node, to facilate key movement
                 nodeX = random.randint(0,lenNodes-1)
-                colX = random.randint(1,54)
+                # billion rows only has two cols
+                colX = random.randint(1,2)
                 # FIX! should tune this for covtype20x vs 200x vs covtype.data..but for now
                 row = str(random.randint(1,400000))
 
