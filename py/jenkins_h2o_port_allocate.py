@@ -28,7 +28,6 @@ USED_HOSTNAMES = [
     'mr-0xd9',
     'mr-0xd10',
     'Kevin-Ubuntu3',
-    'Kevin-Ubuntu4',
 ]
 
 # maximum number of ports a job uses 10 = 5 jvms * 2 ports per h2o jvm (current max known)
@@ -75,10 +74,12 @@ def jenkins_h2o_port_allocate():
         h2oPortOffset = PORTS_PER_SLOT * (executor + hostnameIndex)
         h2oPort += h2oPortOffset
 
-    print "Possible h2o base_port range is %s to %s" % (DEFAULT_BASE_PORT, h2oPort + (PORTS_PER_SLOT * EXECUTOR_NUM) - 1)
-    print "Possible h2o ports used ranged is %s to %s" % (DEFAULT_BASE_PORT, h2oPort + (PORTS_PER_SLOT * EXECUTOR_NUM))
-    print "want to 'export H2O_PORT=%s" % h2oPort
-    print "want to 'export H2O_PORT_OFFSET=%s # legacy" % h2oPortOffset
+    print "Possible h2o base_port range is %s to %s" % \
+        (DEFAULT_BASE_PORT, DEFAULT_BASE_PORT + (PORTS_PER_SLOT * EXECUTOR_NUM * len(USED_HOSTNAMES)) - 2)
+    print "Possible h2o ports used ranged is %s to %s" % \
+        (DEFAULT_BASE_PORT, DEFAULT_BASE_PORT + (PORTS_PER_SLOT * EXECUTOR_NUM * len(USED_HOSTNAMES)) - 1)
+    print "want to 'export H2O_PORT=%s'" % h2oPort
+    print "want to 'export H2O_PORT_OFFSET=%s # legacy'" % h2oPortOffset
 
     f = open('H2O_BASE_PORT.sh','w')
     f.write('export H2O_PORT=%s\n' % h2oPort)
