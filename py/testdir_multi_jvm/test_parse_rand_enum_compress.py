@@ -171,8 +171,11 @@ class Basic(unittest.TestCase):
 
                 print "Creating random", csvPathname
                 # same enum list/mapping, but different dataset?
+                start = time.time()
                 lastcols = write_syn_dataset(csvPathname, enumList, rowCount, colCount, scale=1,
                     colSepChar=colSepChar, rowSepChar=rowSepChar, SEED=NEW_SEED)
+                elapsed = time.time() - start
+                print "took %s seconds to create %s" % (elapsed, csvPathname)
                 # why are we saving this?
                 lastcolsHistory.append(lastcols)
 
