@@ -2828,7 +2828,9 @@ class H2O(object):
                 # Timeout check will kick in if continued H2O badness.
                 return False
 
-        self.stabilize(test, error=('waiting to accept initial connection: Expected cloud %s' % nodeList),
+        # get their http addr to represent the nodes
+        expectedCloudStr = ",".join([str(n) for n in nodeList])
+        self.stabilize(test, error=('waiting for initial connection: Expected cloud %s' % expectedCloudStr),
             timeoutSecs=timeoutSecs, # with cold cache's this can be quite slow
             retryDelaySecs=0.1) # but normally it is very fast
 
