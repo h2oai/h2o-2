@@ -480,6 +480,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Max. number of categorical features, enforced via hashing (Experimental).", filter= Default.class, lmin = 1, json = true)
   public int max_categorical_features = Integer.MAX_VALUE;
 
+  @API(help = "Force reproducibility (will be slow - only uses 1 thread)", filter= Default.class, json = true)
+  public boolean reproducible = false;
+
   public enum MissingValuesHandling {
     Skip, MeanImputation
   }
@@ -957,6 +960,14 @@ public class DeepLearning extends Job.ValidatedJob {
     if (!sparse && col_major) {
       if (!quiet_mode) throw new IllegalArgumentException("Cannot use column major storage for non-sparse data handling.");
     }
+    if (reproducible) {
+      if (H2O.CLOUD.size() != 1)
+        throw new IllegalArgumentException("Reproducible mode only works in single-node mode.");
+      if (!quiet_mode)
+        Log.info("Automatically turning on force_load_balancing and setting train_samples_per_iteration to 0 to enforce reproducibility.");
+      force_load_balance = true;
+      train_samples_per_iteration = 0;
+    }
   }
 
   /**
@@ -1030,7 +1041,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final long model_size = model.model_info().size();
       if (!quiet_mode) Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
       train = model.model_info().data_info()._adaptedFrame;
-      if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
+      if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data));
       if (mp.classification && mp.balance_classes) {
         float[] trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
         if (class_sampling_factors != null) {
@@ -1154,10 +1165,13 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return Frame that has potentially more chunks
    */
   private Frame reBalance(final Frame fr, boolean local) {
-    final int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
-    if (fr.anyVec().nChunks() > chunks) {
+    int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
+    if (fr.anyVec().nChunks() > chunks && !reproducible) {
       Log.info("Dataset already contains " + fr.anyVec().nChunks() + " chunks. No need to rebalance.");
       return fr;
+    } else if (reproducible) {
+      Log.warn("Reproducibility enforced - using only 1 thread - can be slow.");
+      chunks = 1;
     }
     if (!quiet_mode) Log.info("ReBalancing dataset into (at least) " + chunks + " chunks.");
 //      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);
