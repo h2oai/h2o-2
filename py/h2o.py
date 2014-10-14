@@ -741,11 +741,11 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
         # UPDATE: best to stabilize on the last node!
-        stabilize_cloud(nodeList[0], len(nodeList),
-                        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorCheck=True)
+        stabilize_cloud(nodeList[0], nodeList,
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorCheck=True)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time() - start, " secs")
-        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList),
-                                                                     hostCount, (time.time() - start)))
+        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % \
+            (len(nodeList), hostCount, (time.time() - start)))
         h2p.red_print("Built cloud:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes")
 
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
@@ -753,7 +753,7 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
         # UPDATE: do it for all cases now 2/14/13
         if conservative: # still needed?
             for n in nodeList:
-                stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
+                stabilize_cloud(n, nodeList, timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
 
         # this does some extra checking now
         verify_cloud_size(nodeList)
@@ -966,7 +966,8 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
     return (sizeStr, consensusStr, expectedSize)
 
 
-def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
+def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
+    node_count = len(nodeList)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None, timeoutSecs=14.0):
@@ -1014,7 +1015,7 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
         return a
 
     # wait to talk to the first one
-    node.wait_for_node_to_accept_connections(timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+    node.wait_for_node_to_accept_connections(nodeList, timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
     # then wait till it says the cloud is the right size
     node.stabilize(test, error=('trying to build cloud of size %d' % node_count),
          timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
@@ -2799,7 +2800,7 @@ class H2O(object):
                 msg = error(self, timeTakenSecs, numberOfRetries)
                 raise Exception(msg)
 
-    def wait_for_node_to_accept_connections(self, timeoutSecs=15, noExtraErrorCheck=False):
+    def wait_for_node_to_accept_connections(self, nodeList, timeoutSecs=15, noExtraErrorCheck=False):
         verboseprint("wait_for_node_to_accept_connections")
 
         def test(n, tries=None, timeoutSecs=timeoutSecs):
@@ -2813,7 +2814,7 @@ class H2O(object):
                 # Timeout check will kick in if continued H2O badness.
                 return False
 
-        self.stabilize(test, error=('waiting to accept initial connection: Expected cloud %s' % nodes),
+        self.stabilize(test, error=('waiting to accept initial connection: Expected cloud %s' % nodeList),
             timeoutSecs=timeoutSecs, # with cold cache's this can be quite slow
             retryDelaySecs=0.1) # but normally it is very fast
 
