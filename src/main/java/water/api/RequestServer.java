@@ -141,6 +141,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new NetworkTest()), "Network Test",             "Admin");
+    Request.addToNavbar(registerRequest(new UDPDropTest()), "Udp drop",                 "Admin");
     Request.addToNavbar(registerRequest(new TaskStatus()),  "Task status",              "Admin");
     Request.addToNavbar(registerRequest(new WaterMeterPerfbar()),  "Water Meter (Perfbar)",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
@@ -152,8 +153,8 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialDeepLearning()),"Deep Learning Tutorial", "Help", USE_NEW_TAB);
     Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest Tutorial", "Help", USE_NEW_TAB);
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help", USE_NEW_TAB);
-    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help", USE_NEW_TAB);
-    Request.addToNavbar(registerRequest(new AboutH2O()),            "About H2O",              "Help");
+    Request.addToNavbar(registerRequest(new TutorialKMeans()), "KMeans Tutorial", "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new AboutH2O()), "About H2O", "Help");
 
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {
