@@ -967,7 +967,6 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
 
 
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
-    node.wait_for_node_to_accept_connections(timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None, timeoutSecs=14.0):
@@ -1014,8 +1013,11 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
 
         return a
 
-    node.stabilize(test, error=('A cloud of size %d' % node_count),
-                   timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
+    # wait to talk to the first one
+    node.wait_for_node_to_accept_connections(timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+    # then wait till it says the cloud is the right size
+    node.stabilize(test, error=('trying to build cloud of size %d' % node_count),
+         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
 
 
 def log_rest(s):
@@ -1620,7 +1622,6 @@ class H2O(object):
             'source': None,
             'after': None,
             'chunks': None,
-            'seed': None,
         }
         params_dict.update(kwargs)
         a = self.__do_json_request('2/ReBalance.json',
@@ -2812,9 +2813,9 @@ class H2O(object):
                 # Timeout check will kick in if continued H2O badness.
                 return False
 
-        self.stabilize(test, 'Cloud accepting connections',
-                       timeoutSecs=timeoutSecs, # with cold cache's this can be quite slow
-                       retryDelaySecs=0.1) # but normally it is very fast
+        self.stabilize(test, error=('waiting to accept initial connection: Expected cloud %s' % nodes),
+            timeoutSecs=timeoutSecs, # with cold cache's this can be quite slow
+            retryDelaySecs=0.1) # but normally it is very fast
 
     def sandbox_error_report(self, done=None):
         # not clearable..just or in new value
