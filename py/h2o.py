@@ -209,6 +209,7 @@ abort_after_import = False
 clone_cloud_json = None
 disable_time_stamp = False
 debug_rest = False
+long_test_case = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
@@ -261,6 +262,7 @@ def parse_our_args():
 
     parser.add_argument('-nc', '--nocolor', help="don't emit the chars that cause color printing", action='store_true')
 
+    parser.add_argument('-long', '--long_test_case', help="some tests will vary behavior to more, longer cases", action='store_true')
     parser.add_argument('unittest_args', nargs='*')
     args = parser.parse_args()
 
@@ -269,7 +271,7 @@ def parse_our_args():
         h2p.disable_colors()
 
     global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest, long_test_case
 
     browse_disable = args.browse_disable or getpass.getuser() == 'jenkins'
     browse_json = args.browse_json
@@ -286,6 +288,7 @@ def parse_our_args():
     clone_cloud_json = args.clone_cloud_json
     disable_time_stamp = args.disable_time_stamp
     debug_rest = args.debug_rest
+    long_test_case = args.long_test_case
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about

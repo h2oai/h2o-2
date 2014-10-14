@@ -4,7 +4,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
 
 
-SPEEDRF = False
+SPEEDRF = True
 MULTINOMIAL = 2
 DO_WITH_INT = False
 ENUMS = 100
