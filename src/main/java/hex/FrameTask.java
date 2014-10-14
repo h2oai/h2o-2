@@ -530,7 +530,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
 
   /**
-   * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
+   * Extracts the values, applies standardization/normalization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.
    */
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
