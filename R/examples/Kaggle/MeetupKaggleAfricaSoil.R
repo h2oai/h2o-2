@@ -3,7 +3,7 @@
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 #install.packages("h2o", repos=(c("file:///Users/arno/h2o/target/R", getOption("repos"))))
-install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1544/R", getOption("repos")))) #choose a build here
+install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1545/R", getOption("repos")))) #choose a build here
 # END
 
 library(h2o)
