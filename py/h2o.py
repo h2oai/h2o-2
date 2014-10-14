@@ -756,7 +756,8 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
                 stabilize_cloud(n, nodeList, timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
 
         # this does some extra checking now
-        verify_cloud_size(nodeList)
+        # verifies cloud name too if param is not None
+        verify_cloud_size(nodeList, expectedCloudName=nodeList[0].cloud_name)
 
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors(python_test_name=python_test_name)
@@ -925,16 +926,20 @@ def touch_cloud(nodeList=None):
         n.is_alive()
 
 # timeoutSecs is per individual node get_cloud()
-def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth=False):
+# verify cloud name if cloudName provided
+def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False, timeoutSecs=10, ignoreHealth=False):
     if not nodeList: nodeList = nodes
 
     expectedSize = len(nodeList)
     # cloud size and consensus have to reflect a single grab of information from a node.
     cloudStatus = [n.get_cloud(timeoutSecs=timeoutSecs) for n in nodeList]
 
+    # get cloud_name from all
+
     cloudSizes = [c['cloud_size'] for c in cloudStatus]
     cloudConsensus = [c['consensus'] for c in cloudStatus]
     cloudHealthy = [c['cloud_healthy'] for c in cloudStatus]
+    cloudName = [c['cloud_name'] for c in cloudStatus]
 
     if not all(cloudHealthy):
         msg = "Some node reported cloud_healthy not true: %s" % cloudHealthy
@@ -961,8 +966,17 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
         sizeStr = (",".join(map(str, cloudSizes)))
         if (s != expectedSize):
             raise Exception("Inconsistent cloud size." +
-                            "nodeList report size: %s consensus: %s instead of %d." % \
-                            (sizeStr, consensusStr, expectedSize))
+               "nodeList report size: %s consensus: %s instead of %d." % \
+               (sizeStr, consensusStr, expectedSize))
+
+    # check that all cloud_names are right
+    if expectedCloudName:
+        for i, cn in enumerate(cloudName):
+            if cn != expectedCloudName:
+                print "node %s cloud status: %s" % (i, dump_json(cloudStatus[i]))
+                raise Exception("node %s has the wrong cloud name: %s expectedCloudName: %s" % \
+                    (i, cn, expectedCloudName))
+
     return (sizeStr, consensusStr, expectedSize)
 
 
