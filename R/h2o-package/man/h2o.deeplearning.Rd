@@ -85,7 +85,7 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
         \item{sparse}{ Sparse data handling (Experimental)}
         \item{col_major}{ Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental)}
         \item{max_categorical_features}{ Max. number of categorical features, enforced via hashing (Experimental) }
-        \item{reproducible}{ Force reproducible mode (slow, only uses 1 thread). }
+        \item{reproducible}{ Force reproducibility on small data (will be slow - only uses 1 thread) }
         %- END AUTO-GENERATED CODE
   }
 
