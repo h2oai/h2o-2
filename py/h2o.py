@@ -76,8 +76,16 @@ def cloud_name():
 def __drain(src, dst):
     for l in src:
         if type(dst) == type(0):
-            os.write(dst, l)
+            # got this with random data to parse.. why? it shows up in our stdout?
+            # UnicodeEncodeError: 'ascii' codec can't encode character u'\x86' in position 60: ordinal not in range(128)
+            # could we be getting unicode object?
+            try:
+                os.write(dst, l)
+            except: 
+                # os.write(dst,"kbn: non-ascii char in the next line?")
+                os.write(dst,l.encode('utf8'))
         else:
+            # FIX! this case probably can have the same issue?
             dst.write(l)
             dst.flush()
     src.close()

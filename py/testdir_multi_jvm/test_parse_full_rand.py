@@ -217,7 +217,7 @@ class Basic(unittest.TestCase):
                 lastcolsHistory.append(lastcols)
 
                 parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, header=0,
-                    timeoutSecs=30, separator=colSepInt, doSummary=DO_SUMMARY)
+                    timeoutSecs=60, separator=colSepInt, doSummary=DO_SUMMARY)
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 
                 inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])

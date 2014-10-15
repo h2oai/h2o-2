@@ -9,15 +9,13 @@
 
     "h2o_per_host": 2, 
     "java_heap_GB": 6, 
+    "random_udp_drop": 1,
 
     "create_json": true,
 
     "hdfs_name_node": "172.16.2.176",
     "hdfs_version": "cdh4",
     "use_hdfs": true,
-    "random_udp_drop": true,
-    "force_tcp": true,
-
     "use_flatfile": true,
 
     "ip": [
