@@ -5,7 +5,8 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2
 
 
 DO_SUMMARY = False # summary slow for some reason
-USE_NA = True
+DISABLE_ALL_NA = False
+CAUSE_RANDOM_NA = True
 DO_WITH_INT = False
 REPORT_OUTPUT = False
 REPORT_LAST_ENUM_INDICES = False
@@ -43,25 +44,33 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, scale=1,
         # add some robj choices here, to get more robjness over time with multiple test runs
 
         rowModulo = row % 1000000 # max range in this if/elif thing
+
+        # only two compression schemes. Well 4
+        # NewChunk: uncompressed
+        # C1: up to 255
+        # C2: up till we force NA
+        # int?: when we flip to all NA
         if rowModulo < (100000 * scale):
-            howManyEnumsToUse = robj.choice([3]) # keep it one choice for early debug
+            # 0 will always force NA, regardless of CAUSE_RANDOM_NA
+            howManyEnumsToUse = robj.choice(
+                [0 if not DISABLE_ALL_NA else 1, 1]) # zero will be all cause all NA
         elif rowModulo < (200000 * scale):
-            howManyEnumsToUse = robj.choice([8]) # keep it one choice for early debug
+            howManyEnumsToUse = robj.choice([1,2,3])
         elif rowModulo < (300000 * scale):
-            howManyEnumsToUse = robj.choice([3,16,8001,8002])
+            howManyEnumsToUse = robj.choice([4,5])
         elif rowModulo < (400000 * scale):
-            howManyEnumsToUse = robj.choice([4,9,11,1223,1224])
+            howManyEnumsToUse = robj.choice([8,9])
         elif rowModulo < (500000 * scale):
-            howManyEnumsToUse = robj.choice([100,3330,3331,3332])
+            howManyEnumsToUse = robj.choice([15,16])
         elif rowModulo < (600000 * scale):
-            howManyEnumsToUse = robj.choice([4,5000,5001,5003])
+            howManyEnumsToUse = robj.choice([31,32])
         elif rowModulo < (700000 * scale):
-            howManyEnumsToUse = robj.choice([7,7900,7910,7919])
+            howManyEnumsToUse = robj.choice([63,64])
         elif rowModulo < (800000 * scale):
-            howManyEnumsToUse = robj.choice([13,2*7900,2*7910,2*7919])
+            howManyEnumsToUse = robj.choice([254,255,256,257, 10000])
         else:
             # some primes
-            howManyEnumsToUse = robj.choice([2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97,101,103,107,109,113,127,131,137,139,149,151,157,163,167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251,257,263,269,271,277,281,283,293,307,311,313,317,331,337,347,349])
+            howManyEnumsToUse = robj.choice([1,2,4,8,16,256,10000])
 
         # never try to use more enums then in the list
         if howManyEnumsToUse > len(enumList):
@@ -79,7 +88,9 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, scale=1,
         riIndexSum = 0
         for col in range(colCount):
             # put in a small number of NAs (1%)
-            if USE_NA and robj.randint(0,99)==0:
+            if not DISABLE_ALL_NA and (   
+                    (CAUSE_RANDOM_NA and robj.randint(0,99)==0) or 
+                    howManyEnumsToUse==0):
                 riIndex = None
                 riIndexSum += 0 # don't change
                 rowData.append('')
@@ -185,11 +196,26 @@ class Basic(unittest.TestCase):
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 
                 inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
-                h2o_cmd.infoFromInspect(inspect)
+                numCols = inspect['numCols']
+                numRows = inspect['numRows']
 
-                print "\n" + csvFilename
+                h2o_cmd.infoFromInspect(inspect)
+                expectedNA = .06 * numRows
+
+                # Each column should get .10 random NAs per iteration. Within 10%? 
+                missingValuesList = h2o_cmd.infoFromInspect(inspect)
+                # print "missingValuesList", missingValuesList
+                for mv in missingValuesList:
+                    # h2o_util.assertApproxEqual(mv, expectedMissing, tol=0.01, msg='mv %s is not approx. expected %s' % (mv, expectedMissing))
+                    self.assertAlmostEqual(mv, expectedNA, delta=0.1 * mv, 
+                        msg='mv %s is not approx. expected %s' % (mv, expectedNA))
+
+                self.assertEqual(rowCount, numRows)
+                self.assertEqual(colCount, numCols)
+
                 (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                    h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=not USE_NA)
+                    h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], 
+                    exceptionOnMissingValues=DISABLE_ALL_NA)
 
 if __name__ == '__main__':
     h2o.unit_main()
