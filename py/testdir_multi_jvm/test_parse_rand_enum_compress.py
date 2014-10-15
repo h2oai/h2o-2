@@ -278,11 +278,11 @@ class Basic(unittest.TestCase):
         # from command line arg -long
         if h2o.long_test_case:
             repeat = 1000 
-            scale = 100 # scale up the # of rows
+            scale = 10 # scale up the # of rows
             tryList = [
-                (n*scale, 3, 'cI', 300), 
-                (n*scale, 3, 'cI', 300), 
-                (n*scale, 3, 'cI', 300), 
+                (n*scale, 1, 'cI', 300), 
+                (n*scale, 1, 'cI', 300), 
+                (n*scale, 1, 'cI', 300), 
             ]
         else:
             repeat = 1
