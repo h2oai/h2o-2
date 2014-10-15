@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         # Uses your username specific json: pytest_config-<username>.json
 
         # do what my json says, but with my hdfs. hdfs_name_node from the json
-        h2o_hosts.build_cloud_with_hosts(use_hdfs=True,base_port=54321)
+        h2o_hosts.build_cloud_with_hosts(use_hdfs=True)
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()

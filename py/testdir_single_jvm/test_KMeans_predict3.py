@@ -65,6 +65,7 @@ class Basic(unittest.TestCase):
             # Huh...now we apparently need the translate. Used to be:
             # No translate because we're using an Exec to get the data out?, and that loses the encoding?
             #  translate = None
+            # FIX! how do we know what the translate should be, when we predict?
             translate = {'setosa': 0.0, 'versicolor': 1.0, 'virginica': 2.0}
             # one wrong will be 0.66667. I guess with random, that can happen?
             expectedPctWrong = 0.7

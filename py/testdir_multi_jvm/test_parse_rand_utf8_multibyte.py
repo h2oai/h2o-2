@@ -2,6 +2,8 @@ import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
+# good background here. I don't really follow the recommendations in this test
+# http://www.azavea.com/blogs/labs/2014/03/solving-unicode-problems-in-python-2-7/
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e
 import codecs
 
@@ -98,18 +100,18 @@ ordinalChoices.remove(0x39) # 9
 # print ordinalChoices
 
 def generate_random_utf8_string(length=1):
-        # want to handle more than 256 numbers
-        cList = []
-        for i in range(length):
-            # to go from hex 'string" to number
-            # cint = int('fd9b', 16)
-            r = random.choice(ordinalChoices)
-            c = unichr(r).encode('utf-8')
-            cList.append(c)
-            print 
+    # want to handle more than 256 numbers
+    cList = []
+    for i in range(length):
+        # to go from hex 'string" to number
+        # cint = int('fd9b', 16)
+        r = random.choice(ordinalChoices)
+        c = unichr(r).encode('utf-8')
+        cList.append(c)
+        print 
 
-        # this is a random byte string now, of type string?
-        return "".join(cList)
+    # this is a random byte string now, of type string?
+    return "".join(cList)
 
 # Python details
 # The rules for converting a Unicode string into the ASCII encoding are simple; for each code point:
@@ -140,7 +142,6 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
 
             # preferred apostrophe (right single quote)
             # u = unichr(0x2019) 
-
             u = unichr(0x2018) + unichr(6000) + unichr(0x2019)
 
             # grave and acute?
@@ -154,17 +155,19 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
                 r = generate_random_utf8_string(length=1)
                 rowData.append(r)
             rowDataCsv = ",".join(rowData)
+
         if UTF16:
             # we're already passing it unicode. no decoding needed
             print "utf16:", repr(rowDataCsv), type(rowDataCsv)
             decoded = rowDataCsv
         else:
             print "str:", repr(rowDataCsv), type(rowDataCsv)
+            # decoded = rowDataCsv.decode('utf-8')
+            # decode to unicode
             decoded = rowDataCsv.decode('utf-8')
             # this has the right length..multibyte utf8 are decoded 
             print "utf8:" , repr(decoded), type(decoded)
         
-        # dsf.write(rowDataCsv + "\n")
         dsf.write(decoded + "\n")
     dsf.close()
 

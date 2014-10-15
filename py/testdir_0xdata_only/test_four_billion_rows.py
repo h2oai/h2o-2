@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(1,java_heap_GB=14)
         else:
-            h2o_hosts.build_cloud_with_hosts(base_port=54325, java_heap_GB=100)
+            h2o_hosts.build_cloud_with_hosts(java_heap_GB=100)
 
     @classmethod
     def tearDownClass(cls):

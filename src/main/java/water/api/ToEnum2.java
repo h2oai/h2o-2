@@ -1,6 +1,5 @@
 package water.api;
 
-import water.Key;
 import water.Request2;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -19,6 +18,7 @@ public class ToEnum2 extends Request2 {
   @Override
   protected Response serve() {
     try {
+      if (column_index <= 0) throw new IllegalArgumentException("Column index is 1 based. Please supply a valid column index in the range [1,"+ src_key.numCols()+"]");
       Log.info("Factorizing column " + column_index);
       Vec nv =  src_key.vecs()[column_index - 1].toEnum();
       src_key.replace(column_index - 1, nv);

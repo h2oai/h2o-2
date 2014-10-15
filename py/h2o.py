@@ -76,8 +76,16 @@ def cloud_name():
 def __drain(src, dst):
     for l in src:
         if type(dst) == type(0):
-            os.write(dst, l)
+            # got this with random data to parse.. why? it shows up in our stdout?
+            # UnicodeEncodeError: 'ascii' codec can't encode character u'\x86' in position 60: ordinal not in range(128)
+            # could we be getting unicode object?
+            try:
+                os.write(dst, l)
+            except: 
+                # os.write(dst,"kbn: non-ascii char in the next line?")
+                os.write(dst,l.encode('utf8'))
         else:
+            # FIX! this case probably can have the same issue?
             dst.write(l)
             dst.flush()
     src.close()
@@ -146,6 +154,7 @@ def get_ip_address():
     socket.setdefaulttimeout(5)
     return ip
 
+
 # used to rename the sandbox when running multiple tests in same dir (in different shells)
 def get_sandbox_name():
     if os.environ.has_key("H2O_SANDBOX_NAME"):
@@ -156,7 +165,8 @@ def get_sandbox_name():
         return "sandbox"
 
 # used to shift ports when running multiple tests on same machine in parallel (in different shells)
-def get_port_offset():
+def get_base_port(base_port):
+    a = 0
     if os.environ.has_key("H2O_PORT_OFFSET"):
         # this will fail if it's not an integer
         a = int(os.environ["H2O_PORT_OFFSET"])
@@ -165,12 +175,30 @@ def get_port_offset():
         # (54321, 54323, 54325 and 54327 are used in testdir_single_jvm)
         # if we're running multi-node with a config json, then obviously the gap needs to be cognizant 
         # of the number of nodes
-        print "H2O_PORT_OFFSET", a
-        if a<8 or a>256:
-            raise Exception("The H2O_PORT_OFFSET os env variable should be either not set, or between 8 and 256")
-        return a
+        verboseprint("H2O_PORT_OFFSET", a)
+        if a<8 or a>500:
+            raise Exception("H2O_PORT_OFFSET % os env variable should be either not set, or between 8 and 500" % a)
+
+    b = None
+    if os.environ.has_key("H2O_PORT"):
+        # this will fail if it's not an integer
+        b = int(os.environ["H2O_PORT"])
+        verboseprint("H2O_PORT", a)
+        if b<54321 or b>54999:
+            raise Exception("H2O_PORT %s os env variable should be either not set, or between 54321 and 54999." % b)
+
+    if b:
+        base_port = b
     else:
-        return 0
+        if getpass.getuser()=='jenkins': 
+            base_port = 54340
+        else:
+            base_port = 54321
+
+        if a:
+            base_port += a
+
+    return base_port
 
 
 def unit_main():
@@ -209,6 +237,7 @@ abort_after_import = False
 clone_cloud_json = None
 disable_time_stamp = False
 debug_rest = False
+long_test_case = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
@@ -261,6 +290,7 @@ def parse_our_args():
 
     parser.add_argument('-nc', '--nocolor', help="don't emit the chars that cause color printing", action='store_true')
 
+    parser.add_argument('-long', '--long_test_case', help="some tests will vary behavior to more, longer cases", action='store_true')
     parser.add_argument('unittest_args', nargs='*')
     args = parser.parse_args()
 
@@ -269,7 +299,7 @@ def parse_our_args():
         h2p.disable_colors()
 
     global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest, long_test_case
 
     browse_disable = args.browse_disable or getpass.getuser() == 'jenkins'
     browse_json = args.browse_json
@@ -286,6 +316,7 @@ def parse_our_args():
     clone_cloud_json = args.clone_cloud_json
     disable_time_stamp = args.disable_time_stamp
     debug_rest = args.debug_rest
+    long_test_case = args.long_test_case
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -489,7 +520,10 @@ nodes = []
 # but it uses hosts, so if that got shuffled, we got it covered?
 # the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
 # FIX! default to random_shuffle for now..then switch to not.
-def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True, port_offset=0):
+def write_flatfile(node_count=2, base_port=None, hosts=None, rand_shuffle=True):
+    # too bad this must be in two places..here and build_cloud()..could do a global above?
+    base_port = get_base_port(base_port)
+    
     # always create the flatfile.
     ports_per_node = 2
     pff = open(flatfile_pathname(), "w+")
@@ -499,12 +533,12 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True,
     if hosts is None:
         ip = python_cmd_ip
         for i in range(node_count):
-            hostPortList.append(ip + ":" + str(port_offset + base_port + ports_per_node * i))
+            hostPortList.append(ip + ":" + str(base_port + ports_per_node * i))
     else:
         for h in hosts:
             for i in range(node_count):
                 # removed leading "/"
-                hostPortList.append(h.addr + ":" + str(port_offset + base_port + ports_per_node * i))
+                hostPortList.append(h.addr + ":" + str(base_port + ports_per_node * i))
 
     # note we want to shuffle the full list of host+port
     if rand_shuffle:
@@ -637,10 +671,9 @@ def setup_benchmark_log():
     cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
 # node_count is per host if hosts is specified.
-def build_cloud(node_count=1, base_port=54321, hosts=None,
+def build_cloud(node_count=1, base_port=None, hosts=None,
                 timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
                 conservative=False, create_json=False, clone_cloud=None, init_sandbox=True, **kwargs):
-
 
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
@@ -676,22 +709,20 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
 
     ports_per_node = 2
     nodeList = []
-    # see if we need to shift the port used to run groups of tests on the same machine
-    # at the same time
-    port_offset = get_port_offset()
+    # see if we need to shift the port used to run groups of tests on the same machine at the same time
+    base_port  = get_base_port(base_port)
+
     try:
         # if no hosts list, use psutil method on local host.
         totalNodes = 0
         # doing this list outside the loops so we can shuffle for better test variation
         # this jvm startup shuffle is independent from the flatfile shuffle
-        portList = [port_offset + base_port + ports_per_node * i for i in range(node_count)]
+        portList = [base_port + ports_per_node * i for i in range(node_count)]
         if hosts is None:
             # if use_flatfile, we should create it,
             # because tests will just call build_cloud with use_flatfile=True
             # best to just create it all the time..may or may not be used
-
-            # port_offset is added in write_flatfile()
-            write_flatfile(node_count=node_count, base_port=base_port, port_offset=port_offset)
+            write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
             if rand_shuffle:
                 random.shuffle(portList)
@@ -721,11 +752,11 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
         # UPDATE: best to stabilize on the last node!
-        stabilize_cloud(nodeList[0], len(nodeList),
-                        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorCheck=True)
+        stabilize_cloud(nodeList[0], nodeList,
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorCheck=True)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time() - start, " secs")
-        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList),
-                                                                     hostCount, (time.time() - start)))
+        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % \
+            (len(nodeList), hostCount, (time.time() - start)))
         h2p.red_print("Built cloud:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes")
 
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
@@ -733,10 +764,11 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         # UPDATE: do it for all cases now 2/14/13
         if conservative: # still needed?
             for n in nodeList:
-                stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
+                stabilize_cloud(n, nodeList, timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
 
         # this does some extra checking now
-        verify_cloud_size(nodeList)
+        # verifies cloud name too if param is not None
+        verify_cloud_size(nodeList, expectedCloudName=nodeList[0].cloud_name)
 
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors(python_test_name=python_test_name)
@@ -905,16 +937,20 @@ def touch_cloud(nodeList=None):
         n.is_alive()
 
 # timeoutSecs is per individual node get_cloud()
-def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth=False):
+# verify cloud name if cloudName provided
+def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False, timeoutSecs=10, ignoreHealth=False):
     if not nodeList: nodeList = nodes
 
     expectedSize = len(nodeList)
     # cloud size and consensus have to reflect a single grab of information from a node.
     cloudStatus = [n.get_cloud(timeoutSecs=timeoutSecs) for n in nodeList]
 
+    # get cloud_name from all
+
     cloudSizes = [c['cloud_size'] for c in cloudStatus]
     cloudConsensus = [c['consensus'] for c in cloudStatus]
     cloudHealthy = [c['cloud_healthy'] for c in cloudStatus]
+    cloudName = [c['cloud_name'] for c in cloudStatus]
 
     if not all(cloudHealthy):
         msg = "Some node reported cloud_healthy not true: %s" % cloudHealthy
@@ -941,13 +977,22 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
         sizeStr = (",".join(map(str, cloudSizes)))
         if (s != expectedSize):
             raise Exception("Inconsistent cloud size." +
-                            "nodeList report size: %s consensus: %s instead of %d." % \
-                            (sizeStr, consensusStr, expectedSize))
+               "nodeList report size: %s consensus: %s instead of %d." % \
+               (sizeStr, consensusStr, expectedSize))
+
+    # check that all cloud_names are right
+    if expectedCloudName:
+        for i, cn in enumerate(cloudName):
+            if cn != expectedCloudName:
+                print "node %s cloud status: %s" % (i, dump_json(cloudStatus[i]))
+                raise Exception("node %s has the wrong cloud name: %s expectedCloudName: %s" % \
+                    (i, cn, expectedCloudName))
+
     return (sizeStr, consensusStr, expectedSize)
 
 
-def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
-    node.wait_for_node_to_accept_connections(timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
+    node_count = len(nodeList)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None, timeoutSecs=14.0):
@@ -994,8 +1039,11 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
 
         return a
 
-    node.stabilize(test, error=('A cloud of size %d' % node_count),
-                   timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
+    # wait to talk to the first one
+    node.wait_for_node_to_accept_connections(nodeList, timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+    # then wait till it says the cloud is the right size
+    node.stabilize(test, error=('trying to build cloud of size %d' % node_count),
+         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
 
 
 def log_rest(s):
@@ -1600,7 +1648,6 @@ class H2O(object):
             'source': None,
             'after': None,
             'chunks': None,
-            'seed': None,
         }
         params_dict.update(kwargs)
         a = self.__do_json_request('2/ReBalance.json',
@@ -2778,7 +2825,7 @@ class H2O(object):
                 msg = error(self, timeTakenSecs, numberOfRetries)
                 raise Exception(msg)
 
-    def wait_for_node_to_accept_connections(self, timeoutSecs=15, noExtraErrorCheck=False):
+    def wait_for_node_to_accept_connections(self, nodeList, timeoutSecs=15, noExtraErrorCheck=False):
         verboseprint("wait_for_node_to_accept_connections")
 
         def test(n, tries=None, timeoutSecs=timeoutSecs):
@@ -2792,9 +2839,11 @@ class H2O(object):
                 # Timeout check will kick in if continued H2O badness.
                 return False
 
-        self.stabilize(test, 'Cloud accepting connections',
-                       timeoutSecs=timeoutSecs, # with cold cache's this can be quite slow
-                       retryDelaySecs=0.1) # but normally it is very fast
+        # get their http addr to represent the nodes
+        expectedCloudStr = ",".join([str(n) for n in nodeList])
+        self.stabilize(test, error=('waiting for initial connection: Expected cloud %s' % expectedCloudStr),
+            timeoutSecs=timeoutSecs, # with cold cache's this can be quite slow
+            retryDelaySecs=0.1) # but normally it is very fast
 
     def sandbox_error_report(self, done=None):
         # not clearable..just or in new value

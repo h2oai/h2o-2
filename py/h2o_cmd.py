@@ -240,8 +240,8 @@ def checkKeyDistribution():
 def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     inspect = runInspect(key=key, **kwargs)
 
-    num_rows = inspect['numRows']
-    num_cols = inspect['numCols']
+    numRows = inspect['numRows']
+    numCols = inspect['numCols']
     keyNA = 'naCnt'
     cols = inspect['cols']
     # type
@@ -283,7 +283,7 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
 
 
         if c[keyNA] != 0:
-            pct = ((c[keyNA] + 0.0)/ num_rows) * 100
+            pct = ((c[keyNA] + 0.0)/ numRows) * 100
             msg += (" %s: %s (%0.1f%s)" % (keyNA, c[keyNA], pct, '%'))
             missingValuesDict[k] = c[keyNA]
             printMsg = True
@@ -293,8 +293,8 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
             constantValuesDict[k] = c['min']
             printMsg = True
 
-        # if the naCnt = num_rows, that means it's likely forced NAs..so detect that
-        if c[keyNA]==num_rows:
+        # if the naCnt = numRows, that means it's likely forced NAs..so detect that
+        if c[keyNA]==numRows:
             msg += (" constant value (na count = num rows): %s" % c['min'])
             constantValuesDict[k] = c['min']
             printMsg = True
@@ -312,15 +312,15 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         print len(constantValuesDict), "columns with constant values", ", ".join(m)
 
     print "\n" + key, \
-        "    num_rows:", "{:,}".format(num_rows), \
-        "    num_cols:", "{:,}".format(num_cols)
+        "    numRows:", "{:,}".format(numRows), \
+        "    numCols:", "{:,}".format(numCols)
 
     if missingValuesDict and exceptionOnMissingValues:
         m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
         raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
 
-    if num_cols != len(colNameDict): 
-        raise Exception("num_cols: %s doesn't agree with len(colNameDict): %s" % (num_cols, len(colNameDict)))
+    if numCols != len(colNameDict): 
+        raise Exception("numCols: %s doesn't agree with len(colNameDict): %s" % (numCols, len(colNameDict)))
 
     return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 

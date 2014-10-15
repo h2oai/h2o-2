@@ -180,6 +180,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTToUpper());
     putPrefix(new ASTGSub());
     putPrefix(new ASTStrSub());
+    putPrefix(new ASTRevalue());
   }
   static private boolean isReserved(String fn) {
     return UNI_INFIX_OPS.containsKey(fn) || BIN_INFIX_OPS.containsKey(fn) || PREFIX_OPS.containsKey(fn);
@@ -880,6 +881,56 @@ class ASTToUpper extends ASTUniPrefixOp {
     env.push(fr2);
   }
 }
+
+class ASTRevalue extends ASTOp {
+
+  ASTRevalue(){ super(new String[]{"revalue", "x", "replace", "warn_missing"},
+          new Type[]{Type.ARY, Type.ARY, Type.STR, Type.DBL},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+
+  @Override String opStr() { return "revalue"; }
+  @Override ASTOp  make()  { return new ASTRevalue(); }
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final boolean warn_missing = env.popDbl() == 1;
+    final String replace = env.popStr();
+    String skey = env.key();
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("revalue works on a single column at a time.");
+    String[] old_dom = fr.anyVec()._domain;
+    if (old_dom == null) throw new IllegalArgumentException("Column is not a factor column. Can only revalue a factor column.");
+
+    HashMap<String, String> dom_map = hashMap(replace);
+
+    for (int i = 0; i < old_dom.length; ++i) {
+      if (dom_map.containsKey(old_dom[i])) {
+        old_dom[i] = dom_map.get(old_dom[i]);
+        dom_map.remove(old_dom[i]);
+      }
+    }
+    if (dom_map.size() > 0 && warn_missing) {
+      for (String k : dom_map.keySet()) {
+        env._warnings = Arrays.copyOf(env._warnings, env._warnings.length + 1);
+        env._warnings[env._warnings.length - 1] = "Warning: old value " + k + " not a factor level.";
+      }
+    }
+  }
+
+  private HashMap<String, String> hashMap(String replace) {
+    HashMap<String, String> map = new HashMap<String, String>();
+    //replace is a ';' separated string. Each piece after splitting is a key:value pair.
+    String[] maps = replace.split(";");
+    for (String s : maps) {
+      String[] pair = s.split(":");
+      String key   = pair[0];
+      String value = pair[1];
+      map.put(key, value);
+    }
+    return map;
+  }
+}
+
 
 class ASTGSub extends ASTOp {
   ASTGSub() { super(new String[]{"gsub", "pattern", "replacement", "x", "ignore.case"},

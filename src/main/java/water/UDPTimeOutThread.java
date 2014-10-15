@@ -33,4 +33,7 @@ public class UDPTimeOutThread extends Thread {
       }
     }
   }
+  public static final RPC[] pendingRPCs(){
+    return PENDING.toArray(new RPC[0]);
+  }
 }

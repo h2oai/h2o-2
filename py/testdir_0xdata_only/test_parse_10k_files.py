@@ -57,7 +57,6 @@ class Basic(unittest.TestCase):
             ]
 
         trialMax = 1
-        base_port = 54321
         tryHeap = 4
         DO_GLM = True
         noPoll = False
@@ -69,11 +68,9 @@ class Basic(unittest.TestCase):
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(3,java_heap_GB=tryHeap, base_port=base_port,
-                    enable_benchmark_log=True)
+                h2o.build_cloud(3,java_heap_GB=tryHeap, enable_benchmark_log=True)
             else:
-                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, base_port=base_port, 
-                    enable_benchmark_log=True)
+                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, enable_benchmark_log=True)
             ### h2b.browseTheCloud()
 
             # don't let the config json redirect import folder to s3 or s3n, because
