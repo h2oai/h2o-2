@@ -10,7 +10,7 @@ if (TRUE) {
       setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_demos")
   }
 
-  source('../findNSourceUtils.R')
+  source('../../findNSourceUtils.R')
   options(echo=TRUE)
   filePath <- normalizePath(locate("smalldata/airlines/allyears2k_headers.zip"))
   testFilePath <- normalizePath(locate("smalldata/airlines/allyears2k_headers.zip"))
