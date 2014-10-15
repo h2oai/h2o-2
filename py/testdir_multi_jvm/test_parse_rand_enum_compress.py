@@ -1,19 +1,111 @@
-import unittest, random, sys, time, re, math
+import unittest, random, sys, time, codecs
 sys.path.extend(['.','..','py'])
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
+DEBUG = False
+UTF8 = True
+UTF8_MULTIBYTE = True
 
+DO_WITH_INT = False
 
-DO_SUMMARY = False # summary slow for some reason
+ENUMS_NUM = 20000
+ENUMLIST = None
+REPORT_LAST_ENUM_INDICES = False
 DISABLE_ALL_NA = False
 CAUSE_RANDOM_NA = True
-DO_WITH_INT = False
-REPORT_OUTPUT = False
-REPORT_LAST_ENUM_INDICES = False
-MULTINOMIAL = 2
-ENUMS_NUM = 20000
-# ENUMLIST = ['bacaa', 'cbcbcacd', 'dccdbda', 'efg', 'hij', 'jkl']
-ENUMLIST = None
+
+CREATE_RESPONSE_COL = False
+RESPONSE_MODULO = 2
+DO_SUMMARY = False # summary slow for some reason
+
+
+def massageUTF8Choices(ordinalChoices):
+    ordinalChoices.remove(0x09) # is 9 bad..apparently can cause NA
+
+    ordinalChoices.remove(0x00) # nul
+    ordinalChoices.remove(0x0d) # cr
+    ordinalChoices.remove(0x0a) # lf
+    ordinalChoices.remove(0x01) # hiveseparator
+
+    # smaller range, avoiding 0-1f control chars
+    # ordinalChoices = range(0x20, 0x7f) # doesn't include last value
+    ordinalChoices.remove(0x3b) # semicolon
+    ordinalChoices.remove(0x20) # space
+    ordinalChoices.remove(0x22) # double quote
+    # ordinalChoices.remove(0x27) # apostrophe. should be legal if single quotes not enabled
+    ordinalChoices.remove(0x2c) # comma
+
+    ordinalChoices.remove(0x30) # 0
+    ordinalChoices.remove(0x31) # 1
+    ordinalChoices.remove(0x32) # 2
+    ordinalChoices.remove(0x33) # 3
+    ordinalChoices.remove(0x34) # 4
+    ordinalChoices.remove(0x35) # 5
+    ordinalChoices.remove(0x36) # 6
+    ordinalChoices.remove(0x37) # 7
+    ordinalChoices.remove(0x38) # 8
+    ordinalChoices.remove(0x39) # 9
+    # print ordinalChoices
+
+if UTF8:
+    # what about multi-byte UTF8
+    ordinalChoices = range(0x0, 0x100) # doesn't include last value ..allow ff
+else:  # ascii subset?
+    ordinalChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
+
+if UTF8_MULTIBYTE:
+    # 000000 - 00007f 1byte
+    # 000080 - 00009f 2byte
+    # 0000a0 - 0003ff 2byte
+    # 000400 - 0007ff 2byte
+    # 000800 - 003fff 3byte
+    # 004000 - 00ffff 3byte
+    # 010000 - 03ffff 3byte
+    # 040000 - 10ffff 4byte
+    # add some UTF8 multibyte, and restrict the choices to make sure we hit these
+
+    def aSmallSet(a, b):
+        return random.sample(range(a,b),10)
+
+    if 1==0: # this full range causes too many unique enums? and we get flipped to NA
+        ordinalChoicesMulti  = range(0x000000,0x00007f) # 1byte
+        ordinalChoicesMulti += range(0x000080,0x00009f) # 2byte
+        ordinalChoicesMulti += range(0x0000a0,0x0003ff) # 2byte
+        ordinalChoicesMulti += range(0x000400,0x0007ff) # 2byte
+        ordinalChoicesMulti += range(0x000800,0x003fff) # 3byte
+        ordinalChoicesMulti += range(0x004000,0x00ffff) # 3byte
+        ordinalChoicesMulti += range(0x010000,0x03ffff) # 3byte
+        ordinalChoicesMulti += range(0x040000,0x10ffff) # 4byte
+    else:
+        # just sample 10 from each. 200+ from first
+        ordinalChoicesMulti  = range(0x000000,0x00007f) # 1byte
+        ordinalChoicesMulti += aSmallSet(0x000080,0x00009f) # 2byte
+        ordinalChoicesMulti += aSmallSet(0x0000a0,0x0003ff) # 2byte
+        ordinalChoicesMulti += aSmallSet(0x000400,0x0007ff) # 2byte
+        ordinalChoicesMulti += aSmallSet(0x000800,0x003fff) # 3byte
+        ordinalChoicesMulti += aSmallSet(0x004000,0x00ffff) # 3byte
+        ordinalChoicesMulti += aSmallSet(0x010000,0x03ffff) # 3byte
+        ordinalChoicesMulti += aSmallSet(0x040000,0x10ffff) # 4byte
+
+    
+if UTF8:
+    massageUTF8Choices(ordinalChoices)
+
+if UTF8_MULTIBYTE:
+    massageUTF8Choices(ordinalChoicesMulti)
+
+def generate_random_utf8_string(length=1, multi=False):
+    # want to handle more than 256 numbers
+    cList = []
+    for i in range(length):
+        # to go from hex 'string" to number
+        # cint = int('fd9b', 16)
+        r = random.choice(ordinalChoicesMulti if multi else ordinalChoices)
+        # we sholdn't encode it here. Then we wouldn't have to decode it to unicode before writing.
+        c = unichr(r).encode('utf-8')
+        cList.append(c)
+    # this is a random byte string now, of type string?
+    return "".join(cList)
 
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
@@ -21,7 +113,7 @@ def random_enum(randChars, maxEnumSize):
     r = ''.join(random.choice(choiceStr) for x in range(maxEnumSize))
     return r
 
-# FIX! make these random UTF8 chars
+# this is for ascii only
 def create_enum_list(randChars="abcdefghijklmnopqrstuvwxyz", maxEnumSize=4, listSize=10):
     if DO_WITH_INT:
         enumList = range(listSize)
@@ -30,7 +122,6 @@ def create_enum_list(randChars="abcdefghijklmnopqrstuvwxyz", maxEnumSize=4, list
             enumList = ENUMLIST
         else:
             enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
-
     return enumList
 
 def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, scale=1,
@@ -39,7 +130,12 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, scale=1,
     # that way the sequence of random choices from the enum list should stay the same for each call? 
     # But the enum list is randomized
     robj = random.Random(SEED)
-    dsf = open(csvPathname, "w+")
+
+    if UTF8 or UTF8_MULTIBYTE:
+        dsf = codecs.open(csvPathname, encoding='utf-8', mode='w+')
+    else:
+        dsf = open(csvPathname, "w+")
+
     for row in range(rowCount):
         # add some robj choices here, to get more robjness over time with multiple test runs
 
@@ -102,22 +198,43 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, scale=1,
                 rowData.append('')
             else:
                 riIndex = robj.randint(0, howManyEnumsToUse-1)
-                if REPORT_OUTPUT:
+                if CREATE_RESPONSE_COL:
                     riIndexSum += riIndex
 
-                rowData.append(enumList[riIndex])
+                if UTF8 or UTF8_MULTIBYTE:
+                    if howManyEnumsToUse >= 256 and UTF8_MULTIBYTE:
+                        r = generate_random_utf8_string(length=1, multi=True)
+                    else:
+                        r = generate_random_utf8_string(length=1, multi=False)
+                else:
+                    r = enumList[riIndex]
+                rowData.append(r)
+
                 if REPORT_LAST_ENUM_INDICES:
-                    rowIndex.append(riIndex)
+                    rowIndex.append(r)
 
         # output column
         # make the output column match odd/even row mappings.
         # change...make it 1 if the sum of the enumList indices used is odd
-        if REPORT_OUTPUT:
-            ri = riIndexSum % MULTINOMIAL
+        if CREATE_RESPONSE_COL:
+            ri = riIndexSum % RESPONSE_MODULO
             rowData.append(ri)
 
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
-        dsf.write(rowDataCsv)
+
+        if UTF8 or UTF8_MULTIBYTE:
+            # decode to unicode
+            decoded = rowDataCsv.decode('utf-8')
+            if DEBUG:
+                # I suppose by having it encoded as utf, we can see the byte representation here?
+                print "str:", repr(rowDataCsv), type(rowDataCsv)
+                # this has the right length..multibyte utf8 are decoded 
+                print "utf8:" , repr(decoded), type(decoded)
+            dsf.write(decoded)
+        else:
+            dsf.write(rowDataCsv)
+
+        
     dsf.close()
     # this is for comparing whether two datasets were generated identically 
     # (last row is essentially a checksum, given the use of random generator for prior rows)
@@ -149,7 +266,12 @@ class Basic(unittest.TestCase):
     def test_parse_rand_enum_compress(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        n = 1000000
+        if DEBUG:
+            n = 20
+        else:
+            n = 1000000
+
+        # from command line arg -long
         if h2o.long_test_case:
             repeat = 1000 
             scale = 100 # scale up the # of rows
