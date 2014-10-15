@@ -628,6 +628,19 @@ h2o.table <- function(x, return.in.R = FALSE) {
   return(tb)
 }
 
+revalue <- function(x, replace = NULL, warn_missing = TRUE) {
+  if (inherits(x, "H2OParsedData")) UseMethod("revalue")
+  else plyr::revalue(x,replace, warn_missing)
+}
+
+revalue.H2OParsedData <- function(x, replace = NULL, warn_missing = TRUE) {
+  if (!is.null(replace)) {
+    s <- paste(names(replace), replace, sep = ":", collapse = ";")
+    expr <- paste("revalue(", paste(x@key, deparse(s), as.numeric(warn_missing), sep = ","), ")", sep = "")
+    invisible(.h2o.__exec2(x@h2o, expr))
+  }
+}
+
 ddply <- function (.data, .variables, .fun = NULL, ..., .progress = "none",
              .inform = FALSE, .drop = TRUE, .parallel = FALSE, .paropts = NULL) {
              if (inherits(.data, "H2OParsedData")) UseMethod("ddply")
@@ -1133,6 +1146,16 @@ setMethod("==", c("H2OParsedData", "character"), function(e1, e2) {
 setMethod("==", c("character", "H2OParsedData"), function(e1, e2) {
   m <- .getDomainMapping(e2,e1)$map
   .h2o.__binop2("==", m, e2)
+})
+
+setMethod("!=", c("H2OParsedData", "character"), function(e1, e2) {
+  m <- .getDomainMapping(e1,e2)$map
+  .h2o.__binop2("!=", e1, m)
+})
+
+setMethod("!=", c("character", "H2OParsedData"), function(e1, e2) {
+  m <- .getDomainMapping(e2,e1)$map
+  .h2o.__binop2("!=", m, e2)
 })
 
 setMethod("!",       "H2OParsedData", function(x) { .h2o.__unop2("!",     x) })

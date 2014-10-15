@@ -1,13 +1,18 @@
 package water.exec;
 
-import java.util.*;
-
-import water.*;
-import water.H2O.KeyInfo;
-import water.fvec.*;
+import water.Futures;
+import water.Iced;
+import water.Key;
+import water.UKV;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedInt;
-import water.util.Log;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -28,6 +33,8 @@ public class Env extends Iced {
   // hex Keys) and always starts at offset 0.
   int _display[] = new int[4];
   int _tod;
+
+  String[] _warnings = new String[0]; // capture warnings
 
   // Ref Counts for each vector
   final IcedHashMap<Vec,IcedInt> _refcnt;
@@ -51,6 +58,7 @@ public class Env extends Iced {
     _locked = locked;
   }
 
+  public String[] warnings() {return _warnings; }
   public int sp() { return _sp; }
   public boolean isAry() { return _ary[_sp-1] != null; }
   public boolean isFcn  () { return _fcn[_sp-1] != null; }
