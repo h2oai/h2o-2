@@ -1,7 +1,9 @@
 #----------------------------------------------------------------------
 # Try to slice by using != factor_level
 #----------------------------------------------------------------------
-
+source('../findNSourceUtils.R')
+options(echo=TRUE)
+library(h2o)
 conn <- h2o.init(ip=myIP, port=myPort, startH2O=FALSE)
 
 filePath <- "/home/0xdiag/datasets/airlines/airlines_all.csv"
