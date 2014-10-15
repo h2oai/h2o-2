@@ -35,16 +35,20 @@ def massageUTF8Choices(ordinalChoices):
     # ordinalChoices.remove(0x27) # apostrophe. should be legal if single quotes not enabled
     ordinalChoices.remove(0x2c) # comma
 
-    ordinalChoices.remove(0x30) # 0
-    ordinalChoices.remove(0x31) # 1
-    ordinalChoices.remove(0x32) # 2
-    ordinalChoices.remove(0x33) # 3
-    ordinalChoices.remove(0x34) # 4
-    ordinalChoices.remove(0x35) # 5
-    ordinalChoices.remove(0x36) # 6
-    ordinalChoices.remove(0x37) # 7
-    ordinalChoices.remove(0x38) # 8
-    ordinalChoices.remove(0x39) # 9
+    # if we always have another non-digit it there, we don't need to remove digits?
+    # we're not checking na counts anyhow
+    if 1==0:
+        ordinalChoices.remove(0x30) # 0
+        ordinalChoices.remove(0x31) # 1
+        ordinalChoices.remove(0x32) # 2
+        ordinalChoices.remove(0x33) # 3
+        ordinalChoices.remove(0x34) # 4
+        ordinalChoices.remove(0x35) # 5
+        ordinalChoices.remove(0x36) # 6
+        ordinalChoices.remove(0x37) # 7
+        ordinalChoices.remove(0x38) # 8
+        ordinalChoices.remove(0x39) # 9
+
     # print ordinalChoices
 
 if UTF8:
@@ -319,7 +323,7 @@ class Basic(unittest.TestCase):
                 # why are we saving this?
                 lastcolsHistory.append(lastcols)
 
-                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key,
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, header=0,
                     timeoutSecs=30, separator=colSepInt, doSummary=DO_SUMMARY)
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 
