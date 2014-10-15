@@ -51,7 +51,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
     if (model_info().get_params().reproducible) {
       seed += model_info().get_processed_global(); //avoid periodicity
     } else {
-      seed = new Random().nextLong(); //multi-node: no point in being reproducible - better to be "good" at being random
+      seed = new Random().nextLong();
     }
     ((Neurons.Input)_neurons[0]).setInput(seed, nums, numcats, cats);
     step(seed, _neurons, _output, _training, responses);
