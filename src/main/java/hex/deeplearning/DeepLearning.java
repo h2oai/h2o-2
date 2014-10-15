@@ -480,7 +480,7 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Max. number of categorical features, enforced via hashing (Experimental).", filter= Default.class, lmin = 1, json = true)
   public int max_categorical_features = Integer.MAX_VALUE;
 
-  @API(help = "Force reproducibility (will be slow - only uses 1 thread)", filter= Default.class, json = true)
+  @API(help = "Force reproducibility on small data (will be slow - only uses 1 thread)", filter= Default.class, json = true)
   public boolean reproducible = false;
 
   public enum MissingValuesHandling {
@@ -961,12 +961,13 @@ public class DeepLearning extends Job.ValidatedJob {
       if (!quiet_mode) throw new IllegalArgumentException("Cannot use column major storage for non-sparse data handling.");
     }
     if (reproducible) {
-      if (H2O.CLOUD.size() != 1)
-        throw new IllegalArgumentException("Reproducible mode only works in single-node mode.");
       if (!quiet_mode)
-        Log.info("Automatically turning on force_load_balancing and setting train_samples_per_iteration to 0 to enforce reproducibility.");
+        Log.info("Automatically enabling force_load_balancing, disabling single_node_mode and replicate_training_data\nand setting train_samples_per_iteration to -1 to enforce reproducibility.");
       force_load_balance = true;
-      train_samples_per_iteration = 0;
+      single_node_mode = false;
+      train_samples_per_iteration = -1;
+      replicate_training_data = false; //there's no benefit from having multiple nodes compute the exact same thing, and then average it back to the same
+//      replicate_training_data = true; //doesn't hurt, but does replicated identical work
     }
   }
 
@@ -1077,7 +1078,7 @@ public class DeepLearning extends Job.ValidatedJob {
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
       model.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp, train.numRows(), model);
       // Determine whether shuffling is enforced
-      if(mp.replicate_training_data && (model.actual_train_samples_per_iteration == train.numRows()*(mp.single_node_mode?1:H2O.CLOUD.size())) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
+      if(mp.replicate_training_data && (model.actual_train_samples_per_iteration == train.numRows()*(mp.single_node_mode?1:H2O.CLOUD.size())) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1 && !mp.reproducible) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
