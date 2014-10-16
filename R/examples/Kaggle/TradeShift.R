@@ -54,6 +54,7 @@ holdout_valid_logloss <- matrix(0, nrow = 1, ncol = length(targets))
 
 ## Main loop over regression targets
 for (resp in 1:length(targets)) {
+  if (resp == 14) next
   trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
   splits <- h2o.splitFrame(trainWL, ratios = 1-1/n_fold, shuffle=T)
   train <- splits[[1]]
