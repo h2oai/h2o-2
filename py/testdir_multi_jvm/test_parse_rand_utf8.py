@@ -40,7 +40,7 @@ ordinalChoices.remove(0x38) # 8
 ordinalChoices.remove(0x39) # 9
 # print ordinalChoices
 
-def generate_random_utf8_string(length=1, multi=False, row=1, col=1):
+def generate_random_utf8_string(length=1, multi=False, row=0, col=0):
     # want to handle more than 256 numbers
     cList = []
     for i in range(length):

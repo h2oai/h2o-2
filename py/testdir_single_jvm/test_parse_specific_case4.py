@@ -49,14 +49,6 @@ for i in toDoList:
         ), 10, 5, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum'], i)
     )
 
-# h2o incorrectly will match this
-# 1, 1, [0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum']),
-
-# u = unichr(0x2018) + unichr(6000) + unichr(0x2019)
-# for i, c in enumerate(u):
-#    print i, '%04x' % ord(c), unicodedata.category(c),
-#    print unicodedata.name(c)
-
 def write_syn_dataset(csvPathname, dataset):
     dsf = codecs.open(csvPathname, encoding='utf-8', mode='w+')
     encoded = dataset.encode('utf-8')

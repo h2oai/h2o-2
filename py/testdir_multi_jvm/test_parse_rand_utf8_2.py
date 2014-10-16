@@ -59,10 +59,10 @@ def generate_random_utf8_string(length=1):
             # to go from hex 'string" to number
             # cint = int('fd9b', 16)
             r = random.choice(ordinalChoices)
+            # TODO: shouldn't have to encode here...just past the unicode object
             c = unichr(r).encode('utf-8')
             cList.append(c)
             print 
-
         # this is a random byte string now, of type string?
         return "".join(cList)
 

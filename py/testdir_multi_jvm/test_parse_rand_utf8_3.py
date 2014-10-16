@@ -27,12 +27,6 @@ print "as the col separator. And if we don't use the eol symbols (CR/CRLF/LF)"
 # double quote: unmatched double quote will change # of cols, so don't use
 
 def massageUTF8Choices(ordinalChoices):
-    # LF:    Line Feed, U+000A (UTF-8 in hex: 0A)
-    # VT:    Vertical Tab, U+000B (UTF-8 in hex: 0B)
-    # FF:    Form Feed, U+000C (UTF-8 in hex: 0C)
-    # CR:    Carriage Return, U+000D (UTF-8 in hex: 0D)
-    # CR+LF: CR (U+000D) followed by LF (U+000A) (UTF-8 in hex: 0D0A)
-
     # is nul acting like lineend?
     if 0x00 in ordinalChoices:
         ordinalChoices.remove(0x00) # nul
@@ -97,7 +91,7 @@ massageUTF8Choices(ordinalChoices)
 if UTF8_MULTIBYTE:
     massageUTF8Choices(ordinalChoicesMulti)
 
-def generate_random_utf8_string(length=1, multi=False, row=1, col=1):
+def generate_random_utf8_string(length=1, multi=False, row=0, col=0):
     # want to handle more than 256 numbers
     cList = []
     for i in range(length):
