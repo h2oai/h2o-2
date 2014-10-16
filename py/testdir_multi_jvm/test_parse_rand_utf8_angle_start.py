@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e, h2o_browse as h2b
 import codecs
 
 # This shows the test really created a UTF8 file that was not a ASCII file
@@ -193,6 +193,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
 
 class Basic(unittest.TestCase):
     def tearDown(self):
+        # h2o.sleep(3600)
         h2o.check_sandbox_for_errors()
 
     @classmethod
@@ -210,6 +211,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parse_rand_utf8_angle_start(self):
+
+        h2b.browseTheCloud()
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -277,6 +280,8 @@ class Basic(unittest.TestCase):
         # Get numeric value of second character
         # print unicodedata.numeric(u[1])
         #**************************
+        h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
+        time.sleep(5)
 
 
 if __name__ == '__main__':

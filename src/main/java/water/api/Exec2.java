@@ -5,6 +5,7 @@ import water.*;
 import water.exec.*;
 import water.fvec.*;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 public class Exec2 extends Request2 {
@@ -15,6 +16,7 @@ public class Exec2 extends Request2 {
   @API(help="String to execute", required=true, filter=Default.class)
   String str;
 
+  @API(help="Warning message,ifany") String[] warning;
   @API(help="Parsing error, if any") String error;
   @API(help="Result key"           ) Key key;
   @API(help="Rows in Frame result" ) long num_rows;
@@ -60,6 +62,7 @@ public class Exec2 extends Request2 {
         scalar = env.popDbl();
         sb.append(Double.toString(scalar));
       }
+      if (env.warnings().length != 0) { sb.append(Arrays.toString(env.warnings())); }
       result=sb.toString();
 //      num_cols = num_rows == 0 ? 0 : num_cols;
       return Response.done(this);

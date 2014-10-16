@@ -30,8 +30,8 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
     stop("'data' must be an H2O parsed dataset")
 
   cnames <- colnames(data)
-  if (!is.character(x) || length(x) != 1L || !(x %in% cnames))
-    stop("'x' must be a character string specifying a column name from 'data'")
+  if (!is.character(x) || !all(x %in% cnames))
+    stop("'x' must be a character vector specifying column names from 'data'")
 
   ny <- length(y)
   if (!is.character(y) || ny < 2L || ny > 3L || !all(y %in% cnames))
@@ -57,7 +57,7 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
                            start_column     = y[1L],
                            stop_column      = y[ny - 1L],
                            event_column     = y[ny],
-                           x_column         = x,
+                           x_columns        = match(x, cnames) - 1L,
                            ties             = ties,
                            init             = init,
                            lre_min          = control$lre,
@@ -67,10 +67,11 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
   .h2o.__waitOnJob(data@h2o, job_key)
   res      <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPHModelView,
                                 '_modelKey' = dest_key)
+  df <- length(res[[3]]$coef)
   mcall <- match.call()
   model <-
     list(coefficients = structure(res[[3L]]$coef, names = x),
-         var          = matrix(res[[3L]]$var_coef, 1L, 1L),
+         var          = do.call(rbind, as.list(res[[3L]]$var_coef)),
          loglik       = c(res[[3L]]$null_loglik, res[[3L]]$loglik),
          score        = res[[3L]]$score_test,
          iter         = res[[3L]]$iter,
@@ -78,29 +79,28 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
          method       = ties,
          n            = res[[3L]]$n,
          nevent       = res[[3L]]$total_event,
-         wald.test    = structure(res[[3L]]$wald_test, names = x),
+         wald.test    = structure(res[[3L]]$wald_test, names = if (df == 1L) x else NULL),
          call         = mcall)
   summary <-
     list(call         = mcall,
          n            = model$n,
          loglik       = model$loglik,
          nevent       = model$nevent,
-         coefficients = matrix(c(res[[3L]]$coef,  res[[3L]]$exp_coef,
-                                 res[[3L]]$se_coef, res[[3L]]$z_coef,
-                                 1 - pchisq(res[[3L]]$z_coef^2, 1)),
-                               nrow = 1L, ncol = 5L,
-                               dimnames =
-                               list(x,
-                                    c("coef", "exp(coef)", "se(coef)",
-                                      "z", "Pr(>|z|)"))),
+         coefficients = structure(cbind(res[[3L]]$coef,    res[[3L]]$exp_coef,
+                                        res[[3L]]$se_coef, res[[3L]]$z_coef,
+                                        1 - pchisq(res[[3L]]$z_coef^2, 1)),
+                                  dimnames =
+                                  list(x,
+                                       c("coef", "exp(coef)", "se(coef)",
+                                         "z", "Pr(>|z|)"))),
          conf.int     = NULL,
-         logtest      = c(test = res[[3L]]$loglik_test, df = 1,
-                          pvalue = 1 - pchisq(res[[3L]]$loglik_test, 1)),
-         sctest       = c(test = res[[3L]]$score_test,  df = 1,
-                          pvalue = 1 - pchisq(res[[3L]]$score_test, 1)),
+         logtest      = c(test = res[[3L]]$loglik_test, df = df,
+                          pvalue = 1 - pchisq(res[[3L]]$loglik_test, df)),
+         sctest       = c(test = res[[3L]]$score_test,  df = df,
+                          pvalue = 1 - pchisq(res[[3L]]$score_test, df)),
          rsq          = c(rsq  = res[[3L]]$rsq,     maxrsq = res[[3L]]$maxrsq),
-         waldtest     = c(test = res[[3L]]$wald_test,   df = 1,
-                          pvalue = 1 - pchisq(res[[3L]]$wald_test, 1)),
+         waldtest     = c(test = res[[3L]]$wald_test,   df = df,
+                          pvalue = 1 - pchisq(res[[3L]]$wald_test, df)),
          used.robust  = FALSE)
   survfit <-
     list(n            = model$n,
@@ -124,7 +124,7 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
-                    n.bins = 100, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
+                    n.bins = 20, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
   args <- .verify_dataxy(data, x, y)
   
   if(!is.character(key)) stop("key must be of class character")
@@ -591,7 +591,8 @@ h2o.deeplearning <- function(x, y, data, key = "",
                              shuffle_training_data,
                              sparse,
                              col_major,
-                             max_categorical_features
+                             max_categorical_features,
+                             reproducible
                              # ----- AUTOGENERATED PARAMETERS END -----
 )
 {
@@ -694,6 +695,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
   parms = .addBooleanParm(parms, k="sparse", v=sparse)
   parms = .addBooleanParm(parms, k="col_major", v=col_major)
   parms = .addIntParm(parms, k="max_categorical_features", v=max_categorical_features)
+  parms = .addBooleanParm(parms, k="reproducible", v=reproducible)
   # ----- AUTOGENERATED PARAMETERS END -----
   
   res = .h2o.__remoteSendWithParms(data@h2o, .h2o.__PAGE_DeepLearning, parms)
@@ -714,7 +716,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
   noGrid <- noGrid && (missing(override_with_best_model) || length(override_with_best_model) == 1)
   noGrid <- noGrid && (missing(seed) || length(seed) == 1)
   noGrid <- noGrid && (missing(input_dropout_ratio) || length(input_dropout_ratio) == 1)
-  noGrid <- noGrid && (missing(hidden_dropout_ratios) || length(hidden_dropout_ratios) == 1)
+  noGrid <- noGrid && (missing(hidden_dropout_ratios) || (!is.list(hidden_dropout_ratios) && length(hidden_dropout_ratios) > 1))
   noGrid <- noGrid && (missing(max_w2) || length(max_w2) == 1)
   noGrid <- noGrid && (missing(initial_weight_distribution) || length(initial_weight_distribution) == 1)
   noGrid <- noGrid && (missing(initial_weight_scale) || length(initial_weight_scale) == 1)
@@ -978,7 +980,7 @@ h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.
 
 # ----------------------------------- Random Forest --------------------------------- #
 h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, depth=20, mtries = -1, sample.rate=2/3,
-                             nbins=100, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1,
+                             nbins=20, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1,
                              balance.classes=FALSE, max.after.balance.size=5, doGrpSplit=TRUE, verbose = FALSE,
                              oobee = TRUE, stat.type = "ENTROPY", type = "fast") {
   if (type == "fast") {
@@ -1110,6 +1112,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
     ) {
   nbins <- max(nbins, 1024)
   args <- .verify_dataxy(data, x, y)
+  if(!classification) stop("Use type = \"BigData\" for random forest regression.")
   if(!is.character(key)) stop("key must be of class character")
   if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
     stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")

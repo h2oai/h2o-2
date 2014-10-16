@@ -177,9 +177,9 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (1000, 1, 'cA', 120),
-            (1000, 1, 'cG', 120),
-            (1000, 1, 'cH', 120),
+            (1000, 2, 'cA', 120),
+            (1000, 2, 'cG', 120),
+            (1000, 2, 'cH', 120),
             ]
 
         print "What about messages to log (INFO) about unmatched quotes (before eol)"

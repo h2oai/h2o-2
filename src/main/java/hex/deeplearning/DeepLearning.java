@@ -480,6 +480,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Max. number of categorical features, enforced via hashing (Experimental).", filter= Default.class, lmin = 1, json = true)
   public int max_categorical_features = Integer.MAX_VALUE;
 
+  @API(help = "Force reproducibility on small data (will be slow - only uses 1 thread)", filter= Default.class, json = true)
+  public boolean reproducible = false;
+
   public enum MissingValuesHandling {
     Skip, MeanImputation
   }
@@ -957,6 +960,15 @@ public class DeepLearning extends Job.ValidatedJob {
     if (!sparse && col_major) {
       if (!quiet_mode) throw new IllegalArgumentException("Cannot use column major storage for non-sparse data handling.");
     }
+    if (reproducible) {
+      if (!quiet_mode)
+        Log.info("Automatically enabling force_load_balancing, disabling single_node_mode and replicate_training_data\nand setting train_samples_per_iteration to -1 to enforce reproducibility.");
+      force_load_balance = true;
+      single_node_mode = false;
+      train_samples_per_iteration = -1;
+      replicate_training_data = false; //there's no benefit from having multiple nodes compute the exact same thing, and then average it back to the same
+//      replicate_training_data = true; //doesn't hurt, but does replicated identical work
+    }
   }
 
   /**
@@ -1030,7 +1042,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final long model_size = model.model_info().size();
       if (!quiet_mode) Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
       train = model.model_info().data_info()._adaptedFrame;
-      if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
+      if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data));
       if (mp.classification && mp.balance_classes) {
         float[] trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
         if (class_sampling_factors != null) {
@@ -1066,7 +1078,7 @@ public class DeepLearning extends Job.ValidatedJob {
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
       model.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp, train.numRows(), model);
       // Determine whether shuffling is enforced
-      if(mp.replicate_training_data && (model.actual_train_samples_per_iteration == train.numRows()*(mp.single_node_mode?1:H2O.CLOUD.size())) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
+      if(mp.replicate_training_data && (model.actual_train_samples_per_iteration == train.numRows()*(mp.single_node_mode?1:H2O.CLOUD.size())) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1 && !mp.reproducible) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
@@ -1154,10 +1166,13 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return Frame that has potentially more chunks
    */
   private Frame reBalance(final Frame fr, boolean local) {
-    final int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
-    if (fr.anyVec().nChunks() > chunks) {
+    int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
+    if (fr.anyVec().nChunks() > chunks && !reproducible) {
       Log.info("Dataset already contains " + fr.anyVec().nChunks() + " chunks. No need to rebalance.");
       return fr;
+    } else if (reproducible) {
+      Log.warn("Reproducibility enforced - using only 1 thread - can be slow.");
+      chunks = 1;
     }
     if (!quiet_mode) Log.info("ReBalancing dataset into (at least) " + chunks + " chunks.");
 //      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);
