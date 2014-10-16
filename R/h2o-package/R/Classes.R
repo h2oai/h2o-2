@@ -117,13 +117,12 @@ function(object, conf.int = 0.95, scale = 1, ...) {
     se   <- scale * res@summary$coefficients[, "se(coef)", drop = TRUE]
     shift <- z * se
     res@summary$conf.int <-
-      matrix(c(exp(coef), exp(- coef), exp(coef - shift), exp(coef + shift)),
-             nrow = 1L, ncol = 4L,
-             dimnames =
-             list(rownames(res@summary$coefficients),
-                  c("exp(coef)", "exp(-coef)",
-                    sprintf("lower .%.0f", 100 * conf.int),
-                    sprintf("upper .%.0f", 100 * conf.int))))
+      structure(cbind(exp(coef), exp(- coef), exp(coef - shift), exp(coef + shift)),
+                dimnames =
+                list(rownames(res@summary$coefficients),
+                     c("exp(coef)", "exp(-coef)",
+                       sprintf("lower .%.0f", 100 * conf.int),
+                       sprintf("upper .%.0f", 100 * conf.int))))
   }
   res
 })

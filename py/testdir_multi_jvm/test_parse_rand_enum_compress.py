@@ -293,12 +293,12 @@ class Basic(unittest.TestCase):
                 (n, 3, 'cI', 300), 
             ]
 
-        NEW_SEED = random.randint(0, sys.maxint)
         lastcolsHistory = []
 
         enumList = create_enum_list(listSize=ENUMS_NUM)
 
         for r in range(repeat):
+            SEED_PER_FILE = random.randint(0, sys.maxint)
             for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
                 # using the comma is nice to ensure no craziness
                 colSepHexString = '2c' # comma
@@ -317,7 +317,7 @@ class Basic(unittest.TestCase):
                 # same enum list/mapping, but different dataset?
                 start = time.time()
                 lastcols = write_syn_dataset(csvPathname, enumList, rowCount, colCount, scale=1,
-                    colSepChar=colSepChar, rowSepChar=rowSepChar, SEED=NEW_SEED)
+                    colSepChar=colSepChar, rowSepChar=rowSepChar, SEED=SEED_PER_FILE)
                 elapsed = time.time() - start
                 print "took %s seconds to create %s" % (elapsed, csvPathname)
                 # why are we saving this?

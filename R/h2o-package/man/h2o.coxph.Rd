@@ -36,9 +36,9 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
 \S3method{vcov}{H2OCoxPHModel}(object, ...)
 }
 \arguments{
-  \item{x}{A character string containing the name of the numeric predictor in
+  \item{x}{A character vector containing the names the numeric predictors in
     the model.}
-  \item{y}{The character vector comprise of two or three elements representing
+  \item{y}{A character vector comprised of two or three elements representing
     \code{"(stop, event)"} or \code{"(stop, event)"} respectively.}
   \item{data}{An \code{\linkS4class{H2OParsedData}} object containing the
     variables in the model.}
@@ -98,5 +98,5 @@ localH2O = h2o.init()
 
 library(survival)
 bladder.hex <- as.h2o(localH2O, bladder, key = "bladder.hex")
-h2o.coxph(x = "number", y = c("stop", "event"), data = bladder.hex)
+h2o.coxph(x = c("number", "size"), y = c("stop", "event"), data = bladder.hex)
 }

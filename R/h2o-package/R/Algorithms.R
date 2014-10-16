@@ -30,8 +30,8 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
     stop("'data' must be an H2O parsed dataset")
 
   cnames <- colnames(data)
-  if (!is.character(x) || length(x) != 1L || !(x %in% cnames))
-    stop("'x' must be a character string specifying a column name from 'data'")
+  if (!is.character(x) || !all(x %in% cnames))
+    stop("'x' must be a character vector specifying column names from 'data'")
 
   ny <- length(y)
   if (!is.character(y) || ny < 2L || ny > 3L || !all(y %in% cnames))
@@ -57,7 +57,7 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
                            start_column     = y[1L],
                            stop_column      = y[ny - 1L],
                            event_column     = y[ny],
-                           x_column         = x,
+                           x_columns        = match(x, cnames) - 1L,
                            ties             = ties,
                            init             = init,
                            lre_min          = control$lre,
@@ -67,10 +67,11 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
   .h2o.__waitOnJob(data@h2o, job_key)
   res      <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPHModelView,
                                 '_modelKey' = dest_key)
+  df <- length(res[[3]]$coef)
   mcall <- match.call()
   model <-
     list(coefficients = structure(res[[3L]]$coef, names = x),
-         var          = matrix(res[[3L]]$var_coef, 1L, 1L),
+         var          = do.call(rbind, as.list(res[[3L]]$var_coef)),
          loglik       = c(res[[3L]]$null_loglik, res[[3L]]$loglik),
          score        = res[[3L]]$score_test,
          iter         = res[[3L]]$iter,
@@ -78,29 +79,28 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
          method       = ties,
          n            = res[[3L]]$n,
          nevent       = res[[3L]]$total_event,
-         wald.test    = structure(res[[3L]]$wald_test, names = x),
+         wald.test    = structure(res[[3L]]$wald_test, names = if (df == 1L) x else NULL),
          call         = mcall)
   summary <-
     list(call         = mcall,
          n            = model$n,
          loglik       = model$loglik,
          nevent       = model$nevent,
-         coefficients = matrix(c(res[[3L]]$coef,  res[[3L]]$exp_coef,
-                                 res[[3L]]$se_coef, res[[3L]]$z_coef,
-                                 1 - pchisq(res[[3L]]$z_coef^2, 1)),
-                               nrow = 1L, ncol = 5L,
-                               dimnames =
-                               list(x,
-                                    c("coef", "exp(coef)", "se(coef)",
-                                      "z", "Pr(>|z|)"))),
+         coefficients = structure(cbind(res[[3L]]$coef,    res[[3L]]$exp_coef,
+                                        res[[3L]]$se_coef, res[[3L]]$z_coef,
+                                        1 - pchisq(res[[3L]]$z_coef^2, 1)),
+                                  dimnames =
+                                  list(x,
+                                       c("coef", "exp(coef)", "se(coef)",
+                                         "z", "Pr(>|z|)"))),
          conf.int     = NULL,
-         logtest      = c(test = res[[3L]]$loglik_test, df = 1,
-                          pvalue = 1 - pchisq(res[[3L]]$loglik_test, 1)),
-         sctest       = c(test = res[[3L]]$score_test,  df = 1,
-                          pvalue = 1 - pchisq(res[[3L]]$score_test, 1)),
+         logtest      = c(test = res[[3L]]$loglik_test, df = df,
+                          pvalue = 1 - pchisq(res[[3L]]$loglik_test, df)),
+         sctest       = c(test = res[[3L]]$score_test,  df = df,
+                          pvalue = 1 - pchisq(res[[3L]]$score_test, df)),
          rsq          = c(rsq  = res[[3L]]$rsq,     maxrsq = res[[3L]]$maxrsq),
-         waldtest     = c(test = res[[3L]]$wald_test,   df = 1,
-                          pvalue = 1 - pchisq(res[[3L]]$wald_test, 1)),
+         waldtest     = c(test = res[[3L]]$wald_test,   df = df,
+                          pvalue = 1 - pchisq(res[[3L]]$wald_test, df)),
          used.robust  = FALSE)
   survfit <-
     list(n            = model$n,
