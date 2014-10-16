@@ -5,40 +5,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e
 import codecs
 
-# This shows the test really created a UTF8 file that was not a ASCII file
-# ~/h2o/py/testdir_multi_jvm$ file sandbox/syn*/*
-# sandbox/syn_datasets/syn_3234802987159914820_1000x1.csv: UTF-8 Unicode text
-# sandbox/syn_datasets/syn_7454586956682649267_1000x1.csv: UTF-8 Unicode text
-#sandbox/syn_datasets/syn_8233902282973358813_1000x1.csv: UTF-8 Unicode text
-
 print "This test makes sure python creates a utf16 file, that is not a ascii file"
 print "apparently need to have at least one normal character otherwise the parse doesn't work right"
-
-# Interesting. Microsoft Word might introduce it's own super ascii/ (smart quotes)
-# 145, 146, 147, 148, 151
-# single quote (L/R), double quote (L/R), dash)
-
-# https://0xdata.atlassian.net/browse/HEX-1950
-# inconsistent handling of some utf-8 char encodings (NA vs not-NA)
-# 0x08 is not treated as NA . It's enum 
-# 0x09 is treated as NA 
-# 0x00 thru 0x1f are considered control characters. 
-# they match ASCII 0x00 thru 0x1F . I guess 0x7F is considered a control character too (DEL), (not printable) 
-
-# del (127) is a control character, so don't include it
-# I suppose we have to exclude space (0x20) to avoid NA
-# and 0x22 is double quote, and 0x2c is comma, 0x27 is apostrophe (single quote)
-
-# have to exclude numbers, otherwise the mix of ints and enums will flip things to NA
-
-# lf is 0xa. exclude that
-# newline (cr) is 0xd
-# hive separator is 0x1?
-# semicolon ..h2o apparently can auto-detect as separator. so don't use it.
-# https://0xdata.atlassian.net/browse/HEX-1951
-
-# hive separator is 0xa? ..down in the control chars I think
-# tab is 0x9, so that's excluded
 
 UTF16 = True
 UTF8 = False
@@ -84,11 +52,8 @@ ordinalChoices.remove(0x39) # 9
 # print ordinalChoices
 
 def generate_random_utf8_string(length=1):
-        # want to handle more than 256 numbers
         cList = []
         for i in range(length):
-            # to go from hex 'string" to number
-            # cint = int('fd9b', 16)
             r = random.choice(ordinalChoices)
             c = unichr(r).encode('utf-8')
             cList.append(c)
@@ -96,17 +61,6 @@ def generate_random_utf8_string(length=1):
 
         # this is a random byte string now, of type string?
         return "".join(cList)
-
-# Python details
-# The rules for converting a Unicode string into the ASCII encoding are simple; for each code point:
-#     If the code point is < 128, each byte is the same as the value of the code point.
-#     If the code point is 128 or greater the Unicode string can't be represented in this encoding.
-# UTF-8 uses the following rules:
-#
-#    If the code point is <128, it's represented by the corresponding byte value.
-#    If the code point is between 128 and 0x7ff, it's turned into two byte values between 128 and 255.
-#    Code points >0x7ff are turned into three- or four-byte sequences, where each byte of the sequence is between 128 and 255.
-
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
@@ -119,20 +73,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
 
     for i in range(rowCount):
         if UTF16:
-            # u = unichr(233) + unichr(0x0bf2) + unichr(3972) + unichr(6000) + unichr(13231)
-
-            # left and right single quotes
-            # u = unichr(0x201c) + unichr(0x201d)
-
-            # preferred apostrophe (right single quote)
-            # u = unichr(0x2019) 
-
             u = unichr(0x2018) + unichr(6000) + unichr(0x2019)
-
-            # grave and acute?
-            # u = unichr(0x60) + unichr(0xb4)
-            # don't do this. grave with apostrophe http://www.cl.cam.ac.uk/~mgk25/ucs/quotes.html
-            # u = unichr(0x60) + unichr(0x27)
             rowDataCsv = u
         else: # both ascii and utf-8 go here?
             rowData = []

@@ -18,11 +18,16 @@ CREATE_RESPONSE_COL = False
 RESPONSE_MODULO = 2
 DO_SUMMARY = False # summary slow for some reason
 
+NO_NUL = True # the problem with NUL is covered by other tests. don't use
+print "We have a problem starting a line with double quote and not ending it before EOL"
+print "assume that is unlikely with the distribution being used"
+
 
 def massageUTF8Choices(ordinalChoices):
     ordinalChoices.remove(0x09) # is 9 bad..apparently can cause NA
 
-    ordinalChoices.remove(0x00) # nul
+    if NO_NUL:
+        ordinalChoices.remove(0x00) # nul
     ordinalChoices.remove(0x0d) # cr
     ordinalChoices.remove(0x0a) # lf
     ordinalChoices.remove(0x01) # hiveseparator
@@ -35,7 +40,7 @@ def massageUTF8Choices(ordinalChoices):
     # ordinalChoices.remove(0x27) # apostrophe. should be legal if single quotes not enabled
     ordinalChoices.remove(0x2c) # comma
 
-    # if we always have another non-digit it there, we don't need to remove digits?
+    # if we always have another non-digit in there, we don't need to remove digits? (assume doesn't match real)
     # we're not checking na counts anyhow
     if 1==0:
         ordinalChoices.remove(0x30) # 0
