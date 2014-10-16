@@ -147,6 +147,9 @@ for (resp in 1:length(targets)) {
       
       ## Aggregate ensemble model predictions
       test_preds <- h2o.predict(model, test_hex)
+      test_preds <- ifelse(test_preds > 1e-15, test_preds, 1e-15)
+      test_preds <- ifelse(test_preds < 1-1e-15, test_preds, 1-1e-15)
+
       if (n == 1) {
         test_preds_blend <- test_preds
       } else {
@@ -196,6 +199,7 @@ if (submit) {
   print("id_label,pred")
   
   ## Reformat to Kaggle style
+  ## TODO: load first column from file, add reshaped matrix with cbind to data.frame
   for (row in 1:nrow(final_submission)) {
     for (resp in 1:length(targets)) {
       if (resp == 14) {
