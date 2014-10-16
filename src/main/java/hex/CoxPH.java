@@ -527,10 +527,8 @@ public class CoxPH extends Job {
     for (int i = 0; i <= iter_max; ++i) {
       model.iter = i;
 
-      // Map, Reduce & Finalize
       CoxPHMRTask coxMR = new CoxPHMRTask(newCoef, model.min_time, n_time, use_start_column,
                                           model.x_mean).doAll(source.vecs());
-      coxMR.finish();
 
       if (i == 0)
         model.calcCounts(coxMR);
@@ -740,7 +738,8 @@ public class CoxPH extends Job {
       Utils.add(rcumsumXXRisk,    that.rcumsumXXRisk);
     }
 
-    protected void finish() {
+    @Override
+    protected void postGlobal() {
       if (!_use_start_column) {
         for (int t = rcumsumRisk.length - 2; t >= 0; --t)
           rcumsumRisk[t] += rcumsumRisk[t + 1];
