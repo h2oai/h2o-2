@@ -1,50 +1,33 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e
+import codecs
 
 print "apparently need to have at least one normal character otherwise the parse doesn't work right"
-print "is char 0x00 treated as NA? skip"
+print "just doing single char here"
 
-# https://0xdata.atlassian.net/browse/HEX-1950
-# inconsistent handling of some utf-8 char encodings (NA vs not-NA)
-# 0x08 is not treated as NA . It's enum 
-# 0x09 is treated as NA 
-# 0x00 thru 0x1f are considered control characters. 
-# they match ASCII 0x00 thru 0x1F . I guess 0x7F is considered a control character too (DEL), (not printable) 
-
-# del (127) is a control character, so don't include it
-# I suppose we have to exclude space (0x20) to avoid NA
-# and 0x22 is double quote, and 0x2c is comma, 0x27 is apostrophe (single quote)
-
-# have to exclude numbers, otherwise the mix of ints and enums will flip things to NA
-
-# lf is 0xa. exclude that
-# newline (cr) is 0xd
-# hive separator is 0x1?
 # semicolon ..h2o apparently can auto-detect as separator. so don't use it.
 # https://0xdata.atlassian.net/browse/HEX-1951
+# ordinalChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
+ordinalChoices = range(0x0, 0x100) # doesn't include last value ..allow 7f
 
-# hive separator is 0xa? ..down in the control chars I think
-# tab is 0x9, so that's excluded
-ordinalChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
-
-ordinalChoices.remove(0x09) # is 9 bad
-
-ordinalChoices.remove(0x00) # nul
+ordinalChoices.remove(0x00) # nul This causes problems. other jira
 ordinalChoices.remove(0x0d) # cr
 ordinalChoices.remove(0x0a) # lf
-ordinalChoices.remove(0x01) # hiveseparator
+ordinalChoices.remove(0x01) # hiveseparator. don't want it autodetecting the hive separator
+# ordinalChoices.remove(0x3b) # semicolon Why is this a problem
 
-# smaller range, avoiding 0-1f control chars
-# ordinalChoices = range(0x20, 0x7f) # doesn't include last value
-ordinalChoices.remove(0x3b) # semicolon
+# white space (tab and space) will throw the col count off?. I guess they cause na 
+# (since we're just doing single char here)
 ordinalChoices.remove(0x20) # space
+ordinalChoices.remove(0x09) # HT (horizontal tab) causes NA?
+
 ordinalChoices.remove(0x22) # double quote
 # ordinalChoices.remove(0x27) # apostrophe. should be legal if single quotes not enabled
-ordinalChoices.remove(0x2c) # comma
+ordinalChoices.remove(0x2c) # comma. don't put extra commas in
 
+# have to exclude numbers, otherwise the mix of ints and enums will flip things to NA
 ordinalChoices.remove(0x30) # 0
 ordinalChoices.remove(0x31) # 1
 ordinalChoices.remove(0x32) # 2
@@ -57,32 +40,31 @@ ordinalChoices.remove(0x38) # 8
 ordinalChoices.remove(0x39) # 9
 # print ordinalChoices
 
-def generate_random_utf8_string(length=1):
-    return "".join(unichr(random.choice(ordinalChoices)) for i in range(length-1))
+def generate_random_utf8_string(length=1, multi=False, row=1, col=1):
+    # want to handle more than 256 numbers
+    cList = []
+    for i in range(length):
+        r = random.choice(ordinalChoicesMulti if multi else ordinalChoices)
+        if (row==1 and col==1 and i==0):
+            while (r==0x40 or r==0x23): # @ is 0x40, # is 0x23
+                # rechoose
+                r = random.choice(ordinalChoicesMulti if multi else ordinalChoices)
+        # ToDo: Shouldn't encode it here. Then we wouldn't have to decode it to unicode before writing.
+        # c = unichr(r).encode('utf-8')
+        # fine for it to be unicode obj when we use the result below
+        cList.append(unichr(r))
+    return "".join(cList)
 
-# Python details
-# The rules for converting a Unicode string into the ASCII encoding are simple; for each code point:
-#     If the code point is < 128, each byte is the same as the value of the code point.
-#     If the code point is 128 or greater the Unicode string can't be represented in this encoding.
-# UTF-8 uses the following rules:
-#
-#    If the code point is <128, it's represented by the corresponding byte value.
-#    If the code point is between 128 and 0x7ff, it's turned into two byte values between 128 and 255.
-#    Code points >0x7ff are turned into three- or four-byte sequences, where each byte of the sequence is between 128 and 255.
-
-
-def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
+def write_syn_dataset(csvPathname, rowCount, colCount, colSepChar=",", rowSepChar="\n", SEED=12345678):
     r1 = random.Random(SEED)
-    dsf = open(csvPathname, "w+")
+    dsf = codecs.open(csvPathname, encoding='utf-8', mode='w+')
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            r = generate_random_utf8_string(length=2)
+            r = generate_random_utf8_string(length=2, row=i, col=j)
             rowData.append(r)
-
-        rowDataCsv = ",".join(map(str,rowData))
-        dsf.write(rowDataCsv + "\n")
-
+        rowDataCsv = colSepChar.join(rowData)
+        dsf.write(rowDataCsv + rowSepChar)
     dsf.close()
 
 class Basic(unittest.TestCase):
@@ -123,7 +105,7 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "\nCreating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
+            write_syn_dataset(csvPathname, rowCount, colCount, SEED=SEEDPERFILE)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', header=0,
                 hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -141,19 +123,6 @@ class Basic(unittest.TestCase):
 
                 stype = inspect['cols'][k]['type']
                 self.assertEqual("Enum", stype, msg='col %s type %s should be Enum' % (k, stype))
-
-        #**************************
-        # for background knowledge; (print info)
-        import unicodedata
-        u = unichr(233) + unichr(0x0bf2) + unichr(3972) + unichr(6000) + unichr(13231)
-
-        for i, c in enumerate(u):
-            print i, '%04x' % ord(c), unicodedata.category(c),
-            print unicodedata.name(c)
-
-        # Get numeric value of second character
-        print unicodedata.numeric(u[1])
-        #**************************
 
 if __name__ == '__main__':
     h2o.unit_main()
