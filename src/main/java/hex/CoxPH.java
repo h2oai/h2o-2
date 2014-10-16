@@ -140,9 +140,9 @@ public class CoxPH extends Job {
     // Following three overrides created for use in super.scoreImpl
     @Override
     public String[] classNames() {
-      String[] names = new String[nclasses()];
+      final String[] names = new String[nclasses()];
       for (int i = 0; i < time.length; i++) {
-        long t = time[i];
+        final long t = time[i];
         names[i]               = "cumhaz_"    + t;
         names[i + time.length] = "se_cumhaz_" + t;
       }
@@ -165,7 +165,7 @@ public class CoxPH extends Job {
           preds[i] = Float.NaN;
       } else {
         double logRisk = 0;
-        double[] data_centered = MemoryManager.malloc8d(n_coef);
+        final double[] data_centered = MemoryManager.malloc8d(n_coef);
         for (int j = 0; j < n_coef; j++) {
           data_centered[j] = data[j] - x_mean[j];
           logRisk += data_centered[j] * coef[j];
@@ -173,7 +173,7 @@ public class CoxPH extends Job {
         final double risk = Math.exp(logRisk);
         for (int t = 0; t < n_time; t++) {
           int i = t + 1;
-          double cumhaz_1 = risk * cumhaz_0[t];
+          final double cumhaz_1 = risk * cumhaz_0[t];
           double var_cumhaz_2_t = 0;
           for (int j = 0; j < n_coef; j++) {
             double sum = 0;
@@ -181,9 +181,9 @@ public class CoxPH extends Job {
               sum += var_coef[j][k] * (data_centered[k] * cumhaz_0[t] - var_cumhaz_2[k][t]);
             var_cumhaz_2_t += (data_centered[j] * cumhaz_0[t] - var_cumhaz_2[j][t]) * sum;
           }
-          double se_cumhaz_1 = risk * Math.sqrt(var_cumhaz_1[t] + var_cumhaz_2_t);
-          preds[i]           = (float) cumhaz_1;
-          preds[i + n_time]  = (float) se_cumhaz_1;
+          final double se_cumhaz_1 = risk * Math.sqrt(var_cumhaz_1[t] + var_cumhaz_2_t);
+          preds[i]          = (float) cumhaz_1;
+          preds[i + n_time] = (float) se_cumhaz_1;
         }
       }
       preds[0] = Float.NaN;
@@ -192,11 +192,7 @@ public class CoxPH extends Job {
 
     protected void initStats(Frame source) {
       // X columns, start (optional), stop, event
-      int n_coef;
-      if (parameters.use_start_column)
-        n_coef = source.numCols() - 3;
-      else
-        n_coef = source.numCols() - 2;
+      final int n_coef = parameters.use_start_column ? source.numCols() - 3 : source.numCols() - 2;
       names_coef       = new String[n_coef];
       coef             = MemoryManager.malloc8d(n_coef);
       exp_coef         = MemoryManager.malloc8d(n_coef);
@@ -214,13 +210,10 @@ public class CoxPH extends Job {
         x_mean[j]      = source.vec(j).mean();
       }
 
-      Vec start_column = source.vec(source.numCols() - 3);
-      Vec stop_column  = source.vec(source.numCols() - 2);
-      if (parameters.use_start_column) {
-        min_time = (long) start_column.min() + 1;
-      } else {
-        min_time = (long) stop_column.min();
-      }
+      final Vec start_column = source.vec(source.numCols() - 3);
+      final Vec stop_column  = source.vec(source.numCols() - 2);
+      min_time = parameters.use_start_column ? (long) start_column.min() + 1 :
+                                               (long) stop_column.min();
       max_time   = (long) stop_column.max();
 
       final int n_time = new CollectDomain(stop_column).doAll(stop_column).domain().length;
@@ -270,17 +263,17 @@ public class CoxPH extends Job {
               for (int j = 0; j < n_coef; j++)
                 gradient[j] += coxMR.sumXEvents[j][t];
               for (long e = 0; e < coxMR.countEvents[t]; e++) {
-                double frac  = ((double) e) / ((double) coxMR.countEvents[t]);
-                double term  = coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t];
-                newLoglik   -= Math.log(term);
+                final double frac = ((double) e) / ((double) coxMR.countEvents[t]);
+                final double term = coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t];
+                newLoglik -= Math.log(term);
                 for (int j = 0; j < n_coef; j++) {
-                  double djTerm     = coxMR.rcumsumXRisk[j][t] - frac * coxMR.sumXRiskEvents[j][t];
-                  double djLogTerm  = djTerm / term;
-                  gradient[j]      -= djLogTerm;
+                  final double djTerm    = coxMR.rcumsumXRisk[j][t] - frac * coxMR.sumXRiskEvents[j][t];
+                  final double djLogTerm = djTerm / term;
+                  gradient[j] -= djLogTerm;
                   for (int k = 0; k < n_coef; k++) {
-                    double dkTerm   = coxMR.rcumsumXRisk[k][t]     - frac * coxMR.sumXRiskEvents[k][t];
-                    double djkTerm  = coxMR.rcumsumXXRisk[j][k][t] - frac * coxMR.sumXXRiskEvents[j][k][t];
-                    hessian[j][k]  -= djkTerm / term - (djLogTerm * (dkTerm / term));
+                    final double dkTerm  = coxMR.rcumsumXRisk[k][t]     - frac * coxMR.sumXRiskEvents[k][t];
+                    final double djkTerm = coxMR.rcumsumXXRisk[j][k][t] - frac * coxMR.sumXXRiskEvents[j][k][t];
+                    hessian[j][k] -= djkTerm / term - (djLogTerm * (dkTerm / term));
                   }
                 }
               }
@@ -293,9 +286,9 @@ public class CoxPH extends Job {
               newLoglik += coxMR.sumLogRiskEvents[t];
               newLoglik -= coxMR.countEvents[t] * Math.log(coxMR.rcumsumRisk[t]);
               for (int j = 0; j < n_coef; j++) {
-                double dlogTerm  = coxMR.rcumsumXRisk[j][t] / coxMR.rcumsumRisk[t];
-                gradient[j]     += coxMR.sumXEvents[j][t];
-                gradient[j]     -= coxMR.countEvents[t] * dlogTerm;
+                final double dlogTerm = coxMR.rcumsumXRisk[j][t] / coxMR.rcumsumRisk[t];
+                gradient[j] += coxMR.sumXEvents[j][t];
+                gradient[j] -= coxMR.countEvents[t] * dlogTerm;
                 for (int k = 0; k < n_coef; k++)
                   hessian[j][k] -= coxMR.countEvents[t] *
                     (((coxMR.rcumsumXXRisk[j][k][t] / coxMR.rcumsumRisk[t]) -
@@ -312,10 +305,10 @@ public class CoxPH extends Job {
 
     protected void calcModelStats(double[] newCoef, double newLoglik) {
       final int n_coef = coef.length;
-      Matrix inv_hessian = new Matrix(hessian).inverse();
+      final Matrix inv_hessian = new Matrix(hessian).inverse();
       for (int j = 0; j < n_coef; j++) {
         for (int k = 0; k <= j; k++) {
-          double elem    = -inv_hessian.get(j, k);
+          final double elem = -inv_hessian.get(j, k);
           var_coef[j][k] = elem;
           var_coef[k][j] = elem;
         }
@@ -362,9 +355,9 @@ public class CoxPH extends Job {
               for (int j = 0; j < n_coef; j++)
                 var_cumhaz_2[j][nz] = 0;
               for (long e = 0; e < coxMR.countEvents[t]; e++) {
-                double frac       = ((double) e) / ((double) coxMR.countEvents[t]);
-                double haz        = 1 / (coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t]);
-                double haz_sq     = haz * haz;
+                final double frac   = ((double) e) / ((double) coxMR.countEvents[t]);
+                final double haz    = 1 / (coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t]);
+                final double haz_sq = haz * haz;
                 cumhaz_0[nz]     += haz;
                 var_cumhaz_1[nz] += haz_sq;
                 for (int j = 0; j < n_coef; j++)
@@ -402,23 +395,23 @@ public class CoxPH extends Job {
       if (Double.isNaN(x_new))
         x_new = x_mean[j];
       final int n_time = time.length;
-      Vec[] vecs = Vec.makeNewCons((long) n_time, 4, 0, null);
-      Vec timevec   = vecs[0];
-      Vec cumhaz    = vecs[1];
-      Vec se_cumhaz = vecs[2];
-      Vec surv      = vecs[3];
-      double x_centered = x_new - x_mean[j];
+      final Vec[] vecs = Vec.makeNewCons((long) n_time, 4, 0, null);
+      final Vec timevec   = vecs[0];
+      final Vec cumhaz    = vecs[1];
+      final Vec se_cumhaz = vecs[2];
+      final Vec surv      = vecs[3];
+      final double x_centered = x_new - x_mean[j];
       final double risk = Math.exp(coef[j] * x_centered);
       for (int t = 0; t < n_time; t++) {
-        double gamma    = x_centered * cumhaz_0[t] - var_cumhaz_2[j][t];
-        double cumhaz_1 = risk * cumhaz_0[t];
+        final double gamma    = x_centered * cumhaz_0[t] - var_cumhaz_2[j][t];
+        final double cumhaz_1 = risk * cumhaz_0[t];
         timevec.set(t,   time[t]);
         cumhaz.set(t,    cumhaz_1);
         se_cumhaz.set(t, risk * Math.sqrt(var_cumhaz_1[t] + (gamma * var_coef[j][j] * gamma)));
         surv.set(t,      Math.exp(- cumhaz_1));
       }
-      Frame fr = new Frame(key, new String[] {"time", "cumhaz", "se_cumhaz", "surv"}, vecs);
-      Futures fs = new Futures();
+      final Frame fr = new Frame(key, new String[] {"time", "cumhaz", "se_cumhaz", "surv"}, vecs);
+      final Futures fs = new Futures();
       DKV.put(key, fr, fs);
       fs.blockForPending();
       return fr;
@@ -484,13 +477,8 @@ public class CoxPH extends Job {
     if (iter_max < 1)
       throw new IllegalArgumentException("iter_max must be a positive integer");
 
-    long min_time;
-    if (use_start_column)
-      min_time = (long) start_column.min() + 1;
-    else
-      min_time = (long) stop_column.min();
-
-    int n_time = (int) (stop_column.max() - min_time + 1);
+    final long min_time = use_start_column ? (long) start_column.min() + 1 : (long) stop_column.min();
+    final int n_time = (int) (stop_column.max() - min_time + 1);
     if (n_time < 1)
       throw new IllegalArgumentException("start times must be strictly less than stop times");
     if (n_time > MAX_TIME_BINS)
@@ -500,11 +488,11 @@ public class CoxPH extends Job {
     source = getSubframe();
     // Use names and domains from fr with source subframe to satisfy model scoring
     final int x_ncol = x_columns.length;
-    String[] names = new String[x_ncol + 1];
+    final String[] names = new String[x_ncol + 1];
     for (int j = 0; j < x_ncol; j++)
       names[j] = source.names()[j];
     names[x_ncol] = source.names()[source.numCols() - 1];
-    Frame fr = source.subframe(names);
+    final Frame fr = source.subframe(names);
     model = new CoxPHModel(this, dest(), source._key, fr.names(), fr.domains(), null, null);
     model.initStats(source);
   }
@@ -512,14 +500,10 @@ public class CoxPH extends Job {
   @Override
   protected void execImpl() {
     // X columns, start (optional), stop, event
-    int n_coef;
-    if (use_start_column)
-      n_coef = source.numCols() - 3;
-    else
-      n_coef = source.numCols() - 2;
-    double[] step    = MemoryManager.malloc8d(n_coef);
-    double[] oldCoef = MemoryManager.malloc8d(n_coef);
-    double[] newCoef = MemoryManager.malloc8d(n_coef);
+    final int n_coef = use_start_column ? source.numCols() - 3 : source.numCols() - 2;
+    final double[] step    = MemoryManager.malloc8d(n_coef);
+    final double[] oldCoef = MemoryManager.malloc8d(n_coef);
+    final double[] newCoef = MemoryManager.malloc8d(n_coef);
     for (int j = 0; j < n_coef; j++) {
       step[j]    = Double.NaN;
       oldCoef[j] = Double.NaN;
@@ -538,7 +522,7 @@ public class CoxPH extends Job {
       if (i == 0)
         model.calcCounts(coxMR);
 
-      double newLoglik = model.calcLoglik(coxMR);
+      final double newLoglik = model.calcLoglik(coxMR);
       if (newLoglik > oldLoglik) {
         model.calcModelStats(newCoef, newLoglik);
         model.calcCumhaz_0(coxMR);
@@ -571,7 +555,7 @@ public class CoxPH extends Job {
         newCoef[j] = oldCoef[j] - step[j];
     }
 
-    Futures fs = new Futures();
+    final Futures fs = new Futures();
     DKV.put(dest(), model, fs);
     fs.blockForPending();
   }
@@ -584,7 +568,7 @@ public class CoxPH extends Job {
   private Frame getSubframe() {
     final int x_ncol = x_columns.length;
     final int ncol   = use_start_column ? x_ncol + 3 : x_ncol + 2;
-    String[] names = new String[ncol];
+    final String[] names = new String[ncol];
     for (int j = 0; j < x_ncol; j++)
       names[j] = source.names()[x_columns[j]];
     if (use_start_column)
@@ -648,114 +632,56 @@ public class CoxPH extends Job {
       }
     }
 
-    private boolean[] mapRowHasNA(Chunk[] cols) {
-      final int x_ncol = _use_start_column ? cols.length - 3 : cols.length - 2;
-      Chunk start  = null;
-      if (_use_start_column)
-            start  = cols[cols.length - 3];
-      Chunk stop   = cols[cols.length - 2];
-      Chunk events = cols[cols.length - 1];
-      final int nrow = stop._len;
-      boolean[] hasNA = MemoryManager.mallocZ(nrow);
-      for (int i = 0; i < nrow; i++)
-        hasNA[i] = stop.isNA0(i);
-      for (int i = 0; i < nrow; i++)
-        hasNA[i] |= events.isNA0(i);
+    private boolean mapRowHasNA(Chunk[] cols, int i) {
+      final int x_ncol  = _use_start_column ? cols.length - 3 : cols.length - 2;
+      final Chunk start = _use_start_column ? cols[cols.length - 3] : null;
+      final Chunk stop   = cols[cols.length - 2];
+      final Chunk events = cols[cols.length - 1];
+
+      boolean hasNA;
+      hasNA  = stop.isNA0(i);
+      hasNA |= events.isNA0(i);
       if (_use_start_column) {
-        for (int i = 0; i < nrow; i++) {
-          hasNA[i] |= start.isNA0(i);
-          if (start.at80(i) >= stop.at80(i))
-            throw new IllegalArgumentException("start times must be strictly less than stop times");
-        }
+        hasNA |= start.isNA0(i);
+        if (start.at80(i) >= stop.at80(i))
+          throw new IllegalArgumentException("start times must be strictly less than stop times");
       }
       for (int j = 0; j < x_ncol; j++)
-        for (int i = 0; i < nrow; i++)
-          hasNA[i] |= cols[j].isNA0(i);
+        hasNA |= cols[j].isNA0(i);
       return hasNA;
     }
 
-    private int[] mapCalcTime1(Chunk start) {
-      int[] t1 = null;
-      if (_use_start_column) {
-        final int nrow = start._len;
-        t1 = MemoryManager.malloc4(nrow);
-        for (int i = 0; i < nrow; i++) {
-          if (!start.isNA0(i)) {
-            long start_i = start.at80(i);
-            t1[i] = (int) ((start_i + 1) - _min_time);
-          }
-        }
-      }
-      return t1;
-    }
+    @Override
+    public void map(Chunk[] cols) {
+      mapAllocMemory();
 
-    private int[] mapCalcTime2(Chunk stop) {
-      final int nrow = stop._len;
-      int[] t2 = MemoryManager.malloc4(nrow);
+      final int nrow     = cols[0]._len;
+      final int x_ncol   = _use_start_column ? cols.length - 3 : cols.length - 2;
+      final Chunk start  = _use_start_column ? cols[cols.length - 3] : null;
+      final Chunk stop   = cols[cols.length - 2];
+      final Chunk events = cols[cols.length - 1];
+
       for (int i = 0; i < nrow; i++) {
-        if (!stop.isNA0(i)) {
-          long stop_i = stop.at80(i);
-          t2[i] = (int) (stop_i - _min_time);
-        }
-      }
-      return t2;
-    }
-
-    private double[] mapCalcLogRisk(Chunk[] cols, boolean[] hasNA) {
-      final int nrow = hasNA.length;
-      final int x_ncol = _use_start_column ? cols.length - 3 : cols.length - 2;
-      double[] logRisk = MemoryManager.malloc8d(nrow);
-      for (int j = 0; j < x_ncol; j++) {
-        for (int i = 0; i < nrow; i++) {
-          if (!hasNA[i]) {
-            double x_i = cols[j].at0(i) - _x_mean[j];
-            logRisk[i] += x_i * _beta[j];
-          }
-        }
-      }
-      return logRisk;
-    }
-
-    private double[] mapCalcRisk(double[] logRisk, boolean[] hasNA) {
-      final int nrow = logRisk.length;
-      double[] risk = MemoryManager.malloc8d(nrow);
-      for (int i = 0; i < nrow; i++) {
-        if (!hasNA[i])
-          risk[i] = Math.exp(logRisk[i]);
-      }
-      return risk;
-    }
-
-    private void mapCalcStats(Chunk[] cols) {
-      final int x_ncol = _use_start_column ? cols.length - 3 : cols.length - 2;
-      Chunk start  = null;
-      if (_use_start_column)
-            start  = cols[cols.length - 3];
-      Chunk stop   = cols[cols.length - 2];
-      Chunk events = cols[cols.length - 1];
-
-      boolean[] hasNA  = mapRowHasNA(cols);
-      int[] time1      = mapCalcTime1(start);
-      int[] time2      = mapCalcTime2(stop);
-      double[] logRisk = mapCalcLogRisk(cols, hasNA);
-      double[] risk    = mapCalcRisk(logRisk, hasNA);
-
-      final int nrow = cols[0]._len;
-      for (int i = 0; i < nrow; i++) {
-        if (hasNA[i])
+        if (mapRowHasNA(cols, i))
           n_missing++;
         else {
           n++;
-          int t2 = time2[i];
-          double risk_i = risk[i];
-          if (events.at80(i) > 0) {
+          final long event_i = events.at80(i);
+          final int t1 = _use_start_column ? (int) ((start.at80(i) + 1) - _min_time) : -1;
+          final int t2 = (int) (stop.at80(i) - _min_time);
+          double logRisk_i = 0;
+          for (int j = 0; j < x_ncol; j++) {
+            final double x_i = cols[j].at0(i) - _x_mean[j];
+            logRisk_i += x_i * _beta[j];
+          }
+          final double risk_i = Math.exp(logRisk_i);
+          if (event_i > 0) {
             countEvents[t2]++;
-            sumLogRiskEvents[t2] += logRisk[i];
+            sumLogRiskEvents[t2] += logRisk_i;
             sumRiskEvents[t2]    += risk_i;
           } else
             countCensored[t2]++;
           if (_use_start_column) {
-            int t1 = time1[i];
             for (int t = t1; t <= t2; t++) {
               countRiskSet[t]++;
               rcumsumRisk[t]     += risk_i;
@@ -764,33 +690,23 @@ public class CoxPH extends Job {
             countRiskSet[t2]++;
             rcumsumRisk[t2]      += risk_i;
           }
-        }
-      }
 
-      for (int j = 0; j < x_ncol; j++) {
-        for (int i = 0; i < nrow; i++) {
-          if (!hasNA[i]) {
-            int t1 = -1;
-            if (_use_start_column)
-                t1 = time1[i];
-            int t2 = time2[i];
-            long event_i   = events.at80(i);
-            double x1_i    = cols[j].at0(i) - _x_mean[j];
-            double risk_i  = risk[i];
-            double xRisk_i = x1_i * risk_i;
+          for (int j = 0; j < x_ncol; j++) {
+            final double x1_i    = cols[j].at0(i) - _x_mean[j];
+            final double xRisk_i = x1_i * risk_i;
             if (event_i > 0) {
               sumXEvents[j][t2]     += x1_i;
               sumXRiskEvents[j][t2] += xRisk_i;
             }
             if (_use_start_column) {
               for (int t = t1; t <= t2; t++)
-                rcumsumXRisk[j][t] += xRisk_i;
+                rcumsumXRisk[j][t]  += xRisk_i;
             } else {
-              rcumsumXRisk[j][t2]  += xRisk_i;
+              rcumsumXRisk[j][t2]   += xRisk_i;
             }
             for (int k = 0; k < x_ncol; k++) {
-              double x2_i = cols[k].at0(i) - _x_mean[k];
-              double xxRisk_i = x2_i * xRisk_i;
+              final double x2_i     = cols[k].at0(i) - _x_mean[k];
+              final double xxRisk_i = x2_i * xRisk_i;
               if (event_i > 0)
                 sumXXRiskEvents[j][k][t2] += xxRisk_i;
               if (_use_start_column) {
@@ -803,12 +719,6 @@ public class CoxPH extends Job {
           }
         }
       }
-    }
-
-    @Override
-    public void map(Chunk[] cols) {
-      mapAllocMemory();
-      mapCalcStats(cols);
     }
 
     @Override
