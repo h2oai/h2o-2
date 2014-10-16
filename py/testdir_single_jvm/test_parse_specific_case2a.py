@@ -6,20 +6,26 @@ import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
 print "I'll keep it to one case per file"
 
+# this works
+# unicodeNull = unichr(0x33)
+# this fails
+unicodeNull = unichr(0x0)
+
 tryList = [
-('''\
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-a,b,c,d
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-''', 
-10, 4, [0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum']),
+    # the nul char I think is causing extra rows and also wiping out the next char?
+    # I got nulls when concat'ing files with dd. may be used for padding somehow?
+    ((
+    'a,b,c,d' + unicodeNull + ',n\n'
+    'a,b,c,d' + unicodeNull + ',n\n'
+    'a,b,c,d' + unicodeNull + ',n\n'
+    'a,b,c,d' + unicodeNull + ',n\n'
+    'a,b,c,d' + unicodeNull + ',n\n'
+    'a,b,c,d' + unicodeNull + ',n\n'
+    'a,b,c,d' + unicodeNull + ',n\n'
+    'a,b,c,d' + unicodeNull + ',n\n'
+    'a,b,c,d' + unicodeNull + ',n\n'
+    'a,b,c,d' + unicodeNull + ',n\n'
+    ), 10, 5, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum']),
 ]
 
 # h2o incorrectly will match this
@@ -32,7 +38,7 @@ a,b,c,d
 
 def write_syn_dataset(csvPathname, dataset):
     dsf = codecs.open(csvPathname, encoding='utf-8', mode='w+')
-    encoded = dataset.decode('utf-8')
+    encoded = dataset.encode('utf-8')
     print "utf8:" , repr(encoded), type(encoded)
     print "str or utf8:" , repr(dataset), type(dataset)
     dsf.write(dataset)
@@ -56,7 +62,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_specific_case1(self):
+    def test_parse_specific_case2a(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         hex_key = "a.hex"
 

@@ -1297,9 +1297,9 @@ class H2O(object):
     def poll_url(self, response,
                  timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=0, pollTimeoutSecs=180,
                  noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
-        ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
-        print "at top of poll_url, timeoutSecs: ", timeoutSecs
+        ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
+        ### print "at top of poll_url, timeoutSecs: ", timeoutSecs
 
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2

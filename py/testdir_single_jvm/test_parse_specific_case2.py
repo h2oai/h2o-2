@@ -38,8 +38,8 @@ tryList = [
 
 def write_syn_dataset(csvPathname, dataset):
     dsf = codecs.open(csvPathname, encoding='utf-8', mode='w+')
-    decoded = dataset.decode('utf-8')
-    print "utf8:" , repr(decoded), type(decoded)
+    encoded = dataset.encode('utf-8')
+    print "utf8:" , repr(encoded), type(encoded)
     print "str or utf8:" , repr(dataset), type(dataset)
     dsf.write(dataset)
     dsf.close()
@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
         hex_key = "a.hex"
 
         for (dataset, expNumRows, expNumCols, expNaCnt, expType) in tryList:
-            csvFilename = 'specific_' + str(expNumRows) + str(expNumCols) + '.csv'
+            csvFilename = 'specific_' + str(expNumRows) + "x" + str(expNumCols) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             write_syn_dataset(csvPathname, dataset)
 

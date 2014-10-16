@@ -6,14 +6,27 @@ import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
 print "I'll keep it to one case per file"
 
-# toDoList = range(0x20,0x80)
-toDoList = [0x22] # double quote
+# toDoList = range(0x0,0x80)
+# 0x1 can be the hive separator? if we force comma it should be treated as char
+# should try without and change expected cols
+toDoList = range(0x00, 0x100)
 
 def removeIfThere(d):
     if d in toDoList:
         toDoList.remove(d)
 
+H2O_COL_SEPARATOR = 0x2c # comma
+# H2O_COL_SEPARATOR = 0x1 # hive separator
+
+# removeIfThere(0x1) # hive separator okay if we force comma below
+
 removeIfThere(0x0) # nul. known issue
+removeIfThere(0xa) # LF. causes EOL
+removeIfThere(0xd) # CR. causes EOL
+removeIfThere(0x22) # double quote. known issue
+removeIfThere(0x2c) # comma. don't mess up my expected col count
+
+# could try single quote if enabled, to see if does damage. probably like double quote
 
 tryList = []
 for i in toDoList:
@@ -33,7 +46,7 @@ for i in toDoList:
         'a,b,c,d' + unicodeSymbol + 's,n\n'
         'a,b,c,d' + unicodeSymbol + 's,n\n'
         'a,b,c,d' + unicodeSymbol + 's,n\n'
-        ), 10, 4, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum'], i)
+        ), 10, 5, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum'], i)
     )
 
 # h2o incorrectly will match this
@@ -70,21 +83,21 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_specific_case3(self):
+    def test_parse_specific_case4(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         hex_key = "a.hex"
 
         for (dataset, expNumRows, expNumCols, expNaCnt, expType, unicodeNum) in tryList:
-            csvFilename = 'specific_' + str(expNumRows) + "x" + str(expNumCols) + '.csv'
+            csvFilename = 'specific_' + str(expNumRows) + str(expNumCols) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             write_syn_dataset(csvPathname, dataset)
 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', header=0,
-                hex_key=hex_key, timeoutSecs=10, doSummary=False)
+                hex_key=hex_key, timeoutSecs=10, doSummary=False, separator=H2O_COL_SEPARATOR) # force comma separator
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)
             
             print "Parsed with special unichr(%s) which is %s:" % (unicodeNum, unichr(unicodeNum))
-            print "inspect:", h2o.dump_json(inspect)
+            # print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
             self.assertEqual(numRows, expNumRows, msg='Using unichr(0x%x) Wrong numRows: %s Expected: %s' % \
                 (unicodeNum, numRows, expNumRows))
