@@ -6,20 +6,26 @@ import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
 print "I'll keep it to one case per file"
 
+# this works
+# unicodeNull = unichr(0x33)
+# this fails
+unicodeNull = unichr(0x0)
+
 tryList = [
-('''\
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-a,b,c,d
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-"a,b,c,d
-''', 
-10, 4, [0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum']),
+    # the nul char I think is causing extra rows and also wiping out the next char?
+    # I got nulls when concat'ing files with dd. may be used for padding somehow?
+    ((
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeNull + 's,n\n'
+    ), 10, 5, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum']),
 ]
 
 # h2o incorrectly will match this
@@ -56,12 +62,12 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_specific_case1(self):
+    def test_parse_specific_case2(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         hex_key = "a.hex"
 
         for (dataset, expNumRows, expNumCols, expNaCnt, expType) in tryList:
-            csvFilename = 'specific_' + str(expNumRows) + "x" + str(expNumCols) + '.csv'
+            csvFilename = 'specific_' + str(expNumRows) + str(expNumCols) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             write_syn_dataset(csvPathname, dataset)
 
