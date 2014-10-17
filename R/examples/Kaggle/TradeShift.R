@@ -5,6 +5,8 @@
 #install.packages("h2o", repos=(c("file:///Users/arno/h2o/target/R", getOption("repos"))))
 #install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1545/R", getOption("repos")))) #choose a build here
 # END
+
+sink("TradeShift.log")
 library(h2o)
 library(stringr)
 
@@ -73,7 +75,7 @@ for (resp in 1:length(targets)) {
     
     train_resp <- train[,targets[resp]]
     valid_resp <- valid[,targets[resp]]
-    
+
     #   # DL model with early stopping based on validation error
     #   cvmodel <-
     #     h2o.deeplearning(x = predictors,
@@ -121,11 +123,11 @@ for (resp in 1:length(targets)) {
     valid_preds <- h2o.predict(model, valid)[,3]
     
     # clamp predictions for LogLoss computation
-    valid_preds <- ifelse(valid_preds > 1e-15, valid_preds, 1e-15)
-    valid_preds <- ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15)
+    valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds > 1e-15, valid_preds, 1e-15))
+    valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15))
     
     test_preds <- h2o.predict(model, test_hex)[,3]
-    
+
     ## Compute MSE
     #msetrain <- h2o.exec(h2oServer,expr=mean((train_preds - train_resp)^2))
     sevalid <- h2o.exec(h2oServer,expr=(valid_preds - valid_resp)^2)
@@ -133,7 +135,7 @@ for (resp in 1:length(targets)) {
     holdout_valid_se[resp] <- holdout_valid_se[resp] + h2o.exec(h2oServer,expr=sum(sevalid))
     
     ## Compute LogLoss
-    LL <- mean(-valid_resp*(log(valid_preds)-(1-valid_resp)*log(1-valid_preds)))
+    LL <- h2o.exec(h2oServer,expr=mean(-valid_resp*(log(valid_preds)-(1-valid_resp)*log(1-valid_preds))))
     holdout_valid_logloss[resp] <- holdout_valid_logloss[resp] + LL
     
     
@@ -201,7 +203,7 @@ for (resp in 1:length(targets)) {
     }
     
     ## Now create submission
-    print (paste0("\n Number of ensemble models: ", ncol(test_preds_blend)))
+    cat("\n Number of ensemble models: ", ncol(test_preds_blend))
     ensemble_average <- matrix("ensemble_average", nrow = nrow(test_preds_blend), ncol = 1)
     ensemble_average <- rowMeans(as.data.frame(test_preds_blend)) # Simple ensemble average, consider blending/stacking
     ensemble_average <- as.data.frame(ensemble_average)
@@ -228,10 +230,10 @@ for (resp in 1:length(targets)) {
   }
 }
 if (validate) {
-  print(paste0("\nOverall cross-validated MSEs = " , MSEs))
-  print(paste0("\nOverall cross-validated MSE = " , mean(MSEs)))
-  print(paste0("\nOverall cross-validated LogLosses = " , LogLoss))
-  print(paste0("\nOverall cross-validated LogLoss = " , mean(LogLoss)))
+  cat("\nOverall cross-validated MSEs = " , MSEs)
+  cat("\nOverall cross-validated MSE = " , mean(MSEs))
+  cat("\nOverall cross-validated LogLosses = " , LogLoss)
+  cat("\nOverall cross-validated LogLoss = " , mean(LogLoss))
 }
 if (submit) {
   print(summary(final_submission))
@@ -242,3 +244,4 @@ if (submit) {
   submission[,2] <- fs #replace 0s with actual predictions
   write.csv(submission, file = "./submission.csv", quote = F, row.names = F)
 }
+sink()
