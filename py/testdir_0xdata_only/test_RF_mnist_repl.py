@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
 
             # RF+RFView (train)****************************************
             print "This is the 'ignore=' we'll use"
-            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
+            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, returnIgnoreX=True)
             ntree = 100
             params = {
                 'response_variable': 0,

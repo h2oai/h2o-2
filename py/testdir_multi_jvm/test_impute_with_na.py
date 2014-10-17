@@ -72,12 +72,8 @@ class Basic(unittest.TestCase):
             print "Doing the ToEnum2 AFTER the NA injection, because h2o doesn't work right if we do it before"
             expectedMissing = missing_fraction * origNumRows # per col
             enumColList = [49, 50, 51, 52, 53, 54] 
-            enumResult = h2o.nodes[0].to_enum(src_key=hex_key2, column_index=(54+1))
-            enumResult = h2o.nodes[0].to_enum(src_key=hex_key2, column_index=(53+1))
-            enumResult = h2o.nodes[0].to_enum(src_key=hex_key2, column_index=(52+1))
-            enumResult = h2o.nodes[0].to_enum(src_key=hex_key2, column_index=(51+1))
-            enumResult = h2o.nodes[0].to_enum(src_key=hex_key2, column_index=(50+1))
-            enumResult = h2o.nodes[0].to_enum(src_key=hex_key2, column_index=(49+1))
+            for e in enumColList:
+                enumResult = h2o.nodes[0].to_enum(src_key=hex_key2, column_index=(e+1))
 
             inspect = h2o_cmd.runInspect(key=hex_key2)
             numRows = inspect['numRows']

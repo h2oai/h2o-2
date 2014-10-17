@@ -549,7 +549,7 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
     toFactor <- names(which(unlist(lapply(object, is.factor))))
     write.csv(object, file=tmpf, quote = TRUE, row.names = FALSE)
     h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
-    invisible(lapply(toFactor, function(a) { h2o.exec(h2f[,a] <- factor(h2f[,a])) }))
+#    invisible(lapply(toFactor, function(a) { h2o.exec(h2f[,a] <- factor(h2f[,a])) }))
     unlink(tmpf)
     return(h2f)
   }
@@ -1421,6 +1421,10 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
 
+setMethod("which", "H2OParsedData", function(x, arr.ind = FALSE, useNames = TRUE) {
+  .h2o.__unop2("which", x)
+})
+
 strsplit <- function(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE) {
   if (inherits(x, "H2OParsedData")) { UseMethod("strsplit")
   } else base::strsplit(x, split, fixed, perl, useBytes)
@@ -1470,6 +1474,19 @@ h2o.sub <- function(pattern, replacement, x, ignore.case = FALSE) {
   res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
   res@logic <- FALSE
   return(res)
+}
+
+trim <- function(x) {
+  if (!inherits(x, "H2OParsedData")) stop("x must be an H2OParsedData object")
+  .h2o.__unop2("trim", x)
+}
+
+h2o.sample <- function(data, nobs, seed = -1) {
+    expr <- paste("sample(", paste(data@key, nobs, seed, sep = ","), ")", sep = "")
+    print(expr)
+    res <- .h2o.__exec2(data@h2o, expr)
+    res <- .h2o.exec2(res$dest_key, h2o = data@h2o, res$dest_key)
+    res
 }
 
 # setMethod("hist", "H2OParsedData", function(object))

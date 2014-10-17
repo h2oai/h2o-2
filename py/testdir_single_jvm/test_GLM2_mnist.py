@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
             print "We won't use this pruning of x on test data. See if it prunes the same as the training"
             y = 0 # first column is pixel value
             print "y:"
-            ignoreX = h2o_glm.goodXFromColumnInfo(y, key=parseTestResult['destination_key'], timeoutSecs=300, forRF=True)
+            ignoreX = h2o_glm.goodXFromColumnInfo(y, key=parseTestResult['destination_key'], timeoutSecs=300, returnIgnoreX=True)
 
             # PARSE train****************************************
             trainKey = trainCsvFilename + "_" + str(trial) + ".hex"

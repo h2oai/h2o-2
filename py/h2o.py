@@ -1855,10 +1855,9 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
         return a
 
-    def speedrf(self, data_key, ntrees=50, max_depth=10, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+    def speedrf(self, data_key, ntrees=50, max_depth=20, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
-
 
         params_dict = {'destination_key': None,
                        'source': data_key,

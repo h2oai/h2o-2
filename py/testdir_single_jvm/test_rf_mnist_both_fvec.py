@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
 
             # RF+RFView (train)****************************************
             print "Not using ignore from this..have to adjust cols?"
-            h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
+            h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, returnIgnoreX=True)
             ntree = 2
             params = {
                 'response': 'C1',
