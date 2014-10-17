@@ -1,12 +1,16 @@
+sink("TradeShift.log", split = T)
+
 ## This code block is to re-install a particular version of H2O
 # START
 #if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 #if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-#install.packages("h2o", repos=(c("file:///Users/arno/h2o/target/R", getOption("repos"))))
-#install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1545/R", getOption("repos")))) #choose a build here
+#install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1548/R", getOption("repos")))) #choose a build here
 # END
 
-sink("TradeShift.log")
+# Fetch the latest nightly build using Jo-fai Chow's package
+#devtools::install_github("woobe/deepr")
+#deepr::install_h2o()
+
 library(h2o)
 library(stringr)
 
@@ -30,16 +34,15 @@ test_hex <- h2o.importFile(h2oServer, path = path_test)
 vars <- colnames(train_hex)
 ID <- vars[1]
 labels <- colnames(trainLabels_hex)
-predictors <- vars[c(-1,-4,-35,-62,-65,-92,-95)] #remove ID and variables with too many enums
-predictors
+predictors <- vars[c(-1,-4,-35,-62,-65,-92,-95)] #remove ID and variables with too many factor levels
 targets <- labels[-1] ## all targets
 #targets <- labels[c(7,8,10,11,13,29,30,31,32,33)]  ## harder to predict targets for tuning of parameters
 
 ## Settings
-validate = T #whether to run CV on train/validation split (or n-fold), potentially with grid search
+validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search - not needed for submission
 submit = T #whether to make ensemble prediction for submission
 
-# These settings lead to a cross-validated log-loss of 0.008743972 with h2o.randomForest
+# These settings lead to a cross-validated log-loss of 0.008743972 with h2o.randomForest(ntree=20,depth=40,type="fast")
 ensemble_size <- 5
 seed0 = 1337
 
@@ -48,11 +51,6 @@ reproducible_mode = F # For DL only. Set to TRUE if you want reproducible result
 ## Scoring helpers
 MSEs <- matrix(0, nrow = 1, ncol = length(targets))
 LogLoss <- matrix(0, nrow = 1, ncol = length(targets))
-
-errs = 0
-cv_preds <- matrix(0, nrow = nrow(train_hex), ncol = 1)
-
-
 
 ## Main loop over targets
 for (resp in 1:length(targets)) {
