@@ -18,6 +18,8 @@ h2oServer <- h2o.init(ip="mr-0xd1", port = 53322)
 path_train <- "/home/arno/kaggle_tradeshift/data/train.csv"
 path_trainLabels <- "/home/arno/kaggle_tradeshift/data/trainLabels.csv"
 path_test <- "/home/arno/kaggle_tradeshift/data/test.csv"
+path_submission <- "/home/arno/kaggle_tradeshift/data/sampleSubmission.csv"
+
 train_hex <- h2o.importFile(h2oServer, path = path_train)
 trainLabels_hex <- h2o.importFile(h2oServer, path = path_trainLabels)
 test_hex <- h2o.importFile(h2oServer, path = path_test)
@@ -26,19 +28,16 @@ test_hex <- h2o.importFile(h2oServer, path = path_test)
 vars <- colnames(train_hex)
 ID <- vars[1]
 labels <- colnames(trainLabels_hex)
-predictors <- vars[c(-1,-4,-35,-62,-65,-92,-95)]
+predictors <- vars[c(-1,-4,-35,-62,-65,-92,-95)] #remove ID and variables with too many enums
 predictors
 targets <- labels[-1]
-#targets <- labels[c(2,3)]
-targets
 
 ## Settings
-ensemble_size <- 2
-n_fold = 20
-reproducible_mode = F # set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower
-seed0 = 1337 # Only really matters for reproducible_mode = T
+ensemble_size <- 1
+reproducible_mode = F # For DL only. Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower
+seed0 = 1337
+validate = T
 submit = T
-
 
 ## Scoring helpers
 MSEs <- matrix(0, nrow = 1, ncol = length(targets))
@@ -54,103 +53,146 @@ holdout_valid_logloss <- matrix(0, nrow = 1, ncol = length(targets))
 
 ## Main loop over regression targets
 for (resp in 1:length(targets)) {
-  if (resp == 14) next
+  if (resp == 14) {
+    if (submit) {
+      final_submission <- cbind(final_submission, as.data.frame(matrix(0, nrow = nrow(test_hex), ncol = 1)))
+      colnames(final_submission)[resp] <- targets[resp]
+    }
+    next
+  }
+  
+  # No need to do n-fold just yet - simple split is enough (enough data) -> faster
   trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
-  splits <- h2o.splitFrame(trainWL, ratios = 1-1/n_fold, shuffle=T)
-  train <- splits[[1]]
-  valid <- splits[[2]]
   
-  cat("\n\nNow training and cross-validating a DL model for", targets[resp], "...\n")
-  
-  train_resp <- train[,targets[resp]]
-  valid_resp <- valid[,targets[resp]]
-  
-  # build final model blend with validated parameters, do early stopping based on validation error
-  cvmodel <-
-    h2o.deeplearning(x = predictors,
-                     y = targets[resp],
-                     data = train,
-                     validation = valid,
-                     classification = F,
-                     activation="Tanh",
-                     hidden = c(1),
-                     epochs = 1,
-                     l1 = c(0),
-                     l2 = c(0), 
-                     rho = 0.99, 
-                     epsilon = 1e-8,
-                     score_duty_cycle = 0.1,
-                     score_interval = 1,
-                     train_samples_per_iteration = 10000,
-                     reproducible = reproducible_mode,
-                     seed = seed0 + resp,
-                     max_categorical_features = 1000000
-    )
-  
-  #model <- cvmodel@model[[1]] #If cv model is a grid search model
-  model <- cvmodel #If cvmodel is not a grid search model
-  
-  ## Use the model and store results
-  #train_preds <- h2o.predict(model, train)
-  valid_preds <- h2o.predict(model, valid)
-  valid_preds <- ifelse(valid_preds > 1e-15, valid_preds, 1e-15)
-  valid_preds <- ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15)
-  
-  test_preds <- h2o.predict(model, test_hex)
-  test_preds <- ifelse(test_preds > 1e-15, test_preds, 1e-15)
-  test_preds <- ifelse(test_preds < 1-1e-15, test_preds, 1-1e-15)
-  
-  #print(head(test_preds))
-
-  ## Compute MSE
-  #msetrain <- h2o.exec(h2oServer,expr=mean((train_preds - train_resp)^2))
-  sevalid <- h2o.exec(h2oServer,expr=(valid_preds - valid_resp)^2)
-  msevalid <- h2o.exec(h2oServer,expr=mean(sevalid))
-  holdout_valid_se[resp] <- holdout_valid_se[resp] + h2o.exec(h2oServer,expr=sum(sevalid))
-  
-  ## Compute LogLoss
-  LL <- mean(-valid_resp*(log(valid_preds)-(1-valid_resp)*log(1-valid_preds)))
-  holdout_valid_logloss[resp] <- holdout_valid_logloss[resp] + LL
-  
-  
-  MSE <- msevalid
-  MSEs[resp] <- MSE
-  LogLoss[resp] <- LL
-  cat("\nCross-validated MSEs so far:", MSEs)
-  cat("\nCross-validated LogLoss so far:", LogLoss)
+  if (validate) {
+    splits <- h2o.splitFrame(trainWL, ratios = c(0.95), shuffle=F)
+    train <- splits[[1]]
+    valid <- splits[[2]]
+    
+    cat("\n\nNow training and cross-validating an H2O model for", targets[resp], "...\n")
+    
+    train_resp <- train[,targets[resp]]
+    valid_resp <- valid[,targets[resp]]
+    
+    #   # DL model with early stopping based on validation error
+    #   cvmodel <-
+    #     h2o.deeplearning(x = predictors,
+    #                      y = targets[resp],
+    #                      data = train,
+    #                      validation = valid,
+    #                      classification = T,
+    #                      activation="Tanh",
+    #                      hidden = c(10,50,50),
+    #                      epochs = 1,
+    #                      l1 = c(0),
+    #                      l2 = c(0), 
+    #                      rho = 0.99, 
+    #                      epsilon = 1e-8,
+    #                      score_duty_cycle = 0.1,
+    #                      score_interval = 1,
+    #                      train_samples_per_iteration = 10000,
+    #                      reproducible = reproducible_mode,
+    #                      seed = seed0 + resp,
+    #                      max_categorical_features = 10000
+    #     )
+    
+    cvmodel <-
+      h2o.randomForest(x = predictors,
+                       y = targets[resp],
+                       data = train,
+                       classification = T,
+                       type = "fast",
+                       ntree = 50,
+                       depth = c(30),
+                       nbins = 100,
+                       seed = seed0 + resp,
+                       validation = valid
+      )
+    
+    #model <- cvmodel@model[[1]] #If cv model is a grid search model
+    model <- cvmodel #If cvmodel is not a grid search model
+    
+    ## Use the model and store results
+    
+    # use labels (at best F1) - turn into 0/1 numerical values
+    #valid_preds <- h2o.predict(model, valid)[,1] == "1" ## too many total misses -> large error
+    
+    # use probabilities - clamp validation predictions for LogLoss computation
+    valid_preds <- h2o.predict(model, valid)[,3]
+    
+    # clamp predictions for LogLoss computation
+    valid_preds <- ifelse(valid_preds > 1e-15, valid_preds, 1e-15)
+    valid_preds <- ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15)
+    
+    test_preds <- h2o.predict(model, test_hex)[,3]
+    
+    ## Compute MSE
+    #msetrain <- h2o.exec(h2oServer,expr=mean((train_preds - train_resp)^2))
+    sevalid <- h2o.exec(h2oServer,expr=(valid_preds - valid_resp)^2)
+    msevalid <- h2o.exec(h2oServer,expr=mean(sevalid))
+    holdout_valid_se[resp] <- holdout_valid_se[resp] + h2o.exec(h2oServer,expr=sum(sevalid))
+    
+    ## Compute LogLoss
+    LL <- mean(-valid_resp*(log(valid_preds)-(1-valid_resp)*log(1-valid_preds)))
+    holdout_valid_logloss[resp] <- holdout_valid_logloss[resp] + LL
+    
+    
+    MSE <- msevalid
+    MSEs[resp] <- MSE
+    LogLoss[resp] <- LL
+    cat("\nMean cross-validated MSE so far:", sum(MSEs)/resp)
+    cat("\nMean cross-validated LogLoss so far:", sum(LogLoss)/resp)
+    cat("\nCross-validated MSEs so far:", MSEs)
+    cat("\nCross-validated LogLosses so far:", LogLoss)
+  }
   
   if (submit) {
-    cat("\n\nTaking parameters from grid search winner for", targets[resp], "...\n")
-    #p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
-    p <- cvmodel@model$params   #If cvmodel is not a grid search model
-    
+    if (validate) {
+      cat("\n\nTaking parameters from grid search winner for", targets[resp], "...\n")
+      #p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
+      p <- cvmodel@model$params   #If cvmodel is not a grid search model
+    }
+    else {
+      p = list(classification=T, ntree=50, depth=10, type="BigData")
+    }
     ## Build an ensemble model on full training data - should perform better than the CV model above
     for (n in 1:ensemble_size) {
       cat("\n\nBuilding ensemble model", n, "of", ensemble_size, "for", targets[resp], "...\n")
+      #       model <-
+      #         h2o.deeplearning(x = predictors,
+      #                          y = targets[resp],
+      #                          key = paste0(targets[resp], "_cv_ensemble_", n, "_of_", ensemble_size),
+      #                          data = trainWL, 
+      #                          classification = p$classification,
+      #                          activation = p$activation,
+      #                          hidden = p$hidden,
+      #                          epochs = p$epochs,
+      #                          l1 = p$l1,
+      #                          l2 = p$l2,
+      #                          rho = p$rho,
+      #                          epsilon = p$epsilon,
+      #                          train_samples_per_iteration = p$train_samples_per_iteration,
+      #                          reproducible = p$reproducible,
+      #                          seed = p$seed + n,
+      #                          max_categorical_features = p$max_categorical_features
+      #         )
+      
       model <-
-        h2o.deeplearning(x = predictors,
+        h2o.randomForest(x = predictors,
                          y = targets[resp],
-                         key = paste0(targets[resp], "_cv_ensemble_", n, "_of_", ensemble_size),
-                         data = trainWL, 
-                         classification = F,
-                         activation = p$activation,
-                         hidden = p$hidden,
-                         epochs = p$epochs,
-                         l1 = p$l1,
-                         l2 = p$l2,
-                         rho = p$rho,
-                         epsilon = p$epsilon,
-                         train_samples_per_iteration = p$train_samples_per_iteration,
-                         reproducible = p$reproducible,
-                         seed = p$seed + n,
-                         max_categorical_features = p$max_categorical_features
+                         data = trainWL,
+                         classification = T,
+                         type = "fast",
+                         ntree = p$ntree,
+                         depth = p$depth,
+                         nbins = p$nbins,
+                         seed = seed0 + resp*ensemble_size + n,
+                         key = paste0(targets[resp], "_cv_ensemble_", n, "_of_", ensemble_size)
         )
       
       ## Aggregate ensemble model predictions
-      test_preds <- h2o.predict(model, test_hex)
-      test_preds <- ifelse(test_preds > 1e-15, test_preds, 1e-15)
-      test_preds <- ifelse(test_preds < 1-1e-15, test_preds, 1-1e-15)
-
+      test_preds <- h2o.predict(model, test_hex)[,3]
+      
       if (n == 1) {
         test_preds_blend <- test_preds
       } else {
@@ -159,7 +201,7 @@ for (resp in 1:length(targets)) {
     }
     
     ## Now create submission
-    cat (paste0("\n Number of ensemble models: ", ncol(test_preds_blend)))
+    print (paste0("\n Number of ensemble models: ", ncol(test_preds_blend)))
     ensemble_average <- matrix("ensemble_average", nrow = nrow(test_preds_blend), ncol = 1)
     ensemble_average <- rowMeans(as.data.frame(test_preds_blend)) # Simple ensemble average, consider blending/stacking
     ensemble_average <- as.data.frame(ensemble_average)
@@ -167,49 +209,36 @@ for (resp in 1:length(targets)) {
     
     colnames(ensemble_average)[1] <- targets[resp]
     if (resp == 1) {
-      final_submission <- cbind(as.data.frame(test_hex[,1]), ensemble_average)
+      final_submission <- ensemble_average
     } else {
       final_submission <- cbind(final_submission, ensemble_average)
     }
     print(head(final_submission))
     
   }
-
+  
   ## Remove no longer needed old models and temporaries from K-V store to keep memory footprint low
   ls_temp <- h2o.ls(h2oServer)
   for (n_ls in 1:nrow(ls_temp)) {
-    if (str_detect(ls_temp[n_ls, 1], "DeepLearning")) {
-      h2o.rm(h2oServer, keys = as.character(ls_temp[n_ls, 1]))
-    } else if (str_detect(ls_temp[n_ls, 1], "Last.value")) {
+    if (str_detect(ls_temp[n_ls, 1], "DeepLearning") ||
+          str_detect(ls_temp[n_ls, 1], "SpeeDRF") ||
+          str_detect(ls_temp[n_ls, 1], "Last.value")) {
       h2o.rm(h2oServer, keys = as.character(ls_temp[n_ls, 1]))
     }
   }
-
 }
-cat("\nOverall cross-validated MSEs = " , MSEs)
-cat("\nOverall cross-validated MSE = " , mean(MSEs))
-cat("\nOverall cross-validated LogLosses = " , LogLoss)
-cat("\nOverall cross-validated LogLoss = " , mean(LogLoss))
-
+if (validate) {
+  print(paste0("\nOverall cross-validated MSEs = " , MSEs))
+  print(paste0("\nOverall cross-validated MSE = " , mean(MSEs)))
+  print(paste0("\nOverall cross-validated LogLosses = " , LogLoss))
+  print(paste0("\nOverall cross-validated LogLoss = " , mean(LogLoss)))
+}
 if (submit) {
-  # print(head(final_submission))
-  # f <- matrix(final_submission[,-1], nrow=(ncol(final_submission)-1)*nrow(final_submission), byrow = F)
-  # head(f)
-  
-  sink("./submission.csv")
-  print("id_label,pred")
-  
-  ## Reformat to Kaggle style
-  ## TODO: load first column from file, add reshaped matrix with cbind to data.frame
-  for (row in 1:nrow(final_submission)) {
-    for (resp in 1:length(targets)) {
-      if (resp == 14) {
-        print(paste0(final_submission[row,1],"_",targets[resp],",",0.0))
-      } else {
-        print(paste0(final_submission[row,1],"_",targets[resp],",",final_submission[row,1+resp]))
-      }
-    }
-  }
-  
-  sink()
+  print(summary(final_submission))
+  submission <- read.csv(path_submission)
+  fs <- as.matrix(final_submission)
+  dim(fs) <- c(prod(dim(fs)),1) #reshape predictions into 1D
+  summary(fs)
+  submission[,2] <- fs #replace 0s with actual predictions
+  write.csv(submission, file = "./submission.csv", quote = F, row.names = F)
 }
