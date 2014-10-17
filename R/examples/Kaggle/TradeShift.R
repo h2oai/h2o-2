@@ -36,11 +36,14 @@ targets <- labels[-1] ## all targets
 #targets <- labels[c(7,8,10,11,13,29,30,31,32,33)]  ## harder to predict targets for tuning of parameters
 
 ## Settings
+validate = T #whether to run CV on train/validation split (or n-fold), potentially with grid search
+submit = T #whether to make ensemble prediction for submission
+
+# These settings lead to a cross-validated log-loss of 0.008743972 with h2o.randomForest
 ensemble_size <- 5
-reproducible_mode = F # For DL only. Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower
 seed0 = 1337
-validate = T
-submit = T
+
+reproducible_mode = F # For DL only. Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower
 
 ## Scoring helpers
 MSEs <- matrix(0, nrow = 1, ncol = length(targets))
@@ -78,7 +81,7 @@ for (resp in 1:length(targets)) {
     
     for (n in 1:ensemble_size) {
       cat("\n\nBuilding ensemble validation model", n, "of", ensemble_size, "for", targets[resp], "...\n")
-      
+
       #   cvmodel <-
       #     h2o.deeplearning(x = predictors,
       #                      y = targets[resp],
@@ -99,7 +102,7 @@ for (resp in 1:length(targets)) {
       #                      seed = seed0 + resp*ensemble_size + n,
       #                      max_categorical_features = 10000
       #     )
-      
+
       cvmodel <-
         h2o.randomForest(x = predictors,
                          y = targets[resp],
@@ -171,7 +174,7 @@ for (resp in 1:length(targets)) {
       #         h2o.deeplearning(x = predictors,
       #                          y = targets[resp],
       #                          key = paste0(targets[resp], "_cv_ensemble_", n, "_of_", ensemble_size),
-      #                          data = trainWL, 
+      #                          data = trainWL,
       #                          classification = p$classification,
       #                          activation = p$activation,
       #                          hidden = p$hidden,
@@ -185,7 +188,7 @@ for (resp in 1:length(targets)) {
       #                          seed = seed0 + resp*ensemble_size + n,
       #                          max_categorical_features = p$max_categorical_features
       #         )
-      
+
       model <-
         h2o.randomForest(x = predictors,
                          y = targets[resp],
@@ -239,6 +242,7 @@ if (validate) {
   cat("\nOverall cross-validated MSE = " , mean(MSEs))
   cat("\nOverall cross-validated LogLosses = " , LogLoss)
   cat("\nOverall cross-validated LogLoss = " , mean(LogLoss))
+  cat("\n")
 }
 if (submit) {
   print(summary(final_submission))
