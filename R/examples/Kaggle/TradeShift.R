@@ -34,7 +34,7 @@ test_hex <- h2o.importFile(h2oServer, path = path_test)
 vars <- colnames(train_hex)
 ID <- vars[1]
 labels <- colnames(trainLabels_hex)
-predictors <- vars[c(-1,-4,-35,-62,-65,-92,-95)] #remove ID and variables with too many factor levels
+predictors <- vars[c(-1,-4,-5,-35,-36,-62,-65,-66,-92,-95,-96)] #remove ID and variables with too many factor levels
 targets <- labels[-1] ## all targets
 #targets <- labels[c(7,8,10,11,13,29,30,31,32,33)]  ## harder to predict targets for tuning of parameters
 
