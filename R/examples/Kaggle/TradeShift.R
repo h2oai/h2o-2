@@ -51,6 +51,15 @@ reproducible_mode = F # For DL only. Set to TRUE if you want reproducible result
 MSEs <- matrix(0, nrow = 1, ncol = length(targets))
 LogLoss <- matrix(0, nrow = 1, ncol = length(targets))
 
+## Split the training data into train/valid (95%/5%)
+## Want to keep train large enough to make a good submission if submitwithfulldata = F
+trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
+splits <- h2o.splitFrame(trainWL, ratios = c(0.95), shuffle=!reproducible_mode)
+train <- splits[[1]]
+valid <- splits[[2]]
+train <- h2o.assign(train, "train")
+valid <- h2o.assign(valid, "valid")
+
 ## Main loop over targets
 for (resp in 1:length(targets)) {
   # always just predict class 0 for y_14 (is constant)
@@ -59,21 +68,12 @@ for (resp in 1:length(targets)) {
     colnames(final_submission)[resp] <- targets[resp]
     next
   }
-  
-  # No need to do n-fold just yet - simple 95%/5% split is fine (enough data) and much faster
-  trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
-  
+
   if (validate) {
-    splits <- h2o.splitFrame(trainWL, ratios = c(0.95), shuffle=!reproducible_mode)
-    train <- splits[[1]]
-    valid <- splits[[2]]
-    
     cat("\n\nNow training and cross-validating an H2O model for", targets[resp], "...\n")
-    
     train_resp <- train[,targets[resp]]
     valid_resp <- valid[,targets[resp]]
-    
-    
+
     for (n in 1:ensemble_size) {
       cat("\n\nBuilding ensemble validation model", n, "of", ensemble_size, "for", targets[resp], "...\n")
 
@@ -162,7 +162,7 @@ for (resp in 1:length(targets)) {
     cat("\nMean validation LogLoss so far:", sum(LogLoss)/resp)
 
     if (!submitwithfulldata) {
-      cat("\nMaking submission from validation model on 95% of the data\n")
+      cat("\nMaking test set predictions from validation (ensemble) model on 95% of the data\n")
       ensemble_average <- as.data.frame(test_preds) #bring ensemble average to R
       colnames(ensemble_average)[1] <- targets[resp] #give it the right name
 
