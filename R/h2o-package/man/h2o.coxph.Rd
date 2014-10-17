@@ -36,7 +36,7 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
 \S3method{vcov}{H2OCoxPHModel}(object, ...)
 }
 \arguments{
-  \item{x}{A character vector containing the names the numeric predictors in
+  \item{x}{A character vector containing the column names of the predictors in
     the model.}
   \item{y}{A character vector comprised of two or three elements representing
     \code{"(stop, event)"} or \code{"(stop, event)"} respectively.}

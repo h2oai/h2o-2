@@ -107,30 +107,28 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new Inspect2());
 
     // FVec models
-    Request.addToNavbar(registerRequest(new PCA()),         "PCA",                      "Model");
-    Request.addToNavbar(registerRequest(new GBM()),         "GBM",                      "Model");
-    Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",            "Model");
-    Request.addToNavbar(registerRequest(new SpeeDRF()),     "Random Forest",            "Model");
-    Request.addToNavbar(registerRequest(new DRF()),         "BigData RF",               "Model");
-    Request.addToNavbar(registerRequest(new GLM2()),        "GLM",                      "Model");
-    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans",                   "Model");
-    Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
-    Request.addToNavbar(registerRequest(new Anomaly()),     "Anomaly Detection (Beta)", "Model");
-    Request.addToNavbar(registerRequest(new DeepFeatures()),"Deep Feature Extractor (Beta)", "Model");
-
+    Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",                   "Model");
+    Request.addToNavbar(registerRequest(new GLM2()),        "Generalized Linear Model",        "Model");
+    Request.addToNavbar(registerRequest(new GBM()),         "Gradient Boosting Machine",       "Model");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "K-Means Clustering",              "Model");
+    Request.addToNavbar(registerRequest(new PCA()),         "Principal Component Analysis",    "Model");
+    Request.addToNavbar(registerRequest(new SpeeDRF()),     "Random Forest",                   "Model");
+    Request.addToNavbar(registerRequest(new DRF()),         "Random Forest - Big Data",        "Model");
+    Request.addToNavbar(registerRequest(new Anomaly()),     "Anomaly Detection (Beta)",        "Model");
+    Request.addToNavbar(registerRequest(new CoxPH()),       "Cox Proportional Hazards (Beta)", "Model");
+    Request.addToNavbar(registerRequest(new DeepFeatures()),"Deep Feature Extractor (Beta)",   "Model");
+    Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes Classifier (Beta)",   "Model");
 
     // FVec scoring
     Request.addToNavbar(registerRequest(new Predict()),     "Predict",                  "Score");
-    // survival curve generation
-    registerRequest(new CoxPHSurvfit());
     // only for glm to allow for overriding of lambda_submodel
     registerRequest(new GLMPredict());
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",     "Score");
-    Request.addToNavbar(registerRequest(new AUC()),         "AUC",                      "Score");
-    Request.addToNavbar(registerRequest(new HitRatio()),    "HitRatio",                 "Score");
-    Request.addToNavbar(registerRequest(new PCAScore()),    "PCAScore",                 "Score");
+    Request.addToNavbar(registerRequest(new AUC()),             "AUC",                  "Score");
+    Request.addToNavbar(registerRequest(new HitRatio()),        "HitRatio",             "Score");
+    Request.addToNavbar(registerRequest(new PCAScore()),        "PCAScore",             "Score");
     Request.addToNavbar(registerRequest(new GainsLiftTable()),"Gains/Lift Table (Beta)","Score");
-    Request.addToNavbar(registerRequest(new Steam()),    "Multi-model Scoring (Beta)", "Score");
+    Request.addToNavbar(registerRequest(new Steam()),      "Multi-model Scoring (Beta)","Score");
 
     // Admin
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",                     "Admin");
@@ -153,13 +151,12 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialDeepLearning()),"Deep Learning Tutorial", "Help", USE_NEW_TAB);
     Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest Tutorial", "Help", USE_NEW_TAB);
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help", USE_NEW_TAB);
-    Request.addToNavbar(registerRequest(new TutorialKMeans()), "KMeans Tutorial", "Help", USE_NEW_TAB);
-    Request.addToNavbar(registerRequest(new AboutH2O()), "About H2O", "Help");
+    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new AboutH2O()),            "About H2O",              "Help");
 
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new hex.LR2());
-      registerRequest(new CoxPH());
       registerRequest(new ReBalance());
       registerRequest(new NFoldFrameExtractPage());
       registerRequest(new Console());
@@ -175,7 +172,6 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new UnlockKeys());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
-      Request.addToNavbar(registerRequest(new CoxPH()),                "Cox Proportional Hazards", "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
       Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold Frame Extract", "Beta");
       Request.addToNavbar(registerRequest(new Console()),              "Console",              "Beta");

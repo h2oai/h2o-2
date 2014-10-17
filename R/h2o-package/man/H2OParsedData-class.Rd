@@ -104,6 +104,7 @@
 \alias{tail,H2OParsedData-method}
 \alias{trunc,H2OParsedData-method}
 \alias{var,H2OParsedData-method}
+\alias{which,H2OParsedData-method}
 
 \title{Class \code{"H2OParsedData"}}
 \description{

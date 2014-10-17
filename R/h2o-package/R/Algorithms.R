@@ -68,18 +68,21 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
   res      <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPHModelView,
                                 '_modelKey' = dest_key)
   df <- length(res[[3]]$coef)
+  nnum <- length(res[[3L]]$x_mean)
+  coef_names <- res[[3L]]$coef_names
   mcall <- match.call()
   model <-
-    list(coefficients = structure(res[[3L]]$coef, names = x),
+    list(coefficients = structure(res[[3L]]$coef, names = coef_names),
          var          = do.call(rbind, as.list(res[[3L]]$var_coef)),
          loglik       = c(res[[3L]]$null_loglik, res[[3L]]$loglik),
          score        = res[[3L]]$score_test,
          iter         = res[[3L]]$iter,
-         means        = structure(res[[3L]]$x_mean, names = x),
+         means        = structure(res[[3L]]$x_mean, names = tail(coef_names, nnum)),
          method       = ties,
          n            = res[[3L]]$n,
          nevent       = res[[3L]]$total_event,
-         wald.test    = structure(res[[3L]]$wald_test, names = if (df == 1L) x else NULL),
+         wald.test    = structure(res[[3L]]$wald_test,
+                                  names = if (df == 1L) coef_names else NULL),
          call         = mcall)
   summary <-
     list(call         = mcall,
@@ -90,7 +93,7 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
                                         res[[3L]]$se_coef, res[[3L]]$z_coef,
                                         1 - pchisq(res[[3L]]$z_coef^2, 1)),
                                   dimnames =
-                                  list(x,
+                                  list(coef_names,
                                        c("coef", "exp(coef)", "se(coef)",
                                          "z", "Pr(>|z|)"))),
          conf.int     = NULL,
