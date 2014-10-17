@@ -10,11 +10,11 @@ sink("TradeShift.log")
 library(h2o)
 library(stringr)
 
-## Connect to H2O server (On server(s), run 'java -jar h2o.jar -Xmx4G -port 43322 -name AfricaSoil' first)
+## Connect to H2O server (On server(s), run 'java -jar h2o.jar -Xmx8G -port 53322 -name TradeShift' first)
 h2oServer <- h2o.init(ip="mr-0xd1", port = 53322)
 
 ## Launch H2O directly on localhost
-#h2oServer <- h2o.init(nthreads = -1, max_mem_size = '128g') # allow the use of all cores - requires reproducible = F below though.
+#h2oServer <- h2o.init(nthreads = -1, max_mem_size = '8g') # allow the use of all cores - requires reproducible = F below though.
 
 ## Import data
 path_train <- "/home/arno/kaggle_tradeshift/data/train.csv"
@@ -32,10 +32,11 @@ ID <- vars[1]
 labels <- colnames(trainLabels_hex)
 predictors <- vars[c(-1,-4,-35,-62,-65,-92,-95)] #remove ID and variables with too many enums
 predictors
-targets <- labels[-1]
+targets <- labels[-1] ## all targets
+#targets <- labels[c(7,8,10,11,13,29,30,31,32,33)]  ## harder to predict targets for tuning of parameters
 
 ## Settings
-ensemble_size <- 1
+ensemble_size <- 5
 reproducible_mode = F # For DL only. Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower
 seed0 = 1337
 validate = T
@@ -47,14 +48,12 @@ LogLoss <- matrix(0, nrow = 1, ncol = length(targets))
 
 errs = 0
 cv_preds <- matrix(0, nrow = nrow(train_hex), ncol = 1)
-holdout_valid_se <- matrix(0, nrow = 1, ncol = length(targets))
-holdout_valid_mse <- matrix(0, nrow = 1, ncol = length(targets))
-holdout_valid_logloss <- matrix(0, nrow = 1, ncol = length(targets))
 
 
 
-## Main loop over regression targets
+## Main loop over targets
 for (resp in 1:length(targets)) {
+  # always just predict class 0 for y_14 (is constant)
   if (resp == 14) {
     if (submit) {
       final_submission <- cbind(final_submission, as.data.frame(matrix(0, nrow = nrow(test_hex), ncol = 1)))
@@ -63,7 +62,7 @@ for (resp in 1:length(targets)) {
     next
   }
   
-  # No need to do n-fold just yet - simple split is enough (enough data) -> faster
+  # No need to do n-fold just yet - simple 95%/5% split is fine (enough data) and much faster
   trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
   
   if (validate) {
@@ -75,87 +74,95 @@ for (resp in 1:length(targets)) {
     
     train_resp <- train[,targets[resp]]
     valid_resp <- valid[,targets[resp]]
-
-    #   # DL model with early stopping based on validation error
-    #   cvmodel <-
-    #     h2o.deeplearning(x = predictors,
-    #                      y = targets[resp],
-    #                      data = train,
-    #                      validation = valid,
-    #                      classification = T,
-    #                      activation="Tanh",
-    #                      hidden = c(10,50,50),
-    #                      epochs = 1,
-    #                      l1 = c(0),
-    #                      l2 = c(0), 
-    #                      rho = 0.99, 
-    #                      epsilon = 1e-8,
-    #                      score_duty_cycle = 0.1,
-    #                      score_interval = 1,
-    #                      train_samples_per_iteration = 10000,
-    #                      reproducible = reproducible_mode,
-    #                      seed = seed0 + resp,
-    #                      max_categorical_features = 10000
-    #     )
     
-    cvmodel <-
-      h2o.randomForest(x = predictors,
-                       y = targets[resp],
-                       data = train,
-                       classification = T,
-                       type = "fast",
-                       ntree = 50,
-                       depth = c(30),
-                       nbins = 100,
-                       seed = seed0 + resp,
-                       validation = valid
-      )
     
-    #model <- cvmodel@model[[1]] #If cv model is a grid search model
-    model <- cvmodel #If cvmodel is not a grid search model
-    
-    ## Use the model and store results
-    
-    # use labels (at best F1) - turn into 0/1 numerical values
-    #valid_preds <- h2o.predict(model, valid)[,1] == "1" ## too many total misses -> large error
-    
-    # use probabilities - clamp validation predictions for LogLoss computation
-    valid_preds <- h2o.predict(model, valid)[,3]
+    for (n in 1:ensemble_size) {
+      cat("\n\nBuilding ensemble validation model", n, "of", ensemble_size, "for", targets[resp], "...\n")
+      
+      #   cvmodel <-
+      #     h2o.deeplearning(x = predictors,
+      #                      y = targets[resp],
+      #                      data = train,
+      #                      validation = valid,
+      #                      classification = T,
+      #                      activation="Tanh",
+      #                      hidden = c(10,50,50),
+      #                      epochs = 1,
+      #                      l1 = c(0),
+      #                      l2 = c(0),
+      #                      rho = 0.99,
+      #                      epsilon = 1e-8,
+      #                      score_duty_cycle = 0.1,
+      #                      score_interval = 1,
+      #                      train_samples_per_iteration = 10000,
+      #                      reproducible = reproducible_mode,
+      #                      seed = seed0 + resp*ensemble_size + n,
+      #                      max_categorical_features = 10000
+      #     )
+      
+      cvmodel <-
+        h2o.randomForest(x = predictors,
+                         y = targets[resp],
+                         data = train,
+                         classification = T,
+                         type = "fast",
+                         ntree = 20,
+                         depth = c(40),
+                         seed = seed0 + resp*ensemble_size + n,
+                         validation = valid
+        )
+      
+      #model <- cvmodel@model[[1]] #If cv model is a grid search model
+      model <- cvmodel #If cvmodel is not a grid search model
+      
+      # use probabilities - clamp validation predictions for LogLoss computation
+      valid_preds <- h2o.predict(model, valid)[,3]
+      
+      # compute LogLoss for this ensemble member, on validation data, as a guidance to see the variance etc.
+      vpc <- valid_preds
+      vpc <- h2o.exec(h2oServer,expr=ifelse(vpc > 1e-15, vpc, 1e-15))
+      vpc <- h2o.exec(h2oServer,expr=ifelse(vpc < 1-1e-15, vpc, 1-1e-15))
+      myLL <- h2o.exec(h2oServer,expr=mean(-valid_resp*(log(vpc)-(1-valid_resp)*log(1-vpc))))
+      cat("\nLogLoss of this ensemble member:", myLL)
+      
+      if (n == 1) {
+        valid_preds_blend <- valid_preds
+      } else {
+        valid_preds_blend <- valid_preds_blend+valid_preds
+      }
+    }
+    valid_preds <- valid_preds_blend/ensemble_size ##ensemble average of probabilities
     
     # clamp predictions for LogLoss computation
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds > 1e-15, valid_preds, 1e-15))
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15))
     
     test_preds <- h2o.predict(model, test_hex)[,3]
-
+    
     ## Compute MSE
     #msetrain <- h2o.exec(h2oServer,expr=mean((train_preds - train_resp)^2))
     sevalid <- h2o.exec(h2oServer,expr=(valid_preds - valid_resp)^2)
     msevalid <- h2o.exec(h2oServer,expr=mean(sevalid))
-    holdout_valid_se[resp] <- holdout_valid_se[resp] + h2o.exec(h2oServer,expr=sum(sevalid))
+    MSE <- msevalid
+    MSEs[resp] <- MSE
+    cat("\n\nCross-validated MSEs so far:", MSEs)
+    cat("\nMean cross-validated MSE so far:", sum(MSEs)/resp)
     
     ## Compute LogLoss
     LL <- h2o.exec(h2oServer,expr=mean(-valid_resp*(log(valid_preds)-(1-valid_resp)*log(1-valid_preds))))
-    holdout_valid_logloss[resp] <- holdout_valid_logloss[resp] + LL
-    
-    
-    MSE <- msevalid
-    MSEs[resp] <- MSE
     LogLoss[resp] <- LL
-    cat("\nMean cross-validated MSE so far:", sum(MSEs)/resp)
-    cat("\nMean cross-validated LogLoss so far:", sum(LogLoss)/resp)
-    cat("\nCross-validated MSEs so far:", MSEs)
     cat("\nCross-validated LogLosses so far:", LogLoss)
+    cat("\nMean cross-validated LogLoss so far:", sum(LogLoss)/resp)
   }
   
   if (submit) {
     if (validate) {
-      cat("\n\nTaking parameters from grid search winner for", targets[resp], "...\n")
+      cat("\n\nTaking parameters from validation run (or grid search winner) for", targets[resp], "...\n")
       #p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
       p <- cvmodel@model$params   #If cvmodel is not a grid search model
     }
     else {
-      p = list(classification=T, ntree=50, depth=10, type="BigData")
+      p = list(ntree=50, depth=40) #For randomForest
     }
     ## Build an ensemble model on full training data - should perform better than the CV model above
     for (n in 1:ensemble_size) {
@@ -175,7 +182,7 @@ for (resp in 1:length(targets)) {
       #                          epsilon = p$epsilon,
       #                          train_samples_per_iteration = p$train_samples_per_iteration,
       #                          reproducible = p$reproducible,
-      #                          seed = p$seed + n,
+      #                          seed = seed0 + resp*ensemble_size + n,
       #                          max_categorical_features = p$max_categorical_features
       #         )
       
@@ -187,12 +194,11 @@ for (resp in 1:length(targets)) {
                          type = "fast",
                          ntree = p$ntree,
                          depth = p$depth,
-                         nbins = p$nbins,
                          seed = seed0 + resp*ensemble_size + n,
                          key = paste0(targets[resp], "_cv_ensemble_", n, "_of_", ensemble_size)
         )
       
-      ## Aggregate ensemble model predictions
+      ## Aggregate ensemble model predictions (probabilities)
       test_preds <- h2o.predict(model, test_hex)[,3]
       
       if (n == 1) {
@@ -216,7 +222,6 @@ for (resp in 1:length(targets)) {
       final_submission <- cbind(final_submission, ensemble_average)
     }
     print(head(final_submission))
-    
   }
   
   ## Remove no longer needed old models and temporaries from K-V store to keep memory footprint low
