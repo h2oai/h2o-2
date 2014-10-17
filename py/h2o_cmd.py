@@ -487,7 +487,6 @@ def createIgnoredCols(key, cols, response):
     inspect = runInspect(key=key)
     numCols = inspect['numCols']
     ignore = filter(lambda x:(x not in cols and x!=response), range(numCols))
-
     ignored_cols = ','.join(map(str,ignore))
     return ignored_cols
 
