@@ -42,8 +42,7 @@ targets <- labels[-1] ## all targets
 validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search - not needed for submission
 submit = T #whether to make ensemble prediction for submission
 
-# These settings lead to a cross-validated log-loss of 0.008743972 with h2o.randomForest(ntree=20,depth=40,type="fast")
-ensemble_size <- 5
+ensemble_size <- 1
 seed0 = 1337
 
 reproducible_mode = F # For DL only. Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower
@@ -67,9 +66,9 @@ for (resp in 1:length(targets)) {
   trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
   
   if (validate) {
-    splits <- h2o.splitFrame(trainWL, ratios = c(0.95), shuffle=F)
-    train <- splits[[1]]
-    valid <- splits[[2]]
+    splits <- h2o.splitFrame(trainWL, ratios = c(0.05), shuffle=F)
+    train <- splits[[2]]
+    valid <- splits[[1]]
     
     cat("\n\nNow training and cross-validating an H2O model for", targets[resp], "...\n")
     
@@ -107,10 +106,9 @@ for (resp in 1:length(targets)) {
                          data = train,
                          classification = T,
                          type = "fast",
-                         ntree = 20,
-                         depth = c(40),
-                         seed = seed0 + resp*ensemble_size + n,
-                         validation = valid
+                         ntree = 100,
+                         depth = 40,
+                         seed = seed0 + resp*ensemble_size + n
         )
       
       #model <- cvmodel@model[[1]] #If cv model is a grid search model
@@ -124,36 +122,34 @@ for (resp in 1:length(targets)) {
       vpc <- h2o.exec(h2oServer,expr=ifelse(vpc > 1e-15, vpc, 1e-15))
       vpc <- h2o.exec(h2oServer,expr=ifelse(vpc < 1-1e-15, vpc, 1-1e-15))
       myLL <- h2o.exec(h2oServer,expr=mean(-valid_resp*(log(vpc)-(1-valid_resp)*log(1-vpc))))
-      cat("\nLogLoss of this ensemble member:", myLL)
+      cat("\nLogLoss of this ensemble member on validation data:", myLL)
       
       if (n == 1) {
-        valid_preds_blend <- valid_preds
+        valid_preds_ensemble <- valid_preds
       } else {
-        valid_preds_blend <- valid_preds_blend+valid_preds
+        valid_preds_ensemble <- valid_preds_ensemble + valid_preds
       }
     }
-    valid_preds <- valid_preds_blend/ensemble_size ##ensemble average of probabilities
+    valid_preds <- valid_preds_ensemble/ensemble_size ##ensemble average of probabilities
     
     # clamp predictions for LogLoss computation
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds > 1e-15, valid_preds, 1e-15))
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15))
-    
-    test_preds <- h2o.predict(model, test_hex)[,3]
-    
+
     ## Compute MSE
     #msetrain <- h2o.exec(h2oServer,expr=mean((train_preds - train_resp)^2))
     sevalid <- h2o.exec(h2oServer,expr=(valid_preds - valid_resp)^2)
     msevalid <- h2o.exec(h2oServer,expr=mean(sevalid))
     MSE <- msevalid
     MSEs[resp] <- MSE
-    cat("\n\nCross-validated MSEs so far:", MSEs)
-    cat("\nMean cross-validated MSE so far:", sum(MSEs)/resp)
+    cat("\n\nValidation MSEs so far:", MSEs)
+    cat("\nMean validation MSE so far:", sum(MSEs)/resp)
     
     ## Compute LogLoss
     LL <- h2o.exec(h2oServer,expr=mean(-valid_resp*(log(valid_preds)-(1-valid_resp)*log(1-valid_preds))))
     LogLoss[resp] <- LL
-    cat("\nCross-validated LogLosses so far:", LogLoss)
-    cat("\nMean cross-validated LogLoss so far:", sum(LogLoss)/resp)
+    cat("\nValidation LogLosses so far:", LogLoss)
+    cat("\nMean validation LogLoss so far:", sum(LogLoss)/resp)
   }
   
   if (submit) {
@@ -163,7 +159,7 @@ for (resp in 1:length(targets)) {
       p <- cvmodel@model$params   #If cvmodel is not a grid search model
     }
     else {
-      p = list(ntree=50, depth=40) #For randomForest
+      p = list(ntree=100, depth=40) #For randomForest
     }
     ## Build an ensemble model on full training data - should perform better than the CV model above
     for (n in 1:ensemble_size) {
@@ -203,20 +199,15 @@ for (resp in 1:length(targets)) {
       test_preds <- h2o.predict(model, test_hex)[,3]
       
       if (n == 1) {
-        test_preds_blend <- test_preds
+        test_preds_ensemble <- test_preds
       } else {
-        test_preds_blend <- cbind(test_preds_blend, test_preds[,1])
+        test_preds_ensemble <- test_preds_ensemble + test_preds
       }
     }
-    
-    ## Now create submission
-    cat("\n Number of ensemble models: ", ncol(test_preds_blend))
-    ensemble_average <- matrix("ensemble_average", nrow = nrow(test_preds_blend), ncol = 1)
-    ensemble_average <- rowMeans(as.data.frame(test_preds_blend)) # Simple ensemble average, consider blending/stacking
-    ensemble_average <- as.data.frame(ensemble_average)
-    
-    
-    colnames(ensemble_average)[1] <- targets[resp]
+    test_preds <- test_preds_ensemble/ensemble_size #simple ensemble average
+    ensemble_average <- as.data.frame(test_preds) #bring ensemble average to R
+    colnames(ensemble_average)[1] <- targets[resp] #give it the right name
+
     if (resp == 1) {
       final_submission <- ensemble_average
     } else {
@@ -236,18 +227,18 @@ for (resp in 1:length(targets)) {
   }
 }
 if (validate) {
-  cat("\nOverall cross-validated MSEs = " , MSEs)
-  cat("\nOverall cross-validated MSE = " , mean(MSEs))
-  cat("\nOverall cross-validated LogLosses = " , LogLoss)
-  cat("\nOverall cross-validated LogLoss = " , mean(LogLoss))
+  cat("\nOverall validation MSEs = " , MSEs)
+  cat("\nOverall validation MSE = " , mean(MSEs))
+  cat("\nOverall validation LogLosses = " , LogLoss)
+  cat("\nOverall validation LogLoss = " , mean(LogLoss))
   cat("\n")
 }
 if (submit) {
   print(summary(final_submission))
   submission <- read.csv(path_submission)
-  fs <- as.matrix(final_submission)
-  dim(fs) <- c(prod(dim(fs)),1) #reshape predictions into 1D
-  summary(fs)
+  #reshape predictions into 1D
+  fs <- t(as.matrix(final_submission))
+  dim(fs) <- c(prod(dim(fs)),1)
   submission[,2] <- fs #replace 0s with actual predictions
   write.csv(submission, file = "./submission.csv", quote = F, row.names = F)
 }
