@@ -38,9 +38,9 @@ predictors <- vars[c(-1,-4,-35,-62,-65,-92,-95)] #remove ID and variables with t
 targets <- labels[-1] ## all targets
 #targets <- labels[c(7,8,10,11,13,29,30,31,32,33)]  ## harder to predict targets for tuning of parameters
 
-## Settings
-validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search - not needed for submission
-submit = T #whether to make ensemble prediction for submission
+## Settings (at least one of these has to be TRUE)
+validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
+submitwithfulldata = F #whether to use full dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
 
 ensemble_size <- 1
 seed0 = 1337
@@ -55,10 +55,8 @@ LogLoss <- matrix(0, nrow = 1, ncol = length(targets))
 for (resp in 1:length(targets)) {
   # always just predict class 0 for y_14 (is constant)
   if (resp == 14) {
-    if (submit) {
-      final_submission <- cbind(final_submission, as.data.frame(matrix(0, nrow = nrow(test_hex), ncol = 1)))
-      colnames(final_submission)[resp] <- targets[resp]
-    }
+    final_submission <- cbind(final_submission, as.data.frame(matrix(0, nrow = nrow(test_hex), ncol = 1)))
+    colnames(final_submission)[resp] <- targets[resp]
     next
   }
   
@@ -66,9 +64,9 @@ for (resp in 1:length(targets)) {
   trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
   
   if (validate) {
-    splits <- h2o.splitFrame(trainWL, ratios = c(0.05), shuffle=F)
-    train <- splits[[2]]
-    valid <- splits[[1]]
+    splits <- h2o.splitFrame(trainWL, ratios = c(0.95), shuffle=!reproducible_mode)
+    train <- splits[[1]]
+    valid <- splits[[2]]
     
     cat("\n\nNow training and cross-validating an H2O model for", targets[resp], "...\n")
     
@@ -116,7 +114,10 @@ for (resp in 1:length(targets)) {
       
       # use probabilities - clamp validation predictions for LogLoss computation
       valid_preds <- h2o.predict(model, valid)[,3]
-      
+      if (!submitwithfulldata) {
+        test_preds  <- h2o.predict(model, test_hex)[,3]
+      }
+
       # compute LogLoss for this ensemble member, on validation data, as a guidance to see the variance etc.
       vpc <- valid_preds
       vpc <- h2o.exec(h2oServer,expr=ifelse(vpc > 1e-15, vpc, 1e-15))
@@ -126,12 +127,21 @@ for (resp in 1:length(targets)) {
       
       if (n == 1) {
         valid_preds_ensemble <- valid_preds
+        if (!submitwithfulldata) {
+          test_preds_ensemble <- test_preds
+        }
       } else {
         valid_preds_ensemble <- valid_preds_ensemble + valid_preds
+        if (!submitwithfulldata) {
+          test_preds_ensemble <- test_preds_ensemble + test_preds
+        }
       }
     }
     valid_preds <- valid_preds_ensemble/ensemble_size ##ensemble average of probabilities
-    
+    if (!submitwithfulldata) {
+      test_preds  <- test_preds_ensemble/ensemble_size
+    }
+
     # clamp predictions for LogLoss computation
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds > 1e-15, valid_preds, 1e-15))
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15))
@@ -150,9 +160,22 @@ for (resp in 1:length(targets)) {
     LogLoss[resp] <- LL
     cat("\nValidation LogLosses so far:", LogLoss)
     cat("\nMean validation LogLoss so far:", sum(LogLoss)/resp)
+
+    if (!submitwithfulldata) {
+      cat("\nMaking submission from validation model on 95% of the data\n")
+      ensemble_average <- as.data.frame(test_preds) #bring ensemble average to R
+      colnames(ensemble_average)[1] <- targets[resp] #give it the right name
+
+      if (resp == 1) {
+        final_submission <- ensemble_average
+      } else {
+        final_submission <- cbind(final_submission, ensemble_average)
+      }
+      print(head(final_submission))
+    }
   }
   
-  if (submit) {
+  if (submitwithfulldata) {
     if (validate) {
       cat("\n\nTaking parameters from validation run (or grid search winner) for", targets[resp], "...\n")
       #p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
@@ -233,13 +256,11 @@ if (validate) {
   cat("\nOverall validation LogLoss = " , mean(LogLoss))
   cat("\n")
 }
-if (submit) {
-  print(summary(final_submission))
-  submission <- read.csv(path_submission)
-  #reshape predictions into 1D
-  fs <- t(as.matrix(final_submission))
-  dim(fs) <- c(prod(dim(fs)),1)
-  submission[,2] <- fs #replace 0s with actual predictions
-  write.csv(submission, file = "./submission.csv", quote = F, row.names = F)
-}
+print(summary(final_submission))
+submission <- read.csv(path_submission)
+#reshape predictions into 1D
+fs <- t(as.matrix(final_submission))
+dim(fs) <- c(prod(dim(fs)),1)
+submission[,2] <- fs #replace 0s with actual predictions
+write.csv(submission, file = "./submission.csv", quote = F, row.names = F)
 sink()
