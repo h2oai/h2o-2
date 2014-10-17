@@ -181,6 +181,9 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTGSub());
     putPrefix(new ASTStrSub());
     putPrefix(new ASTRevalue());
+    putPrefix(new ASTWhich());
+    putPrefix(new ASTTrim());
+    putPrefix(new ASTSample());
   }
   static private boolean isReserved(String fn) {
     return UNI_INFIX_OPS.containsKey(fn) || BIN_INFIX_OPS.containsKey(fn) || PREFIX_OPS.containsKey(fn);
@@ -394,6 +397,35 @@ class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na";
     return false;
   }
 }
+
+class ASTWhich extends ASTOp {
+
+  ASTWhich() { super(new String[]{"which", "x"},
+                     new Type[]{Type.dblary(), Type.dblary()},
+                     OPF_PREFIX, OPP_PREFIX, OPA_RIGHT);}
+
+  @Override String opStr() { return "which"; }
+  @Override ASTOp  make()  { return new ASTWhich(); }
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if(env.isAry()) {
+      Frame fr = env.popAry();
+      if (fr.numCols() != 1) throw new IllegalArgumentException("`which` accepts at exactly 1 column!");
+      String skey = env.key();
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chk, NewChunk nchk) {
+          for (int r = 0; r < chk._len; ++r)
+            if (chk.at0(r) == 1) nchk.addNum(chk._start + r + 1);
+        }
+      }.doAll(1,fr).outputFrame(new String[]{"which"},null);
+      env.subRef(fr,skey);
+      env.pop();                  // Pop self
+      env.push(fr2);
+    }
+  }
+}
+
+
 
 class ASTRound extends ASTOp {
   @Override String opStr() { return "round"; }
@@ -953,6 +985,99 @@ class ASTGSub extends ASTOp {
 
     Frame fr2 = new Frame(fr.names(), fr.vecs());
     fr2.anyVec()._domain = doms;
+    env.subRef(fr, skey);
+    env.poppush(1, fr2, null);
+  }
+}
+
+class ASTTrim extends ASTOp {
+  ASTTrim() { super(new String[]{"trim","x"},
+          new Type[]{Type.dblary(), Type.dblary()},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "trim"; }
+  @Override ASTOp make() { return new ASTTrim(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    String skey = env.key();
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("trim works on a single column at a time.");
+    String[] doms = fr.anyVec().domain().clone();
+    for (int i = 0; i < doms.length; ++i) doms[i] = doms[i].trim();
+    Frame fr2 = new Frame(fr.names(), fr.vecs());
+    fr2.anyVec()._domain = doms;
+    env.subRef(fr, skey);
+    env.poppush(1, fr2, null);
+  }
+}
+
+//FIXME: Create new chunks that overlay the frame to avoid ragged chunk issue
+class ASTSample extends ASTOp {
+  ASTSample() { super(new String[]{"sample", "ary", "nobs", "seed"},
+                      new Type[]{Type.ARY, Type.ARY, Type.DBL, Type.DBL},
+                      OPF_PREFIX, OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "sample"; }
+  @Override ASTOp make() { return new ASTSample(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final double seed = env.popDbl();
+    final double nobs = env.popDbl();
+    String skey = env.key();
+    Frame fr = env.popAry();
+    long[] espc = fr.anyVec()._espc;
+    long[] chk_sizes = new long[espc.length];
+    final long[] css = new long[espc.length];
+    for (int i = 0; i < espc.length-1; ++i)
+      chk_sizes[i] = espc[i+1] - espc[i];
+    chk_sizes[chk_sizes.length-1] = fr.numRows() - espc[espc.length-1];
+    long per_chunk_sample = (long) Math.floor(nobs / (double)espc.length);
+    long defecit = (long) (nobs - per_chunk_sample*espc.length) ;
+    // idxs is an array list of chunk indexes for adding to the sample size. Chunks with no defecit can not be "sampled" as candidates.
+    ArrayList<Integer> idxs = new ArrayList<Integer>();
+    for (int i = 0; i < css.length; ++i) {
+      // get the max allowed rows to sample from the chunk
+      css[i] = Math.min(per_chunk_sample, chk_sizes[i]);
+      // if per_chunk_sample > css[i] => spread around the defecit to meet number of rows requirement.
+      long def = per_chunk_sample - css[i];
+      // no more "room" in chunk `i`
+      if (def >= 0) {
+        defecit += def;
+      // else `i` has "room"
+      }
+      if (chk_sizes[i] > per_chunk_sample) idxs.add(i);
+    }
+    if (defecit > 0) {
+      Random rng = new Random(seed != -1 ? (long)seed : System.currentTimeMillis());
+      while (defecit > 0) {
+        if (idxs.size() <= 0) break;
+        // select chunks at random and add to the number of rows they should sample,
+        // up to the number of rows in the chunk.
+        int rand = rng.nextInt(idxs.size());
+        if (css[idxs.get(rand)] == chk_sizes[idxs.get(rand)]) {
+          idxs.remove(rand);
+          continue;
+        }
+        css[idxs.get(rand)]++;
+        defecit--;
+      }
+    }
+
+    Frame fr2 = new MRTask2() {
+      @Override public void map(Chunk[] chks, NewChunk[] nchks) {
+        int N = chks[0]._len;
+        int m = 0;
+        long n = css[chks[0].cidx()];
+        int row = 0;
+        Random rng = new Random(seed != -1 ? (long)seed : System.currentTimeMillis());
+        while( m  < n) {
+          double u = rng.nextDouble();
+          if ( (N - row)* u >= (n - m)) {
+            row++;
+          } else {
+            for (int i = 0; i < chks.length; ++i) nchks[i].addNum(chks[i].at0(row));
+            row++; m++;
+          }
+        }
+      }
+    }.doAll(fr.numCols(), fr).outputFrame(fr.names(), fr.domains());
     env.subRef(fr, skey);
     env.poppush(1, fr2, null);
   }
