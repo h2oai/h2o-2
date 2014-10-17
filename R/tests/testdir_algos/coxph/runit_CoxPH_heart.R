@@ -13,11 +13,11 @@ test.CoxPH.heart <- function(conn) {
   heart.coxph <- coxph(Surv(start, stop, event) ~ age, data = heart)
   checkCoxPHModel(heart.coxph.h2o, heart.coxph)
 
-  Log.info("H2O Cox PH Model of heart Data Set using Efron's Approximation; 3 predictors\n")
+  Log.info("H2O Cox PH Model of heart Data Set using Efron's Approximation; 4 predictors\n")
   heart.coxph.h2o <-
-    h2o.coxph(x = c("age", "year", "surgery"), y = c("start", "stop", "event"), data = heart.h2o,
+    h2o.coxph(x = c("transplant", "age", "year", "surgery"), y = c("start", "stop", "event"), data = heart.h2o,
               key = "heartmod.h2o")
-  heart.coxph <- coxph(Surv(start, stop, event) ~ age + year + surgery, data = heart)
+  heart.coxph <- coxph(Surv(start, stop, event) ~ transplant + age + year + surgery, data = heart)
   checkCoxPHModel(heart.coxph.h2o, heart.coxph)
 
   Log.info("H2O Cox PH Model of heart Data Set using Efron's Approximation; init = 0.05\n")
@@ -45,10 +45,10 @@ test.CoxPH.heart <- function(conn) {
 
   Log.info("H2O Cox PH Model of heart Data Set using Breslow's Approximation; 3 predictors\n")
   heart.coxph.h2o <-
-    h2o.coxph(x = c("age", "year", "surgery"), y = c("start", "stop", "event"), data = heart.h2o,
+    h2o.coxph(x = c("transplant", "age", "year", "surgery"), y = c("start", "stop", "event"), data = heart.h2o,
               key = "heartmod.h2o", ties = "breslow")
   heart.coxph <-
-    coxph(Surv(start, stop, event) ~ age + year + surgery, data = heart, ties = "breslow")
+    coxph(Surv(start, stop, event) ~ transplant + age + year + surgery, data = heart, ties = "breslow")
   checkCoxPHModel(heart.coxph.h2o, heart.coxph)
 
   Log.info("H2O Cox PH Model of heart Data Set using Breslow's Approximation; init = 0.05\n")

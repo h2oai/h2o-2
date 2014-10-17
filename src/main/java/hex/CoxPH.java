@@ -1,6 +1,7 @@
 package hex;
 
 import Jama.Matrix;
+import java.util.Arrays;
 import hex.FrameTask.DataInfo;
 import water.DKV;
 import water.Futures;
@@ -77,8 +78,10 @@ public class CoxPH extends Job {
     final private CoxPH parameters;
     @API(help="Input data info")
     DataInfo data_info;
+    @API(help = "category counts")
+    long[] n_cats;
     @API(help = "names of coefficients")
-    String[] names_coef;
+    String[] coef_names;
     @API(help = "coefficients")
     double[] coef;
     @API(help = "exp(coefficients)")
@@ -170,20 +173,37 @@ public class CoxPH extends Job {
 
     @Override
     protected float[] score0(double[] data, float[] preds) {
-      final int n_coef = coef.length;
-      final int n_time = time.length;
-      boolean hasNA = false;
-      for (int j = 0; j < n_coef; ++j)
-        hasNA |= Double.isNaN(data[j]);
-      if (hasNA) {
+      final int n_time   = time.length;
+      final int n_coef   = coef.length;
+      final int n_cats   = data_info._cats;
+      final int n_num    = data_info._nums;
+      final int n_data   = n_cats + n_num;
+      final int numStart = data_info.numStart();
+      boolean catsAllNA  = true;
+      boolean catsHasNA  = false;
+      boolean numsHasNA  = false;
+      for (int j = 0; j < n_cats; ++j) {
+        catsAllNA &= Double.isNaN(data[j]);
+        catsHasNA |= Double.isNaN(data[j]);
+      }
+      for (int j = n_cats; j < n_data; ++j)
+        numsHasNA |= Double.isNaN(data[j]);
+      if (numsHasNA || (catsHasNA && !catsAllNA) || (n_num == 0 && catsAllNA)) {
         for (int i = 1; i <= 2 * n_time; ++i)
           preds[i] = Float.NaN;
       } else {
-        for (int j = 0; j < n_coef; ++j)
-          data[j] -= data_info._normSub[j];
+        double[] full_data = MemoryManager.malloc8d(n_coef);
+        for (int j = 0; j < n_cats; ++j)
+          if (Double.isNaN(data[j])) {
+            for (int k = data_info._catOffsets[j]; k < data_info._catOffsets[j+1]; ++k)
+              full_data[k] = (double) this.n_cats[k] / (double) n;
+          } else if (data[j] != 0)
+            full_data[data_info._catOffsets[j] + (int) (data[j] - 1)] = 1;
+        for (int j = 0; j < n_num; ++j)
+          full_data[numStart + j] = data[n_cats + j] - data_info._normSub[j];
         double logRisk = 0;
         for (int j = 0; j < n_coef; ++j)
-          logRisk += data[j] * coef[j];
+          logRisk += full_data[j] * coef[j];
         final double risk = Math.exp(logRisk);
         for (int t = 0; t < n_time; ++t)
           preds[t + 1] = (float) (risk * cumhaz_0[t]);
@@ -192,8 +212,8 @@ public class CoxPH extends Job {
           for (int j = 0; j < n_coef; ++j) {
             double sum = 0;
             for (int k = 0; k < n_coef; ++k)
-              sum += var_coef[j][k] * (data[k] * cumhaz_0[t] - var_cumhaz_2[k][t]);
-            var_cumhaz_2_t += (data[j] * cumhaz_0[t] - var_cumhaz_2[j][t]) * sum;
+              sum += var_coef[j][k] * (full_data[k] * cumhaz_0[t] - var_cumhaz_2[k][t]);
+            var_cumhaz_2_t += (full_data[j] * cumhaz_0[t] - var_cumhaz_2[j][t]) * sum;
           }
           preds[t + 1 + n_time] = (float) (risk * Math.sqrt(var_cumhaz_1[t] + var_cumhaz_2_t));
         }
@@ -204,11 +224,9 @@ public class CoxPH extends Job {
 
     protected void initStats(Frame source, DataInfo dinfo) {
       data_info = dinfo;
-      // X columns, start (optional), stop, event
-      final int n_coef = parameters.use_start_column ? source.numCols() - 3 : source.numCols() - 2;
-      names_coef   = new String[n_coef];
-      for (int j = 0; j < n_coef; ++j)
-        names_coef[j] = source.names()[j];
+      final int n_coef = data_info.fullN();
+      n_cats       = MemoryManager.malloc8(n_coef - data_info._nums);
+      coef_names   = data_info.coefNames();
       coef         = MemoryManager.malloc8d(n_coef);
       exp_coef     = MemoryManager.malloc8d(n_coef);
       exp_neg_coef = MemoryManager.malloc8d(n_coef);
@@ -237,6 +255,7 @@ public class CoxPH extends Job {
     protected void calcCounts(CoxPHTask coxMR) {
       n         = coxMR.n;
       n_missing = coxMR.n_missing;
+      System.arraycopy(coxMR.n_cats, 0, n_cats, 0, n_cats.length);
       int nz = 0;
       for (int t = 0; t < coxMR.countEvents.length; ++t) {
         total_event += coxMR.countEvents[t];
@@ -441,7 +460,7 @@ public class CoxPH extends Job {
       sb.append("<tr><th></th><td>coef</td><td>exp(coef)</td><td>se(coef)</td><td>z</td></tr>");
       for (int j = 0; j < coef.length; ++j) {
         sb.append("<tr><th>");
-        sb.append(names_coef[j]);sb.append("</th><td>");sb.append(coef[j]);   sb.append("</td><td>");
+        sb.append(coef_names[j]);sb.append("</th><td>");sb.append(coef[j]);   sb.append("</td><td>");
         sb.append(exp_coef[j]);  sb.append("</td><td>");sb.append(se_coef[j]);sb.append("</td><td>");
         sb.append(z_coef[j]);
         sb.append("</td></tr>");
@@ -495,28 +514,24 @@ public class CoxPH extends Job {
                                          "; maximum number allowed is " + MAX_TIME_BINS);
 
     source = getSubframe();
-    model = new CoxPHModel(this, dest(), source._key, source, null);
     final int n_resp = use_start_column ? 3 : 2;
     final DataInfo dinfo = new DataInfo(source, n_resp, false, DataInfo.TransformType.DEMEAN);
+    model = new CoxPHModel(this, dest(), source._key, source, null);
     model.initStats(source, dinfo);
   }
 
   @Override
   protected void execImpl() {
-    // X columns, start (optional), stop, event
-    final int n_resp = use_start_column ? 3 : 2;
-    final int n_coef = source.numCols() - n_resp;
+    final DataInfo dinfo   = model.data_info;
+    final int n_coef       = dinfo.fullN();
     final double[] step    = MemoryManager.malloc8d(n_coef);
     final double[] oldCoef = MemoryManager.malloc8d(n_coef);
     final double[] newCoef = MemoryManager.malloc8d(n_coef);
-    for (int j = 0; j < n_coef; ++j)
-      step[j]    = Double.NaN;
-    for (int j = 0; j < n_coef; ++j)
-      oldCoef[j] = Double.NaN;
+    Arrays.fill(step,    Double.NaN);
+    Arrays.fill(oldCoef, Double.NaN);
     for (int j = 0; j < n_coef; ++j)
       newCoef[j] = init;
     double oldLoglik = - Double.MAX_VALUE;
-    final DataInfo dinfo = model.data_info;
     final int n_time = (int) (model.max_time - model.min_time + 1);
     model.x_mean = dinfo._normSub.clone();
     for (int i = 0; i <= iter_max; ++i) {
@@ -540,8 +555,7 @@ public class CoxPH extends Job {
         if (model.lre >= lre_min)
           break;
 
-        for (int j = 0; j < n_coef; ++j)
-          step[j] = 0;
+        Arrays.fill(step, 0);
         for (int j = 0; j < n_coef; ++j)
           for (int k = 0; k < n_coef; ++k)
             step[j] -= model.var_coef[j][k] * model.gradient[k];
@@ -591,6 +605,7 @@ public class CoxPH extends Job {
 
     protected long         n;
     protected long         n_missing;
+    protected long[]       n_cats;
     protected long[]       countRiskSet;
     protected long[]       countCensored;
     protected long[]       countEvents;
@@ -615,6 +630,7 @@ public class CoxPH extends Job {
     @Override
     protected void chunkInit(){
       final int n_coef = _beta.length;
+      n_cats           = MemoryManager.malloc8(n_coef - _dinfo._nums);
       countRiskSet     = MemoryManager.malloc8(_n_time);
       countCensored    = MemoryManager.malloc8(_n_time);
       countEvents      = MemoryManager.malloc8(_n_time);
@@ -631,52 +647,65 @@ public class CoxPH extends Job {
     @Override
     protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response) {
       n++;
-      final long event_i = (long) response[response.length - 1];
+      final long event = (long) response[response.length - 1];
       final int t1 = _use_start_column ? (int) (((long) response[response.length - 3] + 1) - _min_time) : -1;
       final int t2 = (int) (((long) response[response.length - 2]) - _min_time);
-      double logRisk_i = 0;
+      if (t1 > t2)
+        throw new IllegalArgumentException("start times must be strictly less than stop times");
+      final int numStart = _dinfo.numStart();
+      for (int j = 0; j < ncats; ++j)
+        n_cats[cats[j]]++;
+      double logRisk = 0;
+      for (int j = 0; j < ncats; ++j)
+        logRisk += _beta[cats[j]];
       for (int j = 0; j < nums.length; ++j)
-        logRisk_i += nums[j] * _beta[j];
-      final double risk_i = Math.exp(logRisk_i);
-      if (event_i > 0) {
+        logRisk += nums[j] * _beta[numStart + j];
+      final double risk = Math.exp(logRisk);
+      if (event > 0) {
         countEvents[t2]++;
-        sumLogRiskEvents[t2] += logRisk_i;
-        sumRiskEvents[t2]    += risk_i;
+        sumLogRiskEvents[t2] += logRisk;
+        sumRiskEvents[t2]    += risk;
       } else
         countCensored[t2]++;
       if (_use_start_column) {
         for (int t = t1; t <= t2; ++t)
           countRiskSet[t]++;
         for (int t = t1; t <= t2; ++t)
-          rcumsumRisk[t] += risk_i;
+          rcumsumRisk[t] += risk;
       } else {
         countRiskSet[t2]++;
-        rcumsumRisk[t2]  += risk_i;
+        rcumsumRisk[t2]  += risk;
       }
 
-      for (int j = 0; j < nums.length; ++j) {
-        final double x1_i    = nums[j];
-        final double xRisk_i = x1_i * risk_i;
-        if (event_i > 0) {
-          sumXEvents[j][t2]     += x1_i;
-          sumXRiskEvents[j][t2] += xRisk_i;
+      final int ntotal = ncats + nums.length;
+      final int numStartIter = numStart - ncats;
+      for (int jit = 0; jit < ntotal; ++jit) {
+        final boolean jIsCat = jit < ncats;
+        final int j          = jIsCat ? cats[jit] : numStartIter + jit;
+        final double x1      = jIsCat ? 1.0 : nums[jit - ncats];
+        final double xRisk   = x1 * risk;
+        if (event > 0) {
+          sumXEvents[j][t2]     += x1;
+          sumXRiskEvents[j][t2] += xRisk;
         }
         if (_use_start_column) {
           for (int t = t1; t <= t2; ++t)
-            rcumsumXRisk[j][t]  += xRisk_i;
+            rcumsumXRisk[j][t]  += xRisk;
         } else {
-          rcumsumXRisk[j][t2]   += xRisk_i;
+          rcumsumXRisk[j][t2]   += xRisk;
         }
-        for (int k = 0; k < nums.length; ++k) {
-          final double x2_i     = nums[k];
-          final double xxRisk_i = x2_i * xRisk_i;
-          if (event_i > 0)
-            sumXXRiskEvents[j][k][t2] += xxRisk_i;
+        for (int kit = 0; kit < ntotal; ++kit) {
+          final boolean kIsCat = kit < ncats;
+          final int k          = kIsCat ? cats[kit] : numStartIter + kit;
+          final double x2      = kIsCat ? 1.0 : nums[kit - ncats];
+          final double xxRisk  = x2 * xRisk;
+          if (event > 0)
+            sumXXRiskEvents[j][k][t2] += xxRisk;
           if (_use_start_column) {
             for (int t = t1; t <= t2; ++t)
-              rcumsumXXRisk[j][k][t]  += xxRisk_i;
+              rcumsumXXRisk[j][k][t]  += xxRisk;
           } else {
-            rcumsumXXRisk[j][k][t2]   += xxRisk_i;
+            rcumsumXXRisk[j][k][t2]   += xxRisk;
           }
         }
       }
@@ -686,6 +715,7 @@ public class CoxPH extends Job {
     public void reduce(CoxPHTask that) {
       n         += that.n;
       n_missing += that.n_missing;
+      Utils.add(n_cats,           that.n_cats);
       Utils.add(countRiskSet,     that.countRiskSet);
       Utils.add(countCensored,    that.countCensored);
       Utils.add(countEvents,      that.countEvents);
