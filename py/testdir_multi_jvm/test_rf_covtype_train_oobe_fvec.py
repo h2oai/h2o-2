@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_util
+import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_util, h2o_browse as h2b
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -15,14 +15,17 @@ paramDict = {
     'nbins': 100,
     # 'ignored_cols_by_name': "C1,C2,C6,C7,C8",
     # since comparing sorted vs not, need 100% sample to use same data for training
-    'sample_rate': 1.0,
+    # complains about no validation, which is not true, if 1.0 sample rate. make it just a little smaller
+    'sample_rate': .99999,
     'classification': 1,
     'seed': '1234567890',
+    'importance': 1,
     # 'mtries': 6, 
     }
 
 class Basic(unittest.TestCase):
     def tearDown(self):
+        # h2b.browseJsonHistoryAsUrlLastMatch("RF")
         h2o.check_sandbox_for_errors()
 
     @classmethod
@@ -33,12 +36,14 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(2, java_heap_GB=7)
         else:
             h2o_hosts.build_cloud_with_hosts(java_heap_GB=10)
+        h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
+        ### h2o.sleep(800)
         h2o.tear_down_cloud()
 
-    def rf_covtype_train_oobe(self, csvFilename, checkExpectedResults=True):
+    def rf_covtype_train_oobe(self, csvFilename, checkExpectedResults=True, expectedAuc=0.5):
         # the expected results are only for the shuffled version
         # since getting 10% samples etc of the smallish dataset will vary between 
         # shuffled and non-shuffled datasets
@@ -81,6 +86,8 @@ class Basic(unittest.TestCase):
             # just do random split for now
             dataKeyTrain = 'rTrain.hex'
             dataKeyTest = 'rTest.hex'
+
+            response = "C55"
             h2o_cmd.createTestTrain(hex_key, dataKeyTrain, dataKeyTest, trainPercent=90, outputClass=4, 
                 outputCol=numCols-1, changeToBinomial=not DO_MULTINOMIAL)
             sliceResult = {'destination_key': dataKeyTrain}
@@ -90,7 +97,8 @@ class Basic(unittest.TestCase):
             kwargs['destination_key'] = "model_" + csvFilename + "_" + str(trial)
             timeoutSecs = 30 + kwargs['ntrees'] * 20
             start = time.time()
-            rfv = h2o_cmd.runRF(parseResult=sliceResult, timeoutSecs=timeoutSecs, **kwargs)
+            # have to pass validation= param to avoid getting no error results (since 100% sample..DRF2 doesn't like that)
+            rfv = h2o_cmd.runRF(parseResult=sliceResult, timeoutSecs=timeoutSecs, validation=dataKeyTest, **kwargs)
 
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
@@ -112,9 +120,11 @@ class Basic(unittest.TestCase):
             data_key = rf_model['_dataKey']
             model_key = rf_model['_key']
 
-            rfvScoring = h2o_cmd.runRFView(None, dataKeyTest, model_key, used_trees,
-                timeoutSecs, retryDelaySecs=1, **kwargs)
-            (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfvScoring, **kwargs)
+            rfvScoring = h2o_cmd.runScore(dataKey=dataKeyTest, modelKey=model_key, vactual=response, vpredict=1, expectedAuc=expectedAuc)
+            print h2o.dump_json(rfvScoring)
+            h2o_rf.simpleCheckRFScore(rfv=rfvScoring, **kwargs)
+            print "hello7"
+            (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFScore(rfv=rfvScoring, **kwargs)
             fullScorePctRight = 100 - error
 
             h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
@@ -146,19 +156,19 @@ class Basic(unittest.TestCase):
     def test_rf_covtype_train_oobe_fvec(self):
         h2o.beta_features = True
         print "\nRun test iterations/compare with covtype.data"
-        rfv1 = self.rf_covtype_train_oobe('covtype.data', checkExpectedResults=False)
-        (ce1, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv1)
+        rfv1 = self.rf_covtype_train_oobe('covtype.data', checkExpectedResults=False, expectedAuc=0.95)
+        (ce1, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFScore(rfv=rfv1)
         # since we created a binomial output class..look at the error rate for class 1
         ce1pct1 = classErrorPctList[1]
 
         print "\nRun test iterations/compare with covtype.shuffled.data"
-        rfv2 = self.rf_covtype_train_oobe('covtype.shuffled.data', checkExpectedResults=True)
-        (ce2, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv2)
+        rfv2 = self.rf_covtype_train_oobe('covtype.shuffled.data', checkExpectedResults=True, expectedAuc=0.95)
+        (ce2, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFScore(rfv=rfv2)
         ce2pct1 = classErrorPctList[1]
 
         print "\nRun test iterations/compare with covtype.sorted.data"
-        rfv3 = self.rf_covtype_train_oobe('covtype.sorted.data', checkExpectedResults=False)
-        (ce3, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv3)
+        rfv3 = self.rf_covtype_train_oobe('covtype.sorted.data', checkExpectedResults=False, expectedAuc=0.95)
+        (ce3, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFScore(rfv=rfv3)
         ce3pct1 = classErrorPctList[1]
 
         print "rfv3, from covtype.sorted.data"
