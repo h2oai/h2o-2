@@ -1,27 +1,23 @@
 package hex.singlenoderf;
 
+import hex.gbm.DTree.TreeModel;
 import hex.singlenoderf.Data.Row;
 import hex.singlenoderf.Tree.SplitNode.SplitInfo;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveTask;
+import org.apache.commons.lang.NotImplementedException;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Chunk;
-import water.fvec.Frame;
 import water.util.Log;
-import water.util.Log.Tag.Sys;
+import water.util.SB;
 import water.util.Utils;
-import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.lang.ObjectUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import hex.gbm.DTree.*;
-import water.util.SB;
 
 public class Tree extends H2OCountedCompleter {
 
@@ -56,6 +52,7 @@ public class Tree extends H2OCountedCompleter {
   final byte     _producerId;   // Id of node producing this tree
   final boolean  _regression; // If true, will build regression tree.
   boolean        _local_mode;
+  boolean        _score_pojo;
   public TreeModel.CompressedTree compressedTree;
 
   /**
@@ -63,7 +60,7 @@ public class Tree extends H2OCountedCompleter {
    */
   public Tree(final Key jobKey, final Key modelKey, final Data data, byte producerId, int maxDepth, StatType stat,
               int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit,
-              final hex.singlenoderf.Sampling sampler, int verbose, boolean regression, boolean local_mode) {
+              final hex.singlenoderf.Sampling sampler, int verbose, boolean regression, boolean local_mode, boolean score_pojo) {
     _jobKey           = jobKey;
     _modelKey         = modelKey;
     _data             = data;
@@ -78,6 +75,7 @@ public class Tree extends H2OCountedCompleter {
     _producerId       = producerId;
     _regression       = regression;
     _local_mode       = local_mode;
+    _score_pojo       = score_pojo;
   }
 
   // Oops, uncaught exception
@@ -162,7 +160,8 @@ public class Tree extends H2OCountedCompleter {
 
       // Atomically improve the Model as well
       Key tkey = toKey();
-      Key dtreeKey = toCompressedKey();
+      Key dtreeKey = null;
+      if (_score_pojo) dtreeKey = toCompressedKey();
       appendKey(_modelKey, tkey, dtreeKey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", _data_id);
 //      appendKey(_modelKey, tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", _data_id);
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);

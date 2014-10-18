@@ -74,6 +74,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Use non-local data")                                       public boolean useNonLocal;
   @API(help = "Dtree keys")                                               public Key[/*ntree*/][/*nclass*/] dtreeKeys;
   @API(help = "DTree Model")                                              public SpeeDRFModel_DTree dtreeTreeModel = null;
+  @API(help = "score_pojo boolean")                                       public boolean score_pojo;
 
   private float _ss; private float _cnt;
   /**
@@ -155,6 +156,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.resp_min = model.resp_min;
     this.validation = model.validation;
     this.src_key = model.src_key;
+    this.score_pojo = model.score_pojo;
   }
 
   public int treeCount() { return t_keys.length; }
@@ -311,8 +313,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @Override public Futures delete_impl(Futures fs) {
     for( Key k : t_keys ) UKV.remove(k,fs);
     if (testKey != null)  UKV.remove(testKey, fs);
-    for (Key[] ka : local_forests) for (Key k : ka) UKV.remove(k, fs);
-
+    for (Key[] ka : local_forests) for (Key k : ka) if (k != null) UKV.remove(k, fs);
     return fs;
   }
 

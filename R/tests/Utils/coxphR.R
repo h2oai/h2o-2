@@ -5,7 +5,7 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
   cat("\nsurvival Package Cox Proportional Hazards Model\n")
   print(myCoxPH.r)
   checkEquals(myCoxPH.r$coefficients, myCoxPH.h2o@model$coefficients,
-              tolerance = tolerance)
+              tolerance = tolerance, check.attributes = FALSE)
   checkEquals(myCoxPH.r$var,          myCoxPH.h2o@model$var,
               tolerance = tolerance)
   checkEquals(myCoxPH.r$loglik,       myCoxPH.h2o@model$loglik,
@@ -13,7 +13,8 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
   checkEquals(myCoxPH.r$score,        myCoxPH.h2o@model$score,
               tolerance = tolerance)
   checkTrue  (                        myCoxPH.h2o@model$iter >= 1L)
-  checkEquals(myCoxPH.r$means,        myCoxPH.h2o@model$means,
+  checkEquals(tail(myCoxPH.r$means, length(myCoxPH.h2o@model$means)),
+              myCoxPH.h2o@model$means,
               tolerance = tolerance)
   checkEquals(myCoxPH.r$method,       myCoxPH.h2o@model$method)
   checkEquals(myCoxPH.r$n,            myCoxPH.h2o@model$n)
@@ -32,15 +33,15 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
               tolerance = tolerance)
   checkEquals(summaryCoxPH.r$nevent,       summaryCoxPH.h2o@summary$nevent)
   checkEquals(summaryCoxPH.r$coefficients, summaryCoxPH.h2o@summary$coefficients,
-              tolerance = tolerance)
+              tolerance = tolerance, check.attributes = FALSE)
   checkEquals(summaryCoxPH.r$conf.int,     summaryCoxPH.h2o@summary$conf.int,
-              tolerance = tolerance)
+              tolerance = tolerance, check.attributes = FALSE)
   checkEquals(summary(myCoxPH.r,   conf.int = 0.99)$conf.int,
               summary(myCoxPH.h2o, conf.int = 0.99)@summary$conf.int,
-              tolerance = tolerance)
+              tolerance = tolerance, check.attributes = FALSE)
   checkEquals(summary(myCoxPH.r,   conf.int = 0.90, scale = 1.2)$conf.int,
               summary(myCoxPH.h2o, conf.int = 0.90, scale = 1.2)@summary$conf.int,
-              tolerance = tolerance)
+              tolerance = tolerance, check.attributes = FALSE)
   checkEquals(summaryCoxPH.r$logtest,      summaryCoxPH.h2o@summary$logtest,
               tolerance = tolerance)
   checkEquals(summaryCoxPH.r$sctest,       summaryCoxPH.h2o@summary$sctest,
@@ -69,12 +70,13 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
   checkCoxPHSurvfit(survfitCoxPH.h2o, survfitCoxPH.r, tolerance = tolerance)
   }
   survfitCoxPH.h2o <- survfit(myCoxPH.h2o, newdata = myCoxPH.h2o@data)
-  survfitCoxPH.r   <- survfit(myCoxPH.r, newdata = eval(myCoxPH.r$call$data))
+  survfitCoxPH.r   <- survfit(myCoxPH.r, newdata = eval(myCoxPH.r$call$data, sys.parent()))
   checkCoxPHSurvfit(survfitCoxPH.h2o, survfitCoxPH.r, tolerance = tolerance)
 
-  checkEquals(coef(myCoxPH.r),       coef(myCoxPH.h2o), tolerance = tolerance)
+  checkEquals(coef(myCoxPH.r),       coef(myCoxPH.h2o),
+              tolerance = tolerance, check.attributes = FALSE)
   checkEquals(coef(summaryCoxPH.r),  coef(summaryCoxPH.h2o),
-              tolerance = tolerance)
+              tolerance = tolerance, check.attributes = FALSE)
   checkEquals(extractAIC(myCoxPH.r), extractAIC(myCoxPH.h2o),
               tolerance = tolerance)
   checkEquals(extractAIC(myCoxPH.r,   k = log(myCoxPH.r$n)),
@@ -83,7 +85,7 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
   checkEquals(logLik(myCoxPH.r),     logLik(myCoxPH.h2o),
               tolerance = tolerance)
   checkEquals(vcov(myCoxPH.r),       vcov(myCoxPH.h2o),
-              tolerance = tolerance)
+              tolerance = tolerance, check.attributes = FALSE)
 
   invisible(TRUE)
 }

@@ -2,6 +2,7 @@ import unittest, random, sys, time, codecs
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
+
 DEBUG = False
 UTF8 = True
 UTF8_MULTIBYTE = True
@@ -11,12 +12,16 @@ CAUSE_RANDOM_NA = True
 
 DO_SUMMARY = False # summary slow for some reason
 
+NO_NUL = True # the problem with NUL is covered by other tests. don't use
+print "We have a problem starting a line with double quote and not ending it before EOL"
+print "assume that is unlikely with the distribution being used"
+
 
 if UTF8:
     # what about multi-byte UTF8
-    ordinalChoices = range(0x0, 0x100) # doesn't include last value ..allow ff
+    ordinalChoices = range(0x1 if NO_NUL else 0x0, 0x100) # doesn't include last value ..allow ff
 else:  # ascii subset?
-    ordinalChoices = range(0x0, 0x80) # doesn't include last value ..allow 7f
+    ordinalChoices = range(0x1 if NO_NUL else 0x0, 0x80) # doesn't include last value ..allow 7f
 
 if UTF8_MULTIBYTE:
     def aSmallSet(a, b):

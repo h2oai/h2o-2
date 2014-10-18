@@ -4,7 +4,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
-print "This is CR in quoted string. EOL is LF. Shows that we can't escape the alternate EOLs"
+print "This is CR in quoted string. EOL is LF. Shows that we can't escape the alternate EOLs (or any EOL)"
 
 # toDoList = range(0x20,0x80)
 toDoList = [0x0d] # CR ...we put it in quoted string below
@@ -35,14 +35,6 @@ for i in toDoList:
         'a,b,c,"d' + unicodeSymbol + 's",n\n'
         ), 10, 4, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum'], i)
     )
-
-# h2o incorrectly will match this
-# 1, 1, [0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum']),
-
-# u = unichr(0x2018) + unichr(6000) + unichr(0x2019)
-# for i, c in enumerate(u):
-#    print i, '%04x' % ord(c), unicodedata.category(c),
-#    print unicodedata.name(c)
 
 def write_syn_dataset(csvPathname, dataset):
     dsf = codecs.open(csvPathname, encoding='utf-8', mode='w+')

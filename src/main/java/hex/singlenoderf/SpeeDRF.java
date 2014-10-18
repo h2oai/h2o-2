@@ -1,20 +1,22 @@
 package hex.singlenoderf;
 
 
-import static water.util.MRUtils.sampleFrameStratified;
-import hex.*;
 import hex.ConfusionMatrix;
-
-import java.util.*;
-
+import hex.FrameTask;
+import hex.VarImp;
 import hex.drf.DRF;
-import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.Timer;
-import water.api.*;
+import water.api.AUCData;
+import water.api.DocGen;
+import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
+
+import java.util.*;
+
+import static water.util.MRUtils.sampleFrameStratified;
 
 public class SpeeDRF extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -48,6 +50,9 @@ public class SpeeDRF extends Job.ValidatedJob {
 
 //  @API(help ="Score each iteration", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean score_each_iteration = false;
+
+  @API(help = "Create the Score POJO", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
+  public boolean score_pojo = true;
 
   /*Imbalanced Classes*/
   /**
@@ -302,6 +307,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.time = 0;
     for( Key tkey : model.t_keys ) assert DKV.get(tkey)!=null;
     model.jobKey = self();
+    model.score_pojo = score_pojo;
     model.current_status = "Initializing Model";
 
     // Model OUTPUTS
@@ -577,7 +583,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       for (int i = 0; i < ntrees; ++i) {
         long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
         trees[i] = new Tree(jobKey, modelKey, localData, producerId, drfParams.max_depth, drfParams.stat_type, numSplitFeatures, treeSeed,
-                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression, !drfParams._useNonLocalData);
+                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression, !drfParams._useNonLocalData, ((SpeeDRFModel)UKV.get(modelKey)).score_pojo);
       }
 
       Log.info("Invoking the tree build tasks on all nodes.");

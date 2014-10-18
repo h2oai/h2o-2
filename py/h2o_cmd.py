@@ -170,16 +170,6 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
         h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
 
-def runRFScore(node=None, data_key=None, model_key=None, ntree=None, 
-    timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True, **kwargs):
-    if not node: node = h2o.nodes[0]
-
-    # kind of wasteful re-read, but maybe good for testing
-    rfView = node.random_forest_score(data_key, model_key, timeoutSecs, **kwargs)
-    if doSimpleCheck:
-        h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
-    return rfView
-
 def runStoreView(node=None, timeoutSecs=30, noPrint=None, **kwargs):
     if not node: node = h2o.nodes[0]
     storeView = node.store_view(timeoutSecs, **kwargs)
@@ -487,7 +477,6 @@ def createIgnoredCols(key, cols, response):
     inspect = runInspect(key=key)
     numCols = inspect['numCols']
     ignore = filter(lambda x:(x not in cols and x!=response), range(numCols))
-
     ignored_cols = ','.join(map(str,ignore))
     return ignored_cols
 

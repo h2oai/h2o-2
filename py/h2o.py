@@ -984,7 +984,11 @@ def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False, time
     if expectedCloudName:
         for i, cn in enumerate(cloudName):
             if cn != expectedCloudName:
-                print "node %s cloud status: %s" % (i, dump_json(cloudStatus[i]))
+                # tear everyone down, in case of zombies. so we don't have to kill -9 manually
+                print "node %s has the wrong cloud name: %s expectedCloudName: %s."
+                # print "node %s cloud status: %s" % (i, dump_json(cloudStatus[i]))
+                print "tearing cloud down"
+                tear_down_cloud(nodeList=nodeList, sandboxIgnoreErrors=False)
                 raise Exception("node %s has the wrong cloud name: %s expectedCloudName: %s" % \
                     (i, cn, expectedCloudName))
 
@@ -1855,10 +1859,9 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
         return a
 
-    def speedrf(self, data_key, ntrees=50, max_depth=10, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+    def speedrf(self, data_key, ntrees=50, max_depth=20, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
-
 
         params_dict = {'destination_key': None,
                        'source': data_key,
@@ -1977,16 +1980,11 @@ class H2O(object):
     def random_forest_view(self, data_key=None, model_key=None, timeoutSecs=300,
         retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, print_params=False, noPoll=False,
-        noPrint=False, useRFScore=False, **kwargs):
+        noPrint=False, **kwargs):
 
         print "random_forest_view not supported in H2O fvec yet. hacking done response"
         r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
             # return r
-
-        # for drf2, you can't pass a new dataset here, compared to what you trained with.
-        # should complain or something if tried with a data_key
-        if data_key:
-            print "Can't pass a new data_key to random_forest_view for v2's DRFModelView. Not using"
 
         algo = '2/DRFModelView'
         # No such thing as 2/DRFScore2
@@ -2009,10 +2007,11 @@ class H2O(object):
             print "\n%s parameters:" % algo, params_dict
             sys.stdout.flush()
 
-        if useRFScore:
-            whichUsed = algoScore
-        else:
-            whichUsed = algo
+        whichUsed = algo
+        # for drf2, you can't pass a new dataset here, compared to what you trained with.
+        # should complain or something if tried with a data_key
+        if data_key:
+            print "Can't pass a new data_key to random_forest_view for v2's DRFModelView. Not using"
 
         a = self.__do_json_request(whichUsed + ".json", timeout=timeoutSecs, params=params_dict)
         verboseprint("\n%s result:" % whichUsed, dump_json(a))
@@ -2042,11 +2041,6 @@ class H2O(object):
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch(whichUsed)
-        return rfView
-
-    def random_forest_score(self, data_key, model_key,
-            timeoutSecs=60, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180, **kwargs):
-        rfView = random_forest_view(useRFScore=True, *args, **kwargs)
         return rfView
 
     def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
