@@ -45,10 +45,9 @@ submitwithfulldata = F #whether to use full dataset for submission (if FALSE, th
 ensemble_size <- 1
 seed0 = 1337
 
-reproducible_mode = F # For DL only. Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower
+reproducible_mode = F # Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower for DL
 
 ## Scoring helpers
-MSEs <- matrix(0, nrow = 1, ncol = length(targets))
 LogLoss <- matrix(0, nrow = 1, ncol = length(targets))
 
 ## Split the training data into train/valid (95%/5%)
@@ -142,27 +141,16 @@ for (resp in 1:length(targets)) {
       test_preds  <- test_preds_ensemble/ensemble_size
     }
 
-    # clamp predictions for LogLoss computation
+    ## Compute LogLoss of ensemble
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds > 1e-15, valid_preds, 1e-15))
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15))
-
-    ## Compute MSE
-    #msetrain <- h2o.exec(h2oServer,expr=mean((train_preds - train_resp)^2))
-    sevalid <- h2o.exec(h2oServer,expr=(valid_preds - valid_resp)^2)
-    msevalid <- h2o.exec(h2oServer,expr=mean(sevalid))
-    MSE <- msevalid
-    MSEs[resp] <- MSE
-    cat("\n\nValidation MSEs so far:", MSEs)
-    cat("\nMean validation MSE so far:", sum(MSEs)/resp)
-    
-    ## Compute LogLoss
     LL <- h2o.exec(h2oServer,expr=mean(-valid_resp*(log(valid_preds)-(1-valid_resp)*log(1-valid_preds))))
     LogLoss[resp] <- LL
-    cat("\nValidation LogLosses so far:", LogLoss)
-    cat("\nMean validation LogLoss so far:", sum(LogLoss)/resp)
+    cat("\nLogLosses of ensemble on validation data so far:", LogLoss)
+    cat("\nMean LogLoss of ensemble on validation data so far:", sum(LogLoss)/resp)
 
     if (!submitwithfulldata) {
-      cat("\nMaking test set predictions from validation (ensemble) model on 95% of the data\n")
+      cat("\nMaking test set predictions with ensemble model on 95% of the data\n")
       ensemble_average <- as.data.frame(test_preds) #bring ensemble average to R
       colnames(ensemble_average)[1] <- targets[resp] #give it the right name
 
@@ -250,8 +238,6 @@ for (resp in 1:length(targets)) {
   }
 }
 if (validate) {
-  cat("\nOverall validation MSEs = " , MSEs)
-  cat("\nOverall validation MSE = " , mean(MSEs))
   cat("\nOverall validation LogLosses = " , LogLoss)
   cat("\nOverall validation LogLoss = " , mean(LogLoss))
   cat("\n")
