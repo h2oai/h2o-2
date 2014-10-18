@@ -76,27 +76,6 @@ for (resp in 1:length(targets)) {
     for (n in 1:ensemble_size) {
       cat("\n\nBuilding ensemble validation model", n, "of", ensemble_size, "for", targets[resp], "...\n")
 
-      #   cvmodel <-
-      #     h2o.deeplearning(x = predictors,
-      #                      y = targets[resp],
-      #                      data = train,
-      #                      validation = valid,
-      #                      classification = T,
-      #                      activation="Tanh",
-      #                      hidden = c(10,50,50),
-      #                      epochs = 1,
-      #                      l1 = c(0),
-      #                      l2 = c(0),
-      #                      rho = 0.99,
-      #                      epsilon = 1e-8,
-      #                      score_duty_cycle = 0.1,
-      #                      score_interval = 1,
-      #                      train_samples_per_iteration = 10000,
-      #                      reproducible = reproducible_mode,
-      #                      seed = seed0 + resp*ensemble_size + n,
-      #                      max_categorical_features = 10000
-      #     )
-
       cvmodel <-
         h2o.randomForest(x = predictors,
                          y = targets[resp],
@@ -104,7 +83,7 @@ for (resp in 1:length(targets)) {
                          classification = T,
                          type = "fast",
                          ntree = 100,
-                         depth = 40,
+                         depth = 20,
                          seed = seed0 + resp*ensemble_size + n
         )
       
@@ -170,29 +149,11 @@ for (resp in 1:length(targets)) {
       p <- cvmodel@model$params   #If cvmodel is not a grid search model
     }
     else {
-      p = list(ntree=100, depth=40) #For randomForest
+      p = list(ntree=100, depth=20) #For randomForest
     }
     ## Build an ensemble model on full training data - should perform better than the CV model above
     for (n in 1:ensemble_size) {
       cat("\n\nBuilding ensemble model", n, "of", ensemble_size, "for", targets[resp], "...\n")
-      #       model <-
-      #         h2o.deeplearning(x = predictors,
-      #                          y = targets[resp],
-      #                          key = paste0(targets[resp], "_cv_ensemble_", n, "_of_", ensemble_size),
-      #                          data = trainWL,
-      #                          classification = p$classification,
-      #                          activation = p$activation,
-      #                          hidden = p$hidden,
-      #                          epochs = p$epochs,
-      #                          l1 = p$l1,
-      #                          l2 = p$l2,
-      #                          rho = p$rho,
-      #                          epsilon = p$epsilon,
-      #                          train_samples_per_iteration = p$train_samples_per_iteration,
-      #                          reproducible = p$reproducible,
-      #                          seed = seed0 + resp*ensemble_size + n,
-      #                          max_categorical_features = p$max_categorical_features
-      #         )
 
       model <-
         h2o.randomForest(x = predictors,
@@ -230,9 +191,7 @@ for (resp in 1:length(targets)) {
   ## Remove no longer needed old models and temporaries from K-V store to keep memory footprint low
   ls_temp <- h2o.ls(h2oServer)
   for (n_ls in 1:nrow(ls_temp)) {
-    if (str_detect(ls_temp[n_ls, 1], "DeepLearning") ||
-          str_detect(ls_temp[n_ls, 1], "SpeeDRF") ||
-          str_detect(ls_temp[n_ls, 1], "Last.value")) {
+    if (str_detect(ls_temp[n_ls, 1], "SpeeDRF") || str_detect(ls_temp[n_ls, 1], "Last.value")) {
       h2o.rm(h2oServer, keys = as.character(ls_temp[n_ls, 1]))
     }
   }
