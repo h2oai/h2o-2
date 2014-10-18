@@ -1,9 +1,7 @@
 package hex.singlenoderf;
 
 
-import water.Job;
-import water.Key;
-import water.MemoryManager;
+import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
@@ -113,7 +111,21 @@ final class DataAdapter  {
 
   public void shrink() {
     if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
-    for ( Col c: _c) c.shrink();
+//    for ( Col c: _c) c.shrink();
+    // sort columns in parallel: c.shrink() calls single-threaded Arrays.sort()
+    Futures fs = new Futures();
+    for ( final Col c: _c) {
+      H2O.H2OCountedCompleter t = new H2O.H2OCountedCompleter() {
+        @Override public byte priority() { return H2O.MIN_HI_PRIORITY; }
+        @Override public void compute2() {
+          c.shrink();
+          tryComplete();
+        }
+      };
+      H2O.submitTask(t);
+      fs.add(t);
+    }
+    fs.blockForPending();
   }
 
   public String columnName(int i) { return _c[i].name(); }
