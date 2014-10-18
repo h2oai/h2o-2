@@ -1,6 +1,8 @@
 package hex.singlenoderf;
 
 
+import jsr166y.ForkJoinTask;
+import jsr166y.RecursiveAction;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -113,19 +115,14 @@ final class DataAdapter  {
     if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
 //    for ( Col c: _c) c.shrink();
     // sort columns in parallel: c.shrink() calls single-threaded Arrays.sort()
-    Futures fs = new Futures();
+    RecursiveAction [] ras = new RecursiveAction[_c.length];
+    int i=0;
     for ( final Col c: _c) {
-      H2O.H2OCountedCompleter t = new H2O.H2OCountedCompleter() {
-        @Override public byte priority() { return H2O.MIN_HI_PRIORITY; }
-        @Override public void compute2() {
-          c.shrink();
-          tryComplete();
-        }
+      ras[i++] = new RecursiveAction() {
+        @Override public void compute() { c.shrink(); }
       };
-      H2O.submitTask(t);
-      fs.add(t);
     }
-    fs.blockForPending();
+    ForkJoinTask.invokeAll(ras);
   }
 
   public String columnName(int i) { return _c[i].name(); }
