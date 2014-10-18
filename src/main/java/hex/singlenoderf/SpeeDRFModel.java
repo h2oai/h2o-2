@@ -269,28 +269,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
     m.cms[m.cms.length-1] = null;
 
-    // Tree Statistics
-    JsonObject trees = new JsonObject();
-    trees.addProperty(Constants.TREE_COUNT,  m.size());
-    if( m.size() > 0 ) {
-      trees.add(Constants.TREE_DEPTH,  m.depth().toJson());
-      trees.add(Constants.TREE_LEAVES, m.leaves().toJson());
-    }
-    TreeStats treeStats = new TreeStats();
-    double[] depth_stats = stats(trees.get(Constants.TREE_DEPTH));
-    double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
-
-    if(depth_stats != null) {
-      treeStats.minDepth   = (int)depth_stats[0];
-      treeStats.meanDepth  = (float)depth_stats[1];
-      treeStats.maxDepth   = (int)depth_stats[2];
-      treeStats.minLeaves  = (int)leaf_stats[0];
-      treeStats.meanLeaves = (float)leaf_stats[1];
-      treeStats.maxLeaves  = (int)leaf_stats[2];
-    } else {
-      treeStats = null;
-    }
-    m.treeStats = treeStats;
     return m;
   }
 
