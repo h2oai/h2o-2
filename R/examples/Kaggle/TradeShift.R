@@ -68,6 +68,9 @@ for (resp in 1:length(targets)) {
   if (resp == 14) {
     final_submission <- cbind(final_submission, as.data.frame(matrix(0, nrow = nrow(test_hex), ncol = 1)))
     colnames(final_submission)[resp] <- targets[resp]
+    mytestfinal_submission <- cbind(mytestfinal_submission, as.data.frame(matrix(0, nrow = nrow(mytest), ncol = 1)))
+    colnames(mytestfinal_submission)[resp] <- targets[resp]
+    mytest_respR <- cbind(mytest_respR, as.data.frame(mytest[,targets[resp]]))
     next
   }
 
@@ -105,13 +108,13 @@ for (resp in 1:length(targets)) {
       vpc <- valid_preds
       vpc <- h2o.exec(h2oServer,expr=ifelse(vpc > 1e-15, vpc, 1e-15))
       vpc <- h2o.exec(h2oServer,expr=ifelse(vpc < 1-1e-15, vpc, 1-1e-15))
-      myLL <- h2o.exec(h2oServer,expr=mean(-valid_resp*(log(vpc)-(1-valid_resp)*log(1-vpc))))
+      myLL <- h2o.exec(h2oServer,expr=mean(-valid_resp*log(vpc)-(1-valid_resp)*log(1-vpc)))
       cat("\nLogLoss of this ensemble member on validation data:", myLL)
 
       mtpc <- mytest_preds
       mtpc <- h2o.exec(h2oServer,expr=ifelse(mtpc > 1e-15, mtpc, 1e-15))
       mtpc <- h2o.exec(h2oServer,expr=ifelse(mtpc < 1-1e-15, mtpc, 1-1e-15))
-      mytestLL <- h2o.exec(h2oServer,expr=mean(-mytest_resp*(log(mtpc)-(1-mytest_resp)*log(1-mtpc))))
+      mytestLL <- h2o.exec(h2oServer,expr=mean(-mytest_resp*log(mtpc)-(1-mytest_resp)*log(1-mtpc)))
       cat("\nLogLoss of this ensemble member on mytest data:", mytestLL)
 
       if (n == 1) {
@@ -137,14 +140,14 @@ for (resp in 1:length(targets)) {
     ## Compute LogLoss of ensemble
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds > 1e-15, valid_preds, 1e-15))
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15))
-    LL <- h2o.exec(h2oServer,expr=mean(-valid_resp*(log(valid_preds)-(1-valid_resp)*log(1-valid_preds))))
+    LL <- h2o.exec(h2oServer,expr=mean(-valid_resp*log(valid_preds)-(1-valid_resp)*log(1-valid_preds)))
     LogLoss[resp] <- LL
     cat("\nLogLosses of ensemble on validation data so far:", LogLoss)
     cat("\nMean LogLoss of ensemble on validation data so far:", sum(LogLoss)/resp)
 
     mytest_preds <- h2o.exec(h2oServer,expr=ifelse(mytest_preds > 1e-15, mytest_preds, 1e-15))
     mytest_preds <- h2o.exec(h2oServer,expr=ifelse(mytest_preds < 1-1e-15, mytest_preds, 1-1e-15))
-    mytestLL <- h2o.exec(h2oServer,expr=mean(-mytest_resp*(log(mytest_preds)-(1-mytest_resp)*log(1-mytest_preds))))
+    mytestLL <- h2o.exec(h2oServer,expr=mean(-mytest_resp*log(mytest_preds)-(1-mytest_resp)*log(1-mytest_preds)))
     myTestLogLoss[resp] <- mytestLL
     cat("\nLogLosses of ensemble on myTest data so far:", myTestLogLoss)
     cat("\nMean LogLoss of ensemble on myTest data so far:", sum(myTestLogLoss)/resp)
@@ -166,9 +169,12 @@ for (resp in 1:length(targets)) {
       mytestensemble_average <- as.data.frame(mytest_preds) #bring ensemble average to R
       colnames(mytestensemble_average)[1] <- targets[resp] #give it the right name
 
+      # also bring mytest_resp to R
       if (resp == 1) {
+        mytest_respR <- as.data.frame(mytest_resp) #bring ensemble average to R
         mytestfinal_submission <- mytestensemble_average
       } else {
+        mytest_respR <- cbind(mytest_respR, as.data.frame(mytest_resp)) #bring ensemble average to R
         mytestfinal_submission <- cbind(mytestfinal_submission, mytestensemble_average)
       }
       print(head(mytestfinal_submission))
@@ -247,5 +253,13 @@ print(summary(mytestfinal_submission))
 #reshape predictions into 1D
 mtfs <- t(as.matrix(mytestfinal_submission))
 dim(mtfs) <- c(prod(dim(mtfs)),1)
+
+mtr <- t(as.matrix(as.data.frame(mytest_respR)))
+dim(mtr) <- c(prod(dim(mtr)),1)
+
+mtfs <- ifelse(mtfs > 1e-15, mtfs, 1e-15)
+mtfs <- ifelse(mtfs < 1-1e-15, mtfs, 1-1e-15)
+
+mean(-mtr*log(mtfs)-(1-mtr)*log(1-mtfs))
 
 sink()
