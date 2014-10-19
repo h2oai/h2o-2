@@ -149,6 +149,8 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     varimp = rf_model['varimp']
     treeStats = rf_model['treeStats']
+    if not treeStats:
+        raise Exception("treeStats not right?: %s" % h2o.dump_json(treestats))
     # print "json:", h2o.dump_json(rfv)
     data_key = rf_model['_dataKey']
     model_key = rf_model['_key']
