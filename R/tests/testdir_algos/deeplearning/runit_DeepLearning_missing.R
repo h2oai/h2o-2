@@ -36,7 +36,7 @@ check.deeplearning_missing <- function(conn) {
   for(i in 1:length(missing_ratios)) {
     print(paste("missing ratio: ", missing_ratios[i]*100, "% --> classification error: ", errors[i]))
   }
-  checkTrue(sum(errors) < 2, "Sum of classification errors is too large!")
+  checkTrue(sum(errors) < 2.2, "Sum of classification errors is too large!")
 
   testEnd()
 }
