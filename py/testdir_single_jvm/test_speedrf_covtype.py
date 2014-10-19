@@ -153,6 +153,11 @@ class Basic(unittest.TestCase):
             N = rf_model['N']
             varimp = rf_model['varimp']
             treeStats = rf_model['treeStats']
+            if not treeStats:
+                raise Exception("treeStats not right?: %s" % h2o.dump_json(treeStats))
+
+            if 'minLeaves' not in treeStats or not treeStats['minLeaves']:
+                raise Exception("treeStats seems to be missing minLeaves %s" % h2o.dump_json(treeStats))
 
             print "maxDepth:", treeStats['maxDepth']
             print "maxLeaves:", treeStats['maxLeaves']
@@ -160,6 +165,7 @@ class Basic(unittest.TestCase):
             print "minLeaves:", treeStats['minLeaves']
             print "meanLeaves:", treeStats['meanLeaves']
             print "meanDepth:", treeStats['meanDepth']
+
             print "errs[0]:", errs[0]
             print "errs[-1]:", errs[-1]
             print "errs:", errs
