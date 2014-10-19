@@ -42,7 +42,7 @@ targets <- labels[-1] ## all targets
 validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
 submitwithfulldata = F #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
 
-ensemble_size <- 5 # more -> lower variance
+ensemble_size <- 1 # more -> lower variance
 seed0 = 1337
 reproducible_mode = T # Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower for DL
 
