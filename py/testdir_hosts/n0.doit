@@ -13,7 +13,9 @@ echo
 date
 echo 
 time nosetests --verbose --stop --nocapture --nologcapture --with-xunit --xunit-file=$1.nosetests.xml --tests=$1
+# time nosetests --verbose --stop --with-xunit --xunit-file=$1.nosetests.xml --tests=$1
 echo 
+date
 
 # hack ..copy the log files we care about from the sandbox
 # the sandbox could have been renamed for this run, and there could be multiple sandboxes in the job dir
@@ -66,5 +68,4 @@ if [ -d "$ANDBOX/syn_datasets" ]; then
 fi
 
 # skip the done* and the ice directory
-
 
