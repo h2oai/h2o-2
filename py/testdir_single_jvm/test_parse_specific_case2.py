@@ -4,11 +4,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
-print "I'll keep it to one case per file"
+print "This is injecting 0x0 (NUL) into a col, with one char after it"
 
-# this works
-# unicodeNull = unichr(0x33)
-# this fails
 unicodeNull = unichr(0x0)
 
 tryList = [
@@ -63,6 +60,7 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             write_syn_dataset(csvPathname, dataset)
 
+            # not forcing the column separator
             parseResult = h2i.import_parse(path=csvPathname, schema='put', header=0,
                 hex_key=hex_key, timeoutSecs=10, doSummary=False)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)
