@@ -34,15 +34,15 @@ test_hex <- h2o.importFile(h2oServer, path = path_test)
 vars <- colnames(train_hex)
 ID <- vars[1]
 labels <- colnames(trainLabels_hex)
-predictors <- vars[c(-1,-92)] #,-4,-5,-35,-36,-62,-65,-66,-95,-96)] #remove ID and some features with too many factors
+predictors <- vars[c(-1,-92)] #remove ID and one features with too many factors
 targets <- labels[-1] ## all targets
 #targets <- labels[c(7,8,10,11,13,29,30,31,32,33)]  ## harder to predict targets for tuning of parameters
 
 ## Settings (at least one of the following two settings has to be TRUE)
-validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
-submitwithfulldata = F #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
+validate = F #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
+submitwithfulldata = T #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
 
-ensemble_size <- 1 # more -> lower variance
+ensemble_size <- 2 # more -> lower variance
 seed0 = 1337
 reproducible_mode = T # Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower for DL
 
@@ -53,11 +53,13 @@ vLogLoss <- matrix(0, nrow = 1, ncol = length(targets))
 ## Split the training data into train/valid (95%/5%)
 ## Want to keep train large enough to make a good submission if submitwithfulldata = F
 trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
-splits <- h2o.splitFrame(trainWL, ratios = 0.95, shuffle=!reproducible_mode)
-train <- splits[[1]]
-valid <- splits[[2]]
-train <- h2o.assign(train, "train")
-valid <- h2o.assign(valid, "valid")
+if (validate) {
+  splits <- h2o.splitFrame(trainWL, ratios = 0.95, shuffle=!reproducible_mode)
+  train <- splits[[1]]
+  valid <- splits[[2]]
+  train <- h2o.assign(train, "train")
+  valid <- h2o.assign(valid, "valid")
+}
 
 ## Main loop over targets
 #for (resp in c(6,7,9,12,29,33)) { # FIXME: remove
@@ -91,16 +93,22 @@ for (resp in 1:length(targets)) {
                          seed = seed0 + resp*ensemble_size + n
         )
 
-      #y33
+      #y33 DRF
       #100trees, depth 20: validation ll 0.1305
       #50 trees, depth 30: training ll 0.0298 validation ll 0.0832
       #50 trees, depth 30, 20 mtries, 50 bins: training ll 0.0278 validation ll 0.0779
       #20 trees, depth 100: training ll 0.0232 validation ll 0.1140
 
       #overall
-      #ntree=100, depth=20
+      #1 ensemble DRF ntree=100, depth=20
       #Overall validation LogLosses =  0.0036210883470459268897 0.00093248060944743443 0.0033672750311952927456 0.0021615067778732411849 0.00066611468647258254006 0.039699153689623581376 0.026062744200152396928 0.0038022229461941057724 0.047238971099232508755 0.011217721209381286557 0.00094352354247681296737 0.045193823452661284479 0.0052504059519060076663 0 0.0015075118782610749842 0.0031323080340788398909 0.00056565005960328878284 0.00049855167613287968299 0.00010742980631501478778 0.00038932701854535060665 0.0014864136358284606425 0.0011580518684932109442 0.00012617514326470962924 0.0065985565515910820505 0.00091284420340833911239 0.0037073679367141914968 0.0019028473236039631158 0.0024906651997033796807 0.030321520288551069566 0.0088540590503823502627 0.013449799883376137993 0.018525638668708464124 0.13056367073405611423
       #Overall validation LogLoss =  0.012619861227402436737
+
+      # 1ensemble DRF 50 trees, depth 30, 20 mtries, 50 bins
+      #Overall training LogLosses =  0.000705078 0.0001237611 0.000622789 0.0007093981 5.144581e-05 0.01030896 0.005183933 0.0007074265 0.01132459 0.002862326 0.0001907624 0.01342103 0.0009695712 0 0.000278939 0.0006330025 4.219361e-05 4.906694e-05 5.536219e-05 9.803132e-05 0.0004691322 0.0002654067 4.076982e-05 0.001107899 9.153072e-05 0.0006073599 0.0003994988 0.0004687263 0.006693895 0.0018135 0.003063326 0.003295198 0.02783544
+      #Overall training LogLoss =  0.002863313
+      #Overall validation LogLosses =  0.003536253 0.001190493 0.00187604 0.001776977 0.0006466543 0.02641678 0.02127753 0.007762937 0.03849423 0.01445234 0.001482586 0.03245364 0.005364658 0 0.001331533 0.002560752 0.000593061 0.0005078235 0.0001158875 0.0003086396 0.001246065 0.0008614129 0.0004870374 0.004126767 0.001185908 0.003610489 0.001881706 0.00291564 0.02438964 0.00748035 0.01031835 0.01369977 0.07793831
+      #Overall validation LogLoss =  0.009463341 <-- best
       
       #model <- cvmodel@model[[1]] #If cv model is a grid search model
       model <- cvmodel #If cvmodel is not a grid search model
