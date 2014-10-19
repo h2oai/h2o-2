@@ -49,18 +49,15 @@ reproducible_mode = F # Set to TRUE if you want reproducible results, e.g. for f
 
 ## Scoring helpers
 LogLoss <- matrix(0, nrow = 1, ncol = length(targets))
-myTestLogLoss <- matrix(0, nrow = 1, ncol = length(targets))
 
 ## Split the training data into train/valid (95%/5%)
 ## Want to keep train large enough to make a good submission if submitwithfulldata = F
 trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
-splits <- h2o.splitFrame(trainWL, ratios = c(0.9,0.05), shuffle=!reproducible_mode)
+splits <- h2o.splitFrame(trainWL, ratios = 0.95, shuffle=!reproducible_mode)
 train <- splits[[1]]
 valid <- splits[[2]]
-mytest <- splits[[3]]
 train <- h2o.assign(train, "train")
 valid <- h2o.assign(valid, "valid")
-mytest <- h2o.assign(mytest, "mytest")
 
 ## Main loop over targets
 for (resp in 1:length(targets)) {
@@ -68,9 +65,6 @@ for (resp in 1:length(targets)) {
   if (resp == 14) {
     final_submission <- cbind(final_submission, as.data.frame(matrix(0, nrow = nrow(test_hex), ncol = 1)))
     colnames(final_submission)[resp] <- targets[resp]
-    mytestfinal_submission <- cbind(mytestfinal_submission, as.data.frame(matrix(0, nrow = nrow(mytest), ncol = 1)))
-    colnames(mytestfinal_submission)[resp] <- targets[resp]
-    mytest_respR <- cbind(mytest_respR, as.data.frame(mytest[,targets[resp]]))
     next
   }
 
@@ -78,7 +72,6 @@ for (resp in 1:length(targets)) {
     cat("\n\nNow training and validating an ensemble model for", targets[resp], "...\n")
     train_resp <- train[,targets[resp]]
     valid_resp <- valid[,targets[resp]]
-    mytest_resp <- mytest[,targets[resp]]
 
     for (n in 1:ensemble_size) {
       cat("\n\nBuilding ensemble validation model", n, "of", ensemble_size, "for", targets[resp], "...\n")
@@ -99,10 +92,6 @@ for (resp in 1:length(targets)) {
       
       # use probabilities - clamp validation predictions for LogLoss computation
       valid_preds <- h2o.predict(model, valid)[,3]
-      if (!submitwithfulldata) {
-        test_preds  <- h2o.predict(model, test_hex)[,3]
-        mytest_preds  <- h2o.predict(model, mytest)[,3]
-      }
 
       # compute LogLoss for this ensemble member, on validation data, as a guidance to see the variance etc.
       vpc <- valid_preds
@@ -111,30 +100,34 @@ for (resp in 1:length(targets)) {
       myLL <- h2o.exec(h2oServer,expr=mean(-valid_resp*log(vpc)-(1-valid_resp)*log(1-vpc)))
       cat("\nLogLoss of this ensemble member on validation data:", myLL)
 
-      mtpc <- mytest_preds
-      mtpc <- h2o.exec(h2oServer,expr=ifelse(mtpc > 1e-15, mtpc, 1e-15))
-      mtpc <- h2o.exec(h2oServer,expr=ifelse(mtpc < 1-1e-15, mtpc, 1-1e-15))
-      mytestLL <- h2o.exec(h2oServer,expr=mean(-mytest_resp*log(mtpc)-(1-mytest_resp)*log(1-mtpc)))
-      cat("\nLogLoss of this ensemble member on mytest data:", mytestLL)
+      #mean_resp <- as.data.frame(matrix(mean(train_resp), nrow = nrow(train_resp), ncol = 1))
+      mean_resp <- mean(train_resp)
+      meanLL <- h2o.exec(h2oServer,expr=mean(-valid_resp*log(mean_resp)-(1-valid_resp)*log(1-mean_resp)))
+      cat("\nLogLoss of the mean response:", meanLL)
+
+      if (!submitwithfulldata) {
+        test_preds <- h2o.predict(model, test_hex)[,3]
+        if (myLL > meanLL) {
+          cat("\nReplacing the test set prediction with the mean response!")
+          test_preds <- ifelse(test_preds[,1] > 1000, 0., mean_resp) #not sure how else to replace all elements with mean_resp..
+        }
+      }
 
       if (n == 1) {
         valid_preds_ensemble <- valid_preds
         if (!submitwithfulldata) {
           test_preds_ensemble <- test_preds
-          mytest_preds_ensemble <- mytest_preds
         }
       } else {
         valid_preds_ensemble <- valid_preds_ensemble + valid_preds
         if (!submitwithfulldata) {
           test_preds_ensemble <- test_preds_ensemble + test_preds
-          mytest_preds_ensemble <- mytest_preds_ensemble + mytest_preds
         }
       }
     }
     valid_preds <- valid_preds_ensemble/ensemble_size ##ensemble average of probabilities
     if (!submitwithfulldata) {
       test_preds  <- test_preds_ensemble/ensemble_size
-      mytest_preds  <- mytest_preds_ensemble/ensemble_size
     }
 
     ## Compute LogLoss of ensemble
@@ -145,39 +138,16 @@ for (resp in 1:length(targets)) {
     cat("\nLogLosses of ensemble on validation data so far:", LogLoss)
     cat("\nMean LogLoss of ensemble on validation data so far:", sum(LogLoss)/resp)
 
-    mytest_preds <- h2o.exec(h2oServer,expr=ifelse(mytest_preds > 1e-15, mytest_preds, 1e-15))
-    mytest_preds <- h2o.exec(h2oServer,expr=ifelse(mytest_preds < 1-1e-15, mytest_preds, 1-1e-15))
-    mytestLL <- h2o.exec(h2oServer,expr=mean(-mytest_resp*log(mytest_preds)-(1-mytest_resp)*log(1-mytest_preds)))
-    myTestLogLoss[resp] <- mytestLL
-    cat("\nLogLosses of ensemble on myTest data so far:", myTestLogLoss)
-    cat("\nMean LogLoss of ensemble on myTest data so far:", sum(myTestLogLoss)/resp)
-
     if (!submitwithfulldata) {
       cat("\nMaking test set predictions with ensemble model on 95% of the data\n")
       ensemble_average <- as.data.frame(test_preds) #bring ensemble average to R
       colnames(ensemble_average)[1] <- targets[resp] #give it the right name
-
       if (resp == 1) {
         final_submission <- ensemble_average
       } else {
         final_submission <- cbind(final_submission, ensemble_average)
       }
-      print(head(final_submission))
-
-
-      cat("\nMaking mytest set predictions with ensemble model on 5% of the data\n")
-      mytestensemble_average <- as.data.frame(mytest_preds) #bring ensemble average to R
-      colnames(mytestensemble_average)[1] <- targets[resp] #give it the right name
-
-      # also bring mytest_resp to R
-      if (resp == 1) {
-        mytest_respR <- as.data.frame(mytest_resp) #bring ensemble average to R
-        mytestfinal_submission <- mytestensemble_average
-      } else {
-        mytest_respR <- cbind(mytest_respR, as.data.frame(mytest_resp)) #bring ensemble average to R
-        mytestfinal_submission <- cbind(mytestfinal_submission, mytestensemble_average)
-      }
-      print(head(mytestfinal_submission))
+      #print(head(final_submission))
     }
   }
   
@@ -248,18 +218,4 @@ fs <- t(as.matrix(final_submission))
 dim(fs) <- c(prod(dim(fs)),1)
 submission[,2] <- fs #replace 0s with actual predictions
 write.csv(submission, file = "./submission.csv", quote = F, row.names = F)
-
-print(summary(mytestfinal_submission))
-#reshape predictions into 1D
-mtfs <- t(as.matrix(mytestfinal_submission))
-dim(mtfs) <- c(prod(dim(mtfs)),1)
-
-mtr <- t(as.matrix(as.data.frame(mytest_respR)))
-dim(mtr) <- c(prod(dim(mtr)),1)
-
-mtfs <- ifelse(mtfs > 1e-15, mtfs, 1e-15)
-mtfs <- ifelse(mtfs < 1-1e-15, mtfs, 1-1e-15)
-
-mean(-mtr*log(mtfs)-(1-mtr)*log(1-mtfs))
-
 sink()
