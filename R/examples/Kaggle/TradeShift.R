@@ -40,7 +40,7 @@ targets <- labels[-1] ## all targets
 
 ## Settings (at least one of the following two settings has to be TRUE)
 validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
-submitwithfulldata = F #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
+submitwithfulldata = T #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
 
 ensemble_size <- 1 # more -> lower variance
 seed0 = 1337
@@ -62,7 +62,6 @@ if (validate) {
 }
 
 ## Main loop over targets
-#for (resp in c(6,7,9,12,29,33)) { # FIXME: remove
 for (resp in 1:length(targets)) {
   # always just predict class 0 for y_14 (is constant)
   if (resp == 14) {
@@ -86,8 +85,6 @@ for (resp in 1:length(targets)) {
                          validation = valid,
                          classification = T,
                          type = "BigData", #this has better handling of categoricals than type = "fast", but is slower
-                         balance.classes = T,
-                         max.after.balance.size = 2,
                          ntree = c(50),
                          depth = c(30),
                          mtries = 20,
@@ -185,7 +182,7 @@ for (resp in 1:length(targets)) {
       p <- cvmodel@model$params   #If cvmodel is not a grid search model
     }
     else {
-      p = list(classification = T, type = "BigData", balance.classes = T, max.after.balance.size = 2, ntree=50, depth=30, mtries=20, nbins=50)
+      p = list(classification = T, type = "BigData", ntree=50, depth=30, mtries=20, nbins=50)
     }
     ## Build an ensemble model on full training data - should perform better than the CV model above
     for (n in 1:ensemble_size) {
@@ -197,8 +194,6 @@ for (resp in 1:length(targets)) {
                          data = trainWL,
                          classification = p$classification,
                          type = p$type,
-                         balance.classes = p$balance.classes,
-                         max.after.balance.size = p$max.after.balance.size,
                          ntree = p$ntree,
                          depth = p$depth,
                          mtries = p$mtries,
