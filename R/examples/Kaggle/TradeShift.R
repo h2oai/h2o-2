@@ -60,9 +60,8 @@ train <- h2o.assign(train, "train")
 valid <- h2o.assign(valid, "valid")
 
 ## Main loop over targets
-#for (resp in 1:length(targets)) {
-#for (resp in c(6,7,9,12,29,33)) {
-for (resp in c(33)) {
+#for (resp in c(6,7,9,12,29,33)) { # FIXME: remove
+for (resp in 1:length(targets)) {
   # always just predict class 0 for y_14 (is constant)
   if (resp == 14) {
     final_submission <- cbind(final_submission, as.data.frame(matrix(0, nrow = nrow(test_hex), ncol = 1)))
@@ -84,18 +83,21 @@ for (resp in c(33)) {
                          data = train,
                          validation = valid,
                          classification = T,
-                         type = "fast", #this has better handling of categoricals than type = "fast", but is slower
+                         type = "BigData", #this has better handling of categoricals than type = "fast", but is slower
                          ntree = c(50),
                          depth = c(30),
-                         mtries = 50,
-                         nbins = 1024,
+                         mtries = 20,
+                         nbins = 50,
                          seed = seed0 + resp*ensemble_size + n
         )
 
       #y33
+      #100trees, depth 20: validation ll 0.1305
       #50 trees, depth 30: training ll 0.0298 validation ll 0.0832
+      #50 trees, depth 30, 20 mtries, 50 bins: training ll 0.0278 validation ll 0.0779
       #20 trees, depth 100: training ll 0.0232 validation ll 0.1140
 
+      #overall
       #ntree=100, depth=20
       #Overall validation LogLosses =  0.0036210883470459268897 0.00093248060944743443 0.0033672750311952927456 0.0021615067778732411849 0.00066611468647258254006 0.039699153689623581376 0.026062744200152396928 0.0038022229461941057724 0.047238971099232508755 0.011217721209381286557 0.00094352354247681296737 0.045193823452661284479 0.0052504059519060076663 0 0.0015075118782610749842 0.0031323080340788398909 0.00056565005960328878284 0.00049855167613287968299 0.00010742980631501478778 0.00038932701854535060665 0.0014864136358284606425 0.0011580518684932109442 0.00012617514326470962924 0.0065985565515910820505 0.00091284420340833911239 0.0037073679367141914968 0.0019028473236039631158 0.0024906651997033796807 0.030321520288551069566 0.0088540590503823502627 0.013449799883376137993 0.018525638668708464124 0.13056367073405611423
       #Overall validation LogLoss =  0.012619861227402436737
@@ -149,8 +151,8 @@ for (resp in c(33)) {
     train_preds <- h2o.exec(h2oServer,expr=ifelse(train_preds < 1-1e-15, train_preds, 1-1e-15))
     tLL <- h2o.exec(h2oServer,expr=mean(-train_resp*log(train_preds)-(1-train_resp)*log(1-train_preds)))
     tLogLoss[resp] <- tLL
-    cat("\nLogLosses of ensemble on validation data so far:", tLogLoss)
-    cat("\nMean LogLoss of ensemble on validation data so far:", sum(tLogLoss)/resp)
+    cat("\nLogLosses of ensemble on training data so far:", tLogLoss)
+    cat("\nMean LogLoss of ensemble on training data so far:", sum(tLogLoss)/resp)
 
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds > 1e-15, valid_preds, 1e-15))
     valid_preds <- h2o.exec(h2oServer,expr=ifelse(valid_preds < 1-1e-15, valid_preds, 1-1e-15))
@@ -193,6 +195,8 @@ for (resp in c(33)) {
                          type = "BigData",
                          ntree = p$ntree,
                          depth = p$depth,
+                         mtries = p$mtries,
+                         nbins = p$nbins,
                          seed = seed0 + resp*ensemble_size + n,
                          key = paste0(targets[resp], "_cv_ensemble_", n, "_of_", ensemble_size)
         )
@@ -221,7 +225,7 @@ for (resp in c(33)) {
   ## Remove no longer needed old models and temporaries from K-V store to keep memory footprint low
   ls_temp <- h2o.ls(h2oServer)
   for (n_ls in 1:nrow(ls_temp)) {
-    if (str_detect(ls_temp[n_ls, 1], "SpeeDRF") || str_detect(ls_temp[n_ls, 1], "Last.value")) {
+    if (str_detect(ls_temp[n_ls, 1], "DRF") || str_detect(ls_temp[n_ls, 1], "Last.value")) {
       h2o.rm(h2oServer, keys = as.character(ls_temp[n_ls, 1]))
     }
   }
