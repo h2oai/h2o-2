@@ -155,6 +155,8 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     classification_error = pctWrong
 
     if not noPrint: 
+        if 'minLeaves' not in treeStats or not treeStats['minLeaves']:
+            raise Exception("treestats seems to be missing minLeaves %s" % h2o.dump_json(treestats))
         print """
          Leaves: {0} / {1} / {2}
           Depth: {3} / {4} / {5}
