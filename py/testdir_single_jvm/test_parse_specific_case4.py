@@ -4,11 +4,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
-print "I'll keep it to one case per file"
+print "This injects the full set of single byte UTF8 in a col, except for some special h2o chars"
 
-# toDoList = range(0x0,0x80)
-# 0x1 can be the hive separator? if we force comma it should be treated as char
-# should try without and change expected cols
 toDoList = range(0x00, 0x100)
 
 def removeIfThere(d):
@@ -17,7 +14,6 @@ def removeIfThere(d):
 
 H2O_COL_SEPARATOR = 0x2c # comma
 # H2O_COL_SEPARATOR = 0x1 # hive separator
-
 # removeIfThere(0x1) # hive separator okay if we force comma below
 
 removeIfThere(0x0) # nul. known issue
@@ -26,15 +22,11 @@ removeIfThere(0xd) # CR. causes EOL
 removeIfThere(0x22) # double quote. known issue
 removeIfThere(0x2c) # comma. don't mess up my expected col count
 
-# could try single quote if enabled, to see if does damage. probably like double quote
-
 tryList = []
 for i in toDoList:
     unicodeSymbol = unichr(i)
 
     tryList.append(
-        # the nul char I think is causing extra rows and also wiping out the next char?
-        # I got nulls when concat'ing files with dd. may be used for padding somehow?
         ((
         'a,b,c,d' + unicodeSymbol + 's,n\n'
         'a,b,c,d' + unicodeSymbol + 's,n\n'
@@ -85,7 +77,8 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, dataset)
 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', header=0,
-                hex_key=hex_key, timeoutSecs=10, doSummary=False, separator=H2O_COL_SEPARATOR) # force comma separator
+                # force column separator
+                hex_key=hex_key, timeoutSecs=10, doSummary=False, separator=H2O_COL_SEPARATOR) 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)
             
             print "Parsed with special unichr(%s) which is %s:" % (unicodeNum, unichr(unicodeNum))
