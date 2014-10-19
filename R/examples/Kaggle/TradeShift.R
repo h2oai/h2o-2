@@ -39,10 +39,10 @@ targets <- labels[-1] ## all targets
 #targets <- labels[c(7,8,10,11,13,29,30,31,32,33)]  ## harder to predict targets for tuning of parameters
 
 ## Settings (at least one of the following two settings has to be TRUE)
-validate = F #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
-submitwithfulldata = T #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
+validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
+submitwithfulldata = F #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
 
-ensemble_size <- 2 # more -> lower variance
+ensemble_size <- 5 # more -> lower variance
 seed0 = 1337
 reproducible_mode = T # Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower for DL
 
@@ -86,18 +86,14 @@ for (resp in 1:length(targets)) {
                          validation = valid,
                          classification = T,
                          type = "BigData", #this has better handling of categoricals than type = "fast", but is slower
+                         balance.classes = T,
+                         max.after.balance.size = 2,
                          ntree = c(50),
                          depth = c(30),
                          mtries = 20,
                          nbins = 50,
                          seed = seed0 + resp*ensemble_size + n
         )
-
-      #y33 DRF
-      #100trees, depth 20: validation ll 0.1305
-      #50 trees, depth 30: training ll 0.0298 validation ll 0.0832
-      #50 trees, depth 30, 20 mtries, 50 bins: training ll 0.0278 validation ll 0.0779
-      #20 trees, depth 100: training ll 0.0232 validation ll 0.1140
 
       #overall
       #1 ensemble DRF ntree=100, depth=20
@@ -189,7 +185,7 @@ for (resp in 1:length(targets)) {
       p <- cvmodel@model$params   #If cvmodel is not a grid search model
     }
     else {
-      p = list(ntree=50, depth=30, mtries=20, nbins=50)
+      p = list(classification = T, type = "BigData", balance.classes = T, max.after.balance.size = 2, ntree=50, depth=30, mtries=20, nbins=50)
     }
     ## Build an ensemble model on full training data - should perform better than the CV model above
     for (n in 1:ensemble_size) {
@@ -199,8 +195,10 @@ for (resp in 1:length(targets)) {
         h2o.randomForest(x = predictors,
                          y = targets[resp],
                          data = trainWL,
-                         classification = T,
-                         type = "BigData",
+                         classification = p$classification,
+                         type = p$type,
+                         balance.classes = p$balance.classes,
+                         max.after.balance.size = p$max.after.balance.size,
                          ntree = p$ntree,
                          depth = p$depth,
                          mtries = p$mtries,
