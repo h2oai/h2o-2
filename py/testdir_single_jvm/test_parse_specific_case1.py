@@ -4,7 +4,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
-print "I'll keep it to one case per file"
+print "This is a known fail for both row and col. Leading unmatched double quote issue"
 
 tryList = [
 ('''\

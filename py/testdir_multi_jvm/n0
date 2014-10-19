@@ -1,129 +1,143 @@
-./n0.doit test_0_NA_2enum.py
-./n0.doit test_allstate_claim_prediction.py
-./n0.doit test_basics.py
-# ./n0.doit test_big_local_cloud.py
-# ./n0.doit test_cloud_127_2_loop.py
-# ./n0.doit test_cloud_127.py
-# ./n0.doit test_cloud_17to25.py
-# ./n0.doit test_cloud_5_loop.py
-# ./n0.doit test_cloud.py
-# ./n0.doit test_cloud_udp_drop.py
-./n0.doit test_csv_download_libsvm.py
-./n0.doit test_ddply_plot2.py
-./n0.doit test_dead_node_status.py
-./n0.doit test_elapsed_time.py
-./n0.doit test_exec2_2.py
-./n0.doit test_exec2_arith_precedence.py
-./n0.doit test_exec2_autoframe2.py
-./n0.doit test_exec2_col_scalar.py
-./n0.doit test_exec2_covtype_rand2.py
-./n0.doit test_exec2_dkv.py
-./n0.doit test_exec2_factor.py
-./n0.doit test_exec2_int2cat_nested.py
-./n0.doit test_exec2_int2cat.py
-./n0.doit test_exec2_plus_browse.py
-./n0.doit test_exec2_rotate_inc.py
-./n0.doit test_exec2_slicing.py
-./n0.doit test_exec2_sum_cols.py
-./n0.doit test_flatfile_fvec.py
-./n0.doit test_frame_split_rebalance.py
-./n0.doit test_GBM_cancel_model_reuse.py
-./n0.doit test_GBM_covtype_train_test.py
-./n0.doit test_GBM_manyfiles_train_test.py
-./n0.doit test_GBM_params_rand2.py
-./n0.doit test_GBM_poker_1m.py
-./n0.doit test_GBM_regression_rand2.py
-./n0.doit test_GBM_with_cancels.py
-# ./n0.doit test_get_cloud.py
-./n0.doit test_GLM2_big1_nopoll.py
-./n0.doit test_GLM2_big2.py
-./n0.doit test_GLM2_catdata.py
-./n0.doit test_GLM2_covtype_exec.py
-./n0.doit test_GLM2_covtype_single_cols.py
-./n0.doit test_GLM2_from_import.py
-./n0.doit test_GLM2grid_hastie.py
-./n0.doit test_GLM2_many_cols_4.py
-./n0.doit test_GLM2_many_cols_int2cat.py
-./n0.doit test_GLM2_many_cols_tridist.py
-./n0.doit test_GLM2_prob_cols_4.py
-./n0.doit test_GLM2.py
-./n0.doit test_inspect.py
-./n0.doit test_iostatus.py
-./n0.doit test_jstack.py
-./n0.doit test_KMeans2_sphere100.py
-./n0.doit test_KMeans2_sphere5_bad_inits.py
-./n0.doit test_KMeans2_sphere5_inits.py
-./n0.doit test_KMeans2_winesPCA.py
-./n0.doit test_KMeans_covtype20x_fvec.py
-./n0.doit test_KMeans_covtype_cols_fvec.py
-./n0.doit test_KMeans_create_frame_fvec.py
-./n0.doit test_KMeansGrid_basic_fvec.py
-./n0.doit test_KMeansGrid_params_rand2_fvec.py
-./n0.doit test_KMeans_iris_fvec.py
-./n0.doit test_KMeans_libsvm_fvec.py
-./n0.doit test_KMeans_params_rand2_fvec.py
-./n0.doit test_KMeans_sphere100_fvec.py
-./n0.doit test_KMeans_sphere3_fvec.py
-./n0.doit test_log_download_view.py
-./n0.doit test_many_cols_01.py
-./n0.doit test_many_cols_0.py
-./n0.doit test_many_cols_and_types.py
-./n0.doit test_many_cols_csv_download.py
-./n0.doit test_many_cols_enum_multi.py
-./n0.doit test_many_cols_long_enums.py
-./n0.doit test_many_fp_formats_libsvm_2_fvec.py
-./n0.doit test_many_fp_formats_libsvm_fvec.py
-./n0.doit test_many_fp_formats.py
-./n0.doit test_many_rows_long_enums.py
-./n0.doit test_mixed_int_enum_many.py
-./n0.doit test_model_management.py
-# ./n0.doit test_multi_with_a_browser.py
-./n0.doit test_network.py
-./n0.doit test_NN2_mnist_multi.py
-./n0.doit test_parse_bounds_csv_fvec.py
-./n0.doit test_parse_csv_download_fvec.py
-./n0.doit test_parse_file_loop_fvec.py
-./n0.doit test_parse_fs_schmoo_fvec.py
-./n0.doit test_parse_many_cols_fvec.py
-./n0.doit test_parse_manyfiles_fvec.py
-./n0.doit test_parse_mnist_rebalance.py
-./n0.doit test_parse_rand_schmoo2_fvec.py
-./n0.doit test_parse_rand_schmoo3_fvec.py
-./n0.doit test_parse_rand_schmoo_fvec.py
-./n0.doit test_parse_time2_fvec.py
-./n0.doit test_parse_time_fvec.py
-./n0.doit test_poisson_covtype20x.py
-./n0.doit test_putfile2_fvec.py
-./n0.doit test_putfile_fvec.py
-./n0.doit test_rebalance_int2enum.py
-./n0.doit test_rf_1ktrees_job_cancel_3_fvec.py
-./n0.doit test_rf_1ktrees_job_cancel_fvec.py
-./n0.doit test_rf_1ktrees_job_cancel_many_fvec.py
-./n0.doit test_rf_200x4_fvec.py
-./n0.doit test_rf3_fvec.py
-./n0.doit test_rf_airlines_2013_fvec.py
-./n0.doit test_rf_arity_fvec.py
-./n0.doit test_rf_big_rand_tree_fvec.py
-./n0.doit test_rf_brutal2_fvec.py
-./n0.doit test_rf_covtype_brutal_fvec.py
-./n0.doit test_rf_float_bigexp_fvec.py
-./n0.doit test_rf_float_many_bins_fvec.py
-./n0.doit test_rf_float_rand2_fvec.py
-./n0.doit test_rf_float_rand_fvec.py
-./n0.doit test_rf_hhp_2a_fvec.py
-./n0.doit test_rf_hhp_2_fvec.py
-./n0.doit test_rf_kaggle_fvec.py
-./n0.doit test_rf_kddcup_1999_fvec.py
-./n0.doit test_rf_libsvm_fvec.py
-./n0.doit test_rf_mnist_fvec.py
-./n0.doit test_rf_parity_500trees.py
-./n0.doit test_rf_poker_1m_fvec.py
-./n0.doit test_rf_sample_fvec.py
-./n0.doit test_rf_stedo_fvec.py
-./n0.doit test_same_parse_fvec.py
-./n0.doit test_SetupThreeJVM4.py
-./n0.doit test_storeview_diff.py
-./n0.doit test_storeview_import.py
-./n0.doit test_storeview_walk.py
-./n0.doit test_summary2_with_x_libsvm.py
-./n0.doit test_xls.py
+./n0.doit test_0_NA_2enum.py $*
+./n0.doit test_allstate_claim_prediction.py $*
+./n0.doit test_basics.py $*
+# ./n0.doit test_big_local_cloud.py $*
+# ./n0.doit test_cloud_127_2_loop.py $*
+# ./n0.doit test_cloud_127.py $*
+# ./n0.doit test_cloud_17to25.py $*
+# ./n0.doit test_cloud_5_loop.py $*
+# ./n0.doit test_cloud.py $*
+# ./n0.doit test_cloud_udp_drop.py $*
+./n0.doit test_csv_download_libsvm.py $*
+./n0.doit test_ddply_plot2.py $*
+./n0.doit test_dead_node_status.py $*
+./n0.doit test_elapsed_time.py $*
+./n0.doit test_exec2_2.py $*
+./n0.doit test_exec2_arith_precedence.py $*
+./n0.doit test_exec2_autoframe2.py $*
+./n0.doit test_exec2_col_scalar.py $*
+./n0.doit test_exec2_covtype_rand2.py $*
+./n0.doit test_exec2_dkv.py $*
+./n0.doit test_exec2_factor.py $*
+./n0.doit test_exec2_int2cat_nested.py $*
+./n0.doit test_exec2_int2cat.py $*
+./n0.doit test_exec2_plus_browse.py $*
+./n0.doit test_exec2_rotate_inc.py $*
+./n0.doit test_exec2_slicing.py $*
+./n0.doit test_exec2_sum_cols.py $*
+./n0.doit test_flatfile_fvec.py $*
+./n0.doit test_frame_split_rebalance.py $*
+./n0.doit test_GBM_cancel_model_reuse.py $*
+./n0.doit test_GBM_covtype_train_test.py $*
+./n0.doit test_GBM_manyfiles_train_test.py $*
+./n0.doit test_GBM_params_rand2.py $*
+./n0.doit test_GBM_poker_1m.py $*
+./n0.doit test_GBM_regression_rand2.py $*
+./n0.doit test_GBM_with_cancels.py $*
+# ./n0.doit test_get_cloud.py $*
+./n0.doit test_GLM2_big1_nopoll.py $*
+./n0.doit test_GLM2_big2.py $*
+./n0.doit test_GLM2_catdata.py $*
+./n0.doit test_GLM2_covtype_exec.py $*
+./n0.doit test_GLM2_covtype_single_cols.py $*
+./n0.doit test_GLM2_from_import.py $*
+./n0.doit test_GLM2grid_hastie.py $*
+./n0.doit test_GLM2_many_cols_4.py $*
+./n0.doit test_GLM2_many_cols_int2cat.py $*
+./n0.doit test_GLM2_many_cols_tridist.py $*
+./n0.doit test_GLM2_prob_cols_4.py $*
+./n0.doit test_GLM2.py $*
+./n0.doit test_impute_with_na.py $*
+./n0.doit test_inspect.py $*
+./n0.doit test_iostatus.py $*
+./n0.doit test_jstack.py $*
+./n0.doit test_KMeans2_sphere100.py $*
+./n0.doit test_KMeans2_sphere5_bad_inits.py $*
+./n0.doit test_KMeans2_sphere5_inits.py $*
+./n0.doit test_KMeans2_winesPCA.py $*
+./n0.doit test_KMeans_covtype20x_fvec.py $*
+./n0.doit test_KMeans_covtype_cols_fvec.py $*
+./n0.doit test_KMeans_create_frame_fvec.py $*
+./n0.doit test_KMeansGrid_basic_fvec.py $*
+./n0.doit test_KMeansGrid_params_rand2_fvec.py $*
+./n0.doit test_KMeans_iris_fvec.py $*
+./n0.doit test_KMeans_libsvm_fvec.py $*
+./n0.doit test_KMeans_params_rand2_fvec.py $*
+./n0.doit test_KMeans_sphere100_fvec.py $*
+./n0.doit test_KMeans_sphere3_fvec.py $*
+./n0.doit test_log_download_view.py $*
+./n0.doit test_many_cols_01.py $*
+./n0.doit test_many_cols_0.py $*
+./n0.doit test_many_cols_and_types.py $*
+./n0.doit test_many_cols_csv_download.py $*
+./n0.doit test_many_cols_enum_multi.py $*
+./n0.doit test_many_cols_long_enums.py $*
+./n0.doit test_many_fp_formats_libsvm_2_fvec.py $*
+./n0.doit test_many_fp_formats_libsvm_fvec.py $*
+./n0.doit test_many_fp_formats.py $*
+./n0.doit test_many_rows_long_enums.py $*
+./n0.doit test_mixed_int_enum_many.py $*
+./n0.doit test_model_management.py $*
+# ./n0.doit test_multi_with_a_browser.py $*
+./n0.doit test_network.py $*
+./n0.doit test_NN2_mnist_multi.py $*
+./n0.doit test_parse_bounds_csv_fvec.py $*
+./n0.doit test_parse_csv_download_fvec.py $*
+./n0.doit test_parse_file_loop_fvec.py $*
+./n0.doit test_parse_fs_schmoo_fvec.py $*
+./n0.doit test_parse_full_rand.py $*
+./n0.doit test_parse_many_cols_fvec.py $*
+./n0.doit test_parse_manyfiles_fvec.py $*
+./n0.doit test_parse_mnist_rebalance.py $*
+./n0.doit test_parse_rand_enum_compress.py $*
+./n0.doit test_parse_rand_just_special.py $*
+./n0.doit test_parse_rand_schmoo2_fvec.py $*
+./n0.doit test_parse_rand_schmoo3_fvec.py $*
+./n0.doit test_parse_rand_schmoo_fvec.py $*
+./n0.doit test_parse_rand_utf16.py $*
+./n0.doit test_parse_rand_utf8_2.py $*
+./n0.doit test_parse_rand_utf8_3.py $*
+./n0.doit test_parse_rand_utf8_angle_start.py $*
+./n0.doit test_parse_rand_utf8_just_double_quote.py $*
+./n0.doit test_parse_rand_utf8_multibyte.py $*
+./n0.doit test_parse_rand_utf8.py $*
+./n0.doit test_parse_rand_utf8_unmatched_double.py $*
+./n0.doit test_parse_time2_fvec.py $*
+./n0.doit test_parse_time_fvec.py $*
+./n0.doit test_poisson_covtype20x.py $*
+./n0.doit test_putfile2_fvec.py $*
+./n0.doit test_putfile_fvec.py $*
+./n0.doit test_rebalance_int2enum.py $*
+./n0.doit test_rf_1ktrees_job_cancel_3_fvec.py $*
+./n0.doit test_rf_1ktrees_job_cancel_fvec.py $*
+./n0.doit test_rf_1ktrees_job_cancel_many_fvec.py $*
+./n0.doit test_rf_200x4_fvec.py $*
+./n0.doit test_rf3_fvec.py $*
+./n0.doit test_rf_airlines_2013_fvec.py $*
+./n0.doit test_rf_arity_fvec.py $*
+./n0.doit test_rf_big_rand_tree_fvec.py $*
+./n0.doit test_rf_brutal2_fvec.py $*
+./n0.doit test_rf_covtype_brutal_fvec.py $*
+./n0.doit test_rf_covtype_train_oobe_fvec.py $*
+./n0.doit test_rf_float_bigexp_fvec.py $*
+./n0.doit test_rf_float_many_bins_fvec.py $*
+./n0.doit test_rf_float_rand2_fvec.py $*
+./n0.doit test_rf_float_rand_fvec.py $*
+./n0.doit test_rf_hhp_2a_fvec.py $*
+./n0.doit test_rf_hhp_2_fvec.py $*
+./n0.doit test_rf_kaggle_fvec.py $*
+./n0.doit test_rf_kddcup_1999_fvec.py $*
+./n0.doit test_rf_libsvm_fvec.py $*
+./n0.doit test_rf_mnist_fvec.py $*
+./n0.doit test_rf_parity_500trees.py $*
+./n0.doit test_rf_parity_cmp.py $*
+./n0.doit test_rf_poker_1m_fvec.py $*
+./n0.doit test_rf_sample_fvec.py $*
+./n0.doit test_rf_stedo_fvec.py $*
+./n0.doit test_same_parse_fvec.py $*
+./n0.doit test_SetupThreeJVM4.py $*
+./n0.doit test_storeview_diff.py $*
+./n0.doit test_storeview_import.py $*
+./n0.doit test_storeview_walk.py $*
+./n0.doit test_summary2_with_x_libsvm.py $*
+./n0.doit test_xls.py $*

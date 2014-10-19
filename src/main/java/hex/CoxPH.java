@@ -451,13 +451,12 @@ public class CoxPH extends Job {
       sb.append("<h4>Data</h4>");
       sb.append("<table class='table table-striped table-bordered table-condensed'><col width=\"25%\"><col width=\"75%\">");
       sb.append("<tr><th>Number of Complete Cases</th><td>");          sb.append(n);          sb.append("</td></tr>");
-      sb.append("<tr><th>Number of Non Complete Cases</th><td>");      sb.append(n_missing);  sb.append("</td></tr>");
       sb.append("<tr><th>Number of Events in Complete Cases</th><td>");sb.append(total_event);sb.append("</td></tr>");
       sb.append("</table>");
 
       sb.append("<h4>Coefficients</h4>");
       sb.append("<table class='table table-striped table-bordered table-condensed'>");
-      sb.append("<tr><th></th><td>coef</td><td>exp(coef)</td><td>se(coef)</td><td>z</td></tr>");
+      sb.append("<tr><th></th><th>coef</th><th>exp(coef)</th><th>se(coef)</th><th>z</th></tr>");
       for (int j = 0; j < coef.length; ++j) {
         sb.append("<tr><th>");
         sb.append(coef_names[j]);sb.append("</th><td>");sb.append(coef[j]);   sb.append("</td><td>");
@@ -472,11 +471,11 @@ public class CoxPH extends Job {
       sb.append("<tr><th>Rsquare</th><td>");sb.append(String.format("%.3f", rsq));
       sb.append(" (max possible = ");       sb.append(String.format("%.3f", maxrsq));sb.append(")</td></tr>");
       sb.append("<tr><th>Likelihood ratio test</th><td>");sb.append(String.format("%.2f", loglik_test));
-      sb.append(" on 1 df</td></tr>");
+      sb.append(" on ");sb.append(String.format("%d", coef.length));sb.append(" df</td></tr>");
       sb.append("<tr><th>Wald test            </th><td>");sb.append(String.format("%.2f", wald_test));
-      sb.append(" on 1 df</td></tr>");
+      sb.append(" on ");sb.append(String.format("%d", coef.length));sb.append(" df</td></tr>");
       sb.append("<tr><th>Score (logrank) test </th><td>");sb.append(String.format("%.2f", score_test));
-      sb.append(" on 1 df</td></tr>");
+      sb.append(" on ");sb.append(String.format("%d", coef.length));sb.append(" df</td></tr>");
       sb.append("</table>");
     }
 

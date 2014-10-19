@@ -3,16 +3,22 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 
+print 'not using NUL, (0x0), or " at start of line since they cause add/deletes of row count'
+
+NO_NUL = True # the problem with NUL is covered by other tests. don't use
+NO_COMMENT = True
+NO_QUOTE_BEGIN = True
+
 DEBUG = False
 UTF8 = True
 UTF8_MULTIBYTE = True
 
 DISABLE_ALL_NA = False
+
+# if we have empty rows, they mess up the row count. If we have multiple cols, it's less likely for NAs to make an empty row
 CAUSE_RANDOM_NA = True
 
 DO_SUMMARY = False # summary slow for some reason
-
-NO_NUL = True # the problem with NUL is covered by other tests. don't use
 print "We have a problem starting a line with double quote and not ending it before EOL"
 print "assume that is unlikely with the distribution being used"
 
@@ -22,6 +28,7 @@ if UTF8:
     ordinalChoices = range(0x1 if NO_NUL else 0x0, 0x100) # doesn't include last value ..allow ff
 else:  # ascii subset?
     ordinalChoices = range(0x1 if NO_NUL else 0x0, 0x80) # doesn't include last value ..allow 7f
+    # remove the comma to avoid creating extra columns
 
 if UTF8_MULTIBYTE:
     def aSmallSet(a, b):
@@ -47,11 +54,20 @@ if UTF8_MULTIBYTE:
         ordinalChoicesMulti += aSmallSet(0x010000,0x03ffff) # 3byte
         ordinalChoicesMulti += aSmallSet(0x040000,0x10ffff) # 4byte
 
-def generate_random_utf8_string(length=1, multi=False):
+ordinalChoices.remove(0x2c)
+ordinalChoicesMulti.remove(0x2c)
+
+def generate_random_utf8_string(length=1, multi=False, row=0, col=0):
     # want to handle more than 256 numbers
     cList = []
     for i in range(length):
-        r = random.choice(ordinalChoicesMulti if multi else ordinalChoices)
+        good = False
+        while not good:
+            r = random.choice(ordinalChoicesMulti if multi else ordinalChoices)
+            illegal1 = (NO_COMMENT and row==1 and col==1 and i==0) and (r==0x40 or r==0x23) # @ is 0x40, # is 0x23
+            illegal2 = (NO_QUOTE_BEGIN and i==0) and (r==0x22) # " is 0x22
+            good = not (illegal1 or illegal2)
+
         # we sholdn't encode it here. Then we wouldn't have to decode it to unicode before writing.
         c = unichr(r).encode('utf-8')
         cList.append(c)
@@ -122,12 +138,12 @@ def write_syn_dataset(csvPathname, rowCount, colCount=1, scale=1,
                 rowData.append('')
             else:
                 if howManyEnumsToUse >= 256 and UTF8_MULTIBYTE:
-                    r = generate_random_utf8_string(length=1, multi=True)
+                    r = generate_random_utf8_string(length=1, multi=True, row=row, col=col)
                 else:
-                    r = generate_random_utf8_string(length=1, multi=False)
+                    r = generate_random_utf8_string(length=1, multi=False, row=row, col=col)
                 rowData.append(r)
 
-        rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
+        rowDataCsv = colSepChar.join(rowData) + rowSepChar
 
         if UTF8 or UTF8_MULTIBYTE:
             # decode to unicode
@@ -180,16 +196,12 @@ class Basic(unittest.TestCase):
             repeat = 1000 
             scale = 10 # scale up the # of rows
             tryList = [
-                (n*scale, 1, 'cI', 300), 
-                (n*scale, 1, 'cI', 300), 
-                (n*scale, 1, 'cI', 300), 
+                (n*scale, 3, 'cI', 300), 
             ]
         else:
             repeat = 1
             scale = 1
             tryList = [
-                (n, 3, 'cI', 300), 
-                (n, 3, 'cI', 300), 
                 (n, 3, 'cI', 300), 
             ]
 

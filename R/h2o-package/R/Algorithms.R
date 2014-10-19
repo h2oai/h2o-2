@@ -1140,26 +1140,26 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
   if(!is.logical(verbose)) stop("verbose must be a logical value")
 
   if (missing(validation) && nfolds == 0 && oobee) {
-    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, importance=as.numeric(importance),
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, importance=as.numeric(importance),
                                 sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
 
   } else if(missing(validation) && nfolds >= 2 && oobee) {
-        res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
+        res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, mtries = mtries, n_folds=nfolds, importance=as.numeric(importance),
                                 sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
 
   } else if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation if oobee is false...
     validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, validation=data@key, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, validation=data@key, importance=as.numeric(importance),
                             sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else if(missing(validation) && nfolds >= 2) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, mtries = mtries, n_folds=nfolds, importance=as.numeric(importance),
                             sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else if(!missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, validation=validation@key, importance=as.numeric(importance),
                             sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes),
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, mtries=mtries, sample.rate=sample.rate, nbins=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes),
                 sampling_strategy="RANDOM", seed=seed, oobee=oobee, nfolds=nfolds, importance=importance, verbose = as.numeric(verbose), h2o = data@h2o)
   
   if(.is_singlerun("SpeeDRF", params))
