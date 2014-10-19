@@ -4,7 +4,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
-print "I'll keep it to one case per file"
+print "This is injecting double quote in a col"
 
 # toDoList = range(0x20,0x80)
 toDoList = [0x22] # double quote
@@ -20,8 +20,6 @@ for i in toDoList:
     unicodeSymbol = unichr(i)
 
     tryList.append(
-        # the nul char I think is causing extra rows and also wiping out the next char?
-        # I got nulls when concat'ing files with dd. may be used for padding somehow?
         ((
         'a,b,c,d' + unicodeSymbol + 's,n\n'
         'a,b,c,d' + unicodeSymbol + 's,n\n'
@@ -71,6 +69,7 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             write_syn_dataset(csvPathname, dataset)
 
+            # not forcing the column separator
             parseResult = h2i.import_parse(path=csvPathname, schema='put', header=0,
                 hex_key=hex_key, timeoutSecs=10, doSummary=False)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)
