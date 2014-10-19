@@ -189,7 +189,7 @@ for (resp in 1:length(targets)) {
       p <- cvmodel@model$params   #If cvmodel is not a grid search model
     }
     else {
-      p = list(ntree=20, depth=40) #For randomForest
+      p = list(ntree=50, depth=30, mtries=20, nbins=50)
     }
     ## Build an ensemble model on full training data - should perform better than the CV model above
     for (n in 1:ensemble_size) {
