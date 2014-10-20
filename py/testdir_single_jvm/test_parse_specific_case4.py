@@ -23,8 +23,8 @@ removeIfThere(0x22) # double quote. known issue
 removeIfThere(0x2c) # comma. don't mess up my expected col count
 
 tryList = []
-for i in toDoList:
-    unicodeSymbol = unichr(i)
+for unicodeNum in toDoList:
+    unicodeSymbol = unichr(unicodeNum)
 
     tryList.append(
         ((
@@ -38,7 +38,7 @@ for i in toDoList:
         'a,b,c,d' + unicodeSymbol + 's,n\n'
         'a,b,c,d' + unicodeSymbol + 's,n\n'
         'a,b,c,d' + unicodeSymbol + 's,n\n'
-        ), 10, 5, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum'], i)
+        ), 10, 5, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum'], unicodeNum)
     )
 
 def write_syn_dataset(csvPathname, dataset):

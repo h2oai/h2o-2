@@ -39,6 +39,7 @@ class Basic(unittest.TestCase):
 
         for trial, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             csvPathname = importFolderPath + "/" + csvFilepattern
+            hex_key = csvFilename + ".hex"
 
             (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
             (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
@@ -50,7 +51,7 @@ class Basic(unittest.TestCase):
             print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
 
-            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', timeoutSecs=300)
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', hex_key=hex_key, timeoutSecs=600)
             execExpr="A.hex=%s" % parseResult['destination_key']
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
 

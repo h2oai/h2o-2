@@ -82,7 +82,8 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname
-            (actualMax, actualMin) = write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
+            (actualMax, actualMin) = write_syn_dataset(csvPathname, rowCount, colCount, 
+                expectedMin, expectedMax, SEEDPERFILE)
             # adjust the min/max depending on what the min/max actually was!
             # the expected 25%/50%/75% will still be off
             expected[1] = actualMin
@@ -94,12 +95,19 @@ class Basic(unittest.TestCase):
             # because of floor and ceil effects due we potentially lose 2 bins (worst case)
             # the extra bin for the max value, is an extra bin..ignore
             expectedBin = expectedRange/(MAX_QBINS-2)
-            # maxDelta = 0.5 * expectedBin # should we have some fuzz for fp?
-            maxDelta = expectedBin
-            maxDelta = 1.2 * maxDelta # fuzz?
+            maxDelta = 0.5 * expectedBin
+
+            # how much error do we get in the random distribution gen? pain. It's a probability issue
+            # smaller error likely with larger # of values.
+            # the maxDelta used for the scipy/sort compare can be tighter, since it's looking
+            # at actual data
+            maxDeltaPlusDistVariance = 4 * maxDelta
+            # allow some fuzz in the comparison to scipy/sort
+            maxDelta = 1.1 * maxDelta 
 
             csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+                timeoutSecs=30, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -140,18 +148,25 @@ class Basic(unittest.TestCase):
 
             zeros = stats['zeros']
             mins = stats['mins']
-            h2o_util.assertApproxEqual(mins[0], expected[1], rel=.00001, msg='min is not approx. expected')
+            # these should match exactly except for fp compare error?
+            h2o_util.assertApproxEqual(mins[0], expected[1], rel=.00001, msg='min is not expected')
             maxs = stats['maxs']
-            h2o_util.assertApproxEqual(maxs[0], expected[5], rel=.00001, msg='max is not approx. expected')
+            h2o_util.assertApproxEqual(maxs[0], expected[5], rel=.00001, msg='max is not expected')
 
             pct = stats['pct']
             # the thresholds h2o used, should match what we expected
             expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
 
             pctile = stats['pctile']
-            h2o_util.assertApproxEqual(pctile[3], expected[2], tol=maxDelta, msg='25th percentile is not approx. expected')
-            h2o_util.assertApproxEqual(pctile[5], expected[3], tol=maxDelta, msg='50th percentile (median) is not approx. expected')
-            h2o_util.assertApproxEqual(pctile[7], expected[4], tol=maxDelta, msg='75th percentile is not approx. expected')
+            h2o_util.assertApproxEqual(pctile[3], expected[2], tol=maxDeltaPlusDistVariance, 
+                msg='25th percentile is not approx. expected for generated uniform range %s %s' %\
+                    (expectedMin, expectedMax))
+            h2o_util.assertApproxEqual(pctile[5], expected[3], tol=maxDeltaPlusDistVariance, 
+                msg='50th percentile is not approx. expected for generated uniform range %s %s' %\
+                    (expectedMin, expectedMax))
+            h2o_util.assertApproxEqual(pctile[7], expected[4], tol=maxDeltaPlusDistVariance, 
+                msg='75th percentile is not approx. expected for generated uniform range %s %s' %\
+                    (expectedMin, expectedMax))
 
             hstart = column['hstart']
             hstep = column['hstep']
