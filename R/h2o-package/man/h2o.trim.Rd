@@ -13,7 +13,10 @@ Remove trailing and leading white space.
 \examples{
 library(h2o)
 localH2O = h2o.init()
-fr <- data.frame(x = c("   asdfhuash ", "  # a    ", "hello    "))
+fr <- data.frame(
+    x = c("   asdfhuash ", "  # a    ", "hello    "),
+    y = c(1,2,3)
+)
 hex <- as.h2o(localH2O, fr)
-trim(hex)
+trim(hex$x)
 }
