@@ -372,7 +372,7 @@ setMethod("show", "H2ODRFModel", function(object) {
       cat("\nGini:", model$gini, "\n")
   }
   if (!is.null(model$auc)) {
-    trainOrValidation <- ifelse(is.na(object@valid@key), "train)", "validation)")
+    trainOrValidation <- ifelse(is.na(object@valid@key), "train) (OOBEE)", "validation)")
     cat("\nAUC = ", model$auc, "(on", trainOrValidation ,"\n")
   }
   if(!is.null(model$varimp)) {
@@ -420,7 +420,8 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
 
   if (!is.null(model$auc)) {
     trainOrValidation <- ifelse(is.na(object@valid@key), "train)", "validation)")
-    cat("\nAUC = ", model$auc, "(on", trainOrValidation ,"\n")
+    oobee_or_not <- ifelse( (is.na(object@valid@key) && object@model$params$oobee), "(OOBEE)", "")
+    cat("\nAUC = ", model$auc, "(on", trainOrValidation , oobee_or_not,"\n")
   }
 
 })
