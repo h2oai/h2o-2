@@ -223,6 +223,7 @@ public class CoxPH extends Job {
     }
 
     protected void initStats(Frame source, DataInfo dinfo) {
+      n = source.numRows();
       data_info = dinfo;
       final int n_coef = data_info.fullN();
       n_cats       = MemoryManager.malloc8(n_coef - data_info._nums);
@@ -253,8 +254,8 @@ public class CoxPH extends Job {
     }
 
     protected void calcCounts(CoxPHTask coxMR) {
+      n_missing = n - coxMR.n;
       n         = coxMR.n;
-      n_missing = coxMR.n_missing;
       System.arraycopy(coxMR.n_cats, 0, n_cats, 0, n_cats.length);
       int nz = 0;
       for (int t = 0; t < coxMR.countEvents.length; ++t) {
@@ -451,6 +452,7 @@ public class CoxPH extends Job {
       sb.append("<h4>Data</h4>");
       sb.append("<table class='table table-striped table-bordered table-condensed'><col width=\"25%\"><col width=\"75%\">");
       sb.append("<tr><th>Number of Complete Cases</th><td>");          sb.append(n);          sb.append("</td></tr>");
+      sb.append("<tr><th>Number of Non Complete Cases</th><td>");      sb.append(n_missing);  sb.append("</td></tr>");
       sb.append("<tr><th>Number of Events in Complete Cases</th><td>");sb.append(total_event);sb.append("</td></tr>");
       sb.append("</table>");
 
@@ -471,11 +473,11 @@ public class CoxPH extends Job {
       sb.append("<tr><th>Rsquare</th><td>");sb.append(String.format("%.3f", rsq));
       sb.append(" (max possible = ");       sb.append(String.format("%.3f", maxrsq));sb.append(")</td></tr>");
       sb.append("<tr><th>Likelihood ratio test</th><td>");sb.append(String.format("%.2f", loglik_test));
-      sb.append(" on ");sb.append(String.format("%d", coef.length));sb.append(" df</td></tr>");
+      sb.append(" on ");sb.append(coef.length);sb.append(" df</td></tr>");
       sb.append("<tr><th>Wald test            </th><td>");sb.append(String.format("%.2f", wald_test));
-      sb.append(" on ");sb.append(String.format("%d", coef.length));sb.append(" df</td></tr>");
+      sb.append(" on ");sb.append(coef.length);sb.append(" df</td></tr>");
       sb.append("<tr><th>Score (logrank) test </th><td>");sb.append(String.format("%.2f", score_test));
-      sb.append(" on ");sb.append(String.format("%d", coef.length));sb.append(" df</td></tr>");
+      sb.append(" on ");sb.append(coef.length);sb.append(" df</td></tr>");
       sb.append("</table>");
     }
 
@@ -712,8 +714,7 @@ public class CoxPH extends Job {
 
     @Override
     public void reduce(CoxPHTask that) {
-      n         += that.n;
-      n_missing += that.n_missing;
+      n += that.n;
       Utils.add(n_cats,           that.n_cats);
       Utils.add(countRiskSet,     that.countRiskSet);
       Utils.add(countCensored,    that.countCensored);
