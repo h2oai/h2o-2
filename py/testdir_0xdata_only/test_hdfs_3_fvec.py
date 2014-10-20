@@ -76,7 +76,8 @@ class Basic(unittest.TestCase):
             print "Loading", csvFilename, 'from HDFS'
             csvPathname = importFolderPath + "/" + csvFilename
             start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=1000, doSummary=DO_SUMMARY, blocking=1)
+            parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=1000, header=0,
+                doSummary=DO_SUMMARY, blocking=1)
             print "parse result:", parseResult['destination_key'], 'took', time.time() - start, 'secs'
 
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])

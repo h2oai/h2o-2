@@ -70,39 +70,15 @@ class Basic(unittest.TestCase):
             start = time.time()
             print 'Parsing', csvFilename
             csvPathname = "datasets/" + csvFilename
-            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', 
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', header=0,
                 timeoutSecs=timeoutSecs, retryDelaySecs=1.0)
             print csvFilename, '\nparse time (python)', time.time() - start, 'seconds'
-            print csvFilename, '\nparse time (h2o):', parseResult['response']['time']
             ### print h2o.dump_json(parseResult['response'])
 
             print "parse result:", parseResult['destination_key']
             # I use this if i want the larger set in my localdir
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-
-            ### print h2o.dump_json(inspect)
-            cols = inspect['cols']
-
-            # look for nonzero num_missing_values count in each col
-            for i, colDict in enumerate(cols):
-                num_missing_values = colDict['num_missing_values']
-                if num_missing_values != 0:
-                    ### print "%s: col: %d, num_missing_values: %d" % (csvFilename, i, num_missing_values)
-                    pass
-
-            ### print h2o.dump_json(cols[0])
-
-            num_cols = inspect['num_cols']
-            num_rows = inspect['num_rows']
-            row_size = inspect['row_size']
-            ptype = inspect['type']
-            value_size_bytes = inspect['value_size_bytes']
-            response = inspect['response']
-            ptime = response['time']
-
-            print "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, \
-                   value_size_bytes: %s, response: %s, time: %s" % \
-                   (num_cols, num_rows, row_size, ptype, value_size_bytes, response, ptime)
+            h2o_cmd.infoFromInspect(parseResult['destination_key'], csvPathname)
 
             # h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             print "\n" + csvFilename

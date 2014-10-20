@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
             csvPathname = "datasets/" + csvFilename
-            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', timeoutSecs=1000)
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', header=0, timeoutSecs=1000)
             print "parse result:", parseResult['destination_key']
 
 if __name__ == '__main__':
