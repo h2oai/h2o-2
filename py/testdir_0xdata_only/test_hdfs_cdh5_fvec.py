@@ -73,6 +73,8 @@ class Basic(unittest.TestCase):
             print "Unique per-user to avoid permission issues"
             username = getpass.getuser()
             csvPathname = "tmp2/a%s.%s.csv" % (trial, username)
+            # reuse the file name to avoid running out of space
+            csvPathname = "tmp2/a%s.%s.csv" % ('_h2o_export_files', username)
 
             path = "hdfs://"+ h2o.nodes[0].hdfs_name_node + "/" + csvPathname
             h2o.nodes[0].export_files(src_key=hex_key, path=path, force=1, timeoutSecs=timeoutSecs)
