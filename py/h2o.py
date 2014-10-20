@@ -28,7 +28,7 @@ class OutWrapper:
                 s = x.replace('\n', '\n[{0}] '.format(datetime.datetime.now()))
                 self._out.write(s)
             except: 
-                self._out.write(dst,s.encode('utf8'))
+                self._out.write(s.encode('utf8'))
 
     def flush(self):
         self._out.flush()
