@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
                 'ntrees': ntree,
                 # 'data_key='mnist_training.csv.hex'
                 'mtries': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
-                'max_depth': 2147483647,
+                'max_depth': 500,
                 'destination_key': 'RF_model',
                 'nbins': 1024,
                 }

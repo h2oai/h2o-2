@@ -83,7 +83,8 @@ class Basic(unittest.TestCase):
                 'cols': colX, 
                 'alpha': 0, 
                 'lambda': 0, 
-                'link': 'binomial',
+                'family': 'binomial',
+                # 'link' can be family_default, identity, logit, log, inverse, tweedie
             }
             # one coefficient is checked a little more
 
