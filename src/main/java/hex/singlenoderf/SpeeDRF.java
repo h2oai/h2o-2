@@ -1,6 +1,7 @@
 package hex.singlenoderf;
 
 
+import dontweave.gson.JsonObject;
 import hex.ConfusionMatrix;
 import hex.FrameTask;
 import hex.VarImp;
@@ -8,6 +9,7 @@ import hex.drf.DRF;
 import water.*;
 import water.Timer;
 import water.api.AUCData;
+import water.api.Constants;
 import water.api.DocGen;
 import water.api.ParamImportance;
 import water.fvec.Frame;
@@ -257,6 +259,14 @@ public class SpeeDRF extends Job.ValidatedJob {
         model.variableImportanceCalc(train, resp);
         Log.info("Variable Importance on "+(train.numCols()-1)+" variables and "+ ntrees +" trees done in " + VITimer);
       }
+      Log.info("Generating Tree Stats");
+      JsonObject trees = new JsonObject();
+      trees.addProperty(Constants.TREE_COUNT, model.size());
+      if( model.size() > 0 ) {
+        trees.add(Constants.TREE_DEPTH, model.depth().toJson());
+        trees.add(Constants.TREE_LEAVES, model.leaves().toJson());
+      }
+      model.generateHTMLTreeStats(new StringBuilder(), trees);
       model.current_status = "Model Complete";
     } finally {
       if (model != null) {
