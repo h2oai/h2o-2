@@ -119,7 +119,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
         # FIX! temp to avoid the INFO in jan's latest logging. don't print any info?
         # don't want the tcp_active in the cloud status. Ok to not look for tcp stuff now
         # regex3 = re.compile('warn|TCP', re.IGNORECASE)
-        regex3 = re.compile('warn', re.IGNORECASE)
+        regex3 = re.compile('warn|Retrying after IO error', re.IGNORECASE)
 
         # many hdfs/apache messages have 'error' in the text. treat as warning if they have '[WARN]'
         # i.e. they start with:
@@ -163,6 +163,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                 #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                 foundBadPartial = regex1.search(line)
                 foundBad = foundBadPartial and not (
+                    ('Retrying after IO error') or
                     ('Error on' in line) or
                     # temporary hack. getting these on shutdown in multi-machine
                     # ApiWatch  ERRR WATER: ApiPortWatchdog: Failed trying to connect to REST API IP and Port (/10.73.149.39:54323, 30000 ms)
