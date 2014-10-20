@@ -524,6 +524,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   public DTree.TreeModel transform2DTreeModel() {
     if (dtreeTreeModel != null) {
+      dtreeTreeModel = new SpeeDRFModel_DTree(dtreeTreeModel, dtreeKeys, treeStats); //freshen the dtreeTreeModel
       return dtreeTreeModel;
     }
     Key key = Key.make();
