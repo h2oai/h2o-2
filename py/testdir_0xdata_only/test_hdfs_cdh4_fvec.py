@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hdfs_cdh5_fvec(self):
+    def test_hdfs_cdh4_fvec(self):
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
@@ -40,9 +40,9 @@ class Basic(unittest.TestCase):
             ("hhp.unbalanced.012.data.gz", 60),
             ("hhp.unbalanced.data.gz", 60),
             ("leads.csv", 60),
-            ("covtype.169x.data", 600),
+            # ("covtype.169x.data", 600),
             ("prostate_long_1G.csv", 600),
-            ("airlines_all.csv", 900),
+            # ("airlines_all.csv", 900),
         ]
 
         # pick 8 randomly!

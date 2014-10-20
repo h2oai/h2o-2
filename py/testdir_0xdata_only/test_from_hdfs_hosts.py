@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
             print "parse result:", parseResult['destination_key']
             # I use this if i want the larger set in my localdir
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-            h2o_cmd.infoFromInspect(parseResult['destination_key'], csvPathname)
+            h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             # h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             print "\n" + csvFilename

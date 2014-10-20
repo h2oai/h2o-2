@@ -15,7 +15,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(2, java_heap_GB=6)
         else:
-            h2o_hosts.build_cloud_with_hosts(2, java_heap_GB=6)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
             print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
 
-            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local')
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', timeoutSecs=300)
             execExpr="A.hex=%s" % parseResult['destination_key']
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
 

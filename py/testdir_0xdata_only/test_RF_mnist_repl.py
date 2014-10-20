@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
             trainKey = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             csvPathname = importFolderPath + "/" + parsePattern
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=parsePattern, schema='local')
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=parsePattern, schema='local', timeoutSecs=300)
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
