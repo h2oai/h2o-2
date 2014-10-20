@@ -16,8 +16,8 @@ def removeIfThere(d):
 removeIfThere(0xa) # lf. this is the unix eol
 
 tryList = []
-for i in toDoList:
-    unicodeSymbol = unichr(i)
+for unicodeNum in toDoList:
+    unicodeSymbol = unichr(unicodeNum)
 
     tryList.append(
         # the nul char I think is causing extra rows and also wiping out the next char?
@@ -33,7 +33,7 @@ for i in toDoList:
         'a,b,c,"d' + unicodeSymbol + 's",n\n'
         'a,b,c,"d' + unicodeSymbol + 's",n\n'
         'a,b,c,"d' + unicodeSymbol + 's",n\n'
-        ), 10, 4, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum'], i)
+        ), 10, 4, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum'], unicodeNum)
     )
 
 def write_syn_dataset(csvPathname, dataset):
@@ -67,6 +67,8 @@ class Basic(unittest.TestCase):
         hex_key = "a.hex"
 
         for (dataset, expNumRows, expNumCols, expNaCnt, expType, unicodeNum) in tryList:
+            unicodeSymbol = unichr(unicodeNum)
+
             csvFilename = 'specific_' + str(expNumRows) + "x" + str(expNumCols) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             write_syn_dataset(csvPathname, dataset)
@@ -78,6 +80,7 @@ class Basic(unittest.TestCase):
             print "Parsed with special unichr(%s) which is %s:" % (unicodeNum, unichr(unicodeNum))
             print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
+            numCols = inspect['numCols']
             self.assertEqual(numRows, expNumRows, msg='Using quoted unichr(0x%x) Wrong numRows: %s Expected: %s' % \
                 (unicodeNum, numRows, expNumRows))
             numCols = inspect['numCols']

@@ -6,22 +6,23 @@ import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
 print "This is injecting 0x0 (NUL) into a col, with one char after it"
 
-unicodeNull = unichr(0x0)
+unicodeNum = 0x0
+unicodeSymbol = unichr(unicodeNum)
 
 tryList = [
     # the nul char I think is causing extra rows and also wiping out the next char?
     # I got nulls when concat'ing files with dd. may be used for padding somehow?
     ((
-    'a,b,c,d' + unicodeNull + 's,n\n'
-    'a,b,c,d' + unicodeNull + 's,n\n'
-    'a,b,c,d' + unicodeNull + 's,n\n'
-    'a,b,c,d' + unicodeNull + 's,n\n'
-    'a,b,c,d' + unicodeNull + 's,n\n'
-    'a,b,c,d' + unicodeNull + 's,n\n'
-    'a,b,c,d' + unicodeNull + 's,n\n'
-    'a,b,c,d' + unicodeNull + 's,n\n'
-    'a,b,c,d' + unicodeNull + 's,n\n'
-    'a,b,c,d' + unicodeNull + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
+    'a,b,c,d' + unicodeSymbol + 's,n\n'
     ), 10, 5, [0,0,0,0,0], ['Enum', 'Enum', 'Enum', 'Enum', 'Enum']),
 ]
 
@@ -65,11 +66,15 @@ class Basic(unittest.TestCase):
                 hex_key=hex_key, timeoutSecs=10, doSummary=False)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)
             
-            print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
-            self.assertEqual(numRows, expNumRows, msg='Wrong numRows: %s Expected: %s' % (numRows, expNumRows))
             numCols = inspect['numCols']
-            self.assertEqual(numCols, expNumCols, msg='Wrong numCols: %s Expected: %s' % (numCols, expNumCols))
+            print "inspect:", h2o.dump_json(inspect)
+            self.assertEqual(numRows, expNumRows, msg='Using unichr(0x%x) Wrong numRows: %s Expected: %s' % \
+                (unicodeNum, numRows, expNumRows))
+            numCols = inspect['numCols']
+            self.assertEqual(numCols, expNumCols, msg='Using unichr(0x%x) Wrong numCols: %s Expected: %s' % \
+                (unicodeNum, numCols, expNumCols))
+
 
             # this is required for the test setup
             assert(len(expNaCnt)>=expNumCols)
