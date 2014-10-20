@@ -72,7 +72,8 @@ class Basic(unittest.TestCase):
 
             # GLM****************************************
             print "This is the pruned x we'll use"
-            ignoreX = h2o_glm.goodXFromColumnInfo(y, key=parseTrainResult['destination_key'], timeoutSecs=300, forRF=True)
+            ignoreX = h2o_glm.goodXFromColumnInfo(y, key=parseTrainResult['destination_key'], timeoutSecs=300, 
+                returnIgnoreX=True)
             print "ignoreX:", ignoreX 
 
             modelKey = 'GLM_model'

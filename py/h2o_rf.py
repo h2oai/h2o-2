@@ -150,7 +150,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     varimp = rf_model['varimp']
     treeStats = rf_model['treeStats']
     if not treeStats:
-        raise Exception("treeStats not right?: %s" % h2o.dump_json(treestats))
+        raise Exception("treeStats not right?: %s" % h2o.dump_json(treeStats))
     # print "json:", h2o.dump_json(rfv)
     data_key = rf_model['_dataKey']
     model_key = rf_model['_key']
@@ -158,7 +158,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     if not noPrint: 
         if 'minLeaves' not in treeStats or not treeStats['minLeaves']:
-            raise Exception("treestats seems to be missing minLeaves %s" % h2o.dump_json(treestats))
+            raise Exception("treeStats seems to be missing minLeaves %s" % h2o.dump_json(treeStats))
         print """
          Leaves: {0} / {1} / {2}
           Depth: {3} / {4} / {5}

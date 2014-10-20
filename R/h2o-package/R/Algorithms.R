@@ -1034,7 +1034,7 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
                             classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, ntree=ntree, mtries = mtries, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, nodesize=nodesize, h2o = data@h2o)
+  params = list(x=args$x, y=args$y, type="BigData", ntree=ntree, mtries = mtries, depth=depth, nbins=nbins, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, nodesize=nodesize, h2o = data@h2o)
   
   if(.is_singlerun("RF", params))
     .h2o.singlerun.internal("RF", data, res, nfolds, validation, params)
@@ -1051,7 +1051,7 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
   mySum$nbins = res$nbins
   mySum$balance_classes = res$balance_classes
   mySum$max_after_balance_size = res$max_after_balance_size
-  
+
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
   mySum$prediction_error = tail(res$'cms', 1)[[1]]$'_predErr'
@@ -1159,7 +1159,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, validation=validation@key, importance=as.numeric(importance),
                             sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, mtries=mtries, sample.rate=sample.rate, nbins=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes),
+  params = list(x=args$x, y=args$y, type="fast", ntree=ntree, depth=depth, mtries=mtries, sample.rate=sample.rate, nbins=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes),
                 sampling_strategy="RANDOM", seed=seed, oobee=oobee, nfolds=nfolds, importance=importance, verbose = as.numeric(verbose), h2o = data@h2o)
   
   if(.is_singlerun("SpeeDRF", params))

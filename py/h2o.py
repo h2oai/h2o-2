@@ -21,7 +21,14 @@ class OutWrapper:
         self._out = out
 
     def write(self, x):
-        self._out.write(x.replace('\n', '\n[{0}] '.format(str(datetime.datetime.now()))))
+            # got this with random data to parse.. why? it shows up in our stdout?
+            # UnicodeEncodeError: 'ascii' codec can't encode character u'\x80' in position 41: ordinal not in range(128)
+            # could we be getting unicode object, or is it just the bytes
+            try:
+                s = x.replace('\n', '\n[{0}] '.format(datetime.datetime.now()))
+                self._out.write(s)
+            except: 
+                self._out.write(dst,s.encode('utf8'))
 
     def flush(self):
         self._out.flush()
