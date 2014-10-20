@@ -19,7 +19,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
         csvFilenameList= [
-            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 900),
             # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
         ]
 
@@ -49,7 +49,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                 start = time.time()
                 parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
-                    hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                    hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, doSummary=False,
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     benchmarkLogging=benchmarkLogging)
@@ -59,6 +59,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
+
+                h2o_cmd.infoFromInspect(inspect, csvPathname)
+                numRows = inspect['numRows']
+                numCols = inspect['numCols']
+                summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], timeoutSecs=timeoutSecs,
+                    numCols=numCols, numRows=numRows)
 
                 if totalBytes is not None:
                     fileMBS = (totalBytes/1e6)/elapsed
