@@ -2,10 +2,9 @@ sink("TradeShift.log", split = T)
 
 ## This code block is to re-install a particular version of H2O
 # START
-if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
-if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-install.packages("h2o", repos=(c("file:///Users/arno/h2o/target/R", getOption("repos"))))
-
+#if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+#if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+#install.packages("h2o", repos=(c("file:///Users/arno/h2o/target/R", getOption("repos"))))
 
 #install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1548/R", getOption("repos")))) #choose a build here
 # END
@@ -18,16 +17,16 @@ library(h2o)
 library(stringr)
 
 ## Connect to H2O server (On server(s), run 'java -jar h2o.jar -Xmx8G -port 53322 -name TradeShift' first)
-#h2oServer <- h2o.init(ip="mr-0xd1", port = 53322)
+h2oServer <- h2o.init(ip="mr-0xd1", port = 53322)
 
 ## Launch H2O directly on localhost
-h2oServer <- h2o.init(nthreads = -1, max_mem_size = '12g') # allow the use of all cores - requires reproducible = F below though.
+#h2oServer <- h2o.init(nthreads = -1, max_mem_size = '12g')
 
 ## Import data
-path_train <- "/Users/arno/kaggle_tradeshift/data/train.csv"
-path_trainLabels <- "/Users/arno/kaggle_tradeshift/data/trainLabels.csv"
-path_test <- "/Users/arno/kaggle_tradeshift/data/test.csv"
-path_submission <- "/Users/arno/kaggle_tradeshift/data/sampleSubmission.csv"
+path_train <- "/home/arno/kaggle_tradeshift/data/train.csv"
+path_trainLabels <- "/home/arno/kaggle_tradeshift/data/trainLabels.csv"
+path_test <- "/home/arno/kaggle_tradeshift/data/test.csv"
+path_submission <- "/home/arno/kaggle_tradeshift/data/sampleSubmission.csv"
 
 train_hex <- h2o.importFile(h2oServer, path = path_train)
 trainLabels_hex <- h2o.importFile(h2oServer, path = path_trainLabels)
@@ -43,7 +42,7 @@ targets <- labels[-1] ## all targets
 
 ## Settings (at least one of the following two settings has to be TRUE)
 validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
-submitwithfulldata = F #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
+submitwithfulldata = T #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
 
 ensemble_size <- 1 # more -> lower variance
 seed0 = 1337
@@ -55,14 +54,15 @@ vLogLoss <- matrix(0, nrow = 1, ncol = length(targets))
 
 ## Split the training data into train/valid (95%/5%)
 ## Want to keep train large enough to make a good submission if submitwithfulldata = F
-full_train <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
-full_train <- h2o.assign(full_train, "full_train")
+trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
+splits <- h2o.splitFrame(trainWL, ratios = 0.95, shuffle=!reproducible_mode)
+train <- splits[[1]]
+valid <- splits[[2]]
 
-if (validate) {
-  splits <- h2o.splitFrame(full_train, ratios = 0.95, shuffle=!reproducible_mode)
-  train <- splits[[1]]
-  valid <- splits[[2]]
-}
+## Assign proper names, such that h2o.rm() below won't remove these frames
+trainWL <- h2o.assign(trainWL, "train_full")
+train <- h2o.assign(train, "train")
+valid <- h2o.assign(valid, "valid")
 
 ## Main loop over targets
 for (resp in 1:length(targets)) {
@@ -87,9 +87,9 @@ for (resp in 1:length(targets)) {
                          data = train,
                          validation = valid,
                          classification = T,
-                         type = "fast", #this has better handling of categoricals than type = "fast", but is slower
-                         ntree = c(5),
-                         depth = c(3),
+                         type = "BigData", #type="BigData" has better handling of categoricals than type="fast", but is slower
+                         ntree = c(50),
+                         depth = c(30),
                          mtries = 20,
                          nbins = 50,
                          seed = seed0 + resp*ensemble_size + n
@@ -194,7 +194,7 @@ for (resp in 1:length(targets)) {
       model <-
         h2o.randomForest(x = predictors,
                          y = targets[resp],
-                         data = full_train,
+                         data = trainWL,
                          classification = p$classification,
                          type = p$type,
                          ntree = p$ntree,
