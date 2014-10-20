@@ -49,13 +49,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         #summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2)
         # summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2500)
         # can't do more than 1000
-        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], numCols=numCols, numRows=numRows)
+        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], numCols=numCols, numRows=numRows, timeoutSecs=500)
 
         keepPattern = "oly_|mt_|b_"
         y = "is_purchase"
         print "y:", y
         # don't need the intermediate Dicts produced from columnInfoFromInspect
-        x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseResult['destination_key'], timeoutSecs=300)
+        x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseResult['destination_key'])
         print "x:", x
 
         kwargs = {
