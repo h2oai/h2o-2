@@ -78,10 +78,10 @@ class Basic(unittest.TestCase):
             print "Parsed with special unichr(%s) which is %s:" % (unicodeNum, unichr(unicodeNum))
             print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
-            self.assertEqual(numRows, expNumRows, msg='Using unichr(0x%x) Wrong numRows: %s Expected: %s' % \
+            self.assertEqual(numRows, expNumRows, msg='Using quoted unichr(0x%x) Wrong numRows: %s Expected: %s' % \
                 (unicodeNum, numRows, expNumRows))
             numCols = inspect['numCols']
-            self.assertEqual(numCols, expNumCols, msg='Using unichr(0x%x) Wrong numCols: %s Expected: %s' % \
+            self.assertEqual(numCols, expNumCols, msg='Using quoted unichr(0x%x) Wrong numCols: %s Expected: %s' % \
                 (unicodeNum, numCols, expNumCols))
 
             # this is required for the test setup
@@ -90,10 +90,10 @@ class Basic(unittest.TestCase):
 
             for k in range(expNumCols):
                 naCnt = inspect['cols'][k]['naCnt']
-                self.assertEqual(expNaCnt[k], naCnt, msg='Using unichr(0x%x) col: %s naCnt: %d should be: %s' % \
+                self.assertEqual(expNaCnt[k], naCnt, msg='Using quoted unichr(0x%x) col: %s naCnt: %d should be: %s' % \
                     (unicodeNum, k, naCnt, expNaCnt[k]))
                 stype = inspect['cols'][k]['type']
-                self.assertEqual(expType[k], stype, msg='Using unichr(0x%x) col: %s type: %s should be: %s' % \
+                self.assertEqual(expType[k], stype, msg='Using quoted unichr(0x%x) col: %s type: %s should be: %s' % \
                     (unicodeNum, k, stype, expType[k]))
 
 if __name__ == '__main__':
