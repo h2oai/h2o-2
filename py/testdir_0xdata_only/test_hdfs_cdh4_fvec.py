@@ -1,6 +1,7 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+import getpass
 
 RANDOM_UDP_DROP = False
 class Basic(unittest.TestCase):
@@ -22,7 +23,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_hdfs_cdh5_fvec(self):
-        h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
@@ -67,13 +67,17 @@ class Basic(unittest.TestCase):
             start = time.time()
             hex_key = "a.hex"
             csvPathname = "datasets/" + csvFilename
-            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key, timeoutSecs=1000)
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key, header=0, timeoutSecs=1000)
             print "hdfs parse of", csvPathname, "took", time.time() - start, 'secs'
 
             start = time.time()
             print "Saving", csvFilename, 'to HDFS'
+
             print "Using /tmp2 to avoid the '.' prefixed files in /tmp2 (kills import)"
-            csvPathname = "tmp2/a%s.csv" % trial
+            print "Unique per-user to avoid permission issues"
+            username = getpass.getuser()
+            csvPathname = "tmp2/a%s.%s.csv" % (trial, username)
+
             path = "hdfs://"+ h2o.nodes[0].hdfs_name_node + "/" + csvPathname
             h2o.nodes[0].export_files(src_key=hex_key, path=path, force=1, timeoutSecs=timeoutSecs)
             print "export_files of", hex_key, "to", path, "took", time.time() - start, 'secs'
@@ -85,7 +89,7 @@ class Basic(unittest.TestCase):
             time.sleep(2)
             d = h2i.import_only(path=csvPathname, schema='hdfs', timeoutSecs=1000)
             print h2o.dump_json(d)
-            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key, timeoutSecs=1000)
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key, header=0, timeoutSecs=1000)
             print "hdfs re-parse of", csvPathname, "took", time.time() - start, 'secs'
 
 if __name__ == '__main__':
