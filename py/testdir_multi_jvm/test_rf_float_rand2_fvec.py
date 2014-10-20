@@ -39,7 +39,12 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global SEED, localhost
-        SEED = h2o.setup_random_seed()
+        # SEED = h2o.setup_random_seed()
+        # force the seed that gets the assertion error 
+        SEED = h2o.setup_random_seed(seed=4548383660131500992)
+
+        # java.lang.AssertionError: -2.9975397E38<NaN n=98
+        # at hex.gbm.DTree$Split.split(DTree.java:224)
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2,java_heap_MB=1300,use_flatfile=True)
