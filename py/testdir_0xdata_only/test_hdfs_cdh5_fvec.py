@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
             ("hhp.unbalanced.012.data.gz", 60),
             ("hhp.unbalanced.data.gz", 60),
             ("leads.csv", 60),
-            ("covtype.169x.data", 1200),
+            # ("covtype.169x.data", 1200),
             ("prostate_long_1G.csv", 200),
             ("airlines_all.csv", 1200),
         ]
