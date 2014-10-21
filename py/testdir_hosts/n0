@@ -17,5 +17,4 @@
 ./n0.doit test_plot_remove_keys_manyfiles.py $*
 # ./n0.doit test_remote_cloud1.py $*
 # ./n0.doit test_remote_cloud.py $*
-./n0.doit test_rf_311M_rows_fvec.py $*
 ./n0.doit test_rf_parity_fvec.py $*

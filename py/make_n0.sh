@@ -13,6 +13,11 @@ sed -i 's!$! $*!' n0
 sed -i 's!\(.*cloud.*\)!# \1!' ./n0
 sed -i 's!\(.*with_a_browser.*\)!# \1!' ./n0
 
+cd ../testdir_kevin
+ls -1 test*py > n0
+sed -i 's!^!./n0.doit !' n0
+sed -i 's!$! $*!' n0
+
 cd ../testdir_hosts
 ls -1 test*py > n0
 sed -i 's!^!./n0.doit !' n0

@@ -67,10 +67,11 @@ class Basic(unittest.TestCase):
 
             # RF+RFView (train)****************************************
             print "This is the 'ignore=' we'll use"
+            y = 0 # first column is pixel value
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, returnIgnoreX=True)
             ntree = 100
             params = {
-                'response': 0,
+                'response': y,
                 'ignored_cols': ignore_x, 
                 'ntrees': ntree,
                 # 'data_key='mnist_training.csv.hex'
