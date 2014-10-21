@@ -212,12 +212,9 @@ for (resp in 1:length(targets)) {
   }
   
   ## Remove no longer needed old models and temporaries from K-V store to keep memory footprint low
-  ls_temp <- h2o.ls(h2oServer)
-  for (n_ls in 1:nrow(ls_temp)) {
-    if (str_detect(ls_temp[n_ls, 1], "DRF") || str_detect(ls_temp[n_ls, 1], "Last.value")) {
-      h2o.rm(h2oServer, keys = as.character(ls_temp[n_ls, 1]))
-    }
-  }
+  h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
+  h2o.rm(h2oServer, grep(pattern = "DRF", x = h2o.ls(h2oServer)$Key, value = TRUE))
+
 }
 if (validate) {
   cat("\nOverall training LogLosses = " , tLogLoss)
