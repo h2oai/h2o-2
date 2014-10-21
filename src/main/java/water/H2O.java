@@ -418,10 +418,10 @@ public final class H2O {
       // using google's DNS server as an external IP to find
       // Add a timeout to the touch of google.
       // https://0xdata.atlassian.net/browse/HEX-743
-      s = new Socket(); 
+      s = new Socket();
       // only 3000 milliseconds before giving up
       // Exceptions: IOException, SocketTimeoutException, plus two Illegal* exceptions
-      s.connect(new InetSocketAddress("8.8.8.8", 53), 3000); 
+      s.connect(new InetSocketAddress("8.8.8.8", 53), 3000);
       m+="Using " + s.getLocalAddress() + "\n";
       return s.getLocalAddress();
     } catch( java.net.SocketException se ) {
@@ -708,6 +708,7 @@ public final class H2O {
     public String single_precision = null;
     public String beta = null;
     public String mem_watchdog = null; // For developer debugging
+    public boolean md5skip = false;
   }
 
   public static void printHelp() {
