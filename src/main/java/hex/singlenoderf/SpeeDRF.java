@@ -54,7 +54,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public boolean score_each_iteration = false;
 
   @API(help = "Create the Score POJO", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
-  public boolean score_pojo = true;
+  public boolean score_pojo = false;
 
   /*Imbalanced Classes*/
   /**
