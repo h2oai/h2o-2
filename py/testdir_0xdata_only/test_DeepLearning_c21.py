@@ -44,7 +44,9 @@ class Basic(unittest.TestCase):
         model_key = 'nn_' + identifier + '.hex'
 
         # use defaults otherwise
+        # need to change epochs otherwise it takes too long
         kwargs = {
+            'epochs'                       : 0.001,
             'response'                     : response,
             'destination_key'              : model_key,
             'validation'                   : validation_key,
