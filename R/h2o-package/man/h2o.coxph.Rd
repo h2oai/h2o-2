@@ -20,7 +20,7 @@ H2O: Cox Proportional Hazards Models
 Fit a Cox Proportional Hazards Model.
 }
 \usage{
-h2o.coxph(x, y, data, key = "", ties = c("efron", "breslow"),
+h2o.coxph(x, y, data, key = "", weights, ties = c("efron", "breslow"),
           init = 0, control = h2o.coxph.control(...), ...)
 
 h2o.coxph.control(lre = 9, iter.max = 20, ...)
@@ -44,6 +44,8 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
     variables in the model.}
   \item{key}{An optional unique hex key assigned to the resulting model.
     If none is given, a key will automatically be generated.}
+  \item{weights}{An optional character string representing the case weights in
+    the model.}
   \item{ties}{A character string denoting which approximation method for
     handling ties should be used in the partial likelihood;
     one of either \code{"efron"} or \code{"breslow"}.}
