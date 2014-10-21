@@ -18,13 +18,13 @@ library(stringr)
 #h2oServer <- h2o.init(ip="mr-0xd1", port = 53322)
 
 ## Launch H2O directly on localhost
-h2oServer <- h2o.init(nthreads = -1, max_mem_size = '12g')
+h2oServer <- h2o.init(nthreads = -1, max_mem_size = '8g')
 
 ## Import data
-path_train <- "/home/arno/kaggle_tradeshift/data/train.csv"
-path_trainLabels <- "/home/arno/kaggle_tradeshift/data/trainLabels.csv"
-path_test <- "/home/arno/kaggle_tradeshift/data/test.csv"
-path_submission <- "/home/arno/kaggle_tradeshift/data/sampleSubmission.csv"
+path_train <- "/Users/arno/kaggle_tradeshift/data/train.csv"
+path_trainLabels <- "/Users/arno/kaggle_tradeshift/data/trainLabels.csv"
+path_test <- "/Users/arno/kaggle_tradeshift/data/test.csv"
+path_submission <- "/Users/arno/kaggle_tradeshift/data/sampleSubmission.csv"
 
 train_hex <- h2o.importFile(h2oServer, path = path_train)
 trainLabels_hex <- h2o.importFile(h2oServer, path = path_trainLabels)
@@ -39,7 +39,7 @@ targets <- labels[-1] #remove ID
 
 ## Settings (at least one of the following two settings has to be TRUE)
 validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
-submitwithfulldata = T #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
+submitwithfulldata = F #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
 
 ensemble_size <- 1 # more -> lower variance
 seed0 = 1337
@@ -55,9 +55,6 @@ trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
 splits <- h2o.splitFrame(trainWL, ratios = 0.95, shuffle=!reproducible_mode)
 train <- splits[[1]]
 valid <- splits[[2]]
-
-## Assign proper names, such that h2o.rm() below won't remove these frames
-trainWL <- h2o.assign(trainWL, "train_full")
 train <- h2o.assign(train, "train")
 valid <- h2o.assign(valid, "valid")
 
@@ -84,8 +81,8 @@ for (resp in 1:length(targets)) {
                          data = train,
                          validation = valid,
                          classification = T,
-                         type = "BigData", ntree = 50, depth = 30, mtries = 20, nbins = 50, #training LL: 0.002863313 validation LL: 0.009463341 LB: 0.094373
-                         #type = "fast", ntree = c(100), depth = c(20),
+#                         type = "BigData", ntree = 50, depth = 30, mtries = 20, nbins = 50, #training LL: 0.002863313 validation LL: 0.009463341 LB: 0.094373
+                         type = "BigData", ntree = c(100), depth = c(30), mtries = 30, nbins = 100, #training LL: 0.002892511 validation LL: 0.008592581
                          seed = seed0 + resp*ensemble_size + n
         )
 
@@ -168,7 +165,7 @@ for (resp in 1:length(targets)) {
       p <- cvmodel@model$params   #If cvmodel is not a grid search model
     }
     else {
-      p = list(classification = T, type = "BigData", ntree=50, depth=30, mtries=20, nbins=50)
+      p = list(classification = T, type = "BigData", ntree=50, depth=30, mtries=20, nbins=50) #LB: 0.0093360
     }
     ## Build an ensemble model on full training data - should perform better than the CV model above
     for (n in 1:ensemble_size) {
@@ -178,8 +175,8 @@ for (resp in 1:length(targets)) {
         h2o.randomForest(x = predictors,
                          y = targets[resp],
                          data = trainWL,
-                         classification = p$classification,
-                         type = p$type,
+                         classification = T,
+                         type = "BigData",
                          ntree = p$ntree,
                          depth = p$depth,
                          mtries = p$mtries,
