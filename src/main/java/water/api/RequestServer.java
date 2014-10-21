@@ -3,14 +3,10 @@ package water.api;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
-import hex.CoxPH;
-import hex.CreateFrame;
+import hex.*;
 import hex.GridSearch.GridSearchProgress;
-import hex.InsertMissingValues;
-import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
-import hex.ReBalance;
 import hex.anomaly.Anomaly;
 import hex.deepfeatures.DeepFeatures;
 import hex.deeplearning.DeepLearning;
@@ -100,6 +96,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
     Request.addToNavbar(registerRequest(new Impute()),        "Impute",                 "Data");
+    Request.addToNavbar(registerRequest(new Interaction()),   "Interaction",            "Data");
     Request.addToNavbar(registerRequest(new FrameSplitPage()),"Split Frame",            "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
     Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
