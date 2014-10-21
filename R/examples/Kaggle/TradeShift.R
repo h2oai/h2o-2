@@ -176,7 +176,7 @@ for (resp in 1:length(targets)) {
                          y = targets[resp],
                          data = trainWL,
                          classification = T,
-                         type = "BigData",
+                         type = p$type,
                          ntree = p$ntree,
                          depth = p$depth,
                          mtries = p$mtries,
