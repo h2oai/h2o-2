@@ -4,9 +4,7 @@ sink("TradeShift.log", split = T)
 # START
 #if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 #if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-#install.packages("h2o", repos=(c("file:///Users/arno/h2o/target/R", getOption("repos"))))
-
-#install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1548/R", getOption("repos")))) #choose a build here
+#install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1553/R", getOption("repos")))) #choose a build here
 # END
 
 # Fetch the latest nightly build using Jo-fai Chow's package
@@ -37,8 +35,7 @@ vars <- colnames(train_hex)
 ID <- vars[1]
 labels <- colnames(trainLabels_hex)
 predictors <- vars[c(-1,-92)] #remove ID and one features with too many factors
-targets <- labels[-1] ## all targets
-#targets <- labels[c(7,8,10,11,13,29,30,31,32,33)]  ## harder to predict targets for tuning of parameters
+targets <- labels[-1] #remove ID
 
 ## Settings (at least one of the following two settings has to be TRUE)
 validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
