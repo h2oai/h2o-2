@@ -1,10 +1,10 @@
 sink("TradeShift.log", split = T)
 
-## This code block is to re-install a particular version of H2O
+## This code block is to install a particular version of H2O
 # START
-#if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
-#if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-#install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1553/R", getOption("repos")))) #choose a build here
+if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1555/R", getOption("repos")))) #choose a build here
 # END
 
 # Fetch the latest nightly build using Jo-fai Chow's package
@@ -15,9 +15,10 @@ library(h2o)
 library(stringr)
 
 ## Connect to H2O server (On server(s), run 'java -jar h2o.jar -Xmx8G -port 53322 -name TradeShift' first)
-#h2oServer <- h2o.init(ip="mr-0xd1", port = 53322)
+## Go to http://server:53322/ to check Jobs/Data/Models etc.
+#h2oServer <- h2o.init(ip="server", port = 53322)
 
-## Launch H2O directly on localhost
+## Launch H2O directly on localhost, go to http://localhost:54321/ to check Jobs/Data/Models etc.!
 h2oServer <- h2o.init(nthreads = -1, max_mem_size = '8g')
 
 ## Import data
@@ -39,9 +40,9 @@ targets <- labels[-1] #remove ID
 
 ## Settings (at least one of the following two settings has to be TRUE)
 validate = T #whether to compute CV error on train/validation split (or n-fold), potentially with grid search
-submitwithfulldata = F #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
+submitwithfulldata = T #whether to use full training dataset for submission (if FALSE, then the validation model(s) will make test set predictions)
 
-ensemble_size <- 1 # more -> lower variance
+ensemble_size <- 2 # more -> lower variance
 seed0 = 1337
 reproducible_mode = T # Set to TRUE if you want reproducible results, e.g. for final Kaggle submission if you think you'll win :)  Note: will be slower for DL
 
@@ -49,14 +50,17 @@ reproducible_mode = T # Set to TRUE if you want reproducible results, e.g. for f
 tLogLoss <- matrix(0, nrow = 1, ncol = length(targets))
 vLogLoss <- matrix(0, nrow = 1, ncol = length(targets))
 
+## Attach the labels to the training data
+trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
+trainWL <- h2o.assign(trainWL, "trainWL")
+h2o.rm(h2oServer, keys = c("train.hex","trainLabels.hex")) #no longer need these two individually
+h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
+
 ## Split the training data into train/valid (95%/5%)
 ## Want to keep train large enough to make a good submission if submitwithfulldata = F
-trainWL <- h2o.exec(h2oServer,expr=cbind(train_hex, trainLabels_hex))
 splits <- h2o.splitFrame(trainWL, ratios = 0.95, shuffle=!reproducible_mode)
 train <- splits[[1]]
 valid <- splits[[2]]
-train <- h2o.assign(train, "train")
-valid <- h2o.assign(valid, "valid")
 
 ## Main loop over targets
 for (resp in 1:length(targets)) {
@@ -81,13 +85,14 @@ for (resp in 1:length(targets)) {
                          data = train,
                          validation = valid,
                          classification = T,
-#                         type = "BigData", ntree = 50, depth = 30, mtries = 20, nbins = 50, #training LL: 0.002863313 validation LL: 0.009463341 LB: 0.094373
-                         type = "BigData", ntree = c(100), depth = c(30), mtries = 30, nbins = 100, #training LL: 0.002892511 validation LL: 0.008592581
+                         #type = "BigData", ntree = 50, depth = 30, mtries = 20, nbins = 50, #ensemble_size 1: training LL: 0.002863313 validation LL: 0.009463341 LB: 0.094373
+                         #type = "BigData", ntree = 100, depth = 30, mtries = 30, nbins = 100, #ensemble_size 1: training LL: 0.002892511 validation LL: 0.008592581
+                         type = "fast", ntree = c(10,20), depth = c(5,10), mtries = 10, nbins = 10, #demo for grid search
                          seed = seed0 + resp*ensemble_size + n
         )
 
-      #model <- cvmodel@model[[1]] #If cv model is a grid search model
-      model <- cvmodel #If cvmodel is not a grid search model
+      model <- cvmodel@model[[1]] #If cv model is a grid search model
+      #model <- cvmodel #If cvmodel is not a grid search model
       
       # use probabilities - clamp validation predictions for LogLoss computation
       train_preds <- h2o.predict(model, train)[,3]
@@ -161,8 +166,8 @@ for (resp in 1:length(targets)) {
   if (submitwithfulldata) {
     if (validate) {
       cat("\n\nTaking parameters from validation run (or grid search winner) for", targets[resp], "...\n")
-      #p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
-      p <- cvmodel@model$params   #If cvmodel is not a grid search model
+      p <- cvmodel@model[[1]]@model$params #If cvmodel is a grid search model
+      #p <- cvmodel@model$params   #If cvmodel is not a grid search model
     }
     else {
       p = list(classification = T, type = "BigData", ntree=50, depth=30, mtries=20, nbins=50) #LB: 0.0093360
