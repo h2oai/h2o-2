@@ -540,7 +540,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       memForNonLocal += fr.numRows() * fr.numCols();
       for(int i = 0; i < H2O.CLOUD._memary.length; i++) {
         HeartBeat hb = H2O.CLOUD._memary[i]._heartbeat;
-        long nodeFreeMemory = (long)( (hb.get_max_mem()-(hb.get_tot_mem()-hb.get_free_mem())) * OVERHEAD_MAGIC);
+        long nodeFreeMemory = (long)(hb.get_max_mem() * 0.8); // * OVERHEAD_MAGIC;
         Log.debug(Log.Tag.Sys.RANDF, i + ": computed available mem: " + PrettyPrint.bytes(nodeFreeMemory));
         Log.debug(Log.Tag.Sys.RANDF, i + ": remote chunks require: " + PrettyPrint.bytes(memForNonLocal));
         if (nodeFreeMemory - memForNonLocal <= 0 || (nodeFreeMemory <= TWO_HUNDRED_MB && memForNonLocal >= ONE_FIFTY_MB)) {

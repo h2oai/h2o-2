@@ -58,7 +58,7 @@ public class CoxPHTest extends TestUtil {
       assertEquals(model.loglik,         -295.536762216228,    1e-8);
       assertEquals(model.score_test,     4.64097294749287,     1e-8);
       assert(model.iter >= 1);
-      assertEquals(model.x_mean[0],      -2.48402655078554,    1e-8);
+      assertEquals(model.x_mean_num[0],  -2.48402655078554,    1e-8);
       assertEquals(model.n,              172);
       assertEquals(model.total_event,    75);
       assertEquals(model.wald_test,      4.6343882547245,      1e-8);
@@ -97,7 +97,7 @@ public class CoxPHTest extends TestUtil {
       assertEquals(model.loglik,         -295.745227177782,    1e-8);
       assertEquals(model.score_test,     4.63317821557301,     1e-8);
       assert(model.iter >= 1);
-      assertEquals(model.x_mean[0],      -2.48402655078554,    1e-8);
+      assertEquals(model.x_mean_num[0],  -2.48402655078554,    1e-8);
       assertEquals(model.n,              172);
       assertEquals(model.total_event,    75);
       assertEquals(model.wald_test,      4.62659510743282,     1e-8);
@@ -136,7 +136,7 @@ public class CoxPHTest extends TestUtil {
       assertEquals(model.loglik,         -311.946958322919,    1e-8);
       assertEquals(model.score_test,     3.97716015008595,     1e-8);
       assert(model.iter >= 1);
-      assertEquals(model.x_mean[0],      -2.48402655078554,    1e-8);
+      assertEquals(model.x_mean_num[0],  -2.48402655078554,    1e-8);
       assertEquals(model.n,              172);
       assertEquals(model.total_event,    75);
       assertEquals(model.wald_test,      3.97164529276219,     1e-8);
@@ -175,7 +175,7 @@ public class CoxPHTest extends TestUtil {
       assertEquals(model.loglik,         -312.095342077591,    1e-8);
       assertEquals(model.score_test,     3.97665282498882,     1e-8);
       assert(model.iter >= 1);
-      assertEquals(model.x_mean[0],      -2.48402655078554,    1e-8);
+      assertEquals(model.x_mean_num[0],  -2.48402655078554,    1e-8);
       assertEquals(model.n,              172);
       assertEquals(model.total_event,    75);
       assertEquals(model.wald_test,      3.97109228128153,     1e-8);
