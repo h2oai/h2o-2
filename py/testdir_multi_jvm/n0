@@ -8,6 +8,7 @@
 # ./n0.doit test_cloud_5_loop.py $*
 # ./n0.doit test_cloud.py $*
 # ./n0.doit test_cloud_udp_drop.py $*
+./n0.doit test_create_frame_rand1.py $*
 ./n0.doit test_csv_download_libsvm.py $*
 ./n0.doit test_ddply_plot2.py $*
 ./n0.doit test_dead_node_status.py $*
@@ -48,6 +49,7 @@
 ./n0.doit test_GLM2_prob_cols_4.py $*
 ./n0.doit test_GLM2.py $*
 ./n0.doit test_impute_with_na.py $*
+./n0.doit test_impute_with_na_rand.py $*
 ./n0.doit test_inspect.py $*
 ./n0.doit test_iostatus.py $*
 ./n0.doit test_jstack.py $*
@@ -86,6 +88,7 @@
 ./n0.doit test_parse_file_loop_fvec.py $*
 ./n0.doit test_parse_fs_schmoo_fvec.py $*
 ./n0.doit test_parse_full_rand.py $*
+./n0.doit test_parse_libsvm_fvec.py $*
 ./n0.doit test_parse_many_cols_fvec.py $*
 ./n0.doit test_parse_manyfiles_fvec.py $*
 ./n0.doit test_parse_mnist_rebalance.py $*
@@ -94,14 +97,11 @@
 ./n0.doit test_parse_rand_schmoo2_fvec.py $*
 ./n0.doit test_parse_rand_schmoo3_fvec.py $*
 ./n0.doit test_parse_rand_schmoo_fvec.py $*
-./n0.doit test_parse_rand_utf16.py $*
 ./n0.doit test_parse_rand_utf8_2.py $*
-./n0.doit test_parse_rand_utf8_3.py $*
 ./n0.doit test_parse_rand_utf8_angle_start.py $*
 ./n0.doit test_parse_rand_utf8_just_double_quote.py $*
 ./n0.doit test_parse_rand_utf8_multibyte.py $*
 ./n0.doit test_parse_rand_utf8.py $*
-./n0.doit test_parse_rand_utf8_unmatched_double.py $*
 ./n0.doit test_parse_time2_fvec.py $*
 ./n0.doit test_parse_time_fvec.py $*
 ./n0.doit test_poisson_covtype20x.py $*
@@ -118,10 +118,8 @@
 ./n0.doit test_rf_big_rand_tree_fvec.py $*
 ./n0.doit test_rf_brutal2_fvec.py $*
 ./n0.doit test_rf_covtype_brutal_fvec.py $*
-./n0.doit test_rf_covtype_train_oobe_fvec.py $*
 ./n0.doit test_rf_float_bigexp_fvec.py $*
 ./n0.doit test_rf_float_many_bins_fvec.py $*
-./n0.doit test_rf_float_rand2_fvec.py $*
 ./n0.doit test_rf_float_rand_fvec.py $*
 ./n0.doit test_rf_hhp_2a_fvec.py $*
 ./n0.doit test_rf_hhp_2_fvec.py $*

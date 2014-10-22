@@ -13,9 +13,11 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
   checkEquals(myCoxPH.r$score,        myCoxPH.h2o@model$score,
               tolerance = tolerance)
   checkTrue  (                        myCoxPH.h2o@model$iter >= 1L)
-  checkEquals(tail(myCoxPH.r$means, length(myCoxPH.h2o@model$means)),
-              myCoxPH.h2o@model$means,
-              tolerance = tolerance)
+  if (myCoxPH.h2o@survfit$type == "counting")
+    myCoxPH.r$means[] <- myCoxPH.h2o@model$means # survival::coxph generates unweighted means when a start time is supplied
+  else
+    checkEquals(myCoxPH.r$means,      myCoxPH.h2o@model$means,
+                tolerance = tolerance, check.attributes = FALSE)
   checkEquals(myCoxPH.r$method,       myCoxPH.h2o@model$method)
   checkEquals(myCoxPH.r$n,            myCoxPH.h2o@model$n)
   checkEquals(myCoxPH.r$nevent,       myCoxPH.h2o@model$nevent)
