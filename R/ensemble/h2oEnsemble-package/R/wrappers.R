@@ -5,7 +5,7 @@
 # like "x, y, data, family", so that the ensemble code can be written more cleanly.
 
 
-h2o.glm.wrapper <- function(x, y, data, key = "", family = "binomial", link = "logit", nfolds = 0, alpha = 0.5, nlambda = -1, 
+h2o.glm.wrapper <- function(x, y, data, key = "", family = "binomial", link, nfolds = 0, alpha = 0.5, nlambda = -1, 
                                     lambda.min.ratio = -1, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, 
                                     prior, variable_importances = FALSE, use_all_factor_levels = FALSE, 
                                     tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), iter.max = 100, 
@@ -44,7 +44,8 @@ h2o.randomForest.wrapper <- function(x, y, data, key = "", family = "binomial", 
                    ntree = ntree, depth = depth, sample.rate = sample.rate, nbins = nbins, seed = seed, 
                    importance = importance, nfolds = nfolds, validation = validation, nodesize = nodesize, 
                    balance.classes = balance.classes, max.after.balance.size = max.after.balance.size,
-                   doGrpSplit = doGrpSplit, verbose = verbose, oobee = oobee, stat.type = stat.type, type = type)
+                   doGrpSplit = doGrpSplit, verbose = verbose, oobee = oobee, stat.type = stat.type, 
+                   type = ifelse(family=="binomial", type, "BigData"))
 }
 
 
