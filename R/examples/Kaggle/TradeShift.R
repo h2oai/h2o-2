@@ -214,8 +214,8 @@ for (resp in 1:length(targets)) {
   ## Remove no longer needed old models and temporaries from K-V store to keep memory footprint low
   h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
   h2o.rm(h2oServer, grep(pattern = "DRF", x = h2o.ls(h2oServer)$Key, value = TRUE))
-
 }
+
 if (validate) {
   cat("\nOverall training LogLosses = " , tLogLoss)
   cat("\nOverall training LogLoss = " , mean(tLogLoss))
