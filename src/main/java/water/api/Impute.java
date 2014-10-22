@@ -52,7 +52,7 @@ public class Impute extends Request2 {
       throw new IllegalArgumentException("method must be one of (mean, median, mode)"); // regression, randomForest)");
     if ( !(column.isEnum()) && column.naCnt() <= 0)
         throw new IllegalArgumentException("No NAs in the column, nothing to do.");
-    if (column.isEnum() &&  !Arrays.asList(column._domain).contains("NA"))
+    if (column.isEnum() && !Arrays.asList(column._domain).contains("NA") && column.naCnt() <= 0 )
       throw new IllegalArgumentException("No NAs in the column, nothing to do.");
 //    if (method == Method.regression && (column.isEnum() || column.isUUID() || column.isTime()))
 //      throw new IllegalArgumentException("Trying to perform regression on non-numeric column! Please select a different column.");
@@ -89,12 +89,15 @@ public class Impute extends Request2 {
           long maxCounts = -1;
           int mode = -1;
           for (int i = 0; i < counts[0].length; ++i) {
-            if (counts[0][i] > maxCounts && !dom[i].equals("NA")) {
+            if (counts[0][i] > maxCounts && !dom[i].equals("NA")) { // check for "NA" in domain -- corner case from R
               maxCounts = counts[0][i];
               mode = i;
             }
           }
-          _replace_val = mode != -1 ? (double) mode : (double) Arrays.asList(dom).indexOf("NA");
+          _replace_val = mode != -1
+                  ? (double) mode
+                  : (double) Arrays.asList(dom).indexOf("NA");  // could produce -1 if "NA" not in the domain -- that is we don't have the R corner case
+          if (_replace_val == -1) _replace_val = Double.NaN;    // OK to replace, since we're in the elif "mode" block
         }
         final double rv = _replace_val;
         new MRTask2() {
@@ -103,7 +106,9 @@ public class Impute extends Request2 {
             Chunk c = cs[col_id];
             int rows = c.len();
             for (int r = 0; r < rows; ++r) {
-              if (c.isNA0(r) || (c._vec.isEnum() && c._vec.domain()[(int) c.at0(r)].equals("NA"))) c.set0(r, rv);
+              if (c.isNA0(r) || (c._vec.isEnum() && c._vec.domain()[(int) c.at0(r)].equals("NA"))) {
+                if (!Double.isNaN(rv)) c.set0(r, rv); // leave as NA if replace value is NA
+              }
             }
           }
         }.doAll(source);
