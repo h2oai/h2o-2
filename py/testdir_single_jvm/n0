@@ -51,7 +51,6 @@
 ./n0.doit test_export_import.py $*
 ./n0.doit test_failswith512chunk.py $*
 ./n0.doit test_fp_many_cols_fvec.py $*
-./n0.doit test_fp_parse_fail.py $*
 ./n0.doit test_frame_split_iris.py $*
 ./n0.doit test_frame_split.py $*
 ./n0.doit test_from_import_fvec.py $*
@@ -109,7 +108,6 @@
 ./n0.doit test_GLM2_poisson_1.py $*
 ./n0.doit test_GLM2_poisson_fail.py $*
 ./n0.doit test_GLM2_poisson_goalies.py $*
-./n0.doit test_GLM2_poisson_normalize.py $*
 ./n0.doit test_GLM2_poisson_rand2.py $*
 ./n0.doit test_GLM2_poisson_timeout_fail.py $*
 ./n0.doit test_GLM2_princeton.py $*
@@ -163,6 +161,7 @@
 ./n0.doit test_parse_small_many_fvec.py $*
 ./n0.doit test_parse_specific_case2a.py $*
 ./n0.doit test_parse_specific_case4.py $*
+./n0.doit test_parse_specific_case5.py $*
 ./n0.doit test_parse_sq_30rows_fvec.py $*
 ./n0.doit test_parse_summary_manyfiles_1_fvec.py $*
 ./n0.doit test_parse_syn_gz_cat_fvec.py $*
