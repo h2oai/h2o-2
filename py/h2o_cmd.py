@@ -39,13 +39,6 @@ def runSummary(node=None, key=None, timeoutSecs=30, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.summary_page(key, timeoutSecs=timeoutSecs, **kwargs)
 
-# Not working in H2O yet, but support the test
-def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
-    if not key: raise Exception('No key for Inspect')
-    if not node: node = h2o.nodes[0]
-    # FIX! currently there is no such thing as a timeout on node.inspect
-    return node.Store2HDFS(key, **kwargs)
-
 # since we'll be doing lots of execs on a parsed file, not useful to have parse+exec
 # retryDelaySecs isn't used, 
 def runExec(node=None, timeoutSecs=20, **kwargs):

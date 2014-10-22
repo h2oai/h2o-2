@@ -23,7 +23,7 @@ h2o.coxph.control <- function(lre = 9, iter.max = 20, ...)
 
   list(lre = lre, iter.max = as.integer(iter.max))
 }
-h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
+h2o.coxph <- function(x, y, data, key = "", weights, ties = c("efron", "breslow"),
                       init = 0, control = h2o.coxph.control(...), ...)
 {
   if (!is(data, "H2OParsedData"))
@@ -38,6 +38,13 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
     stop("'y' must be a character vector of column names from 'data' ",
          "specifying a (start, stop, event) triplet or (stop, event) couplet")
 
+  useWeights <- !missing(weights)
+  if (useWeights) {
+    if (!is.character(weights) || length(weights) != 1L || !(weights %in% cnames))
+      stop("'weights' must be missing or a character string specifying a column name from 'data'")
+  } else
+    weights <- y[1L]
+
   if (!is.character(key) && length(key) == 1L)
     stop("'key' must be a character string")
   if (nchar(key) > 0 && !grepl("^[a-zA-Z_][a-zA-Z0-9_.]*$", key))
@@ -51,24 +58,25 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
     stop("'init' must be a numeric vector containing finite coefficient starting values")
 
   job <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPH,
-                           destination_key  = key,
-                           source           = data@key,
-                           use_start_column = as.integer(ny == 3L),
-                           start_column     = y[1L],
-                           stop_column      = y[ny - 1L],
-                           event_column     = y[ny],
-                           x_columns        = match(x, cnames) - 1L,
-                           ties             = ties,
-                           init             = init,
-                           lre_min          = control$lre,
-                           iter_max         = control$iter.max)
+                           destination_key    = key,
+                           source             = data@key,
+                           use_start_column   = as.integer(ny == 3L),
+                           start_column       = y[1L],
+                           stop_column        = y[ny - 1L],
+                           event_column       = y[ny],
+                           x_columns          = match(x, cnames) - 1L,
+                           use_weights_column = as.integer(useWeights),
+                           weights_column     = weights,
+                           ties               = ties,
+                           init               = init,
+                           lre_min            = control$lre,
+                           iter_max           = control$iter.max)
   job_key  <- job$job_key
   dest_key <- job$destination_key
   .h2o.__waitOnJob(data@h2o, job_key)
   res      <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPHModelView,
                                 '_modelKey' = dest_key)
   df <- length(res[[3]]$coef)
-  nnum <- length(res[[3L]]$x_mean)
   coef_names <- res[[3L]]$coef_names
   mcall <- match.call()
   model <-
@@ -77,7 +85,9 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
          loglik       = c(res[[3L]]$null_loglik, res[[3L]]$loglik),
          score        = res[[3L]]$score_test,
          iter         = res[[3L]]$iter,
-         means        = structure(res[[3L]]$x_mean, names = tail(coef_names, nnum)),
+         means        = structure(c(unlist(res[[3L]]$x_mean_cat),
+                                    unlist(res[[3L]]$x_mean_num)),
+                                  names = coef_names),
          method       = ties,
          n            = res[[3L]]$n,
          nevent       = res[[3L]]$total_event,
@@ -164,9 +174,9 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
   cols = paste(args$x_i - 1, collapse=",")
   if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation
-    validation = data
+#    validation = data
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
-                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=data@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
                             min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
@@ -1024,9 +1034,8 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
   cols <- paste(args$x_i - 1, collapse=',')
   if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation
-    validation = data
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, mtries = mtries, seed=seed, importance=as.numeric(importance),
-                            classification=as.numeric(classification), validation=data@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
+                            classification=as.numeric(classification), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
                             classification=as.numeric(classification), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
@@ -1149,8 +1158,8 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
 
   } else if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation if oobee is false...
-    validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, validation=data@key, importance=as.numeric(importance),
+#    validation = data
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, importance=as.numeric(importance),
                             sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, mtries = mtries, n_folds=nfolds, importance=as.numeric(importance),

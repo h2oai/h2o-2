@@ -25,16 +25,16 @@ class Basic(unittest.TestCase):
     def test_RF_mnist_both(self):
         csvFilelist = [
             # ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, 784834182943470027),
-            ("mnist_training.csv.gz", "mnist_testing_0.csv.gz", 600, None, '*mnist_training*gz'),
-            ("mnist_training.csv.gz", "mnist_testing_0.csv.gz", 600, None, '*mnist_training*gz'),
-            ("mnist_training.csv.gz", "mnist_testing_0.csv.gz", 600, None, '*mnist_training*gz'),
-            ("mnist_training.csv.gz", "mnist_testing_0.csv.gz", 600, None, '*mnist_training*gz'),
+            ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, None, '*mnist_training*gz'),
+            ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, None, '*mnist_training*gz'),
+            ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, None, '*mnist_training*gz'),
+            ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, None, '*mnist_training*gz'),
         ]
         # IMPORT**********************************************
 
         trial = 0
         allDelta = []
-        importFolderPath = "mnist_repl"
+        importFolderPath = "mnist"
         for (trainCsvFilename, testCsvFilename, timeoutSecs, rfSeed, parsePattern) in csvFilelist:
             trialStart = time.time()
 
@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
             trainKey = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             csvPathname = importFolderPath + "/" + parsePattern
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=parsePattern, schema='local',
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=parsePattern, schema='local', timeoutSecs=300)
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -67,27 +67,18 @@ class Basic(unittest.TestCase):
 
             # RF+RFView (train)****************************************
             print "This is the 'ignore=' we'll use"
+            y = 0 # first column is pixel value
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, returnIgnoreX=True)
             ntree = 100
             params = {
-                'response_variable': 0,
-                'ignore': ignore_x, 
-                'ntree': ntree,
-                'iterative_cm': 1,
-                'out_of_bag_error_estimate': 1,
+                'response': y,
+                'ignored_cols': ignore_x, 
+                'ntrees': ntree,
                 # 'data_key='mnist_training.csv.hex'
-                'features': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
-                'exclusive_split_limit': None,
-                'depth': 2147483647,
-                'stat_type': 'ENTROPY',
-                'sampling_strategy': 'RANDOM',
-                'sample': 67,
-                # 'model_key': '__RFModel_7055e6cf-a0de-44db-b165-f5994730ac77',
-                'model_key': 'RF_model',
-                'bin_limit': 1024,
-                # 'seed': 784834182943470027,
-                'use_non_local_data': 0,
-                'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
+                'mtries': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
+                'max_depth': 500,
+                'destination_key': 'RF_model',
+                'nbins': 1024,
                 }
 
             if rfSeed is None:
@@ -110,9 +101,8 @@ class Basic(unittest.TestCase):
 
             # RFView (score on test)****************************************
             start = time.time()
-            # FIX! 1 on oobe causes stack trace?
-            kwargs = {'response_variable': y}
-            rfView = h2o_cmd.runRFView(data_key=testKey, model_key=modelKey, ntree=ntree, out_of_bag_error_estimate=0, 
+            kwargs = {'response': y}
+            rfView = h2o_cmd.runRFView(data_key=testKey, model_key=modelKey, 
                 timeoutSecs=60, pollTimeoutSecs=60, noSimpleCheck=False, **kwargs)
             elapsed = time.time() - start
             print "RFView in",  elapsed, "secs", \
@@ -121,25 +111,17 @@ class Basic(unittest.TestCase):
             print "classification error is expected to be low because we included the test data in with the training!"
             self.assertAlmostEqual(classification_error, 0.028, delta=0.01, msg="Classification error %s differs too much" % classification_error)
         
-            leaves = rfView['trees']['leaves']
+            treeStats = rfView['drf_model']['treesStats']
             # Expected values are from this case:
             # ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, 784834182943470027),
-            leavesExpected = {'min': 4996, 'mean': 5064.1, 'max': 5148}
-            for l in leaves:
-                # self.assertAlmostEqual(leaves[l], leavesExpected[l], delta=10, msg="leaves %s %s %s differs too much" % (l, leaves[l], leavesExpected[l]))
-                delta = ((leaves[l] - leavesExpected[l])/leaves[l]) * 100
-                d = "seed: %s leaves %s %s %s pct. different %s" % (params['seed'], l, leaves[l], leavesExpected[l], delta)
+            expected =  {'minLeaves': 4996, 'meanLeaves': 5064.1, 'maxLeaves': 5148}
+            expected += {'minDepth': 21, 'meanDepth': 23.8, 'maxDepth': 25}
+            for key in expected:
+                delta = ((expected[key]- actual[key])/expected[key]) * 100
+                d = "seed: %s %s %s %s %s pct. different %s" % (params['seed'], key, actual[key], expected[key], delta)
                 print d
                 allDelta.append(d)
-
-            depth = rfView['trees']['depth']
-            depthExpected = {'min': 21, 'mean': 23.8, 'max': 25}
-            for l in depth:
-                # self.assertAlmostEqual(depth[l], depthExpected[l], delta=1, msg="depth %s %s %s differs too much" % (l, depth[l], depthExpected[l]))
-                delta = ((depth[l] - depthExpected[l])/leaves[l]) * 100
-                d = "seed: %s depth %s %s %s pct. different %s" % (params['seed'], l, depth[l], depthExpected[l], delta)
-                print d
-                allDelta.append(d)
+                # FIX! should change this to an assert?
 
             # Predict (on test)****************************************
             start = time.time()

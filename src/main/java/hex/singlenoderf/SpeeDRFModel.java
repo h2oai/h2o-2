@@ -290,7 +290,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /** Free all internal tree keys. */
   @Override public Futures delete_impl(Futures fs) {
     for( Key k : t_keys ) UKV.remove(k,fs);
-    if (testKey != null)  UKV.remove(testKey, fs);
     for (Key[] ka : local_forests) for (Key k : ka) if (k != null) UKV.remove(k, fs);
     return fs;
   }
@@ -524,6 +523,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   public DTree.TreeModel transform2DTreeModel() {
     if (dtreeTreeModel != null) {
+      dtreeTreeModel = new SpeeDRFModel_DTree(dtreeTreeModel, dtreeKeys, treeStats); //freshen the dtreeTreeModel
       return dtreeTreeModel;
     }
     Key key = Key.make();

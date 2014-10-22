@@ -21,7 +21,7 @@ public class CoxPH extends Job {
   @API(help="Data Frame", required=true, filter=Default.class, json=true)
   public Frame source;
 
-  @API(help="start column ignore if unchecked", required=true, filter=Default.class, json=true)
+  @API(help="start column ignored if unchecked", required=true, filter=Default.class, json=true)
   public boolean use_start_column = true;
 
   @API(help="Start Time Column", required=false, filter=CoxPHVecSelect.class, json=true)
@@ -35,6 +35,12 @@ public class CoxPH extends Job {
 
   @API(help="X Columns", required=true, filter=CoxPHMultiVecSelect.class, json=true)
   public int[] x_columns;
+
+  @API(help="weights column ignored if unchecked", required=true, filter=Default.class, json=true)
+  public boolean use_weights_column = false;
+
+  @API(help="Weights Column", required=false, filter=CoxPHVecSelect.class, json=true)
+  public Vec weights_column;
 
   @API(help="Method for Handling Ties", required=true, filter=Default.class, json=true)
   public CoxPHTies ties = CoxPHTies.efron;
@@ -78,8 +84,6 @@ public class CoxPH extends Job {
     final private CoxPH parameters;
     @API(help="Input data info")
     DataInfo data_info;
-    @API(help = "category counts")
-    long[] n_cats;
     @API(help = "names of coefficients")
     String[] coef_names;
     @API(help = "coefficients")
@@ -116,8 +120,10 @@ public class CoxPH extends Job {
     double lre;
     @API(help = "number of iterations")
     int iter;
-    @API(help = "x mean vector")
-    double[] x_mean;
+    @API(help = "x weighted mean vector for categorical variables")
+    double[] x_mean_cat;
+    @API(help = "x weighted mean vector for numeric variables")
+    double[] x_mean_num;
     @API(help = "n")
     long n;
     @API(help = "number of rows with missing values")
@@ -131,11 +137,11 @@ public class CoxPH extends Job {
     @API(help = "time")
     long[] time;
     @API(help = "number at risk")
-    long[] n_risk;
+    double[] n_risk;
     @API(help = "number of events")
-    long[] n_event;
+    double[] n_event;
     @API(help = "number of censored obs")
-    long[] n_censor;
+    double[] n_censor;
     @API(help = "baseline cumulative hazard")
     double[] cumhaz_0;
     @API(help = "component of var(cumhaz)", json = false)
@@ -196,7 +202,7 @@ public class CoxPH extends Job {
         for (int j = 0; j < n_cats; ++j)
           if (Double.isNaN(data[j])) {
             for (int k = data_info._catOffsets[j]; k < data_info._catOffsets[j+1]; ++k)
-              full_data[k] = (double) this.n_cats[k] / (double) n;
+              full_data[k] = this.x_mean_cat[k];
           } else if (data[j] != 0)
             full_data[data_info._catOffsets[j] + (int) (data[j] - 1)] = 1;
         for (int j = 0; j < n_num; ++j)
@@ -223,9 +229,9 @@ public class CoxPH extends Job {
     }
 
     protected void initStats(Frame source, DataInfo dinfo) {
+      n = source.numRows();
       data_info = dinfo;
       final int n_coef = data_info.fullN();
-      n_cats       = MemoryManager.malloc8(n_coef - data_info._nums);
       coef_names   = data_info.coefNames();
       coef         = MemoryManager.malloc8d(n_coef);
       exp_coef     = MemoryManager.malloc8d(n_coef);
@@ -244,26 +250,31 @@ public class CoxPH extends Job {
 
       final int n_time = new CollectDomain(stop_column).doAll(stop_column).domain().length;
       time         = MemoryManager.malloc8(n_time);
-      n_risk       = MemoryManager.malloc8(n_time);
-      n_event      = MemoryManager.malloc8(n_time);
-      n_censor     = MemoryManager.malloc8(n_time);
+      n_risk       = MemoryManager.malloc8d(n_time);
+      n_event      = MemoryManager.malloc8d(n_time);
+      n_censor     = MemoryManager.malloc8d(n_time);
       cumhaz_0     = MemoryManager.malloc8d(n_time);
       var_cumhaz_1 = MemoryManager.malloc8d(n_time);
       var_cumhaz_2 = malloc2DArray(n_coef, n_time);
     }
 
     protected void calcCounts(CoxPHTask coxMR) {
+      n_missing = n - coxMR.n;
       n         = coxMR.n;
-      n_missing = coxMR.n_missing;
-      System.arraycopy(coxMR.n_cats, 0, n_cats, 0, n_cats.length);
+      x_mean_cat = coxMR.sumWeightedCatX.clone();
+      for (int j = 0; j < x_mean_cat.length; j++)
+        x_mean_cat[j] /= coxMR.sumWeights;
+      x_mean_num = coxMR._dinfo._normSub.clone();
+      for (int j = 0; j < x_mean_num.length; j++)
+        x_mean_num[j] += coxMR.sumWeightedNumX[j] / coxMR.sumWeights;
       int nz = 0;
       for (int t = 0; t < coxMR.countEvents.length; ++t) {
         total_event += coxMR.countEvents[t];
-        if (coxMR.countEvents[t] > 0 || coxMR.countCensored[t] > 0) {
+        if (coxMR.sizeEvents[t] > 0 || coxMR.sizeCensored[t] > 0) {
           time[nz]     = min_time + t;
-          n_risk[nz]   = coxMR.countRiskSet[t];
-          n_event[nz]  = coxMR.countEvents[t];
-          n_censor[nz] = coxMR.countCensored[t];
+          n_risk[nz]   = coxMR.sizeRiskSet[t];
+          n_event[nz]  = coxMR.sizeEvents[t];
+          n_censor[nz] = coxMR.sizeCensored[t];
           nz++;
         }
       }
@@ -282,23 +293,24 @@ public class CoxPH extends Job {
       }
       switch (parameters.ties) {
         case efron:
-          for (int t = coxMR.countEvents.length - 1; t >= 0; --t) {
-            if (coxMR.countEvents[t] > 0) {
+          for (int t = coxMR.sizeEvents.length - 1; t >= 0; --t) {
+            if (coxMR.sizeEvents[t] > 0) {
+              final double avgSize = coxMR.sizeEvents[t] / coxMR.countEvents[t];
               newLoglik += coxMR.sumLogRiskEvents[t];
               for (int j = 0; j < n_coef; ++j)
                 gradient[j] += coxMR.sumXEvents[j][t];
               for (long e = 0; e < coxMR.countEvents[t]; ++e) {
                 final double frac = ((double) e) / ((double) coxMR.countEvents[t]);
                 final double term = coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t];
-                newLoglik -= Math.log(term);
+                newLoglik -= avgSize * Math.log(term);
                 for (int j = 0; j < n_coef; ++j) {
                   final double djTerm    = coxMR.rcumsumXRisk[j][t] - frac * coxMR.sumXRiskEvents[j][t];
                   final double djLogTerm = djTerm / term;
-                  gradient[j] -= djLogTerm;
+                  gradient[j] -= avgSize * djLogTerm;
                   for (int k = 0; k < n_coef; ++k) {
                     final double dkTerm  = coxMR.rcumsumXRisk[k][t]     - frac * coxMR.sumXRiskEvents[k][t];
                     final double djkTerm = coxMR.rcumsumXXRisk[j][k][t] - frac * coxMR.sumXXRiskEvents[j][k][t];
-                    hessian[j][k] -= djkTerm / term - (djLogTerm * (dkTerm / term));
+                    hessian[j][k] -= avgSize * (djkTerm / term - (djLogTerm * (dkTerm / term)));
                   }
                 }
               }
@@ -306,16 +318,16 @@ public class CoxPH extends Job {
           }
           break;
         case breslow:
-          for (int t = coxMR.countEvents.length - 1; t >= 0; --t) {
-            if (coxMR.countEvents[t] > 0) {
+          for (int t = coxMR.sizeEvents.length - 1; t >= 0; --t) {
+            if (coxMR.sizeEvents[t] > 0) {
               newLoglik += coxMR.sumLogRiskEvents[t];
-              newLoglik -= coxMR.countEvents[t] * Math.log(coxMR.rcumsumRisk[t]);
+              newLoglik -= coxMR.sizeEvents[t] * Math.log(coxMR.rcumsumRisk[t]);
               for (int j = 0; j < n_coef; ++j) {
                 final double dlogTerm = coxMR.rcumsumXRisk[j][t] / coxMR.rcumsumRisk[t];
                 gradient[j] += coxMR.sumXEvents[j][t];
-                gradient[j] -= coxMR.countEvents[t] * dlogTerm;
+                gradient[j] -= coxMR.sizeEvents[t] * dlogTerm;
                 for (int k = 0; k < n_coef; ++k)
-                  hessian[j][k] -= coxMR.countEvents[t] *
+                  hessian[j][k] -= coxMR.sizeEvents[t] *
                     (((coxMR.rcumsumXXRisk[j][k][t] / coxMR.rcumsumRisk[t]) -
                       (dlogTerm * (coxMR.rcumsumXRisk[k][t] / coxMR.rcumsumRisk[t]))));
               }
@@ -373,8 +385,9 @@ public class CoxPH extends Job {
       int nz = 0;
       switch (parameters.ties) {
         case efron:
-          for (int t = 0; t < coxMR.countEvents.length; ++t) {
-            if (coxMR.countEvents[t] > 0 || coxMR.countCensored[t] > 0) {
+          for (int t = 0; t < coxMR.sizeEvents.length; ++t) {
+            if (coxMR.sizeEvents[t] > 0 || coxMR.sizeCensored[t] > 0) {
+              final double avgSize = coxMR.sizeEvents[t] / coxMR.countEvents[t];
               cumhaz_0[nz]     = 0;
               var_cumhaz_1[nz] = 0;
               for (int j = 0; j < n_coef; ++j)
@@ -383,20 +396,21 @@ public class CoxPH extends Job {
                 final double frac   = ((double) e) / ((double) coxMR.countEvents[t]);
                 final double haz    = 1 / (coxMR.rcumsumRisk[t] - frac * coxMR.sumRiskEvents[t]);
                 final double haz_sq = haz * haz;
-                cumhaz_0[nz]     += haz;
-                var_cumhaz_1[nz] += haz_sq;
+                cumhaz_0[nz]     += avgSize * haz;
+                var_cumhaz_1[nz] += avgSize * haz_sq;
                 for (int j = 0; j < n_coef; ++j)
-                  var_cumhaz_2[j][nz] += (coxMR.rcumsumXRisk[j][t] - frac * coxMR.sumXRiskEvents[j][t]) * haz_sq;
+                  var_cumhaz_2[j][nz] +=
+                    avgSize * ((coxMR.rcumsumXRisk[j][t] - frac * coxMR.sumXRiskEvents[j][t]) * haz_sq);
               }
               nz++;
             }
           }
           break;
         case breslow:
-          for (int t = 0; t < coxMR.countEvents.length; ++t) {
-            if (coxMR.countEvents[t] > 0 || coxMR.countCensored[t] > 0) {
-              cumhaz_0[nz]     = coxMR.countEvents[t] / coxMR.rcumsumRisk[t];
-              var_cumhaz_1[nz] = coxMR.countEvents[t] / (coxMR.rcumsumRisk[t] * coxMR.rcumsumRisk[t]);
+          for (int t = 0; t < coxMR.sizeEvents.length; ++t) {
+            if (coxMR.sizeEvents[t] > 0 || coxMR.sizeCensored[t] > 0) {
+              cumhaz_0[nz]     = coxMR.sizeEvents[t] / coxMR.rcumsumRisk[t];
+              var_cumhaz_1[nz] = coxMR.sizeEvents[t] / (coxMR.rcumsumRisk[t] * coxMR.rcumsumRisk[t]);
               for (int j = 0; j < n_coef; ++j)
                 var_cumhaz_2[j][nz] = (coxMR.rcumsumXRisk[j][t] / coxMR.rcumsumRisk[t]) * cumhaz_0[nz];
               nz++;
@@ -451,6 +465,7 @@ public class CoxPH extends Job {
       sb.append("<h4>Data</h4>");
       sb.append("<table class='table table-striped table-bordered table-condensed'><col width=\"25%\"><col width=\"75%\">");
       sb.append("<tr><th>Number of Complete Cases</th><td>");          sb.append(n);          sb.append("</td></tr>");
+      sb.append("<tr><th>Number of Non Complete Cases</th><td>");      sb.append(n_missing);  sb.append("</td></tr>");
       sb.append("<tr><th>Number of Events in Complete Cases</th><td>");sb.append(total_event);sb.append("</td></tr>");
       sb.append("</table>");
 
@@ -471,11 +486,11 @@ public class CoxPH extends Job {
       sb.append("<tr><th>Rsquare</th><td>");sb.append(String.format("%.3f", rsq));
       sb.append(" (max possible = ");       sb.append(String.format("%.3f", maxrsq));sb.append(")</td></tr>");
       sb.append("<tr><th>Likelihood ratio test</th><td>");sb.append(String.format("%.2f", loglik_test));
-      sb.append(" on ");sb.append(String.format("%d", coef.length));sb.append(" df</td></tr>");
+      sb.append(" on ");sb.append(coef.length);sb.append(" df</td></tr>");
       sb.append("<tr><th>Wald test            </th><td>");sb.append(String.format("%.2f", wald_test));
-      sb.append(" on ");sb.append(String.format("%d", coef.length));sb.append(" df</td></tr>");
+      sb.append(" on ");sb.append(coef.length);sb.append(" df</td></tr>");
       sb.append("<tr><th>Score (logrank) test </th><td>");sb.append(String.format("%.2f", score_test));
-      sb.append(" on ");sb.append(String.format("%d", coef.length));sb.append(" df</td></tr>");
+      sb.append(" on ");sb.append(coef.length);sb.append(" df</td></tr>");
       sb.append("</table>");
     }
 
@@ -513,7 +528,11 @@ public class CoxPH extends Job {
                                          "; maximum number allowed is " + MAX_TIME_BINS);
 
     source = getSubframe();
-    final int n_resp = use_start_column ? 3 : 2;
+    int n_resp = 2;
+    if (use_weights_column)
+      n_resp++;
+    if (use_start_column)
+      n_resp++;
     final DataInfo dinfo = new DataInfo(source, n_resp, false, DataInfo.TransformType.DEMEAN);
     model = new CoxPHModel(this, dest(), source._key, source, null);
     model.initStats(source, dinfo);
@@ -532,12 +551,11 @@ public class CoxPH extends Job {
       newCoef[j] = init;
     double oldLoglik = - Double.MAX_VALUE;
     final int n_time = (int) (model.max_time - model.min_time + 1);
-    model.x_mean = dinfo._normSub.clone();
     for (int i = 0; i <= iter_max; ++i) {
       model.iter = i;
 
       final CoxPHTask coxMR = new CoxPHTask(self(), dinfo, newCoef, model.min_time, n_time,
-                                            use_start_column).doAll(dinfo._adaptedFrame);
+                                            use_start_column, use_weights_column).doAll(dinfo._adaptedFrame);
 
       if (i == 0)
         model.calcCounts(coxMR);
@@ -585,10 +603,16 @@ public class CoxPH extends Job {
 
   private Frame getSubframe() {
     final int x_ncol = x_columns.length;
-    final int ncol   = use_start_column ? x_ncol + 3 : x_ncol + 2;
+    int ncol = x_ncol + 2;
+    if (use_weights_column)
+      ncol++;
+    if (use_start_column)
+      ncol++;
     final String[] names = new String[ncol];
     for (int j = 0; j < x_ncol; ++j)
       names[j] = source.names()[x_columns[j]];
+    if (use_weights_column)
+      names[x_ncol]   = source.names()[source.find(weights_column)];
     if (use_start_column)
       names[ncol - 3] = source.names()[source.find(start_column)];
     names[ncol - 2]   = source.names()[source.find(stop_column)];
@@ -601,12 +625,16 @@ public class CoxPH extends Job {
     private final int      _n_time;
     private final long     _min_time;
     private final boolean  _use_start_column;
+    private final boolean  _use_weights_column;
 
     protected long         n;
     protected long         n_missing;
-    protected long[]       n_cats;
-    protected long[]       countRiskSet;
-    protected long[]       countCensored;
+    protected double       sumWeights;
+    protected double[]     sumWeightedCatX;
+    protected double[]     sumWeightedNumX;
+    protected double[]     sizeRiskSet;
+    protected double[]     sizeCensored;
+    protected double[]     sizeEvents;
     protected long[]       countEvents;
     protected double[][]   sumXEvents;
     protected double[]     sumRiskEvents;
@@ -618,20 +646,23 @@ public class CoxPH extends Job {
     protected double[][][] rcumsumXXRisk;
 
     CoxPHTask(Key jobKey, DataInfo dinfo, final double[] beta, final long min_time, final int n_time,
-              final boolean use_start_column) {
+              final boolean use_start_column, final boolean use_weights_column) {
       super(jobKey, dinfo);
-      _beta             = beta;
-      _n_time           = n_time;
-      _min_time         = min_time;
-      _use_start_column = use_start_column;
+      _beta               = beta;
+      _n_time             = n_time;
+      _min_time           = min_time;
+      _use_start_column   = use_start_column;
+      _use_weights_column = use_weights_column;
     }
 
     @Override
     protected void chunkInit(){
       final int n_coef = _beta.length;
-      n_cats           = MemoryManager.malloc8(n_coef - _dinfo._nums);
-      countRiskSet     = MemoryManager.malloc8(_n_time);
-      countCensored    = MemoryManager.malloc8(_n_time);
+      sumWeightedCatX  = MemoryManager.malloc8d(n_coef - _dinfo._nums);
+      sumWeightedNumX  = MemoryManager.malloc8d(_dinfo._nums);
+      sizeRiskSet      = MemoryManager.malloc8d(_n_time);
+      sizeCensored     = MemoryManager.malloc8d(_n_time);
+      sizeEvents       = MemoryManager.malloc8d(_n_time);
       countEvents      = MemoryManager.malloc8(_n_time);
       sumRiskEvents    = MemoryManager.malloc8d(_n_time);
       sumLogRiskEvents = MemoryManager.malloc8d(_n_time);
@@ -646,33 +677,41 @@ public class CoxPH extends Job {
     @Override
     protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response) {
       n++;
+      final double weight = _use_weights_column ? response[0] : 1.0;
+      if (weight <= 0)
+        throw new IllegalArgumentException("weights must be positive values");
       final long event = (long) response[response.length - 1];
       final int t1 = _use_start_column ? (int) (((long) response[response.length - 3] + 1) - _min_time) : -1;
       final int t2 = (int) (((long) response[response.length - 2]) - _min_time);
       if (t1 > t2)
         throw new IllegalArgumentException("start times must be strictly less than stop times");
       final int numStart = _dinfo.numStart();
+      sumWeights += weight;
       for (int j = 0; j < ncats; ++j)
-        n_cats[cats[j]]++;
+        sumWeightedCatX[cats[j]] += weight;
+      for (int j = 0; j < nums.length; ++j)
+        sumWeightedNumX[j] += weight * nums[j];
       double logRisk = 0;
       for (int j = 0; j < ncats; ++j)
         logRisk += _beta[cats[j]];
       for (int j = 0; j < nums.length; ++j)
         logRisk += nums[j] * _beta[numStart + j];
-      final double risk = Math.exp(logRisk);
+      final double risk = weight * Math.exp(logRisk);
+      logRisk *= weight;
       if (event > 0) {
         countEvents[t2]++;
+        sizeEvents[t2]       += weight;
         sumLogRiskEvents[t2] += logRisk;
         sumRiskEvents[t2]    += risk;
       } else
-        countCensored[t2]++;
+        sizeCensored[t2] += weight;
       if (_use_start_column) {
         for (int t = t1; t <= t2; ++t)
-          countRiskSet[t]++;
+          sizeRiskSet[t] += weight;
         for (int t = t1; t <= t2; ++t)
           rcumsumRisk[t] += risk;
       } else {
-        countRiskSet[t2]++;
+        sizeRiskSet[t2]  += weight;
         rcumsumRisk[t2]  += risk;
       }
 
@@ -684,7 +723,7 @@ public class CoxPH extends Job {
         final double x1      = jIsCat ? 1.0 : nums[jit - ncats];
         final double xRisk   = x1 * risk;
         if (event > 0) {
-          sumXEvents[j][t2]     += x1;
+          sumXEvents[j][t2]     += weight * x1;
           sumXRiskEvents[j][t2] += xRisk;
         }
         if (_use_start_column) {
@@ -712,11 +751,13 @@ public class CoxPH extends Job {
 
     @Override
     public void reduce(CoxPHTask that) {
-      n         += that.n;
-      n_missing += that.n_missing;
-      Utils.add(n_cats,           that.n_cats);
-      Utils.add(countRiskSet,     that.countRiskSet);
-      Utils.add(countCensored,    that.countCensored);
+      n += that.n;
+      sumWeights += that.sumWeights;
+      Utils.add(sumWeightedCatX,  that.sumWeightedCatX);
+      Utils.add(sumWeightedNumX,  that.sumWeightedNumX);
+      Utils.add(sizeRiskSet,      that.sizeRiskSet);
+      Utils.add(sizeCensored,     that.sizeCensored);
+      Utils.add(sizeEvents,       that.sizeEvents);
       Utils.add(countEvents,      that.countEvents);
       Utils.add(sumXEvents,       that.sumXEvents);
       Utils.add(sumRiskEvents,    that.sumRiskEvents);

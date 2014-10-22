@@ -23,7 +23,7 @@ exprList = [
         'Result<n>.hex = sum(<keyX>[,<col1>]) + Result.hex',
     ]
 
-def exec_list(exprList, lenNodes, csvFilename, hex_key):
+def exec_list(exprList, lenNodes, csvFilename, hex_key, colX):
         h2e.exec_zero_list(zeroList)
         # start with trial = 1 because trial-1 is used to point to Result0 which must be initted
         trial = 1
@@ -33,7 +33,7 @@ def exec_list(exprList, lenNodes, csvFilename, hex_key):
                 nodeX = random.randint(0,lenNodes-1)
                 # billion rows only has two cols
                 # colX is incremented in the fill_in_expr_template
-                colX = random.randint(0,1)
+
                 # FIX! should tune this for covtype20x vs 200x vs covtype.data..but for now
                 row = str(random.randint(1,400000))
 
@@ -56,14 +56,12 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1)
+            h2o.build_cloud()
         else:
             h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
-        # wait while I inspect things
-        # time.sleep(1500)
         h2o.tear_down_cloud()
 
     def test_exec_import_hosts_bigfiles(self):
@@ -80,7 +78,8 @@ class Basic(unittest.TestCase):
             ("covtype.data", "c"),
             ("covtype20x.data", "c20"),
             ("covtype200x.data", "c200"),
-            ("billion_rows.csv.gz", "b"),
+            # can't do enum 
+            # ("billion_rows.csv.gz", "b"),
             ]
 
         # h2b.browseTheCloud()
@@ -93,7 +92,10 @@ class Basic(unittest.TestCase):
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
-            exec_list(exprList, lenNodes, csvFilename, hex_key)
+
+            # last column
+            colX = inspect['numCols'] - 1
+            exec_list(exprList, lenNodes, csvFilename, hex_key, colX)
 
 
 if __name__ == '__main__':

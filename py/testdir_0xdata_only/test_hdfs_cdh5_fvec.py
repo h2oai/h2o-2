@@ -1,6 +1,7 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import getpass
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -39,7 +40,7 @@ class Basic(unittest.TestCase):
             ("hhp.unbalanced.012.data.gz", 60),
             ("hhp.unbalanced.data.gz", 60),
             ("leads.csv", 60),
-            ("covtype.169x.data", 1200),
+            # ("covtype.169x.data", 1200),
             ("prostate_long_1G.csv", 200),
             ("airlines_all.csv", 1200),
         ]
@@ -69,7 +70,12 @@ class Basic(unittest.TestCase):
             start = time.time()
             print "Saving", csvFilename, 'to HDFS'
             print "Using /tmp2 to avoid the '.' prefixed files in /tmp2 (kills import)"
-            csvPathname = "tmp2/a%s.csv" % trial
+            print "Unique per-user to avoid permission issues"
+            username = getpass.getuser()
+            csvPathname = "tmp2/a%s.%s.csv" % (trial, username)
+            # reuse the file name to avoid running out of space
+            csvPathname = "tmp2/a%s.%s.csv" % ('_h2o_export_files', username)
+
             path = "hdfs://"+ h2o.nodes[0].hdfs_name_node + "/" + csvPathname
             h2o.nodes[0].export_files(src_key=hex_key, path=path, force=1, timeoutSecs=timeoutSecs)
             print "export_files of", hex_key, "to", path, "took", time.time() - start, 'secs'
