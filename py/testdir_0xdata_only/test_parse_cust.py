@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
         goodKeyList = [key for key in importKeyList if ('.csv' in key  or '.tsv' in key)]
         trial = 0
         # just do 1?
-        for i, importKey in enumerate(random.sample(goodKeyList,3)]):
+        for i, importKey in enumerate(random.sample(goodKeyList,3)):
             print "importKey:", importKey
             trial +=1
 
