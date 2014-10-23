@@ -1708,13 +1708,23 @@ public class RequestArguments extends RequestStatics {
   /** A Fluid Vec, via a column name in a Frame */
   public class FrameKeyVec extends InputSelect<Vec> {
     final TypeaheadKey _key;
+    boolean _optional = false;
+    final String _desc;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
-    public FrameKeyVec(String name, TypeaheadKey key) {
-      super(name, true);
+    public FrameKeyVec(String name, TypeaheadKey key, String desc,boolean required) {
+      super(name, required);
       addPrerequisite(_key=key);
+      setRefreshOnChange();
+      _desc = desc;
     }
+
     protected Frame fr() { return DKV.get(_key.value()).get(); }
-    @Override protected String[] selectValues() { return fr()._names;  }
+    @Override protected String[] selectValues() {
+      String [] vals = fr()._names;
+      if(!_required)
+        vals = Utils.append(new String[]{""},vals);
+      return vals;
+    }
     @Override protected String selectedItemValue() {
       Frame fr = fr();
       if( value() == null || fr == null ) {
@@ -1727,7 +1737,10 @@ public class RequestArguments extends RequestStatics {
         }
         return "";
       }
+      if(_colIdx.get() == null)
+        return "";
       return fr._names[_colIdx.get()];
+
     }
     @Override protected Vec parse(String input) throws IllegalArgumentException {
       int cidx = fr().find(input);
@@ -1742,13 +1755,13 @@ public class RequestArguments extends RequestStatics {
       return fr().vecs()[cidx];
     }
     @Override protected Vec defaultValue() { return null; }
-    @Override protected String queryDescription() { return "Column name"; }
+    @Override protected String queryDescription() { return _desc; }
     @Override protected String[] errors() { return new String[] { "Not a name of column, or a column index" }; }
   }
 
   /** A Class Vec/Column within a Frame.  Limited to 1000 classes, just to prevent madness. */
   public class FrameClassVec extends FrameKeyVec {
-    public FrameClassVec(String name, TypeaheadKey key ) { super(name, key); }
+    public FrameClassVec(String name, TypeaheadKey key ) { super(name, key,"response column name",true); }
     @Override protected String[] selectValues() {
       final Vec [] vecs = fr().vecs();
       String[] names = new String[vecs.length];
@@ -1770,29 +1783,36 @@ public class RequestArguments extends RequestStatics {
     final String _description;
     final boolean _namesOnly;
     final boolean _filterNAs;
-    FrameClassVec _response;
+    transient ArrayList<FrameKeyVec> _ignoredVecs = new ArrayList<FrameKeyVec>();
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() {
       Value v = DKV.get(_key.value());
       if(v == null) throw new H2OIllegalArgumentException(this, "Frame not found");
       return v.get();
     }
-    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description, boolean namesOnly, boolean filterNAs) {
+    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameKeyVec [] vecs, String description, boolean namesOnly, boolean filterNAs) {
       super(name);
       addPrerequisite(_key = key);
       _description = description;
       _namesOnly = namesOnly;
       _filterNAs = filterNAs;
-      if(response != null)
-        setResponse(response);
+      if(vecs != null)
+        for(FrameKeyVec v:vecs)
+          ignoreVec(v);
     }
-    public void setResponse(FrameClassVec response) {
-      _response = response;
-      addPrerequisite(response);
+    public void ignoreVec(FrameKeyVec v) {
+      for(FrameKeyVec vv:_ignoredVecs)
+        if(vv == v)return;
+      addPrerequisite(v);
+      _ignoredVecs.add(v);
     }
     public boolean shouldIgnore(int i, Frame fr ) {
-      return (_response != null && _response.value() == fr.vecs()[i]) ||
-        fr.vecs()[i].isUUID();
+      if(fr.vecs()[i].isUUID())
+        return true;
+      for(FrameKeyVec v:_ignoredVecs)
+        if(v.value() == fr.vecs()[i])
+          return true;
+      return false;
     }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
     transient ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
