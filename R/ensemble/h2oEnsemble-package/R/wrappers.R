@@ -62,7 +62,7 @@ h2o.deeplearning.wrapper <- function(x, y, data, key = "", family = "binomial", 
                                 max_after_balance_size, score_validation_sampling, diagnostics,
                                 variable_importances, fast_mode, ignore_const_cols, force_load_balance,
                                 replicate_training_data, single_node_mode, shuffle_training_data,
-                                sparse, col_major, ...) {
+                                sparse, col_major, max_categorical_features, reproducible, ...) {
   
   h2o.deeplearning(x = x, y = y, data = data, key = key, override_with_best_model = override_with_best_model,
                    classification = ifelse(family=="binomial", TRUE, FALSE), nfolds = nfolds,
@@ -87,6 +87,7 @@ h2o.deeplearning.wrapper <- function(x, y, data, key = "", family = "binomial", 
                    variable_importances = variable_importances, fast_mode = fast_mode, 
                    ignore_const_cols = ignore_const_cols, force_load_balance = force_load_balance,
                    replicate_training_data = replicate_training_data, single_node_mode = single_node_mode, 
-                   shuffle_training_data = shuffle_training_data, sparse = sparse, col_major = col_major)  
+                   shuffle_training_data = shuffle_training_data, sparse = sparse, col_major = col_major,
+                   max_categorical_features = max_categorical_features, reproducible = reproducible)  
 }
 
