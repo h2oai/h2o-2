@@ -64,7 +64,8 @@ class Basic(unittest.TestCase):
             node = h2o.nodes[0]
             print "Deleting", hex_key, "at", node.http_addr, "Shouldn't matter what node the delete happens at..global?"
             start = time.time()
-            node.remove_key(hex_key, timeoutSecs=120)
+            # I guess removing individual keys can be slow?
+            node.remove_key(hex_key, timeoutSecs=300)
             removeElapsed = time.time() - start
             print "Deleting", hex_key, "took", removeElapsed, "seconds"
 

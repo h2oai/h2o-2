@@ -178,6 +178,13 @@ public class Frame extends Lockable<Frame> {
     return new Frame[] { new Frame(names,vecs), ccv>0 ?  new Frame(Arrays.copyOf(cnames, ccv), Arrays.copyOf(cvecs,ccv)) : null };
   }
 
+  public final Vec[] vecs(int [] idxs) {
+    Vec [] all = vecs();
+    Vec [] res = new Vec[idxs.length];
+    for(int i = 0; i < idxs.length; ++i)
+      res[i] = all[idxs[i]];
+    return res;
+  }
   // Return (and cache) vectors
   public final Vec[] vecs() {
     Vec[] tvecs = _vecs; // read the content

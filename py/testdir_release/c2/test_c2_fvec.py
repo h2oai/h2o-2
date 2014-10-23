@@ -60,7 +60,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
 
-                inspect = runInspect(key=parseResult['destination_key'])
+                inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
                 h2o_cmd.infoFromInspect(inspect, csvPathname)
                 numRows = inspect['numRows']
                 numCols = inspect['numCols']
