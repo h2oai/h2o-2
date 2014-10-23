@@ -41,19 +41,20 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     #****************************
     # if we are checking after confusion_matrix for predict, the jsonschema is different
-    if 'drf_model' in rfv:
-        rf_model = rfv['drf_model']
-    elif 'speedrf_model' in rfv:
-        rf_model = rfv['speedrf_model']
-    elif 'rf_model' in rfv:
-        rf_model = rfv['rf_model']
-    else:
-        raise Exception("no rf_model in rfv? %s" % h2o_dump.json(rfv))
         
 
     if 'cm' in rfv:
         cm = rfv['cm'] # only one
     else:
+        if 'drf_model' in rfv:
+            rf_model = rfv['drf_model']
+        elif 'speedrf_model' in rfv:
+            rf_model = rfv['speedrf_model']
+        elif 'rf_model' in rfv:
+            rf_model = rfv['rf_model']
+        else:
+            raise Exception("no rf_model in rfv? %s" % h2o.dump_json(rfv))
+
         cms = rf_model['cms']
         print "number of cms:", len(cms)
         print "FIX! need to add reporting of h2o's _perr per class error"
@@ -67,6 +68,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         ##    print "cm %s: %s" % (i, c['_arr'])
 
         cm = cms[-1]['_arr'] # take the last one
+
     scoresList = cm
 
     if not checkScoringOnly:
