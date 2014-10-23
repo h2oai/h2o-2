@@ -77,12 +77,6 @@ public final class GLMParams extends Iced {
     }
   }
 
-  public double [] nullModelBeta(FrameTask.DataInfo dinfo, double ymu){
-    double [] res = MemoryManager.malloc8d(dinfo.fullN()+1);
-    res[res.length-1] = link(ymu);
-    return res;
-  }
-
   public final boolean canonical(){
     switch(family){
       case gaussian:
@@ -161,7 +155,9 @@ public final class GLMParams extends Iced {
   public final double linkDeriv(double x) {
     switch( link ) {
       case logit:
-        return 1 / (x * (1 - x));
+        double res = 1 / (x * (1 - x));
+        if(res > 1e5) return 1e5;
+        return res;
       case identity:
         return 1;
       case log:

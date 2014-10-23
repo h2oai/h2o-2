@@ -11,7 +11,7 @@ test.CoxPH.bladder <- function(conn) {
     h2o.coxph(x = "size", y = c("stop", "event"), data = bladder.h2o,
               key = "bladmod.h2o")
   bladder.coxph <- coxph(Surv(stop, event) ~ size, data = bladder)
-  checkCoxPHModel(bladder.coxph.h2o, bladder.coxph)
+  checkCoxPHModel(bladder.coxph.h2o, bladder.coxph, tolerance = 1e-7)
 
   Log.info("H2O Cox PH Model of bladder Data Set using Efron's Approximation; 4 predictors\n")
   bladder.coxph.h2o <-

@@ -20,11 +20,11 @@ public class GLMValidation extends Iced {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help="")
-  final double _ymu;
+  double null_deviance;
+
   @API(help="")
   double residual_deviance;
-  @API(help="")
-  double null_deviance;
+
   @API(help="")
   long nobs;
 
@@ -57,7 +57,7 @@ public class GLMValidation extends Iced {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
     public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, GLMValidation [] xvals, double lambda, long nobs, float [] thresholds) {
-      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambda),thresholds);
+      super(mainModel._dataKey, mainModel.glm, mainModel.rank(lambda),thresholds);
       xval_models = new Key[xvalModels.length];
       for(int i = 0; i < xval_models.length; ++i)
         xval_models[i] = xvalModels[i]._key;
@@ -72,12 +72,11 @@ public class GLMValidation extends Iced {
       this.nobs = nobs;
     }
   }
-  public GLMValidation(Key dataKey, double ymu, GLMParams glm, int rank){
-    this(dataKey, ymu, glm, rank,glm.family == Family.binomial?ModelUtils.DEFAULT_THRESHOLDS:null);
+  public GLMValidation(Key dataKey, GLMParams glm, int rank){
+    this(dataKey, glm, rank,glm.family == Family.binomial?ModelUtils.DEFAULT_THRESHOLDS:null);
   }
-  public GLMValidation(Key dataKey, double ymu, GLMParams glm, int rank, float [] thresholds){
+  public GLMValidation(Key dataKey, GLMParams glm, int rank, float [] thresholds){
     _rank = rank;
-    _ymu = ymu;
     _glm = glm;
     if(_glm.family == Family.binomial){
       _cms = new ConfusionMatrix[thresholds.length];
@@ -90,7 +89,6 @@ public class GLMValidation extends Iced {
 
   public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make());}
   public void add(double yreal, double ymodel){
-    null_deviance += _glm.deviance(yreal, _ymu);
     if(_glm.family == Family.binomial) // classification -> update confusion matrix too
       for(int i = 0; i < thresholds.length; ++i)
         _cms[i].add((int)yreal, (ymodel >= thresholds[i])?1:0);
@@ -107,15 +105,12 @@ public class GLMValidation extends Iced {
   }
   public void add(GLMValidation v){
     residual_deviance  += v.residual_deviance;
-    null_deviance += v.null_deviance;
     nobs += v.nobs;
     _aic2 += v._aic2;
     if(_cms == null)_cms = v._cms;
     else for(int i = 0; i < _cms.length; ++i)_cms[i].add(v._cms[i]);
   }
-  public final double nullDeviance(){return null_deviance;}
   public final double residualDeviance(){return residual_deviance;}
-  public final long nullDOF(){return nobs-1;}
   public final long resDOF(){return nobs - _rank -1;}
   public double auc(){return auc;}
   public double aic(){return aic;}
@@ -151,7 +146,7 @@ public class GLMValidation extends Iced {
   }
   @Override
   public String toString(){
-    return "null_dev = " + null_deviance + ", res_dev = " + residual_deviance + ", auc = " + auc();
+    return " res_dev = " + residual_deviance + ", auc = " + auc();
   }
 
 
