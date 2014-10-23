@@ -12,12 +12,13 @@ install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master
 #deepr::install_h2o()
 
 library(h2o)
+
 library(stringr)
 
 ## Connect to H2O server (On server(s), run 'java -jar h2o.jar -Xmx8G -port 53322 -name TradeShift' first)
 ## Go to http://server:53322/ to check Jobs/Data/Models etc.
 #h2oServer <- h2o.init(ip="server", port = 53322)
-
+h2o.shutdown(h2oServer)
 ## Launch H2O directly on localhost, go to http://localhost:54321/ to check Jobs/Data/Models etc.!
 h2oServer <- h2o.init(nthreads = -1, max_mem_size = '8g')
 
@@ -56,7 +57,13 @@ trainWL <- h2o.assign(trainWL, "trainWL")
 h2o.rm(h2oServer, keys = c("train.hex","trainLabels.hex")) #no longer need these two individually
 h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
 
-## Split the training data into train/valid (95%/5%)
+## Impute missing values based on group-by on targets
+for (i in predictors) {
+  if (sum(is.na(trainWL[,i]))==0 || sum(is.na(trainWL[,i])) == nrow(trainWL)) next
+  h2o.impute(trainWL,i,method='mean',targets)
+}
+
+# Split the training data into train/valid (95%/5%)
 ## Want to keep train large enough to make a good submission if submitwithfulldata = F
 splits <- h2o.splitFrame(trainWL, ratios = 0.95, shuffle=!reproducible_mode)
 train <- splits[[1]]
@@ -212,10 +219,13 @@ for (resp in 1:length(targets)) {
   }
   
   ## Remove no longer needed old models and temporaries from K-V store to keep memory footprint low
-  h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
-  h2o.rm(h2oServer, grep(pattern = "DRF", x = h2o.ls(h2oServer)$Key, value = TRUE))
+  ls_temp <- h2o.ls(h2oServer)
+  for (n_ls in 1:nrow(ls_temp)) {
+    if (str_detect(ls_temp[n_ls, 1], "DRF") || str_detect(ls_temp[n_ls, 1], "Last.value")) {
+      h2o.rm(h2oServer, keys = as.character(ls_temp[n_ls, 1]))
+    }
+  }
 }
-
 if (validate) {
   cat("\nOverall training LogLosses = " , tLogLoss)
   cat("\nOverall training LogLoss = " , mean(tLogLoss))
