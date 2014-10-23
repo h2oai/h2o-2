@@ -20,6 +20,9 @@ public class GLMValidation extends Iced {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help="")
+  double null_deviance;
+
+  @API(help="")
   double residual_deviance;
 
   @API(help="")

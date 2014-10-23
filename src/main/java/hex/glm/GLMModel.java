@@ -239,6 +239,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     coefficients_names = coefNames();
     useAllFactorLevels = dinfo._useAllFactorLevels;
     null_validation = nullVal;
+    null_validation.null_deviance = null_validation.residual_deviance;
   }
 
   public void pickBestModel(boolean useAuc){
