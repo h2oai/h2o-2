@@ -2927,7 +2927,7 @@ class H2O(object):
             args += ["-beta"]
 
         if self.network:
-            args += ["-network="] + self.network
+            args += ["-network=" + self.network]
 
         # H2O should figure it out, if not specified
         # DON"T EVER USE on multi-machine...h2o should always get it right, to be able to run on hadoop 
@@ -2935,7 +2935,6 @@ class H2O(object):
         # new 10/22/14. Allow forcing the ip when we do remote, for networks with bridges, where
         # h2o can't self identify (does -network work?)
         if self.force_ip and self.h2o_addr: # should always have an addr if force_ip...but..
-            print "kbn: using -force_ip=%s with java" % self.force_ip
             args += [
                 '--ip=%s' % self.h2o_addr,
             ]
@@ -3062,7 +3061,6 @@ class H2O(object):
         else:
             self.h2o_addr = use_this_ip_addr
 
-        print "Using force_ip=%s at LocalH2O init" % force_ip
         self.force_ip = force_ip or (self.h2o_addr!=None)
 
         if self.h2o_addr:
@@ -3360,7 +3358,6 @@ class RemoteH2O(H2O):
         # it gets set True if an address is specified for LocalH2o init. Override.
         if 'force_ip' in kwargs:
             self.force_ip = kwargs['force_ip']
-        print "kbn: using force_ip=%s at RemoteH2O" % self.force_ip
 
         self.remoteH2O = True # so we can tell if we're remote or local
         self.jar = host.upload_file('target/h2o.jar')
