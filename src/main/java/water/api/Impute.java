@@ -68,6 +68,7 @@ public class Impute extends Request2 {
     init();
     final int col_id = source.find(column);
     final int[] _cols = group_by;
+    final Key mykey = Key.make();
     try {
       if (group_by == null) {
         // just use "method" using the input "column"
@@ -116,8 +117,8 @@ public class Impute extends Request2 {
         // collect the groups HashMap and the frame from the ddply.
         // create a vec of group IDs (each row is in some group)
         // MRTask over the rows
-        water.exec.Exec2.exec("Last.value.998 = anonymous <- function(x) \n{\n " + method + "(x[," + (col_id + 1) + "])\n}").remove_and_unlock();
-        Env env = water.exec.Exec2.exec("Last.value.999 = ddply(" + source._key.toString() + ", " + toAryString(_cols) + ", anonymous)");
+        water.exec.Exec2.exec(Key.make().toString() + " = anonymous <- function(x) \n{\n " + method + "(x[," + (col_id + 1) + "])\n}").remove_and_unlock();
+        Env env = water.exec.Exec2.exec(mykey.toString() + " = ddply(" + source._key.toString() + ", " + toAryString(_cols) + ", anonymous)");
         final Frame grp_replacement = new Frame(env.peekAry());
         env.remove_and_unlock();
         final GroupTask grp2val = new GroupTask(grp_replacement.numCols() - 1).doAll(grp_replacement);
@@ -143,7 +144,7 @@ public class Impute extends Request2 {
     } catch( Throwable t ) {
         return Response.error(t);
     } finally {       // Delete frames
-      UKV.remove(Key.make("Last.value.999"));
+      UKV.remove(mykey);
     }
   }
 

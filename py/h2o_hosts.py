@@ -26,7 +26,11 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     # for new params:
     # Just update this list with the param name and default and you're done
     allParamsDefault = {
-        'use_flatfile': None,
+        # any combination of force_ip/network could be interesting
+        # network may mean you don't need force_ip
+        'force_ip': False,
+        'network': None,
+        'use_flatfile': False,
         'use_hdfs': True, # default to true, so when we flip import folder to hdfs+s3n import on ec2, the cloud is built correctly
         'hdfs_name_node': None, 
         'hdfs_config': None,

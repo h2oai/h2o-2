@@ -28,6 +28,7 @@ R CMD INSTALL h2oEnsemble-package
 
 
 ## Known Bugs
+- This package is incompatible with R 3.0.0-3.1.0 due to a [parser bug](https://bugs.r-project.org/bugzilla3/show_bug.cgi?id=15753) in R.  Upgrade to R 3.1.1 or greater to resolve the issue.  It may work on earlier versions of R but has not been tested.
 - Sometimes while executing `h2o.ensemble`, the code hangs due to a communication issue with H2O.  You may see something like this.  To fix, restart R.
 ```
 GET /Cloud.json HTTP/1.1

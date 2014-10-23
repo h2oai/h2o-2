@@ -109,9 +109,9 @@ def drain(src, dst):
 # Trickiness because you might have multiple IP addresses (Virtualbox), or Windows.
 # we used to not like giving ip 127.0.0.1 to h2o?
 def get_ip_address():
-    if ipaddr_from_cmd_line:
-        verboseprint("get_ip case 1:", ipaddr_from_cmd_line)
-        return ipaddr_from_cmd_line
+    if ip_from_cmd_line:
+        verboseprint("get_ip case 1:", ip_from_cmd_line)
+        return ip_from_cmd_line
 
     import socket
 
@@ -133,28 +133,25 @@ def get_ip_address():
         verboseprint("get_ip case 3:", ip)
 
     ipa = None
-    badHosts = ['lg1', 'ch-0', 'ch-63']
-    # hack for hosts that don't support this
-    # the gethostbyname_ex can be slow. the timeout above will save us quickly
-    if hostname not in badHosts:
-        try:
-            # Translate a host name to IPv4 address format, extended interface. 
-            # Return a triple (hostname, aliaslist, ipaddrlist) 
-            # where hostname is the primary host name responding to the given ip_address, 
-            # aliaslist is a (possibly empty) list of alternative host names for the same address, and 
-            # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
-            ghbx = socket.gethostbyname_ex(hostname)
-            for ips in ghbx[2]:
-                # only take the first
-                if ipa is None and not ips.startswith("127."):
-                    ipa = ips[:]
-                    verboseprint("get_ip case 4:", ipa)
-                    if ip != ipa:
-                        print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
-                        print "You might have a vpn active. Best to use '-ip " + ipa + "' to get python and h2o the same."
-        except:
-            pass
-            # print "Timeout during socket.gethostbyname_ex(hostname)"
+    # we had some hosts that didn't support gethostbyname_ex(). hopefully we don't need a hack to exclude
+    try:
+        # Translate a host name to IPv4 address format, extended interface. 
+        # Return a triple (hostname, aliaslist, ipaddrlist) 
+        # where hostname is the primary host name responding to the given ip_address, 
+        # aliaslist is a (possibly empty) list of alternative host names for the same address, and 
+        # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
+        ghbx = socket.gethostbyname_ex(hostname)
+        for ips in ghbx[2]:
+            # only take the first
+            if ipa is None and not ips.startswith("127."):
+                ipa = ips[:]
+                verboseprint("get_ip case 4:", ipa)
+                if ip != ipa:
+                    print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
+                    print "You might have a vpn active. Best to use '-ip " + ipa + "' to get python and h2o the same."
+    except:
+        pass
+        # print "Timeout during socket.gethostbyname_ex(hostname)"
 
     verboseprint("get_ip_address:", ip)
     # set it back to default higher timeout (None would be no timeout?)
@@ -232,7 +229,8 @@ def unit_main():
 browse_disable = True
 browse_json = False
 verbose = False
-ipaddr_from_cmd_line = None
+ip_from_cmd_line = None
+network_from_cmd_line = None
 config_json = None
 debugger = False
 random_udp_drop = False
@@ -249,8 +247,8 @@ long_test_case = False
 python_test_name = inspect.stack()[1][1]
 
 # trust what the user says!
-if ipaddr_from_cmd_line:
-    python_cmd_ip = ipaddr_from_cmd_line
+if ip_from_cmd_line:
+    python_cmd_ip = ip_from_cmd_line
 else:
     python_cmd_ip = get_ip_address()
 
@@ -271,7 +269,9 @@ def parse_our_args():
                         help='Pops a browser to selected json equivalent urls. Selective. Also keeps test alive (and H2O alive) till you ctrl-c. Then should do clean exit',
                         action='store_true')
     parser.add_argument('-v', '--verbose', help='increased output', action='store_true')
+    # I guess we don't have a -port at the command line
     parser.add_argument('-ip', '--ip', type=str, help='IP address to use for single host H2O with psutil control')
+    parser.add_argument('-network', '--network', type=str, help='network/mask (shorthand form) to use to resolve multiple possible IPs')
     parser.add_argument('-cj', '--config_json',
                         help='Use this json format file to provide multi-host defaults. Overrides the default file pytest_config-<username>.json. These are used only if you do build_cloud_with_hosts()')
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms',
@@ -305,13 +305,14 @@ def parse_our_args():
     if args.nocolor:
         h2p.disable_colors()
 
-    global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
+    global browse_disable, browse_json, verbose, ip_from_cmd_line, config_json, debugger, random_udp_drop
     global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest, long_test_case
 
     browse_disable = args.browse_disable or getpass.getuser() == 'jenkins'
     browse_json = args.browse_json
     verbose = args.verbose
-    ipaddr_from_cmd_line = args.ip
+    ip_from_cmd_line = args.ip
+    network_from_cmd_line = args.network
     config_json = args.config_json
     debugger = args.debugger
     random_udp_drop = args.random_udp_drop
@@ -545,7 +546,7 @@ def write_flatfile(node_count=2, base_port=None, hosts=None, rand_shuffle=True):
         for h in hosts:
             for i in range(node_count):
                 # removed leading "/"
-                hostPortList.append(h.addr + ":" + str(base_port + ports_per_node * i))
+                hostPortList.append(h.h2o_addr + ":" + str(base_port + ports_per_node * i))
 
     # note we want to shuffle the full list of host+port
     if rand_shuffle:
@@ -1956,7 +1957,8 @@ class H2O(object):
         inspect = h2o_cmd.runInspect(key=data_key)
         # response only takes names. can't use col index..have to look it up
         # or add last col
-        if ('response' not in params_dict) or (not params_dict['response']):
+        # mnist can be col 0 for response!
+        if ('response' not in params_dict) or (params_dict['response'] is None):
             params_dict['response'] = str(inspect['cols'][-1]['name'])
         elif isinstance(params_dict['response'], int): 
             params_dict['response'] = str(inspect['cols'][params_dict['response']]['name'])
@@ -2924,12 +2926,17 @@ class H2O(object):
         if beta_features:
             args += ["-beta"]
 
+        if self.network:
+            args += ["-network=" + self.network]
+
         # H2O should figure it out, if not specified
         # DON"T EVER USE on multi-machine...h2o should always get it right, to be able to run on hadoop 
         # where it's not told
-        if (self.addr is not None) and (not self.remoteH2O):
+        # new 10/22/14. Allow forcing the ip when we do remote, for networks with bridges, where
+        # h2o can't self identify (does -network work?)
+        if self.force_ip and self.h2o_addr: # should always have an addr if force_ip...but..
             args += [
-                '--ip=%s' % self.addr,
+                '--ip=%s' % self.h2o_addr,
             ]
 
         # Need to specify port, since there can be multiple ports for an ip in the flatfile
@@ -2996,10 +3003,9 @@ class H2O(object):
 
     def __init__(self,
                  use_this_ip_addr=None, port=54321, capture_output=True,
+                 force_ip=False, network=None,
                  use_debugger=None, classpath=None,
                  use_hdfs=False, use_maprfs=False,
-                 # hdfs_version="cdh4", hdfs_name_node="172.16.2.151",
-                 # hdfs_version="cdh4", hdfs_name_node="172.16.2.176",
                  hdfs_version=None, hdfs_name_node=None, hdfs_config=None,
                  aws_credentials=None,
                  use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None,
@@ -3014,7 +3020,7 @@ class H2O(object):
                  cloud_name=None,
                  disable_assertions=None,
                  sandbox_ignore_errors=False,
-    ):
+        ):
 
         if use_hdfs:
             # see if we can touch a 0xdata machine
@@ -3043,21 +3049,30 @@ class H2O(object):
 
         self.aws_credentials = aws_credentials
         self.port = port
-        # None is legal for self.addr.
+        # None is legal for self.h2o_addr.
         # means we won't give an ip to the jar when we start.
         # Or we can say use use_this_ip_addr=127.0.0.1, or the known address
         # if use_this_addr is None, use 127.0.0.1 for urls and json
-        # Command line arg 'ipaddr_from_cmd_line' dominates:
-        if ipaddr_from_cmd_line:
-            self.addr = ipaddr_from_cmd_line
-        else:
-            self.addr = use_this_ip_addr
+        # Command line arg 'ip_from_cmd_line' dominates:
 
-        if self.addr is not None:
-            self.http_addr = self.addr
+        # ip_from_cmd_line and use_this_ip_addr shouldn't be used for mutli-node
+        if ip_from_cmd_line:
+            self.h2o_addr = ip_from_cmd_line
+        else:
+            self.h2o_addr = use_this_ip_addr
+
+        self.force_ip = force_ip or (self.h2o_addr!=None)
+
+        if self.h2o_addr:
+            self.http_addr = self.h2o_addr
         else:
             self.http_addr = get_ip_address()
 
+        if network_from_cmd_line:
+            self.network = network_from_cmd_line
+        else:
+            self.network = network
+        
         # command line should always dominate for enabling
         if debugger: use_debugger = True
         self.use_debugger = use_debugger
@@ -3118,7 +3133,8 @@ class LocalH2O(H2O):
         # FIX! no option for local /home/username ..always the sandbox (LOG_DIR)
         self.ice = tmp_dir('ice.')
         self.flatfile = flatfile_pathname()
-        self.remoteH2O = False # so we can tell if we're remote or local
+        # so we can tell if we're remote or local. Apparently used in h2o_import.py
+        self.remoteH2O = False 
 
         h2o_os_util.check_port_group(self.port)
         h2o_os_util.show_h2o_processes()
@@ -3289,19 +3305,23 @@ class RemoteHost(object):
         dest = self.uploaded[f]
         for h in hosts:
             if h == self: continue
-            self.run_cmd('scp %s %s@%s:%s' % (dest, h.username, h.addr, dest))
+            self.run_cmd('scp %s %s@%s:%s' % (dest, h.username, h.h2o_addr, dest))
             h.record_file(f, dest)
 
-    def __init__(self, addr, username, password=None, **kwargs):
+    def __init__(self, addr, username=None, password=None, **kwargs):
+
         import paramiko
         # To debug paramiko you can use the following code:
         #paramiko.util.log_to_file('/tmp/paramiko.log')
         #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
 
         # kbn. trying 9/23/13. Never specify -ip on java command line for multi-node
-        # but self.addr is used elsewhere. so look at self.remoteH2O to disable in get_args()
-        self.addr = addr
+        # but self.h2o_addr is used elsewhere. so look at self.remoteH2O to disable in get_args()
+
+        # by definition, this must be the publicly visible addrs, otherwise we can't ssh or browse!
+        self.h2o_addr = addr
         self.http_addr = addr
+
         self.username = username # this works, but it's host state
         self.ssh = paramiko.SSHClient()
 
@@ -3310,16 +3330,16 @@ class RemoteHost(object):
         self.ssh.set_missing_host_key_policy(policy)
         self.ssh.load_system_host_keys()
         if password is None:
-            self.ssh.connect(self.addr, username=username, **kwargs)
+            self.ssh.connect(self.h2o_addr, username=username, **kwargs)
         else:
-            self.ssh.connect(self.addr, username=username, password=password, **kwargs)
+            self.ssh.connect(self.h2o_addr, username=username, password=password, **kwargs)
 
         # keep connection - send keepalive packet evety 5minutes
         self.ssh.get_transport().set_keepalive(300)
         self.uploaded = {}
 
     def remote_h2o(self, *args, **kwargs):
-        return RemoteH2O(self, self.addr, *args, **kwargs)
+        return RemoteH2O(self, self.h2o_addr, *args, **kwargs)
 
     def open_channel(self):
         ch = self.ssh.get_transport().open_session()
@@ -3327,7 +3347,7 @@ class RemoteHost(object):
         return ch
 
     def __str__(self):
-        return 'ssh://%s@%s' % (self.username, self.addr)
+        return 'ssh://%s@%s' % (self.username, self.h2o_addr)
 
 
 #*****************************************************************
@@ -3336,6 +3356,10 @@ class RemoteH2O(H2O):
 
     def __init__(self, host, *args, **kwargs):
         super(RemoteH2O, self).__init__(*args, **kwargs)
+
+        # it gets set True if an address is specified for LocalH2o init. Override.
+        if 'force_ip' in kwargs:
+            self.force_ip = kwargs['force_ip']
 
         self.remoteH2O = True # so we can tell if we're remote or local
         self.jar = host.upload_file('target/h2o.jar')
@@ -3382,7 +3406,7 @@ class RemoteH2O(H2O):
             else:
                 logPrefix = 'remote-h2o'
 
-            logPrefix += '-' + host.addr
+            logPrefix += '-' + host.h2o_addr
 
             outfd, outpath = tmp_file(logPrefix + '.stdout.', '.log')
             errfd, errpath = tmp_file(logPrefix + '.stderr.', '.log')
@@ -3390,11 +3414,11 @@ class RemoteH2O(H2O):
             drain(self.channel.makefile(), outfd)
             drain(self.channel.makefile_stderr(), errfd)
             comment = 'Remote on %s, stdout %s, stderr %s' % (
-                self.addr, os.path.basename(outpath), os.path.basename(errpath))
+                self.h2o_addr, os.path.basename(outpath), os.path.basename(errpath))
         else:
             drain(self.channel.makefile(), sys.stdout)
             drain(self.channel.makefile_stderr(), sys.stderr)
-            comment = 'Remote on %s' % self.addr
+            comment = 'Remote on %s' % self.h2o_addr
 
         log(cmd, comment=comment)
 

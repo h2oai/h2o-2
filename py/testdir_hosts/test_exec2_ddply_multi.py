@@ -19,7 +19,9 @@ exprList = [
     # java.lang.IllegalArgumentException: NA not a valid column
     # "ddply(r.hex,NA,sum)",
     # "ddply(r.hex,c(1,NA,3),sum)",
-    "a.hex = ddply(r.hex,c(1),sum)",
+
+    # skip col 1? too slow? (altitude)
+    # "a.hex = ddply(r.hex,c(1),sum)",
     "a.hex = ddply(r.hex,c(2),sum)",
     "a.hex = ddply(r.hex,c(3),sum)",
     "a.hex = ddply(r.hex,c(4),sum)",
