@@ -3133,6 +3133,8 @@ class LocalH2O(H2O):
         # FIX! no option for local /home/username ..always the sandbox (LOG_DIR)
         self.ice = tmp_dir('ice.')
         self.flatfile = flatfile_pathname()
+        # so we can tell if we're remote or local. Apparently used in h2o_import.py
+        self.remoteH2O = False 
 
         h2o_os_util.check_port_group(self.port)
         h2o_os_util.show_h2o_processes()
