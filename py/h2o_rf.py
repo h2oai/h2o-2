@@ -43,10 +43,13 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     # if we are checking after confusion_matrix for predict, the jsonschema is different
     if 'drf_model' in rfv:
         rf_model = rfv['drf_model']
-    if 'speedrf_model' in rfv:
+    elif 'speedrf_model' in rfv:
         rf_model = rfv['speedrf_model']
-    if 'rf_model' in rfv:
+    elif 'rf_model' in rfv:
         rf_model = rfv['rf_model']
+    else:
+        raise Exception("no rf_model in rfv? %s" % h2o_dump.json(rfv))
+        
 
     if 'cm' in rfv:
         cm = rfv['cm'] # only one
