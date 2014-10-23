@@ -15,14 +15,14 @@ upper left hand corner to download your logs.
 
 
 3. Email the logs to <h2ostream@googlegroups.com>  or <support@0xdata.com> and include the following information: 
-	- H<sub>2</sub>O version number
+	- H\ :sub:`2`\ O version number
 	- Your environment (laptop or server)
 	- Your operating system (Linux, Windows, OS X)
-	- Any other programs you are using with H<sub>2</sub>O (Hadoop, Cloudera, R)
+	- Any other programs you are using with H\ :sub:`2`\ O (Hadoop, Cloudera, R)
 	- If you are using a cluster or other specific configuration
 
 	along with a brief description of the error you encountered and your contact
-	information. Make sure to attach the downloaded H<sub>2</sub>O logs to the email before sending.
+	information. Make sure to attach the downloaded H\ :sub:`2`\ O logs to the email before sending.
 
 We will route your email to the correct engineer or data scientist
 and work to resolve your issue.
