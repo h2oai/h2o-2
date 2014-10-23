@@ -4,30 +4,30 @@
 General Issues
 ==============
 
-Download and Send Us Your Logs
-""""""""""""""""""""""""""""""
+## Downloading and Sending Logs
 
-**Step 1** 
-
-  Through the drop down menu **Admin** go to **Log View**. 
-
-  On the **Log View** page there is a **Download Logs** button in the
-  upper left hand corner. Click on it to download your logs. 
+1. From the drop-down **Admin** menu, select **Inspect Log** or go to <http://localhost:54321/LogView.html>.
+2. On the **Log View** page, click the **Download Logs** button in the
+upper left hand corner to download your logs.
 
 .. Image:: Logsdownload.png
    :width: 70%
 
-**Step 2** 
 
-  From your email account contact h2ostream@googlegroups.com with a
-  brief description of the error you encountered, and your contact
-  information. Attach the downloaded H\ :sub:`2`\ O logs downloaded
-  from log view to the email before sending. 
+3. Email the logs to <h2ostream@googlegroups.com>  or <support@0xdata.com> and include the following information: 
+	- H<sub>2</sub>O version number
+	- Your environment (laptop or server)
+	- Your operating system (Linux, Windows, OS X)
+	- Any other programs you are using with H<sub>2</sub>O (Hadoop, Cloudera, R)
+	- If you are using a cluster or other specific configuration
 
-**Step 3**  
+	along with a brief description of the error you encountered and your contact
+	information. Make sure to attach the downloaded H<sub>2</sub>O logs to the email before sending.
 
-  We will route your email to the correct engineer or data scientist
-  and work to resolve your issue. 
+We will route your email to the correct engineer or data scientist
+and work to resolve your issue.
+
+
 
 
 Tunneling between servers with H\ :sub:`2`\ O
