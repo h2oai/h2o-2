@@ -4,11 +4,11 @@ import hex.FrameTask;
 import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 
 import water.H2O.H2OCountedCompleter;
 import water.*;
+import water.fvec.Chunk;
 import water.util.Utils;
 
 /**
@@ -20,15 +20,16 @@ import water.util.Utils;
 
 public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
   final protected GLMParams _glm;
+
   public GLMTask(Key jobKey, DataInfo dinfo, GLMParams glm){this(jobKey,dinfo,glm,null);}
   public GLMTask(Key jobKey, DataInfo dinfo, GLMParams glm,H2OCountedCompleter cmp){super(jobKey,dinfo,cmp);_glm = glm;}
 
   //helper function to compute eta - i.e. beta * row
-  protected final double computeEta(final int ncats, final int [] cats, final double [] nums, final double [] beta){
+  protected final double computeEta(final int ncats, final int [] cats, final int nnums, final double [] nums, final double [] beta){
     double res = 0;
     for(int i = 0; i < ncats; ++i)res += beta[cats[i]];
     final int numStart = _dinfo.numStart();
-    for (int i = 0; i < nums.length; ++i) res += nums[i] * beta[numStart + i];
+    for (int i = 0; i < nnums; ++i) res += nums[i] * beta[numStart + i];
     res += beta[beta.length-1]; // intercept
     return res;
   }
@@ -103,68 +104,22 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     public double ymu(int foldId){return _ymu[foldId+1];}
     public long nobs(int foldId){return _nobs[foldId+1];}
   }
-  /**
-   * Task to compute Lambda Max for the given dataset.
-   * @author tomasnykodym
-   */
-  static class LMAXTask extends GLMIterationTask {
-    private double[] _z;
-    private final double _gPrimeMu;
-    private final double _alpha;
-
-    //public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, H2OCountedCompleter cmp) {
-
-
-    public LMAXTask(Key jobKey, DataInfo dinfo, GLMParams glm, double ymu, long nobs, double alpha, float [] thresholds, H2OCountedCompleter cmp) {
-      super(jobKey, dinfo, glm, false, true, true, glm.nullModelBeta(dinfo,ymu), ymu, 1.0/nobs, thresholds, cmp);
-      _gPrimeMu = glm.linkDeriv(ymu);
-      _alpha = alpha;
-    }
-    @Override public void chunkInit(){
-      super.chunkInit();
-      _z = MemoryManager.malloc8d(_grad.length);
-    }
-    @Override public void processRow(long gid, double[] nums, int ncats, int[] cats, double [] responses) {
-      double w = (responses[0] - _ymu) * _gPrimeMu;
-      for( int i = 0; i < ncats; ++i ) _z[cats[i]] += w;
-      final int numStart = _dinfo.numStart();
-      for(int i = 0; i < nums.length; ++i)
-        _z[i+numStart] += w*nums[i];
-      super.processRow(gid, nums, ncats, cats, responses);
-    }
-    @Override public void reduce(GLMIterationTask git){
-      Utils.add(_z, ((LMAXTask)git)._z);
-      super.reduce(git);
-    }
-    public double lmax(){
-      double res = Math.abs(_z[0]);
-      for( int i = 1; i < _z.length; ++i )
-        if(res < _z[i])res = _z[i];
-        else if(res < -_z[i])res = -_z[i];
-      return _glm.variance(_ymu) * res / (_nobs * Math.max(_alpha,1e-3));
-    }
-  }
-
 
   public static class GLMLineSearchTask extends GLMTask<GLMLineSearchTask> {
-    public GLMLineSearchTask(Key jobKey, DataInfo dinfo, GLMParams glm, double[] oldBeta, double[] newBeta, double betaEps, double ymu, long nobs, H2OCountedCompleter cmp) {
+    public GLMLineSearchTask(int noff, Key jobKey, DataInfo dinfo, GLMParams glm, double[] oldBeta, double[] newBeta, double betaEps, double ymu, long nobs, H2OCountedCompleter cmp) {
       super(jobKey, dinfo, glm, cmp);
-      ArrayList<double[]> betas = new ArrayList<double[]>();
-      double diff = 1;
-      while(diff > betaEps && betas.size() < 100){
-        diff = 0;
-        for(int i = 0; i < oldBeta.length; ++i) {
-          newBeta[i] = 0.5 * (oldBeta[i] + newBeta[i]);
-          double d = newBeta[i] - oldBeta[i];
-          if(d > diff) diff = d;
-          else if(d < -diff) diff = -d;
-        }
-        betas.add(newBeta.clone());
+      double [][] betas = new double[32][];
+      double step = GLM2.LS_STEP;
+      for(int i = 0; i < betas.length; ++i){
+        betas[i] = MemoryManager.malloc8d(newBeta.length);
+        for(int j = 0; j < oldBeta.length; ++j)
+          betas[i][j] = oldBeta[j] + step*(newBeta[j] - oldBeta[j]);
+        step *= GLM2.LS_STEP;
       }
       // public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
-      _glmts = new GLMIterationTask[betas.size()];
+      _glmts = new GLMIterationTask[betas.length];
       for(int i = 0; i < _glmts.length; ++i)
-        _glmts[i] = new GLMIterationTask(jobKey,dinfo,glm,false,true,true,betas.get(i),ymu,1.0/nobs,new float[]{0} /* don't really want CMs!*/,null);
+        _glmts[i] = new GLMIterationTask(noff, jobKey,dinfo,glm,false,true,true,betas[i],ymu,1.0/nobs,new float[]{0} /* don't really want CMs!*/,null);
     }
     GLMIterationTask [] _glmts;
     @Override public void chunkInit(){
@@ -191,6 +146,43 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
   }
 
+
+  public static class GLMInterceptTask extends MRTask2<GLMInterceptTask> {
+    double _xy;
+    double _xx;
+    double _icpt;
+    final double _sub;
+    final double _mul;
+    final GLMParams _glm;
+    public GLMInterceptTask(GLMParams glm, double sub, double mul, double icpt){
+      _glm = glm;
+      _sub = sub;
+      _mul = mul;
+      _icpt = icpt ;
+    }
+    @Override public void map(Chunk offset, Chunk response){
+      for(int i = 0; i < offset._len; ++i){
+        if(offset.isNA0(i) || response.isNA0(i)) continue;
+        double eta = _icpt;
+        double y = response.at0(i);
+        double mu = _glm.linkInv(eta+(offset.at0(i)-_sub)*_mul);
+        double var = _glm.variance(mu);
+        if(var < 1e-5) var = 1e-5; // avoid numerical problems with 0 variance
+        double d = _glm.linkDeriv(mu);
+        double w = 1.0/(var*d*d);
+        double z = eta + (y-mu)*d;
+        _xy += w*z;
+        _xx += w;
+      }
+    }
+    @Override public void reduce(GLMInterceptTask other){
+      _xx += other._xx;
+      _xy += other._xy;
+    }
+    @Override public  void postGlobal(){
+      _icpt = _xy/_xx;
+    }
+  }
   /**
    * One iteration of glm, computes weighted gram matrix and t(x)*y vector and t(y)*y scalar.
    *
@@ -203,7 +195,6 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     protected double [] _grad;
     double    _yy;
     GLMValidation _val; // validation of previous model
-    final double _ymu;
     protected final double _reg;
     long _nobs;
     final boolean _validate;
@@ -213,12 +204,16 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     final boolean _computeGradient;
     final boolean _computeGram;
     public static final int N_THRESHOLDS = 50;
+    final int _noffsets;
+    final double _ymu;
 
-    public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
+    public GLMIterationTask(int noff, Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
       super(jobKey, dinfo,glm,cmp);
-      assert beta == null || beta.length == dinfo.fullN()+1:"beta.length != dinfo.fullN(), beta = " + beta.length + " dinfo = " + dinfo.fullN();
-      _beta = beta;
+      assert beta != null;
       _ymu = ymu;
+      _noffsets = noff;
+      assert beta == null || beta.length == (dinfo.fullN()+1-_noffsets):"beta.length != dinfo.fullN(), beta = " + beta.length + " dinfo = " + dinfo.fullN() + ", noffsets = " + _noffsets;
+      _beta = beta;
       _reg = reg;
       _computeGram = computeGram;
       _validate = validate;
@@ -238,27 +233,26 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       for (int i = 0; i < _newThresholds.length; i += 4)
         _newThresholds[yi][i >> 2] = _newThresholds[yi][i];
     }
-    @Override public void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
+    @Override public void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses /* time...*/){
       ++_nobs;
+      double off = 0;
+      for(int i = 1; i <= _noffsets; ++i)
+        off += nums[nums.length-i];
       final double y = responses[0];
-      assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
+      assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family = Gamma.";
       assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
-      final double w, eta, mu, var, z;
+      double w, eta, mu, var, z;
       final int numStart = _dinfo.numStart();
       double d = 1;
       if( _glm.family == Family.gaussian){
         w = 1;
         z = y;
-        mu = (_validate || _computeGradient)?computeEta(ncats,cats,nums,_beta):0;
+        mu =  off + ((_validate || _computeGradient)?computeEta(ncats,cats,nums.length-_noffsets,nums,_beta):0);
       } else {
-        if( _beta == null ) {
-          mu = _glm.mustart(y, _ymu);
-          eta = _glm.link(mu);
-        } else {
-          eta = computeEta(ncats, cats,nums,_beta);
-          mu = _glm.linkInv(eta);
-        }
-        var = Math.max(1e-5, _glm.variance(mu)); // avoid numerical problems with 0 variance
+        eta = computeEta(ncats, cats,nums.length-_noffsets,nums,_beta);
+        mu = _glm.linkInv(eta+off);
+        var = _glm.variance(mu);
+        if(var < 1e-5) var = 1e-5; // avoid numerical problems with 0 variance
         d = _glm.linkDeriv(mu);
         z = eta + (y-mu)*d;
         w = 1.0/(var*d*d);
@@ -282,24 +276,24 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           if(_computeGradient)_grad[ii] += grad;
           _xy[ii] += wz;
         }
-        for(int i = 0; i < nums.length; ++i){
+        for(int i = 0; i < nums.length - _noffsets; ++i){
           _xy[numStart+i] += wz*nums[i];
           if(_computeGradient)
             _grad[numStart+i] += grad*nums[i];
         }
         if(_computeGradient)_grad[numStart + _dinfo._nums] += grad;
-        _xy[numStart + _dinfo._nums] += wz;
+        _xy[numStart + _dinfo._nums-_noffsets] += wz;
         if(_computeGram)_gram.addRow(nums, ncats, cats, w);
       }
 
     }
     @Override protected void chunkInit(){
-      if(_computeGram)_gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
-      _xy = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
+      if(_computeGram)_gram = new Gram(_dinfo.fullN()-_noffsets, _dinfo.largestCat(), _dinfo._nums-_noffsets, _dinfo._cats,true);
+      _xy = MemoryManager.malloc8d(_dinfo.fullN()+1-_noffsets); // + 1 is for intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
       if(_validate){
-        _val = new GLMValidation(null,_ymu, _glm,rank, _thresholds);
+        _val = new GLMValidation(null, _glm,rank, _thresholds);
         if(_glm.family == Family.binomial){
           _ti = new int[2];
           _newThresholds = new float[2][N_THRESHOLDS << 2];
