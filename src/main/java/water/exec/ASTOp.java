@@ -2007,6 +2007,7 @@ class ASTMostCommon extends ASTOp {
       }
     }
     double mc = mode != -1 ? (double)mode : (double)Arrays.asList(dom).indexOf("NA");
+    if (mc == -1) mc = Double.NaN;
     env.pop();
     env.poppush(mc);
   }
