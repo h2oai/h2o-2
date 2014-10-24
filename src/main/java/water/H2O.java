@@ -1062,6 +1062,8 @@ public final class H2O {
 
     while (true) {
       UDP_PORT = API_PORT+1;
+      if( API_PORT<0 || API_PORT>65534 ) // 65535 is max, implied for udp port
+        Log.die("Attempting to use system illegal port, either "+API_PORT+" or "+UDP_PORT);
       try {
         // kbn. seems like we need to set SO_REUSEADDR before binding?
         // http://www.javadocexamples.com/java/net/java.net.ServerSocket.html#setReuseAddress:boolean

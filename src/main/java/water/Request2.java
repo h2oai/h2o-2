@@ -114,7 +114,7 @@ public abstract class Request2 extends Request {
     }
   }
 
-  public class VecClassSelect extends SpecialVecSelect {
+  public class VecClassSelect extends Dependent {
     protected VecClassSelect(String key) {
       super(key);
     }
@@ -195,7 +195,7 @@ public abstract class Request2 extends Request {
             fields.add(field);
 
       // TODO remove map, response field already processed specifically
-      HashMap<String, FrameKeyVec[]> classVecs = new HashMap<String, FrameKeyVec[]>();
+      HashMap<String, FrameClassVec> classVecs = new HashMap<String, FrameClassVec>();
       for( Field f : fields ) {
         Annotation[] as = f.getAnnotations();
         API api = find(as, API.class);
@@ -227,30 +227,22 @@ public abstract class Request2 extends Request {
           else if( Dependent.class.isAssignableFrom(api.filter()) ) {
             Dependent d = (Dependent) newInstance(api);
             Argument ref = find(d._ref);
-            if( d instanceof VecClassSelect )
+            if( d instanceof VecSelect )
+              arg = new FrameKeyVec(f.getName(), (TypeaheadKey) ref, api.help(), api.required());
+            else if( d instanceof VecClassSelect ) {
               arg = new FrameClassVec(f.getName(), (TypeaheadKey) ref);
-            else if(d instanceof SpecialVecSelect) {
-              arg = new FrameKeyVec(f.getName(), (TypeaheadKey) ref, api.help(),!((SpecialVecSelect) d).optional);
-            } else if( d instanceof VecSelect )
-              arg = new FrameKeyVec(f.getName(), (TypeaheadKey) ref,api.help(),true);
-            else if( d instanceof MultiVecSelect ) {
-              FrameKeyVec [] vecs = classVecs.get(d._ref);
+              classVecs.put(d._ref, (FrameClassVec) arg);
+            } else if( d instanceof MultiVecSelect ) {
+              FrameClassVec response = classVecs.get(d._ref);
               boolean names = ((MultiVecSelect) d)._namesOnly;
-              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, vecs, api.help(), names,filterNaCols());
+              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names,filterNaCols());
             } else if( d instanceof DoClassBoolean ) {
-              FrameKeyVec [] vecs = classVecs.get(d._ref);
-              if(vecs != null) {
-                for (FrameKeyVec v : vecs)
-                  if (v instanceof FrameClassVec) {
-                    arg = new ClassifyBool(f.getName(), (FrameClassVec) v);
-                    break;
-                  }
-              }
+              FrameClassVec response = classVecs.get(d._ref);
+              arg = new ClassifyBool(f.getName(), response);
             } else if( d instanceof DRFCopyDataBoolean ) {
               arg = new DRFCopyDataBool(f.getName(), (TypeaheadKey)ref);
             }
           }
-
           // String
           else if( f.getType() == String.class )
             arg = new Str(f.getName(), (String) defaultValue);
