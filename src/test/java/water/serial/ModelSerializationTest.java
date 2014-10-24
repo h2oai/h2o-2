@@ -7,6 +7,7 @@ import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.*;
+import hex.glm.GLM2.Source;
 import hex.glm.GLMParams.Family;
 
 import java.io.File;
@@ -143,9 +144,7 @@ public class ModelSerializationTest extends TestUtil {
     Frame f = parseFrame(dataset);
     Key modelKey = Key.make("GLM_model_for_"+dataset);
     try {
-      DataInfo dinfo = new DataInfo(f, response, false, DataInfo.TransformType.STANDARDIZE);
-      GLMParams glm = new GLMParams(family,0,family.defaultLink,0);
-      new GLM2("GLM test on "+dataset,Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
+      new GLM2("GLM test on "+dataset,Key.make(),modelKey,new Source(f,f.vec(response),true),family).fork().get();
       return DKV.get(modelKey).get();
     } finally {
       if (f!=null) f.delete();

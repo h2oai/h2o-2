@@ -196,7 +196,7 @@ public class CoxPH extends Job {
       }
       for (int j = n_cats; j < n_data; ++j)
         numsHasNA |= Double.isNaN(data[j]);
-      if (numsHasNA || (catsHasNA && !catsAllNA) || (n_num == 0 && catsAllNA)) {
+      if (numsHasNA || (catsHasNA && !catsAllNA) || (n_num > 0 && catsAllNA)) {
         for (int i = 1; i <= 2 * n_time; ++i)
           preds[i] = Float.NaN;
       } else {

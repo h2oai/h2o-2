@@ -4,19 +4,20 @@
 General Issues
 ==============
 
-## Downloading and Sending Logs
+Downloading and Sending Logs
+----------------------------
 
-1. From the drop-down **Admin** menu, select **Inspect Log** or go to <http://localhost:54321/LogView.html>.
+1. From the drop-down **Admin** menu, select **Inspect Log** or go to http://localhost:54321/LogView.html.
 2. On the **Log View** page, click the **Download Logs** button in the
 upper left hand corner to download your logs.
 
-.. Image:: Logsdownload.png
+.. Image:: Logsdownload.png 
    :width: 70%
 
 
-3. Email the logs to <h2ostream@googlegroups.com>  or <support@0xdata.com> and include the following information: 
+3. Email the logs to h2ostream@googlegroups.com or support@0xdata.com and include the following information: 
 	- H\ :sub:`2`\ O version number
-	- Your environment (laptop or server)
+	- Your environment (laptop or server) 
 	- Your operating system (Linux, Windows, OS X)
 	- Any other programs you are using with H\ :sub:`2`\ O (Hadoop, Cloudera, R)
 	- If you are using a cluster or other specific configuration

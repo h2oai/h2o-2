@@ -137,6 +137,22 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     final int [][] _catLvls;
 
     /**
+     * Apply data transformation on the given column.
+     *
+     * @param c - index into fully exponded vector
+     * @param v - value of the column to be transformed
+     * @return v transformed by the transformation (e.g. standardization) defined by this dataset for this column
+     */
+    public double applyTransform(int c, double v){
+      if(c >= _catOffsets[_catOffsets.length-1]) {
+        c -= _cats;
+        if (_normSub != null) v -= _normSub[c];
+        if (_normMul != null) v *= _normMul[c];
+      }
+      return v;
+    }
+
+    /**
      * Prepare a Frame (with a single response) to be processed by the FrameTask
      * 1) Place response at the end
      * 2) (Optionally) Remove columns with constant values or with greater than 20% NaNs
@@ -149,6 +165,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
      * @return Frame to be used by FrameTask
      */
     public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
+      return prepareFrame(source,response != null?new Vec[]{response}:null,ignored_cols,toEnum,dropConstantCols,dropNACols);
+    }
+    public static Frame prepareFrame(Frame source, Vec [] response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
       Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
@@ -159,21 +178,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
       // put response to the end (if not already)
       if (response != null) {
-        for (int i = 0; i < vecs.length - 1; ++i) {
-          if (vecs[i] == response) {
-            final String n = fr._names[i];
-            if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
-            else fr.add(n, fr.remove(i));
-            break;
-          }
-        }
-        // special case for when response was at the end already
-        if (toEnum && !response.isEnum() && vecs[vecs.length - 1] == response) {
-          final String n = fr._names[vecs.length - 1];
-          fr.add(n, fr.remove(vecs.length - 1).toEnum());
+        for(Vec v:response){
+          int id = fr.find(v);
+          final String n = fr._names[id];
+          if (toEnum && !vecs[id].isEnum()) fr.add(n, fr.remove(id).toEnum()); //convert int classes to enums
+          else fr.add(n, fr.remove(id));
         }
       }
-
       ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
       {
         ArrayList<Integer> constantCols = new ArrayList<Integer>();
