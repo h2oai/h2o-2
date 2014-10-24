@@ -171,12 +171,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     }
     public static Frame prepareFrame(Frame source, Vec [] response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
       Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
-      Arrays.sort(ignored_cols);
-      for(Vec v:response){
-        int id = source.find(v);
-        if(Arrays.binarySearch(ignored_cols,id) >= 0)
-          throw new IllegalArgumentException("Column can not be both ignored and used as a response.");
-      }
+      if(ignored_cols != null && !Utils.isSorted(ignored_cols))
+        Arrays.sort(ignored_cols);
+      if(response != null && ignored_cols != null)
+        for(Vec v:response){
+          int id = source.find(v);
+          if(Arrays.binarySearch(ignored_cols,id) >= 0)
+            throw new IllegalArgumentException("Column can not be both ignored and used as a response.");
+        }
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
       // compute rollupstats in parallel
