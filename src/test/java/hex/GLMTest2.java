@@ -3,6 +3,8 @@ package hex;
 import hex.glm.GLM2.Source;
 import hex.glm.GLMParams.Link;
 import org.junit.Assert;
+
+import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import hex.FrameTask.DataInfo;
 import hex.glm.*;
@@ -144,7 +146,7 @@ public class GLMTest2  extends TestUtil {
         model = DKV.get(modelKey).get();
         testHTML(model);
         HashMap<String, Double> coefs = model.coefficients();
-        assertEquals(intercepts[i],coefs.get("Intercept"),1e-3);
+        assertEquals(intercepts[i], coefs.get("Intercept"), 1e-3);
         assertEquals(xs[i],coefs.get("x"),1e-3);
       }
     }finally{
@@ -171,10 +173,10 @@ public class GLMTest2  extends TestUtil {
 //      Degrees of Freedom: 379 Total (i.e. Null);  372 Residual
 //      Null Deviance:	    2015
 //      Residual Deviance: 1516 	AIC: 1532
-      // H2O differs on intercept and race, same residual deviance though
+      // H2O differs on has_intercept and race, same residual deviance though
       String [] cfs1 = new String [] {/*"Intercept","RACE.R2","RACE.R3",*/ "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
       double [] vals = new double [] {/*-95.16718, -0.67663, -2.11848,*/1, 2.31296, 3.47783, 0.10842, -0.08657, 2.90452};
-      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,fr.vec("AGE")),Family.binomial).fork().get();
+      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,true,fr.vec("AGE")),Family.binomial).fork().get();
       model = DKV.get(modelKey).get();
       Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
       testHTML(model);
@@ -275,6 +277,48 @@ public class GLMTest2  extends TestUtil {
       assertEquals(512.3, model.null_validation.residualDeviance(),1e-1);
       assertEquals(378.3, val.residualDeviance(),1e-1);
       assertEquals(396.3, val.aic(),1e-1);
+    } finally {
+      fr.delete();
+      if(model != null)model.delete();
+    }
+  }
+
+  @Test public void testNoIntercept(){
+//    Call:  glm(formula = CAPSULE ~ . - ID - 1, family = binomial, data = D)
+//
+//    Coefficients:
+//    AGE      RACE     DPROS     DCAPS       PSA       VOL   GLEASON
+//      -0.07205  -1.23262   0.47899   0.13934   0.03626  -0.01155   0.63645
+//
+//    Degrees of Freedom: 380 Total (i.e. Null);  373 Residual
+//    Null Deviance:	    526.8
+//    Residual Deviance: 399 	AIC: 413
+    Key parsed = Key.make("prostate_parsed");
+    Key modelKey = Key.make("prostate_model");
+    GLMModel model = null;
+    Frame fr = getFrameForFile(parsed, "smalldata/logreg/prostate.csv", new String[]{"ID"}, "CAPSULE");
+    try{
+      // H2O differs on has_intercept and race, same residual deviance though
+      String [] cfs1 = new String [] {"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
+      double [] vals = new double [] { -1.23262,-0.07205, 0.47899, 0.13934, 0.03626, -0.01155, 0.63645};
+      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,false),Family.binomial).fork().get();
+      model = DKV.get(modelKey).get();
+      Assert.assertTrue(model.get_params().state == Job.JobState.DONE);
+      testHTML(model);
+      HashMap<String, Double> coefs = model.coefficients();
+      for(int i = 0; i < cfs1.length; ++i)
+        assertEquals(vals[i], coefs.get(cfs1[i]),1e-4);
+      GLMValidation val = model.validation();
+      assertEquals(526.8, model.null_validation.residualDeviance(),1e-1);
+      assertEquals(399, val.residualDeviance(),1e-1);
+      assertEquals(413, val.aic(),1e-1);
+      // TODO: test scoring (port from h2o-dev?)
+      // test that it throws with categoricals
+      fr = getFrameForFile(parsed, "smalldata/glm_test/prostate_cat_replaced.csv", new String[]{"ID"}, "CAPSULE");
+      try {
+        new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source(fr, fr.vec("CAPSULE"), false,false), Family.binomial).fork().get();
+        assertTrue("should've thrown",false);
+      } catch(IllegalArgumentException iae){}
     } finally {
       fr.delete();
       if(model != null)model.delete();

@@ -571,7 +571,7 @@ public class CoxPH extends Job {
       n_resp++;
     if (start_column != null)
       n_resp++;
-    final DataInfo dinfo = new DataInfo(source, n_resp, false, DataInfo.TransformType.DEMEAN);
+    final DataInfo dinfo = new DataInfo(source, n_resp, true, false, DataInfo.TransformType.DEMEAN);
     model = new CoxPHModel(this, dest(), source._key, source, null);
     model.initStats(source, dinfo);
   }

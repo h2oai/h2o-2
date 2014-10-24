@@ -60,6 +60,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   protected boolean standardize = true;
 
+  @API(help = "Include has_intercept term in the model.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
+  protected boolean has_intercept = true;
+
   @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
   protected int n_folds;
 
@@ -258,12 +261,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public final Vec response;
     public final Vec offset;
     public final boolean standardize;
-    public Source(Frame fr,Vec response, boolean standardize){ this(fr,response,standardize,null);}
-    public Source(Frame fr,Vec response, boolean standardize, Vec offset){
+    public final boolean intercept;
+    public Source(Frame fr,Vec response, boolean standardize){ this(fr,response,standardize,true,null);}
+    public Source(Frame fr,Vec response, boolean standardize, boolean intercept){ this(fr,response,standardize,intercept,null);}
+    public Source(Frame fr,Vec response, boolean standardize, boolean intercept, Vec offset){
       this.fr = fr;
       this.response = response;
       this.offset = offset;
       this.standardize = standardize;
+      this.intercept = intercept;
     }
   }
 
@@ -279,6 +285,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     description = desc;
     destination_key = dest;
     this.offset = src.offset;
+    this.has_intercept = src.intercept;
     this.family = family;
     this.link = l;
     n_folds = nfolds;
@@ -364,13 +371,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       System.out.println("iter = " + iter + ", icpt = " + icpt + ", icpt2 = " + icpt2);
       diff = icpt2 - icpt;
     }
-    System.out.println("intercept = " + icpt);
+    System.out.println("has_intercept = " + icpt);
     return icpt;
   }
 
   private transient Frame source2; // adapted source with reordered (and removed) vecs we do not want to push back into KV
 
   private int _noffsets = 0;
+  private int _intercept = 1; // 1 or 0
 
   @Override public void init(){
     super.init();
@@ -378,6 +386,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       setHighAccuracy();
     if(link == Link.family_default)
       link = family.defaultLink;
+    _intercept = has_intercept ?1:0;
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
     if(tweedie_link_power == 0)link = Link.log;
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
@@ -414,7 +423,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         //pass
     }
     Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, family==Family.binomial, true,true);
-    _dinfo = new DataInfo(fr, 1, use_all_factor_levels || lambda_search, standardize ? DataInfo.TransformType.STANDARDIZE : DataInfo.TransformType.NONE, DataInfo.TransformType.NONE);
+    _dinfo = new DataInfo(fr, 1, has_intercept, use_all_factor_levels || lambda_search, standardize ? DataInfo.TransformType.STANDARDIZE : DataInfo.TransformType.NONE, DataInfo.TransformType.NONE);
+    if(!has_intercept && _dinfo._cats > 0)
+      throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
     _activeData = _dinfo;
     if(higher_accuracy)setHighAccuracy();
 
@@ -499,11 +510,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     assert beta != null;
     if (activeCols == null)
       return beta;
-    double[] res = MemoryManager.malloc8d(_dinfo.fullN() + 1-_noffsets);
+    double[] res = MemoryManager.malloc8d(_dinfo.fullN() + _intercept -_noffsets);
     int i = 0;
     for (int c : activeCols)
       res[c] = beta[i++];
-    res[res.length - 1] = beta[beta.length - 1];
+    if(_intercept == 1)
+      res[res.length - 1] = beta[beta.length - 1];
     for(int j = beta.length-_noffsets; j < beta.length-1; ++j)
       beta[j] = 1;
     return res;
@@ -513,10 +525,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(beta == null)return null;
     if(activeCols == null)return beta.clone();
     final int N = activeCols.length - _noffsets;
-    double [] res = MemoryManager.malloc8d(N+1);
+    double [] res = MemoryManager.malloc8d(N+_intercept);
     for(int i = 0; i < N; ++i)
       res[i] = beta[activeCols[i]];
-    res[res.length-1] = beta[beta.length-1];
+    if(_intercept == 1)
+      res[res.length-1] = beta[beta.length-1];
     return res;
   }
   private final double [] resizeVec(double[] beta, final int[] activeCols, final int[] oldActiveCols){
@@ -631,17 +644,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     if(_noffsets > 0){
       for(int i = fullBeta.length-1-_noffsets; i < fullBeta.length-1; ++i)
-        fullBeta[i] = 1;//_dinfo.applyTransform(i,1);
+        fullBeta[i] = 1;//_dataInfo.applyTransform(i,1);
     }
     final double [] newBetaDeNorm;
     if(_dinfo._predictor_transform == DataInfo.TransformType.STANDARDIZE) {
       newBetaDeNorm = fullBeta.clone();
-      double norm = 0.0;        // Reverse any normalization on the intercept
+      double norm = 0.0;        // Reverse any normalization on the has_intercept
       // denormalize only the numeric coefs (categoricals are not normalized)
       final int numoff = _dinfo.numStart();
       for( int i=numoff; i< fullBeta.length-1; i++ ) {
         double b = newBetaDeNorm[i]*_dinfo._normMul[i-numoff];
-        norm += b*_dinfo._normSub[i-numoff]; // Also accumulate the intercept adjustment
+        norm += b*_dinfo._normSub[i-numoff]; // Also accumulate the has_intercept adjustment
         newBetaDeNorm[i] = b;
       }
       newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
@@ -1028,11 +1041,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           }
 
           @Override public void callback(final GLMIterationTask glmt){
-            if(beta_start == null)
-              beta_start = glmt._beta;
+            double [] beta = glmt._beta;
+            if(beta_start == null) {
+              beta_start = beta;
+            }
             _nullDeviance = glmt._val.residualDeviance();
             double lmax = 0;
-            for(int i = 0; i < glmt._beta.length-1; ++i)
+            for(int i = 0; i < glmt._grad.length-(glmt._dataInfo._hasIntercept?1:0); ++i)
               if(glmt._grad[i] > lmax)
                 lmax = glmt._grad[i];
               else if(-glmt._grad[i] > lmax)
@@ -1043,7 +1058,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             model.start_training(start_time);
             if(lambda_search) {
               assert !Double.isNaN(lambda_max) : LogInfo("running lambda_value search, but don't know what is the lambda_value max!");
-              model = addLmaxSubmodel(model, glmt._val, glmt._beta);
+              model = addLmaxSubmodel(model, glmt._val, beta);
               if (nlambdas == -1) {
                 lambda = null;
               } else {
@@ -1072,7 +1087,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               if(i > 0) {
                 model.addWarning("Removed " + i + " lambdas greater than lambda_max.");
                 lambda = Utils.append(new double[]{lambda_max},Arrays.copyOfRange(lambda,i,lambda.length));
-                addLmaxSubmodel(model,glmt._val, glmt._beta);
+                addLmaxSubmodel(model,glmt._val, beta);
               }
             }
             model.delete_and_lock(self());
@@ -1097,7 +1112,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
                   xvals[i]._ymu = ymut.ymu(i-1);
                   final int fi = i;
                   final double ymu = ymut.ymu(fi-1);
-                  // new GLMIterationTask(offset_cols.length,GLM2.this.self(), _dinfo, _glm, false, true, true,nullModelBeta(),_ymu,1.0/_nobs, thresholds, new H2OCallback<GLMIterationTask>(cmp){
+                  // new GLMIterationTask(offset_cols.length,GLM2.this.self(), _dataInfo, _glm, false, true, true,nullModelBeta(),_ymu,1.0/_nobs, thresholds, new H2OCallback<GLMIterationTask>(cmp){
                   new GLMIterationTask(_noffsets,self(),xvals[i]._dinfo,_glm, false,true,true, nullModelBeta(xvals[fi]._dinfo,ymu),ymu,1.0/ymut.nobs(fi-1),thresholds,new H2OCallback<GLMIterationTask>(futures){
                     @Override
                     public String toString(){
@@ -1135,8 +1150,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private double [] nullModelBeta(DataInfo dinfo, double ymu){
     double icpt = _noffsets == 0?_glm.link(ymu):computeIntercept(dinfo,ymu,offset,response);
-    double[] beta = MemoryManager.malloc8d(_dinfo.fullN() + 1 - _noffsets);
-    beta[beta.length-1] = icpt;
+    double[] beta = MemoryManager.malloc8d(_dinfo.fullN() + (dinfo._hasIntercept?1:0) - _noffsets);
+    if(dinfo._hasIntercept) beta[beta.length-1] = icpt;
     return beta;
   }
 
