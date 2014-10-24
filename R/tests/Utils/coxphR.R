@@ -22,7 +22,7 @@ checkCoxPHModel <- function(myCoxPH.h2o, myCoxPH.r, tolerance = 1e-8, ...) {
   checkEquals(myCoxPH.r$n,            myCoxPH.h2o@model$n)
   checkEquals(myCoxPH.r$nevent,       myCoxPH.h2o@model$nevent)
   checkEquals(myCoxPH.r$wald.test,    myCoxPH.h2o@model$wald.test,
-              tolerance = sqrt(tolerance))
+              tolerance = sqrt(tolerance), check.attributes = FALSE)
 
   summaryCoxPH.h2o <- summary(myCoxPH.h2o)
   summaryCoxPH.r   <- summary(myCoxPH.r)

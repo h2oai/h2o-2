@@ -43,7 +43,7 @@ h2o.coxph <- function(x, y, data, key = "", weights, ties = c("efron", "breslow"
     if (!is.character(weights) || length(weights) != 1L || !(weights %in% cnames))
       stop("'weights' must be missing or a character string specifying a column name from 'data'")
   } else
-    weights <- y[1L]
+    weights <- NULL
 
   if (!is.character(key) && length(key) == 1L)
     stop("'key' must be a character string")
@@ -58,19 +58,17 @@ h2o.coxph <- function(x, y, data, key = "", weights, ties = c("efron", "breslow"
     stop("'init' must be a numeric vector containing finite coefficient starting values")
 
   job <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPH,
-                           destination_key    = key,
-                           source             = data@key,
-                           use_start_column   = as.integer(ny == 3L),
-                           start_column       = y[1L],
-                           stop_column        = y[ny - 1L],
-                           event_column       = y[ny],
-                           x_columns          = match(x, cnames) - 1L,
-                           use_weights_column = as.integer(useWeights),
-                           weights_column     = weights,
-                           ties               = ties,
-                           init               = init,
-                           lre_min            = control$lre,
-                           iter_max           = control$iter.max)
+                           destination_key = key,
+                           source          = data@key,
+                           start_column    = if (ny == 3L) y[1L] else NULL,
+                           stop_column     = y[ny - 1L],
+                           event_column    = y[ny],
+                           x_columns       = match(x, cnames) - 1L,
+                           weights_column  = weights,
+                           ties            = ties,
+                           init            = init,
+                           lre_min         = control$lre,
+                           iter_max        = control$iter.max)
   job_key  <- job$job_key
   dest_key <- job$destination_key
   .h2o.__waitOnJob(data@h2o, job_key)

@@ -16,9 +16,6 @@ import water.util.*;
 import water.util.Log.Tag.Sys;
 import water.license.LicenseManager;
 
-import com.amazonaws.auth.PropertiesCredentials;
-import com.google.common.base.Objects;
-
 /**
 * Start point for creating or joining an <code>H2O</code> Cloud.
 *
