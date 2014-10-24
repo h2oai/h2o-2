@@ -174,7 +174,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Arrays.sort(ignored_cols);
       for(Vec v:response){
         int id = source.find(v);
-        if(Arrays.binarySearch(ignored_cols,id) != -1)
+        if(Arrays.binarySearch(ignored_cols,id) >= 0)
           throw new IllegalArgumentException("Column can not be both ignored and used as a response.");
       }
       if (ignored_cols != null) fr.remove(ignored_cols);
