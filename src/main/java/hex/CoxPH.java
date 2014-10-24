@@ -23,11 +23,8 @@ public class CoxPH extends Job {
   @API(help="Data Frame", required=true, filter=Default.class, json=true)
   public Frame source;
 
-  @API(help="start column ignored if unchecked", required=true, filter=Default.class, json=true)
-  public boolean use_start_column = true;
-
   @API(help="Start Time Column", required=false, filter=CoxPHVecSelect.class, json=true)
-  public Vec start_column;
+  public Vec start_column = null;
 
   @API(help="Stop Time Column", required=true, filter=CoxPHVecSelect.class, json=true)
   public Vec stop_column;
@@ -38,11 +35,8 @@ public class CoxPH extends Job {
   @API(help="X Columns", required=true, filter=CoxPHMultiVecSelect.class, json=true)
   public int[] x_columns;
 
-  @API(help="weights column ignored if unchecked", required=true, filter=Default.class, json=true)
-  public boolean use_weights_column = false;
-
   @API(help="Weights Column", required=false, filter=CoxPHVecSelect.class, json=true)
-  public Vec weights_column;
+  public Vec weights_column = null;
 
   @API(help="Method for Handling Ties", required=true, filter=Default.class, json=true)
   public CoxPHTies ties = CoxPHTies.efron;
@@ -196,15 +190,16 @@ public class CoxPH extends Job {
       }
       for (int j = n_cats; j < n_data; ++j)
         numsHasNA |= Double.isNaN(data[j]);
-      if (numsHasNA || (catsHasNA && !catsAllNA) || (n_num > 0 && catsAllNA)) {
+      if (numsHasNA || (catsHasNA && !catsAllNA)) {
         for (int i = 1; i <= 2 * n_time; ++i)
           preds[i] = Float.NaN;
       } else {
         double[] full_data = MemoryManager.malloc8d(n_coef);
         for (int j = 0; j < n_cats; ++j)
           if (Double.isNaN(data[j])) {
-            for (int k = data_info._catOffsets[j]; k < data_info._catOffsets[j+1]; ++k)
-              full_data[k] = this.x_mean_cat[k];
+            final int kst = data_info._catOffsets[j];
+            final int klen = data_info._catOffsets[j+1] - kst;
+            System.arraycopy(x_mean_cat, kst, full_data, kst, klen);
           } else if (data[j] != 0)
             full_data[data_info._catOffsets[j] + (int) (data[j] - 1)] = 1;
         for (int j = 0; j < n_num; ++j)
@@ -247,8 +242,8 @@ public class CoxPH extends Job {
 
       final Vec start_column = source.vec(source.numCols() - 3);
       final Vec stop_column  = source.vec(source.numCols() - 2);
-      min_time = parameters.use_start_column ? (long) start_column.min() + 1 :
-                                               (long) stop_column.min();
+      min_time = parameters.start_column == null ? (long) stop_column.min():
+                                                   (long) start_column.min() + 1;
       max_time = (long) stop_column.max();
 
       final int n_time = new CollectDomain(stop_column).doAll(stop_column).domain().length;
@@ -281,7 +276,7 @@ public class CoxPH extends Job {
           nz++;
         }
       }
-      if (!parameters.use_start_column)
+      if (parameters.start_column == null)
         for (int t = n_risk.length - 2; t >= 0; --t)
           n_risk[t] += n_risk[t + 1];
     }
@@ -314,8 +309,7 @@ public class CoxPH extends Job {
                   final double rcumsumRisk_t      = coxMR.rcumsumRisk[_t];
                   final double avgSize            = sizeEvents_t / countEvents_t;
                   newLoglik_t[_t] = sumLogRiskEvents_t;
-                  for (int j = 0; j < n_coef; ++j)
-                    gradient_t[_t][j] = coxMR.sumXEvents[_t][j];
+                  System.arraycopy(coxMR.sumXEvents[_t], 0, gradient_t[_t], 0, n_coef);
                   for (long e = 0; e < countEvents_t; ++e) {
                     final double frac = ((double) e) / ((double) countEvents_t);
                     final double term = rcumsumRisk_t - frac * sumRiskEvents_t;
@@ -548,7 +542,7 @@ public class CoxPH extends Job {
   protected void init() {
     super.init();
 
-    if (use_start_column && !start_column.isInt())
+    if ((start_column != null) && !start_column.isInt())
       throw new IllegalArgumentException("start time must be null or of type integer");
 
     if (!stop_column.isInt())
@@ -563,7 +557,7 @@ public class CoxPH extends Job {
     if (iter_max < 1)
       throw new IllegalArgumentException("iter_max must be a positive integer");
 
-    final long min_time = use_start_column ? (long) start_column.min() + 1 : (long) stop_column.min();
+    final long min_time = (start_column == null) ? (long) stop_column.min() : (long) start_column.min() + 1;
     final int n_time = (int) (stop_column.max() - min_time + 1);
     if (n_time < 1)
       throw new IllegalArgumentException("start times must be strictly less than stop times");
@@ -573,9 +567,9 @@ public class CoxPH extends Job {
 
     source = getSubframe();
     int n_resp = 2;
-    if (use_weights_column)
+    if (weights_column != null)
       n_resp++;
-    if (use_start_column)
+    if (start_column != null)
       n_resp++;
     final DataInfo dinfo = new DataInfo(source, n_resp, false, DataInfo.TransformType.DEMEAN);
     model = new CoxPHModel(this, dest(), source._key, source, null);
@@ -595,11 +589,13 @@ public class CoxPH extends Job {
       newCoef[j] = init;
     double oldLoglik = - Double.MAX_VALUE;
     final int n_time = (int) (model.max_time - model.min_time + 1);
+    final boolean has_start_column   = (model.parameters.start_column != null);
+    final boolean has_weights_column = (model.parameters.weights_column != null);
     for (int i = 0; i <= iter_max; ++i) {
       model.iter = i;
 
       final CoxPHTask coxMR = new CoxPHTask(self(), dinfo, newCoef, model.min_time, n_time,
-                                            use_start_column, use_weights_column).doAll(dinfo._adaptedFrame);
+                                            has_start_column, has_weights_column).doAll(dinfo._adaptedFrame);
 
       final double newLoglik = model.calcLoglik(coxMR);
       if (newLoglik > oldLoglik) {
@@ -646,6 +642,8 @@ public class CoxPH extends Job {
   }
 
   private Frame getSubframe() {
+    final boolean use_start_column   = (start_column != null);
+    final boolean use_weights_column = (weights_column != null);
     final int x_ncol = x_columns.length;
     int ncol = x_ncol + 2;
     if (use_weights_column)
@@ -668,8 +666,8 @@ public class CoxPH extends Job {
     private final double[] _beta;
     private final int      _n_time;
     private final long     _min_time;
-    private final boolean  _use_start_column;
-    private final boolean  _use_weights_column;
+    private final boolean  _has_start_column;
+    private final boolean  _has_weights_column;
 
     protected long         n;
     protected long         n_missing;
@@ -690,13 +688,13 @@ public class CoxPH extends Job {
     protected double[][][] rcumsumXXRisk;
 
     CoxPHTask(Key jobKey, DataInfo dinfo, final double[] beta, final long min_time, final int n_time,
-              final boolean use_start_column, final boolean use_weights_column) {
+              final boolean has_start_column, final boolean has_weights_column) {
       super(jobKey, dinfo);
       _beta               = beta;
       _n_time             = n_time;
       _min_time           = min_time;
-      _use_start_column   = use_start_column;
-      _use_weights_column = use_weights_column;
+      _has_start_column   = has_start_column;
+      _has_weights_column = has_weights_column;
     }
 
     @Override
@@ -721,11 +719,11 @@ public class CoxPH extends Job {
     @Override
     protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response) {
       n++;
-      final double weight = _use_weights_column ? response[0] : 1.0;
+      final double weight = _has_weights_column ? response[0] : 1.0;
       if (weight <= 0)
         throw new IllegalArgumentException("weights must be positive values");
       final long event = (long) response[response.length - 1];
-      final int t1 = _use_start_column ? (int) (((long) response[response.length - 3] + 1) - _min_time) : -1;
+      final int t1 = _has_start_column ? (int) (((long) response[response.length - 3] + 1) - _min_time) : -1;
       final int t2 = (int) (((long) response[response.length - 2]) - _min_time);
       if (t1 > t2)
         throw new IllegalArgumentException("start times must be strictly less than stop times");
@@ -749,7 +747,7 @@ public class CoxPH extends Job {
         sumRiskEvents[t2]    += risk;
       } else
         sizeCensored[t2] += weight;
-      if (_use_start_column) {
+      if (_has_start_column) {
         for (int t = t1; t <= t2; ++t)
           sizeRiskSet[t] += weight;
         for (int t = t1; t <= t2; ++t)
@@ -770,7 +768,7 @@ public class CoxPH extends Job {
           sumXEvents[t2][j]     += weight * x1;
           sumXRiskEvents[t2][j] += xRisk;
         }
-        if (_use_start_column) {
+        if (_has_start_column) {
           for (int t = t1; t <= t2; ++t)
             rcumsumXRisk[t][j]  += xRisk;
         } else {
@@ -783,7 +781,7 @@ public class CoxPH extends Job {
           final double xxRisk  = x2 * xRisk;
           if (event > 0)
             sumXXRiskEvents[t2][j][k] += xxRisk;
-          if (_use_start_column) {
+          if (_has_start_column) {
             for (int t = t1; t <= t2; ++t)
               rcumsumXXRisk[t][j][k]  += xxRisk;
           } else {
@@ -815,7 +813,7 @@ public class CoxPH extends Job {
 
     @Override
     protected void postGlobal() {
-      if (!_use_start_column) {
+      if (!_has_start_column) {
         for (int t = rcumsumRisk.length - 2; t >= 0; --t)
           rcumsumRisk[t] += rcumsumRisk[t + 1];
 

@@ -6,12 +6,19 @@ test.CoxPH.bladder <- function(conn) {
   bladder$enum <- as.factor(bladder$enum)
   bladder.h2o  <- as.h2o(conn, bladder, key = "bladder.h2o")
 
-  Log.info("H2O Cox PH Model of bladder Data Set using Efron's Approximation; 1 predictor\n")
+  Log.info("H2O Cox PH Model of bladder Data Set using Efron's Approximation; 1 numeric predictor\n")
   bladder.coxph.h2o <-
     h2o.coxph(x = "size", y = c("stop", "event"), data = bladder.h2o,
               key = "bladmod.h2o")
   bladder.coxph <- coxph(Surv(stop, event) ~ size, data = bladder)
   checkCoxPHModel(bladder.coxph.h2o, bladder.coxph, tolerance = 1e-7)
+
+  Log.info("H2O Cox PH Model of bladder Data Set using Efron's Approximation; 1 categorical predictor\n")
+  bladder.coxph.h2o <-
+    h2o.coxph(x = "enum", y = c("stop", "event"), data = bladder.h2o,
+              key = "bladmod.h2o")
+  bladder.coxph <- coxph(Surv(stop, event) ~ enum, data = bladder)
+  checkCoxPHModel(bladder.coxph.h2o, bladder.coxph)
 
   Log.info("H2O Cox PH Model of bladder Data Set using Efron's Approximation; 4 predictors\n")
   bladder.coxph.h2o <-
@@ -43,13 +50,20 @@ test.CoxPH.bladder <- function(conn) {
                          control = coxph.control(iter.max = 1))
   checkCoxPHModel(bladder.coxph.h2o, bladder.coxph)
 
-  Log.info("H2O Cox PH Model of bladder Data Set using Breslow's Approximation; 1 predictor\n")
+  Log.info("H2O Cox PH Model of bladder Data Set using Breslow's Approximation; 1 numeric predictor\n")
   bladder.coxph.h2o <-
     h2o.coxph(x = "size", y = c("stop", "event"), data = bladder.h2o,
               key = "bladmod.h2o", ties = "breslow")
   bladder.coxph <-
     coxph(Surv(stop, event) ~ size, data = bladder, ties = "breslow")
   checkCoxPHModel(bladder.coxph.h2o, bladder.coxph, tolerance = 1e-7)
+
+  Log.info("H2O Cox PH Model of bladder Data Set using Efron's Approximation; 1 categorical predictor\n")
+  bladder.coxph.h2o <-
+    h2o.coxph(x = "enum", y = c("stop", "event"), data = bladder.h2o,
+              key = "bladmod.h2o", ties = "breslow")
+  bladder.coxph <- coxph(Surv(stop, event) ~ enum, data = bladder, ties = "breslow")
+  checkCoxPHModel(bladder.coxph.h2o, bladder.coxph)
 
   Log.info("H2O Cox PH Model of bladder Data Set using Breslow's Approximation; 4 predictors\n")
   bladder.coxph.h2o <-
