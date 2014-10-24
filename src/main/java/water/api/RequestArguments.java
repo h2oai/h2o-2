@@ -1790,15 +1790,13 @@ public class RequestArguments extends RequestStatics {
       if(v == null) throw new H2OIllegalArgumentException(this, "Frame not found");
       return v.get();
     }
-    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameKeyVec [] vecs, String description, boolean namesOnly, boolean filterNAs) {
+    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec vec, String description, boolean namesOnly, boolean filterNAs) {
       super(name);
       addPrerequisite(_key = key);
       _description = description;
       _namesOnly = namesOnly;
       _filterNAs = filterNAs;
-      if(vecs != null)
-        for(FrameKeyVec v:vecs)
-          ignoreVec(v);
+      if(vec != null) ignoreVec(vec);
     }
     public void ignoreVec(FrameKeyVec v) {
       for(FrameKeyVec vv:_ignoredVecs)

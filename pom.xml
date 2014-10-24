@@ -103,7 +103,7 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.code.gson</groupId>
+      <groupId>ai.h2o.gson</groupId>
       <artifactId>gson</artifactId>
       <version>2.3</version>
       <scope>compile</scope>
@@ -138,9 +138,9 @@
     </dependency>   
     <!-- ==Javassist dependency -->
     <dependency>
-      <groupId>org.javassist</groupId>
+      <groupId>ai.h2o</groupId>
       <artifactId>javassist</artifactId>
-      <version>3.16.1-GA</version>
+      <version>3.18.0-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <!-- ==Jogamp dependencies for NN== -->
@@ -242,6 +242,34 @@
     </pluginManagement>
     <!-- Plugins activation and setup -->
     <plugins>
+      <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-dependency-plugin</artifactId>
+         <version>2.9</version>
+         <executions>
+           <execution>
+             <id>unpack</id>
+             <phase>compile</phase>
+             <goals>
+               <goal>unpack</goal>
+             </goals>
+             <configuration>
+               <artifactItems>
+                 <artifactItem>
+                   <groupId>ai.h2o.gson</groupId>
+                   <artifactId>gson</artifactId>
+                   <version>2.3</version>
+                   <overWrite>true</overWrite>
+                   <outputDirectory>${project.build.directory}/classes</outputDirectory>
+                   <includes>**/*.class,**/*.xml</includes>
+                   <excludes>**/*test.class</excludes>
+                 </artifactItem>
+               </artifactItems>
+             </configuration>
+           </execution>
+         </executions>
+       </plugin>
+
         <!-- FIXME: DatasetCompare serves as a sandbox for Tomas. It should be
              user private and removed! -->
         <plugin>
@@ -293,7 +321,7 @@
               </goals>
             </execution>
           </executions>
-       </plugin>
+        </plugin>
     </plugins>
   </build>
 

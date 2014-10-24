@@ -16,9 +16,6 @@ import water.util.*;
 import water.util.Log.Tag.Sys;
 import water.license.LicenseManager;
 
-import com.amazonaws.auth.PropertiesCredentials;
-import com.google.common.base.Objects;
-
 /**
 * Start point for creating or joining an <code>H2O</code> Cloud.
 *
@@ -1065,6 +1062,8 @@ public final class H2O {
 
     while (true) {
       UDP_PORT = API_PORT+1;
+      if( API_PORT<0 || API_PORT>65534 ) // 65535 is max, implied for udp port
+        Log.die("Attempting to use system illegal port, either "+API_PORT+" or "+UDP_PORT);
       try {
         // kbn. seems like we need to set SO_REUSEADDR before binding?
         // http://www.javadocexamples.com/java/net/java.net.ServerSocket.html#setReuseAddress:boolean
