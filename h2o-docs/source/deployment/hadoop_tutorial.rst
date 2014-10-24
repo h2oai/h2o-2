@@ -39,12 +39,18 @@ review the output from your command.
     
     
 **Parameters**
- Parameter | Definition| 
------------- | ------------- | 
-`h2o_driver_jar_file` | For each major release for each distribution of Hadoop, there is a driver jar file that is required  to launch H\ :sub:`2`\ O. <br>Currently available driver jar files in each build of H\ :sub:`2`\ O include `h2odriver_cdh5.jar`, `h2odriver_hdp2.1.jar`, and `mapr2.1.3.jar`.
-`jobtracker:port` | By default, the Job Tracker is available at the default port for each distro. The argument is optional.
-`mapperXmx ` | The mapper size or the amount of memory allocated to each node.
-`nodes` | The number of nodes specified for the cluster. 
-`output ` | The name of the directory created for each mapper task. Because they cannot be overwritten, the directory has to be unique for each instance of H\ :sub:`2`\ O .
 
+`h2o_driver_jar_file `: For each major release of each distribution of hadoop, there is a driver jar file that the user will need to launch H2O with. Currently available driver jar files in each build of H2O include `h2odriver_cdh5.jar`, `h2odriver_hdp2.1.jar`, and `mapr2.1.3.jar`.
+
+
+`jobtracker:port `: The argument is optional and typically without it the jobtracker will be available at the default port of each distro.
+
+
+`mapperXmx` : The mapper size or the amount of memory allocated to each node.
+
+
+`nodes` : The number of nodes requested to form the cluster.
+
+
+`output` : The name of the directory created for each mapper task which has to be unique to each instance of H2O since they cannot be overwritten.
 
