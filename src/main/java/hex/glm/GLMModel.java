@@ -514,9 +514,12 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i].computeAIC();
         _xvals[i].computeAUC();
         _xvals[i].nobs = _nobs - _xvals[i].nobs;
+        _xvals[i].null_deviance = _xmodels[i].null_validation.residual_deviance;
         GLMModel.setXvalidation(cmp, _xmodels[i]._key, _lambda, _xvals[i]);
       }
-      GLMModel.setXvalidation(cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs,_thresholds));
+      GLMXValidation xval = new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs,_thresholds);
+      xval.null_deviance = _model.null_validation.residual_deviance;
+      GLMModel.setXvalidation(cmp, _model._key, _lambda, xval);
     }
   }
 
