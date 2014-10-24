@@ -641,13 +641,12 @@ revalue.H2OParsedData <- function(x, replace = NULL, warn_missing = TRUE) {
   }
 }
 
-ddply <- function (.data, .variables, .fun = NULL, ..., .progress = "none",
-             .inform = FALSE, .drop = TRUE, .parallel = FALSE, .paropts = NULL) {
-             if (inherits(.data, "H2OParsedData")) UseMethod("ddply")
-             else { if (require(plyr)) {plyr::ddply(.data, .variables, .fun, ..., .progress, .inform, .drop, .parallel, .paropts)} else { stop("invalid input data for H2O. Trying to default to plyr ddply, but plyr not found. Install plyr, or use H2OParsedData objects.") } } }
+#ddply <- function (.data, .variables, .fun = NULL, ..., .progress = "none",
+#             .inform = FALSE, .drop = TRUE, .parallel = FALSE, .paropts = NULL) {
+#             if (inherits(.data, "H2OParsedData")) UseMethod("ddply")
+#             else { if (require(plyr)) {plyr::ddply(.data, .variables, .fun, ..., .progress, .inform, .drop, .parallel, .paropts)} else { stop("invalid input data for H2O. Trying to default to plyr ddply, but plyr not found. Install plyr, or use H2OParsedData objects.") } } }
 
-ddply.H2OParsedData <- function (.data, .variables, .fun = NULL, ..., .progress = "none",
-                                 .inform = FALSE, .drop = TRUE, .parallel = FALSE, .paropts = NULL) {
+h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = "none") {
 
   # .inform, .drop, .parallel, .paropts are all ignored inputs.
 
