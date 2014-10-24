@@ -27,6 +27,7 @@ public class Weaver {
   Weaver() {
     try {
       _pool = ClassPool.getDefault();
+      _pool.insertClassPath(new ClassClassPath(Weaver.class));
       _iced = _pool.get("water.Iced"); // Needs serialization
       _dtask= _pool.get("water.DTask");// Needs serialization and remote execution
       _enum = _pool.get("java.lang.Enum"); // Needs serialization
