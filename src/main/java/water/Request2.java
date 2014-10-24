@@ -8,6 +8,7 @@ import water.api.DocGen;
 import water.api.Request;
 import water.api.RequestArguments;
 import water.api.RequestServer.API_VERSION;
+import water.fvec.Vec;
 import water.util.Log;
 import water.util.Utils;
 
@@ -101,6 +102,15 @@ public abstract class Request2 extends Request {
   public class VecSelect extends Dependent {
     protected VecSelect(String key) {
       super(key);
+    }
+  }
+
+  public class SpecialVecSelect extends VecSelect {
+    public boolean optional = false;
+    protected SpecialVecSelect(String key) { this(key,false);}
+    protected SpecialVecSelect(String key, boolean optional) {
+      super(key);
+      this.optional = optional;
     }
   }
 
@@ -218,7 +228,7 @@ public abstract class Request2 extends Request {
             Dependent d = (Dependent) newInstance(api);
             Argument ref = find(d._ref);
             if( d instanceof VecSelect )
-              arg = new FrameKeyVec(f.getName(), (TypeaheadKey) ref);
+              arg = new FrameKeyVec(f.getName(), (TypeaheadKey) ref, api.help(), api.required());
             else if( d instanceof VecClassSelect ) {
               arg = new FrameClassVec(f.getName(), (TypeaheadKey) ref);
               classVecs.put(d._ref, (FrameClassVec) arg);
@@ -233,7 +243,6 @@ public abstract class Request2 extends Request {
               arg = new DRFCopyDataBool(f.getName(), (TypeaheadKey)ref);
             }
           }
-
           // String
           else if( f.getType() == String.class )
             arg = new Str(f.getName(), (String) defaultValue);
@@ -314,7 +323,7 @@ public abstract class Request2 extends Request {
     }
   }
 
-  final Argument find(String name) {
+  final protected Argument find(String name) {
     for( Argument a : _arguments )
       if( name.equals(a._name) )
         return a;

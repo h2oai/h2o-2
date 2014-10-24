@@ -42,7 +42,6 @@ public class CoxPHTest extends TestUtil {
       CoxPH job = new CoxPH();
       job.destination_key  = modelKey;
       job.source           = fr;
-      job.use_start_column = true;
       job.start_column     = fr.vec("start");
       job.stop_column      = fr.vec("stop");
       job.event_column     = fr.vec("event");
@@ -81,7 +80,6 @@ public class CoxPHTest extends TestUtil {
       CoxPH job = new CoxPH();
       job.destination_key  = modelKey;
       job.source           = fr;
-      job.use_start_column = true;
       job.start_column     = fr.vec("start");
       job.stop_column      = fr.vec("stop");
       job.event_column     = fr.vec("event");
@@ -120,8 +118,7 @@ public class CoxPHTest extends TestUtil {
       CoxPH job = new CoxPH();
       job.destination_key  = modelKey;
       job.source           = fr;
-      job.use_start_column = false;
-      job.start_column     = fr.vec("start");
+      job.start_column     = null;
       job.stop_column      = fr.vec("stop");
       job.event_column     = fr.vec("event");
       job.x_columns        = new int[] {fr.find("age")};
@@ -159,8 +156,7 @@ public class CoxPHTest extends TestUtil {
       CoxPH job = new CoxPH();
       job.destination_key  = modelKey;
       job.source           = fr;
-      job.use_start_column = false;
-      job.start_column     = fr.vec("start");
+      job.start_column     = null;
       job.stop_column      = fr.vec("stop");
       job.event_column     = fr.vec("event");
       job.x_columns        = new int[] {fr.find("age")};

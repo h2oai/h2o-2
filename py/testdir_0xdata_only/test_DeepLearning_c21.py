@@ -2,6 +2,8 @@ import unittest, time, sys, random, string
 sys.path.extend(['.','..','py'])
 import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i
 
+DO_SUMMARY=False
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -30,8 +32,8 @@ class Basic(unittest.TestCase):
         hex_key = 'train.hex'
         validation_key = 'test.hex'
         timeoutSecs = 300
-        parseResult  = h2i.import_parse(path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=timeoutSecs)
-        parseResultV = h2i.import_parse(path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=timeoutSecs)
+        parseResult  = h2i.import_parse(path=csvPathname_train, hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
+        parseResultV = h2i.import_parse(path=csvPathname_test, hex_key=validation_key, timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
         inspect = h2o_cmd.runInspect(None, hex_key)
         print "\n" + csvPathname_train, \
             "    numRows:", "{:,}".format(inspect['numRows']), \

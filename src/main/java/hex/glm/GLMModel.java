@@ -79,7 +79,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       return 0;
     Submodel sm = submodels[best_lambda_idx];
     GLMValidation val = sm.xvalidation == null?sm.validation:sm.xvalidation;
-    return 1.0 - val.residual_deviance/val.null_deviance;
+    return 1.0 - val.residual_deviance/null_validation.residual_deviance;
   }
 
   public static class UnlockModelTask extends DTask.DKeyTask<UnlockModelTask,GLMModel>{
@@ -154,6 +154,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public void setBestSubmodel(double lambda){
 
   }
+
+  @API(help="Validation of the null model")
+  public GLMValidation null_validation;
+
   static class Submodel extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -216,7 +220,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "Variable importances", json=true)
   VarImp variable_importances;
 
-  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double ymu, double prior) {
+  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, GLMValidation nullVal, double beta_eps, double alpha, double lambda_max, double ymu, double prior) {
     super(selfKey,job.source._key == null ? dinfo._frameKey : job.source._key,dinfo._adaptedFrame, /* priorClassDistribution */ null);
     parameters = Job.hygiene((GLM2) job.clone());
     job_key = job.self();
@@ -234,6 +238,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     start_time = System.currentTimeMillis();
     coefficients_names = coefNames();
     useAllFactorLevels = dinfo._useAllFactorLevels;
+    null_validation = nullVal;
+    null_validation.null_deviance = null_validation.residual_deviance;
   }
 
   public void pickBestModel(boolean useAuc){
@@ -247,13 +253,14 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
           bestVal = sm.xvalidation;
         }
       }
-      if(!xval) bestVal = submodels[0].validation;
+      if(!xval)
+        bestVal = submodels[0].validation;
       for (int i = 1; i < submodels.length; ++i) {
         GLMValidation val = xval ? submodels[i].xvalidation : submodels[i].validation;
         if (val == null || val == bestVal) continue;
         if ((useAuc && val.auc > bestVal.auc)
                 || (xval && val.residual_deviance < bestVal.residual_deviance)
-                || (((bestVal.residual_deviance - val.residual_deviance) / val.null_deviance) >= 0.01)) {
+                || (((bestVal.residual_deviance - val.residual_deviance) / null_validation.residual_deviance) >= 0.01)) {
           bestVal = val;
           bestId = i;
         }
@@ -436,7 +443,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     public GLMValidationTask(GLMModel model, double lambda){this(model,lambda,null);}
     public GLMValidationTask(GLMModel model, double lambda, H2OCountedCompleter completer){super(completer); _lambda = lambda; _model = model;}
     @Override public void map(Chunk [] chunks){
-      _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank(_lambda));
+      _res = new GLMValidation(null,_model.glm,_model.rank(_lambda));
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
       float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?3:1);
@@ -475,7 +482,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @Override public void map(Chunk [] chunks){
       _xvals = new GLMValidation[_xmodels.length];
       for(int i = 0; i < _xmodels.length; ++i)
-        _xvals[i] = new GLMValidation(null,_xmodels[i].ymu,_xmodels[i].glm,_xmodels[i].rank(),_thresholds);
+        _xvals[i] = new GLMValidation(null,_xmodels[i].glm,_xmodels[i].rank(),_thresholds);
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_xmodels[0]._names.length);
       float  [] preds = MemoryManager.malloc4f(_xmodels[0].glm.family == Family.binomial?3:1);
@@ -507,9 +514,12 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i].computeAIC();
         _xvals[i].computeAUC();
         _xvals[i].nobs = _nobs - _xvals[i].nobs;
+        _xvals[i].null_deviance = _xmodels[i].null_validation.residual_deviance;
         GLMModel.setXvalidation(cmp, _xmodels[i]._key, _lambda, _xvals[i]);
       }
-      GLMModel.setXvalidation(cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs,_thresholds));
+      GLMXValidation xval = new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs,_thresholds);
+      xval.null_deviance = _model.null_validation.residual_deviance;
+      GLMModel.setXvalidation(cmp, _model._key, _lambda, xval);
     }
   }
 

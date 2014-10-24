@@ -6,11 +6,18 @@ test.CoxPH.heart <- function(conn) {
   heart$stop  <- as.integer(heart$stop)
   heart.h2o <- as.h2o(conn, heart, key = "heart.h2o")
 
-  Log.info("H2O Cox PH Model of heart Data Set using Efron's Approximation; 1 predictor\n")
+  Log.info("H2O Cox PH Model of heart Data Set using Efron's Approximation; 1 numeric predictor\n")
   heart.coxph.h2o <-
     h2o.coxph(x = "age", y = c("start", "stop", "event"), data = heart.h2o,
               key = "heartmod.h2o")
   heart.coxph <- coxph(Surv(start, stop, event) ~ age, data = heart)
+  checkCoxPHModel(heart.coxph.h2o, heart.coxph)
+
+  Log.info("H2O Cox PH Model of heart Data Set using Efron's Approximation; 1 categorical predictor\n")
+  heart.coxph.h2o <-
+    h2o.coxph(x = "transplant", y = c("start", "stop", "event"), data = heart.h2o,
+              key = "heartmod.h2o")
+  heart.coxph <- coxph(Surv(start, stop, event) ~ transplant, data = heart)
   checkCoxPHModel(heart.coxph.h2o, heart.coxph)
 
   Log.info("H2O Cox PH Model of heart Data Set using Efron's Approximation; 4 predictors\n")
@@ -42,12 +49,19 @@ test.CoxPH.heart <- function(conn) {
                        control = coxph.control(iter.max = 1))
   checkCoxPHModel(heart.coxph.h2o, heart.coxph)
 
-  Log.info("H2O Cox PH Model of heart Data Set using Breslow's Approximation\n")
+  Log.info("H2O Cox PH Model of heart Data Set using Breslow's Approximation; 1 numeric predictor\n")
   heart.coxph.h2o <-
     h2o.coxph(x = "age", y = c("start", "stop", "event"), data = heart.h2o,
               key = "heartmod.h2o", ties = "breslow")
   heart.coxph <-
     coxph(Surv(start, stop, event) ~ age, data = heart, ties = "breslow")
+  checkCoxPHModel(heart.coxph.h2o, heart.coxph)
+
+  Log.info("H2O Cox PH Model of heart Data Set using Efron's Approximation; 1 categorical predictor\n")
+  heart.coxph.h2o <-
+    h2o.coxph(x = "transplant", y = c("start", "stop", "event"), data = heart.h2o,
+              key = "heartmod.h2o", ties = "breslow")
+  heart.coxph <- coxph(Surv(start, stop, event) ~ transplant, data = heart, ties = "breslow")
   checkCoxPHModel(heart.coxph.h2o, heart.coxph)
 
   Log.info("H2O Cox PH Model of heart Data Set using Breslow's Approximation; 4 predictors\n")

@@ -11,6 +11,7 @@ def check_cloud_and_setup_next():
     h2o.check_sandbox_for_errors()
     print "Tearing down cloud of size", len(h2o.nodes)
     h2o.tear_down_cloud()
+    # this will delete the flatfile in sandbox
     h2o.clean_sandbox()
     # wait to make sure no sticky ports or anything os-related
     # so let's expand the delay if larger number of jvms
@@ -55,7 +56,9 @@ class Basic(unittest.TestCase):
             # FIX! ..just use_flatfile=False for now on these subsequent ones. rely on multicast
             # Could make the biggest cloud first and count down? supposed to not matter if flatfile has too many?
             start = time.time()
-            h2o.build_cloud(node_count, hosts=h2o_hosts.hosts, use_flatfile=False, timeoutSecs=timeoutSecs, retryDelaySecs=0.5)
+            # it should know not to upload the jars again
+            # the flatfile was deleted, so we can't do build_cloud with hosts defined..it assumed flatfile was created for upload
+            h2o_hosts.build_cloud_with_hosts(node_count, use_flatfile=False, timeoutSecs=timeoutSecs, retryDelaySecs=0.5)
             print "Cloud of", len(h2o.nodes), "built in", time.time()-start, "seconds"
             check_cloud_and_setup_next()
 

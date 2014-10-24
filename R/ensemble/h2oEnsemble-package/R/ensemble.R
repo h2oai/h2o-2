@@ -61,7 +61,7 @@ function(x, y, data, family = "binomial",
   if (grepl("^SL.", metalearner)) {
     # this is very hacky and should be used only for testing until we get the h2o metalearner functions sorted out...
     familyFun <- get(family, mode = "function", envir = parent.frame())
-    Ztmp <- subset(Z, select=-c(fold_id, Class))
+    Ztmp <- Z[, -which(names(Z) %in% c("fold_id", y))]
     runtime$metalearning <- system.time(metafit <- match.fun(metalearner)(Y=as.data.frame(data[,c(y)])[,1], X=Ztmp, newX=Ztmp, 
                                                                           family=familyFun, id=seq(N), obsWeights=rep(1,N)), gcFirst=FALSE)
   } else {
@@ -119,9 +119,11 @@ function(x, y, data, family = "binomial",
   print(sprintf("Cross-validating learner %s: fold %s", idxs$l[i], idxs$v[i]))
   if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
   fit <- match.fun(learner[idxs$l[i]])(y=y, x=xcols, data=data[data$fold_id!=idxs$v[i]], family=family)
-  # Regarding preds assignment below: This is hardcoded for binary outcome (ie. we are grabbing the X1 column)
-  # Probably need to modify this line so that it also works for regression
-  preds <- as.data.frame(h2o.predict(fit, data[data$fold_id==idxs$v[i]]))$X1
+  if (family == "binomial") {
+    preds <- as.data.frame(h2o.predict(fit, data[data$fold_id==idxs$v[i]]))$X1
+  } else {
+    preds <- as.data.frame(h2o.predict(fit, data[data$fold_id==idxs$v[i]]))$predict
+  }
   # Note: column subsetting not supported yet in H2OParsedData object however, 
   # if we can enable that, then it is probably better to insert the preds into 
   # a H2OParsedData object instead of returning 'preds' and bringing into R memory.
@@ -212,9 +214,13 @@ predict.h2o.ensemble <-
     L <- length(object$basefits)
     basepreddf <- as.data.frame(matrix(NA, nrow = nrow(newdata), ncol = L))
     for (l in seq(L)) {
-      # This is hardcoded ($X1) for binary classification, should change this
-      basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
-                                                                   newdata = newdata)))$X1
+      if (object$family == "binomial") {
+        basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
+                                                                     newdata = newdata)))$X1 
+      } else {
+        basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
+                                                                     newdata = newdata)))$predict
+      }
     }
     names(basepreddf) <- names(object$basefits)
     basepreddf[basepreddf < object$ylim[1]] <- object$ylim[1]  #Enforce bounds

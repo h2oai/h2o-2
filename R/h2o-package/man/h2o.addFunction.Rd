@@ -24,11 +24,11 @@ A function in R. Currently, only a subset of the R syntax is recognizable by H2O
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
-This method is intended to be used in conjunction with \code{\link{ddply.H2OParsedData}}. The user must explicitly add the function he or she wishes to apply to H2O. Otherwise, the server will not recognize a function reference that only exists in R.
+This method is intended to be used in conjunction with \code{\link{h2o.ddply}}. The user must explicitly add the function he or she wishes to apply to H2O. Otherwise, the server will not recognize a function reference that only exists in R.
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
-\code{\link{ddply.H2OParsedData}}
+\code{\link{h2o.ddply}}
 }
 \examples{
 library(h2o)
