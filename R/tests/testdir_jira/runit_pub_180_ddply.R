@@ -1,5 +1,5 @@
 #
-# ddply
+# h2o.ddply
 #
 
 
@@ -8,8 +8,8 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 
-ddplytest <- function(conn){
-  Log.info('uploading ddply testing dataset')
+h2o.ddplytest <- function(conn){
+  Log.info('uploading h2o.ddply testing dataset')
   dataset_path = normalizePath(locate('smalldata/jira/pub-180.csv'))
   df.h <- h2o.importFile(conn, dataset_path)
 
@@ -19,27 +19,27 @@ ddplytest <- function(conn){
   Log.info('grouping over a single column (equivalent to tapply)')
   fn1 <- function(df){ min(df$col1)}
   h2o.addFunction(conn, fn1)
-  df.h.1 <- ddply(df.h, .(colgroup), fn1)
+  df.h.1 <- h2o.ddply(df.h, .(colgroup), fn1)
 
   Log.info('grouping over multiple columns (equivalent to tapply with IDX=group1 + group2)')
   fn2 <- function(df){ min(df$col1)}
   h2o.addFunction(conn, fn2)
-  df.h.2 <- ddply(df.h, .(colgroup, colgroup2), fn2)
+  df.h.2 <- h2o.ddply(df.h, .(colgroup, colgroup2), fn2)
 
   Log.info('single grouping column, use 2 columns')
   fn3 <- function(df){ min(df$col1 + df$col2) }
   h2o.addFunction(conn, fn3)
-  df.h.3 <- ddply(df.h, .(colgroup), fn3)
+  df.h.3 <- h2o.ddply(df.h, .(colgroup), fn3)
 
   Log.info('grouping multiple columns, use 2 columns')
   fn4 <- function(df){ min(df$col1 + df$col2) }
   h2o.addFunction(conn, fn4)
-  df.h.4 <- ddply(df.h, .(colgroup, colgroup2), fn4)
+  df.h.4 <- h2o.ddply(df.h, .(colgroup, colgroup2), fn4)
 
   Log.info('testing all column address modes')
-  df.h.4b <- ddply(df.h, c('colgroup', 'colgroup2'), fn4)
-  df.h.4c <- ddply(df.h, 1:2, fn4)
-  df.h.4d <- ddply(df.h, h2o..('colgroup', 'colgroup2'), fn4)
+  df.h.4b <- h2o.ddply(df.h, c('colgroup', 'colgroup2'), fn4)
+  df.h.4c <- h2o.ddply(df.h, 1:2, fn4)
+  df.h.4d <- h2o.ddply(df.h, h2o..('colgroup', 'colgroup2'), fn4)
 
 
   Log.info('pulling data locally')
@@ -116,18 +116,18 @@ if(F){
   # semantically, these produce much the same thing, although one puts in a dataframe and the other in a named vector
   # sql GROUP BY colgroup
   tapply(data$col1, data$colgroup, min)
-  ddply(data, .(colgroup), function(df){min(df$col1)} )
+  h2o.ddply(data, .(colgroup), function(df){min(df$col1)} )
 
   # example 2 -- equivalent to sql GROUP BY colgroup, colgroup2;
   tapply(df$col1, paste(df$colgroup,df$colgroup2), min)
-  ddply(data, .(colgroup, colgroup2), function(df){min(df$col1)} )
+  h2o.ddply(data, .(colgroup, colgroup2), function(df){min(df$col1)} )
 
   # example 3 - can't build with tapply
-  ddply(data, .(colgroup), function(df){ min(df$col1 + df$col2)} )
+  h2o.ddply(data, .(colgroup), function(df){ min(df$col1 + df$col2)} )
 
   # example 4 - can't build with tapply
-  ddply(data, .(colgroup, colgroup2), function(df){ min(df$col1 + df$col2)} )
+  h2o.ddply(data, .(colgroup, colgroup2), function(df){ min(df$col1 + df$col2)} )
 }
 
 
-doTest('ddply', ddplytest)
+doTest('h2o.ddply', h2o.ddplytest)

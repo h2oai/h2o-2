@@ -599,11 +599,11 @@ public class CoxPH extends Job {
 
       final double newLoglik = model.calcLoglik(coxMR);
       if (newLoglik > oldLoglik) {
-        model.calcModelStats(newCoef, newLoglik);
-        model.calcCumhaz_0(coxMR);
-
         if (i == 0)
           model.calcCounts(coxMR);
+
+        model.calcModelStats(newCoef, newLoglik);
+        model.calcCumhaz_0(coxMR);
 
         if (newLoglik == 0)
           model.lre = - Math.log10(Math.abs(oldLoglik - newLoglik));
