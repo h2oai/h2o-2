@@ -75,6 +75,8 @@ public class Boot extends ClassLoader {
   }
 
   private Boot() throws IOException {
+
+    super(Thread.currentThread().getContextClassLoader());
     final String ownJar = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
     Log.POST(2000, "ownJar is " + ownJar);
     ZipFile jar = null;
@@ -372,7 +374,10 @@ public class Boot extends ClassLoader {
 
   public InputStream getResource2(String uri) {
     if( fromJar() ) {
-      return _systemLoader.getResourceAsStream("resources"+uri);
+      InputStream is = _systemLoader.getResourceAsStream("resources"+uri);
+      if (is==null) is = this.getClass().getClassLoader().getResourceAsStream("resources"+uri);
+      if (is==null) is = Thread.currentThread().getContextClassLoader().getResourceAsStream("resources"+uri);
+      return is;
     } else {
       try {
         File resources  = new File("lib/resources");
