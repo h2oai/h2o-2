@@ -134,11 +134,13 @@ def get_ip_address():
 
     ipa = None
     # we had some hosts that didn't support gethostbyname_ex(). hopefully we don't need a hack to exclude
+    # the gethostbyname_ex can be slow. the timeout above will save us quickly
     try:
         # Translate a host name to IPv4 address format, extended interface. 
+        # This should be resolve by dns so it's the right ip for talking to this guy?
         # Return a triple (hostname, aliaslist, ipaddrlist) 
         # where hostname is the primary host name responding to the given ip_address, 
-        # aliaslist is a (possibly empty) list of alternative host names for the same address, and 
+        # aliaslist is a (possibly empty) list of alternative host names for the same address, 
         # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
         ghbx = socket.gethostbyname_ex(hostname)
         for ips in ghbx[2]:
