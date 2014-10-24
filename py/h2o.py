@@ -133,28 +133,26 @@ def get_ip_address():
         verboseprint("get_ip case 3:", ip)
 
     ipa = None
-    badHosts = ['lg1', 'ch-0', 'ch-63']
-    # hack for hosts that don't support this
     # the gethostbyname_ex can be slow. the timeout above will save us quickly
-    if hostname not in badHosts:
-        try:
-            # Translate a host name to IPv4 address format, extended interface. 
-            # Return a triple (hostname, aliaslist, ipaddrlist) 
-            # where hostname is the primary host name responding to the given ip_address, 
-            # aliaslist is a (possibly empty) list of alternative host names for the same address, and 
-            # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
-            ghbx = socket.gethostbyname_ex(hostname)
-            for ips in ghbx[2]:
-                # only take the first
-                if ipa is None and not ips.startswith("127."):
-                    ipa = ips[:]
-                    verboseprint("get_ip case 4:", ipa)
-                    if ip != ipa:
-                        print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
-                        print "You might have a vpn active. Best to use '-ip " + ipa + "' to get python and h2o the same."
-        except:
-            pass
-            # print "Timeout during socket.gethostbyname_ex(hostname)"
+    try:
+        # Translate a host name to IPv4 address format, extended interface. 
+        # This should be resolve by dns so it's the right ip for talking to this guy?
+        # Return a triple (hostname, aliaslist, ipaddrlist) 
+        # where hostname is the primary host name responding to the given ip_address, 
+        # aliaslist is a (possibly empty) list of alternative host names for the same address, 
+        # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
+        ghbx = socket.gethostbyname_ex(hostname)
+        for ips in ghbx[2]:
+            # only take the first
+            if ipa is None and not ips.startswith("127."):
+                ipa = ips[:]
+                verboseprint("get_ip case 4:", ipa)
+                if ip != ipa:
+                    print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
+                    print "You might have a vpn active. Best to use '-ip " + ipa + "' to get python and h2o the same."
+    except:
+        pass
+        # print "Timeout during socket.gethostbyname_ex(hostname)"
 
     verboseprint("get_ip_address:", ip)
     # set it back to default higher timeout (None would be no timeout?)
