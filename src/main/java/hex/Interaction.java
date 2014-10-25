@@ -28,8 +28,8 @@ public class Interaction extends Request2 {
   public int[] factors = new int[0];
   class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
 
-//  @API(help = "Max. number of factor levels in interaction terms", required = true, filter = Default.class, lmin = 1, lmax = 65000, json=true)
-//  public int max_factors = 65000;
+  @API(help = "Max. number of factor levels in interaction terms", required = true, filter = Default.class, lmin = 1, lmax = Integer.MAX_VALUE, json=true)
+  public int max_factors = 100;
 
   @Override public Response serve() {
     try {
