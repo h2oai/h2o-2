@@ -26,8 +26,7 @@ The following tutorial will walk the user through the download or build of H\ :s
 
 ::
 
-  $ hadoop jar <h2o_driver_jar_file> water.hadoop.h2odriver [-jt <jobtracker:port>]
-  -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
+  $ hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
 
 
 4. To monitor your job, direct your web browser to your standard job tracker Web UI.
