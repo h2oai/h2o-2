@@ -63,18 +63,21 @@ public class createInteractions extends H2O.H2OCountedCompleter {
     int d = 0;
     while (it2.hasNext()) {
       Map.Entry kv = (Map.Entry)it2.next();
-      long ab = (Long)kv.getKey();
-      long count = (Long)kv.getValue();
-      if (factorCount < _ci.max_factors) {
+      final long ab = (Long)kv.getKey();
+      final long count = (Long)kv.getValue();
+      if (factorCount < _ci.max_factors && count >= _ci.min_occurrence) {
         factorCount++;
         // extract the two original factor enums
-        int a = (int)(ab >> 32);
-        int b = (int)ab;
-        assert ab == (((long)a << 32) | (b & 0xFFFFFFFFL));
+        String feature = "";
+        if (_j != _i) {
+          int a = (int)(ab >> 32);
+          final String fA = a != _missing ? _fr.domains()[_i][a] : "NA";
+          feature = fA + "_";
+        }
+        int b = (int) ab;
+        String fB = b != _missing ? _fr.domains()[_j][b] : "NA";
+        feature += fB;
 
-        final String fA = a != _missing ? _fr.domains()[_i][a] : "NA";
-        final String fB = b != _missing ? _fr.domains()[_j][b] : "NA";
-        final String feature = fA + "_" + fB;
 //        Log.info("Adding interaction feature " + feature + ", occurrence count: " + count);
 //        Log.info("Total number of interaction factors so far: " + factorCount);
         _domain[d++] = feature;
@@ -109,7 +112,8 @@ public class createInteractions extends H2O.H2OCountedCompleter {
 
     int idx1 = _ci.factors[0];
     Vec tmp = null;
-    for (int i=1; i<_ci.factors.length; ++i) {
+    int start = _ci.factors.length == 1 ? 0 : 1;
+    for (int i=start; i<_ci.factors.length; ++i) {
       if (i>1) {
         idx1 = _out.find(tmp);
         assert idx1 >= 0;
@@ -121,7 +125,9 @@ public class createInteractions extends H2O.H2OCountedCompleter {
       createInteractionDomain pass1 = new createInteractionDomain(idx1, idx2).doAll(_out);
 
       // Create a new Vec based on the domain
-      _out.add(_out._names[idx1] + "_" + _out._names[idx2], _out.anyVec().makeZero(makeDomain(pass1._unsortedMap, idx1, idx2)));
+      final String name = _out._names[idx1] + "_" + _out._names[idx2];
+      final Vec vec = _out.anyVec().makeZero(makeDomain(pass1._unsortedMap, idx1, idx2));
+      _out.add(name, vec);
       _out.update(_job);
 
       // Create array of enum pairs, in the same (sorted) order as in the _domain map -> for linear lookup
@@ -151,7 +157,7 @@ public class createInteractions extends H2O.H2OCountedCompleter {
   @Override
   public void onCompletion(CountedCompleter caller) {
     _out.update(_job);
-    Log.info("Created interaction feature " + _out.names()[_out.names().length-1]
+    Log.info("Created interaction feature " + _out.names()[_out.names().length - 1]
             + " (order: " + _ci.factors.length + ") with " + _out.lastVec().domain().length + " factor levels.");
     _out.unlock(_job);
   }
@@ -176,12 +182,18 @@ private static class createInteractionDomain extends MRTask2<createInteractionDo
     // find unique interaction domain
     for (int r = 0; r < cs[0]._len; r++) {
       int a = cs[_i].isNA0(r) ? _missing : (int)cs[_i].at80(r);
-      int b = cs[_j].isNA0(r) ? _missing : (int)cs[_j].at80(r);
+      long ab;
+      if (_j != _i) {
+        int b = cs[_j].isNA0(r) ? _missing : (int) cs[_j].at80(r);
 
-      // key: combine both ints into a long
-      long ab = ((long)a << 32) | (b & 0xFFFFFFFFL);
-      assert a == (int)(ab >> 32);
-      assert b == (int)ab;
+        // key: combine both ints into a long
+        ab = ((long) a << 32) | (b & 0xFFFFFFFFL);
+        assert a == (int) (ab >> 32);
+        assert b == (int) ab;
+      } else {
+        if (a == _missing) continue;
+        ab = (long)a;
+      }
 
       // add key to hash map, and count occurrences (for pruning)
       IcedLong AB = new IcedLong(ab);
@@ -223,28 +235,31 @@ private static class createInteractionDomain extends MRTask2<createInteractionDo
       // find unique interaction domain
       for (int r = 0; r < cs[0]._len; r++) {
         final int a = cs[_i].isNA0(r) ? _missing : (int)cs[_i].at80(r);
-        final int b = cs[_j].isNA0(r) ? _missing : (int)cs[_j].at80(r);
+        long ab;
+        if (_j != _i) {
+          final int b = cs[_j].isNA0(r) ? _missing : (int) cs[_j].at80(r);
+          ab = ((long) a << 32) | (b & 0xFFFFFFFFL); // key: combine both ints into a long
+        } else {
+          ab = (long)a;
+        }
 
-        // key: combine both ints into a long
-        final long ab = ((long)a << 32) | (b & 0xFFFFFFFFL);
-        assert a == (int)(ab >> 32);
-        assert b == (int)ab;
-
-        // linear search in sorted array of factor levels (descending by occurrence), should be fastest for most small domains
-        int level = -1;
-        for (int i = 0; i < _keys.length; ++i) {
-          if (ab == _keys[i]) {
-            level = i;
-            break;
+        if (_i == _j && cs[_i].isNA0(r)) {
+          cs[cs.length - 1].setNA0(r);
+        } else {
+          // linear search in sorted array of factor levels (descending by occurrence), should be fastest for most small domains
+          int level = -1;
+          for (int i = 0; i < _keys.length; ++i) {
+            if (ab == _keys[i]) {
+              level = i;
+              break;
+            }
           }
+          if (level == -1) {
+            level = _fr.lastVec().domain().length-1;
+            assert _fr.lastVec().domain()[level] == _other;
+          }
+          cs[cs.length - 1].set0(r, level);
         }
-        if (level == -1) {
-          level = _fr.lastVec().domain().length-1;
-          assert _fr.lastVec().domain()[level] == _other;
-        }
-
-        cs[cs.length - 1].set0(r, level);
-
       }
     }
 

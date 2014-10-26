@@ -24,12 +24,15 @@ public class Interaction extends Request2 {
   @API(help = "Output data frame", required = true, filter = Default.class, json=true)
   public String target;
 
-  @API(help = "Factor for which interaction is to be computed (0-based indices)", filter=colsNamesIdxFilter.class, displayName="Interaction columns")
+  @API(help = "Column indices (0-based) of factors for which interaction is to be computed", filter=colsNamesIdxFilter.class, displayName="Interaction columns")
   public int[] factors = new int[0];
   class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
 
-  @API(help = "Max. number of factor levels in interaction terms", required = true, filter = Default.class, lmin = 1, lmax = Integer.MAX_VALUE, json=true)
+  @API(help = "Max. number of factor levels in pair-wise interaction terms (if enforced, one extra catch-all factor will be made)", required = true, filter = Default.class, lmin = 1, lmax = Integer.MAX_VALUE, json=true)
   public int max_factors = 100;
+
+  @API(help = "Min. occurrence threshold for factor levels in pair-wise interaction terms", required = true, filter = Default.class, lmin = 1, lmax = Integer.MAX_VALUE, json=true)
+  public int min_occurrence = 1;
 
   @Override public Response serve() {
     try {
