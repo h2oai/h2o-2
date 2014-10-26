@@ -1,9 +1,7 @@
 package hex;
 
-import water.H2O;
-import water.Key;
-import water.Request2;
-import water.UKV;
+import org.codehaus.jackson.PrettyPrinter;
+import water.*;
 import water.api.DocGen;
 import water.fvec.CreateInteractions;
 import water.fvec.Frame;
@@ -34,6 +32,8 @@ public class Interaction extends Request2 {
   @API(help = "Min. occurrence threshold for factor levels in pair-wise interaction terms", required = true, filter = Default.class, lmin = 1, lmax = Integer.MAX_VALUE, json=true)
   public int min_occurrence = 1;
 
+  long _time;
+
   @Override public Response serve() {
     try {
 //      if (max_factors < 1) throw new IllegalArgumentException("max_factors must be >1.");
@@ -44,11 +44,12 @@ public class Interaction extends Request2 {
         }
       }
 
+      Timer time = new Timer();
       final CreateInteractions in = new CreateInteractions(this);
       H2O.submitTask(in);
       in.join();
-
-      Log.info("Created frame '" + target + "'.");
+      _time = time.time();
+      Log.info(report());
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -62,8 +63,15 @@ public class Interaction extends Request2 {
     }
     RString aft = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
     aft.replace("key", target);
-    DocGen.HTML.section(sb, "Feature generation done.<br/>Frame '" + aft.toString() + "' now has " + fr.numCols() + " columns.");
+    DocGen.HTML.section(sb, report() + "<br/>Frame '" + aft.toString() + "' now has " + fr.numCols() + " columns.");
     return true;
+  }
+
+  private String report() {
+    Frame res = UKV.get(Key.make(target));
+    return "Created interaction feature " + res.names()[source.numCols()]
+            + " (order: " + factors.length + ") with " + res.lastVec().domain().length + " factor levels"
+            + " in" + PrettyPrint.msecs(_time, true);
   }
 
 }
