@@ -2,7 +2,6 @@ package water.fvec;
 
 import hex.Interaction;
 import jsr166y.CountedCompleter;
-import org.apache.commons.math3.stat.inference.TestUtils;
 import water.*;
 import water.util.Log;
 import water.util.Utils;
@@ -13,10 +12,10 @@ import java.util.*;
 /**
  * Helper to create interaction features between enum columns
  */
-public class createInteractions extends H2O.H2OCountedCompleter {
+public class CreateInteractions extends H2O.H2OCountedCompleter {
 
-  public createInteractions(Interaction ci) { this(ci, null); }
-  public createInteractions(Interaction ci, Key job) { super(null); _job = job; _ci = ci; }
+  public CreateInteractions(Interaction ci) { this(ci, null); }
+  public CreateInteractions(Interaction ci, Key job) { super(null); _job = job; _ci = ci; }
 
   final private Interaction _ci;
 
@@ -84,7 +83,7 @@ public class createInteractions extends H2O.H2OCountedCompleter {
       } else break;
     }
     if (d < _sortedMap.size()) {
-      Log.info("Truncated map to " + _sortedMap.size() + " elements.");
+//      Log.info("Truncated map to " + _sortedMap.size() + " elements.");
       String[] copy = new String[d+1];
       System.arraycopy(_domain, 0, copy, 0, d);
       copy[d] = _other;
@@ -157,8 +156,6 @@ public class createInteractions extends H2O.H2OCountedCompleter {
   @Override
   public void onCompletion(CountedCompleter caller) {
     _out.update(_job);
-    Log.info("Created interaction feature " + _out.names()[_out.names().length - 1]
-            + " (order: " + _ci.factors.length + ") with " + _out.lastVec().domain().length + " factor levels.");
     _out.unlock(_job);
   }
 
@@ -209,10 +206,7 @@ private static class createInteractionDomain extends MRTask2<createInteractionDo
   public void reduce(createInteractionDomain mrt) {
     assert(mrt._unsortedMap != null);
     assert(_unsortedMap != null);
-    Utils.IcedHashMap third = new Utils.IcedHashMap<IcedLong, IcedLong>();
-    third.putAll(mrt._unsortedMap);
-    third.putAll(_unsortedMap);
-    _unsortedMap = third;
+    _unsortedMap.putAll(mrt._unsortedMap);
     mrt._unsortedMap = null;
 //    Log.info("Merged hash tables");
 //    Log.info(java.util.Arrays.deepToString(_unsortedMap.entrySet().toArray()));
