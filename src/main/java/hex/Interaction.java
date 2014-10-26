@@ -5,8 +5,8 @@ import water.Key;
 import water.Request2;
 import water.UKV;
 import water.api.DocGen;
+import water.fvec.CreateInteractions;
 import water.fvec.Frame;
-import water.fvec.createInteractions;
 import water.util.Log;
 import water.util.RString;
 
@@ -44,7 +44,7 @@ public class Interaction extends Request2 {
         }
       }
 
-      final createInteractions in = new createInteractions(this);
+      final CreateInteractions in = new CreateInteractions(this);
       H2O.submitTask(in);
       in.join();
 
