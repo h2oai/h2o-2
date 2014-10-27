@@ -109,9 +109,11 @@ public class createInteractions extends H2O.H2OCountedCompleter {
 
     Frame _out = null;
     ArrayList<int[]> al = new ArrayList<int[]>();
-    if (!_ci.pairwise) {
+    if (!_ci.pairwise || _ci.factors.length < 3) {
       al.add(_ci.factors);
-    } else {
+    }
+    else {
+      // pair-wise
       for (int i=0; i<_ci.factors.length; ++i)  {
         for (int j=i+1; j<_ci.factors.length; ++j) {
           al.add(new int[]{_ci.factors[i], _ci.factors[j]});
