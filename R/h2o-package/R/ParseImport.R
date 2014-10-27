@@ -124,9 +124,8 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   .h2o.exec2(expr = key, h2o = object, dest_key = key)
 }
 
-h2o.interaction <- function(data, key, factors, max_factors, min_occurrence) {
+h2o.interaction <- function(data, key=NULL, factors, max_factors, min_occurrence) {
   if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
-  if(missing(key)) stop("destination key must be specified")
   if(missing(factors)) stop("factors must be specified")
   if(missing(max_factors)) stop("max_factors must be specified")
   if(missing(min_occurrence)) stop("min_occurrence must be specified")
@@ -139,7 +138,7 @@ h2o.interaction <- function(data, key, factors, max_factors, min_occurrence) {
 
   factors <- factors - 1 # make 0-based for Java
   res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_Interaction, source = data@key, target = key, factors = factors, max_factors = max_factors, min_occurrence = min_occurrence)
-  h2o.getFrame(data@h2o, key)
+  h2o.getFrame(data@h2o, res$target)
 }
 
 h2o.rebalance <- function(data, chunks, key) {

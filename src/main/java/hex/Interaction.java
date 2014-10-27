@@ -18,7 +18,7 @@ public class Interaction extends Request2 {
   @API(help = "Input data frame", required = true, filter = Default.class, json=true)
   public Frame source;
 
-  @API(help = "Output data frame", required = true, filter = Default.class, json=true)
+  @API(help = "Output data frame, containing the interaction vector", required = false, filter = Default.class, json=true)
   public String target;
 
   @API(help = "Column indices (0-based) of factors for which interaction is to be computed", filter=colsNamesIdxFilter.class, displayName="Interaction columns")
@@ -42,6 +42,13 @@ public class Interaction extends Request2 {
           throw new IllegalArgumentException("Column " + source.names()[v] + " is not a factor.");
         }
       }
+      if (target == null) {
+        target = source._key.toString() + ".interaction.";
+        target += "C" + factors[0];
+        for (int i=1; i<factors.length; ++i) {
+          target += "_C" + factors[i];
+        }
+      }
 
       Timer time = new Timer();
       final createInteractions in = new createInteractions(this);
@@ -62,13 +69,13 @@ public class Interaction extends Request2 {
     }
     RString aft = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
     aft.replace("key", target);
-    DocGen.HTML.section(sb, report() + "<br/>Frame '" + aft.toString() + "' now has " + fr.numCols() + " columns.");
+    DocGen.HTML.section(sb, report() + "<br/>Frame '" + aft.toString() + "' contains the interaction feature.");
     return true;
   }
 
   private String report() {
     Frame res = UKV.get(Key.make(target));
-    return "Created interaction feature " + res.names()[source.numCols()]
+    return "Created interaction feature " + res.names()[0]
             + " (order: " + factors.length + ") with " + res.lastVec().domain().length + " factor levels"
             + " in" + PrettyPrint.msecs(_time, true);
   }

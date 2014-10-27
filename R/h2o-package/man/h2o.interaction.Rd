@@ -29,8 +29,11 @@ myframe = h2o.createFrame(localH2O, 'myframekey', rows = 20, cols = 5,
                           categorical_fraction = 1.0, factors = 5, real_range = 1,
                           integer_fraction = 0, integer_range = 1, missing_fraction = 0.1,
                           response_factors = 1)[,-1]
-myframe.interaction <- h2o.interaction(myframe, 'interaction.key', factors = c(3,1), max_factors = 10, min_occurrence = 1)
-head(myframe.interaction,20)
-summary(myframe.interaction)
+interaction <- h2o.interaction(myframe, factors = c(3,1), max_factors = 10, min_occurrence = 1)
+head(interaction, 20)
+myframe <- cbind(myframe, interaction)
+names(myframe)[ncol(myframe)] <- names(interaction)
+head(myframe,20)
+summary(myframe)
 h2o.shutdown(localH2O)
 }

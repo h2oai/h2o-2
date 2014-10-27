@@ -42,20 +42,21 @@ public class createInteractions extends H2O.H2OCountedCompleter {
     return sortedMap;
   }
 
-  protected String[] makeDomain(Map<IcedLong, IcedLong> unsortedMap, int _i, int _j) {
+  // Create a combined domain from the enum values that map to domain A and domain B
+  // Both enum integers are combined into a long = (int,int), and the unsortedMap keeps the occurrence count for each pair-wise interaction
+  protected String[] makeDomain(Map<IcedLong, IcedLong> unsortedMap, String[] dA, String[] dB) {
     String[] _domain;
-    Frame _fr = _out;
 //    Log.info("Collected hash table");
 //    Log.info(java.util.Arrays.deepToString(unsortedMap.entrySet().toArray()));
 
-//    Log.info("Interaction between " + _fr.domains()[_i].length + " and " + _fr.domains()[_j].length + " factor levels => " +
-//            ((long)_fr.domains()[_i].length * (long)_fr.domains()[_j].length) + " possible factors.");
+//    Log.info("Interaction between " + dA.length + " and " + dB.length + " factor levels => " +
+//            ((long)dA.length * dB.length) + " possible factors.");
 
     _sortedMap = mySort(unsortedMap);
 
     // create domain of the most frequent unique factors
     long factorCount = 0;
-//    Log.info("Found " + _sortedMap.size() + " unique interaction factors (out of " + ((long)_fr.domains()[_i].length * (long)_fr.domains()[_j].length) + ").");
+//    Log.info("Found " + _sortedMap.size() + " unique interaction factors (out of " + ((long)dA.length * (long)dB.length) + ").");
     _domain = new String[_sortedMap.size()]; //TODO: use ArrayList here, then convert to array
     Iterator it2 = _sortedMap.entrySet().iterator();
     int d = 0;
@@ -67,13 +68,13 @@ public class createInteractions extends H2O.H2OCountedCompleter {
         factorCount++;
         // extract the two original factor enums
         String feature = "";
-        if (_j != _i) {
+        if (dA != dB) {
           int a = (int)(ab >> 32);
-          final String fA = a != _missing ? _fr.domains()[_i][a] : "NA";
+          final String fA = a != _missing ? dA[a] : "NA";
           feature = fA + "_";
         }
         int b = (int) ab;
-        String fB = b != _missing ? _fr.domains()[_j][b] : "NA";
+        String fB = b != _missing ? dB[b] : "NA";
         feature += fB;
 
 //        Log.info("Adding interaction feature " + feature + ", occurrence count: " + count);
@@ -104,52 +105,66 @@ public class createInteractions extends H2O.H2OCountedCompleter {
   @Override
   public void compute2() {
     // base frame - same as source
-    DKV.remove(Key.make(_ci.target));//shouldn't be needed, but this avoids missing chunk issues
-    _out = new Frame(Key.make(_ci.target), _ci.source.names().clone(), _ci.source.vecs().clone());
-    _out.delete_and_lock(_job);
+    DKV.remove(Key.make(_ci.target));
 
-    int idx1 = _ci.factors[0];
-    Vec tmp = null;
-    int start = _ci.factors.length == 1 ? 0 : 1;
-    for (int i=start; i<_ci.factors.length; ++i) {
-      if (i>1) {
-        idx1 = _out.find(tmp);
-        assert idx1 >= 0;
-      }
-      int idx2 = _ci.factors[i];
+    _ci.source.read_lock(_job);
+    try {
+      int idx1 = _ci.factors[0];
+      Vec tmp = null;
+      int start = _ci.factors.length == 1 ? 0 : 1;
+      for (int i = start; i < _ci.factors.length; ++i) {
+        String name;
+        int idx2 = _ci.factors[i];
+        if (i > 1) {
+          idx1 = _out.find(tmp);
+          assert idx1 >= 0;
+          name = _out._names[idx1] + "_" + _ci.source._names[idx2];
+        } else {
+          name = _ci.source._names[idx1] + "_" + _ci.source._names[idx2];
+        }
 //      Log.info("Combining columns " + idx1 + " and " + idx2);
+        final Vec A = i > 1 ? _out.vecs()[idx1] : _ci.source.vecs()[idx1];
+        final Vec B = _ci.source.vecs()[idx2];
 
-      // Pass 1: compute unique domains of all interaction features
-      createInteractionDomain pass1 = new createInteractionDomain(idx1, idx2).doAll(_out);
+        // Pass 1: compute unique domains of all interaction features
+        createInteractionDomain pass1 = new createInteractionDomain(idx1 == idx2).doAll(A, B);
 
-      // Create a new Vec based on the domain
-      final String name = _out._names[idx1] + "_" + _out._names[idx2];
-      final Vec vec = _out.anyVec().makeZero(makeDomain(pass1._unsortedMap, idx1, idx2));
-      _out.add(name, vec);
-      _out.update(_job);
+        // Create a new Vec based on the domain
+        final Vec vec = _ci.source.anyVec().makeZero(makeDomain(pass1._unsortedMap, A.domain(), B.domain()));
+        if (i > 1) {
+          _out.add(name, vec);
+          _out.update(_job);
+        } else {
+          _out = new Frame(Key.make(_ci.target), new String[]{name}, new Vec[]{vec});
+          _out.delete_and_lock(_job);
+        }
+        final Vec C = _out.lastVec();
 
-      // Create array of enum pairs, in the same (sorted) order as in the _domain map -> for linear lookup
-      // Note: "other" is not mapped in keys, so keys.length can be 1 less than domain.length
-      long[] keys = new long[_sortedMap.size()];
-      int pos = 0;
-      for (long k : _sortedMap.keySet()) {
-        keys[pos++] = k;
-      }
-      assert(_out.lastVec().domain().length == keys.length || _out.lastVec().domain().length == keys.length + 1); // domain might contain _other
+        // Create array of enum pairs, in the same (sorted) order as in the _domain map -> for linear lookup
+        // Note: "other" is not mapped in keys, so keys.length can be 1 less than domain.length
+        long[] keys = new long[_sortedMap.size()];
+        int pos = 0;
+        for (long k : _sortedMap.keySet()) {
+          keys[pos++] = k;
+        }
+        assert (C.domain().length == keys.length || C.domain().length == keys.length + 1); // domain might contain _other
 
-      // Pass 2: fill Vec values
-      new fillInteractionEnums(idx1, idx2, keys).doAll(_out);
-      tmp = _out.lastVec();
+        // Pass 2: fill Vec values
+        new fillInteractionEnums(idx1 == idx2, keys).doAll(A, B, C);
+        tmp = C;
 
-      // remove temporary vec
-      if (i>1) {
-        final int idx = _out.vecs().length-2; //second-last vec
+        // remove temporary vec
+        if (i > 1) {
+          final int idx = _out.vecs().length - 2; //second-last vec
 //        Log.info("Removing column " + _out._names[idx]);
-        _out.remove(idx);
-        _out.update(_job);
+          _out.remove(idx);
+          _out.update(_job);
+        }
       }
+      tryComplete();
+    } finally {
+      _ci.source.unlock(_job);
     }
-    tryComplete();
   }
 
   @Override
@@ -164,23 +179,22 @@ public class createInteractions extends H2O.H2OCountedCompleter {
 // Create interaction domain
 private static class createInteractionDomain extends MRTask2<createInteractionDomain> {
   // INPUT
-  final private int _i;
-  final private int _j;
+  final private boolean _same;
 
   // OUTPUT
   private Utils.IcedHashMap<IcedLong, IcedLong> _unsortedMap = null;
 
-  public createInteractionDomain(int i, int j) { _i = i; _j = j; }
+  public createInteractionDomain(boolean same) { _same = same; }
 
   @Override
-  public void map(Chunk[] cs) {
+  public void map(Chunk A, Chunk B) {
     _unsortedMap = new Utils.IcedHashMap<IcedLong, IcedLong>();
     // find unique interaction domain
-    for (int r = 0; r < cs[0]._len; r++) {
-      int a = cs[_i].isNA0(r) ? _missing : (int)cs[_i].at80(r);
+    for (int r = 0; r < A._len; r++) {
+      int a = A.isNA0(r) ? _missing : (int)A.at80(r);
       long ab;
-      if (_j != _i) {
-        int b = cs[_j].isNA0(r) ? _missing : (int) cs[_j].at80(r);
+      if (!_same) {
+        int b = B.isNA0(r) ? _missing : (int)B.at80(r);
 
         // key: combine both ints into a long
         ab = ((long) a << 32) | (b & 0xFFFFFFFFL);
@@ -215,13 +229,12 @@ private static class createInteractionDomain extends MRTask2<createInteractionDo
   // Fill interaction enums in last Vec in Frame
   private static class fillInteractionEnums extends MRTask2<fillInteractionEnums> {
     // INPUT
-    final private int _i;
-    final private int _j;
+    boolean _same;
     final long[] _keys; //minimum information to be sent over the wire
     transient private java.util.List<java.util.Map.Entry<Long,Integer>> _valToIndex; //node-local shared helper for binary search
 
-    public fillInteractionEnums(int i, int j, long[] keys) {
-      _i = i; _j = j; _keys = keys;
+    public fillInteractionEnums(boolean same, long[] keys) {
+      _same = same; _keys = keys;
     }
 
     @Override
@@ -238,20 +251,20 @@ private static class createInteractionDomain extends MRTask2<createInteractionDo
     }
 
     @Override
-    public void map(Chunk[] cs) {
+    public void map(Chunk A, Chunk B, Chunk C) {
       // find unique interaction domain
-      for (int r = 0; r < cs[0]._len; r++) {
-        final int a = cs[_i].isNA0(r) ? _missing : (int)cs[_i].at80(r);
+      for (int r = 0; r < A._len; r++) {
+        final int a = A.isNA0(r) ? _missing : (int)A.at80(r);
         long ab;
-        if (_j != _i) {
-          final int b = cs[_j].isNA0(r) ? _missing : (int) cs[_j].at80(r);
+        if (!_same) {
+          final int b = B.isNA0(r) ? _missing : (int) B.at80(r);
           ab = ((long) a << 32) | (b & 0xFFFFFFFFL); // key: combine both ints into a long
         } else {
           ab = (long)a;
         }
 
-        if (_i == _j && cs[_i].isNA0(r)) {
-          cs[cs.length - 1].setNA0(r);
+        if (_same && A.isNA0(r)) {
+          C.setNA0(r);
         } else {
           // find _domain index for given factor level ab
           int level = -1;
@@ -269,7 +282,7 @@ private static class createInteractionDomain extends MRTask2<createInteractionDo
             level = _fr.lastVec().domain().length-1;
             assert _fr.lastVec().domain()[level].equals(_other);
           }
-          cs[cs.length - 1].set0(r, level);
+          C.set0(r, level);
         }
       }
     }
