@@ -1,9 +1,8 @@
 package hex;
 
-import org.codehaus.jackson.PrettyPrinter;
 import water.*;
 import water.api.DocGen;
-import water.fvec.CreateInteractions;
+import water.fvec.createInteractions;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
@@ -45,7 +44,7 @@ public class Interaction extends Request2 {
       }
 
       Timer time = new Timer();
-      final CreateInteractions in = new CreateInteractions(this);
+      final createInteractions in = new createInteractions(this);
       H2O.submitTask(in);
       in.join();
       _time = time.time();

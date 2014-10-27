@@ -3,7 +3,6 @@ package water.fvec;
 import hex.Interaction;
 import jsr166y.CountedCompleter;
 import water.*;
-import water.util.Log;
 import water.util.Utils;
 import static water.util.Utils.IcedLong;
 
@@ -12,10 +11,10 @@ import java.util.*;
 /**
  * Helper to create interaction features between enum columns
  */
-public class CreateInteractions extends H2O.H2OCountedCompleter {
+public class createInteractions extends H2O.H2OCountedCompleter {
 
-  public CreateInteractions(Interaction ci) { this(ci, null); }
-  public CreateInteractions(Interaction ci, Key job) { super(null); _job = job; _ci = ci; }
+  public createInteractions(Interaction ci) { this(ci, null); }
+  public createInteractions(Interaction ci, Key job) { super(null); _job = job; _ci = ci; }
 
   final private Interaction _ci;
 
@@ -218,10 +217,24 @@ private static class createInteractionDomain extends MRTask2<createInteractionDo
     // INPUT
     final private int _i;
     final private int _j;
-    final long[] _keys; //mapping of combined long to index in _domain, for linear search
+    final long[] _keys; //minimum information to be sent over the wire
+    transient private java.util.List<java.util.Map.Entry<Long,Integer>> _valToIndex; //node-local shared helper for binary search
 
     public fillInteractionEnums(int i, int j, long[] keys) {
       _i = i; _j = j; _keys = keys;
+    }
+
+    @Override
+    protected void setupLocal() {
+      // turn _keys into a sorted array of pairs
+      _valToIndex = new java.util.ArrayList<Map.Entry<Long,Integer>>(); // map factor level (int,int) to domain index (long)
+      for (int i=0;i<_keys.length;++i) {
+        _valToIndex.add(new AbstractMap.SimpleEntry<Long, Integer>(_keys[i], i));
+      }
+      // sort by key (the factor level)
+      Collections.sort(_valToIndex, new Comparator<Map.Entry<Long, Integer>>() {
+        @Override public int compare(Map.Entry<Long, Integer> o1, Map.Entry<Long, Integer> o2) { return o1.getKey().compareTo(o2.getKey()); }
+      });
     }
 
     @Override
@@ -240,17 +253,21 @@ private static class createInteractionDomain extends MRTask2<createInteractionDo
         if (_i == _j && cs[_i].isNA0(r)) {
           cs[cs.length - 1].setNA0(r);
         } else {
-          // linear search in sorted array of factor levels (descending by occurrence), should be fastest for most small domains
+          // find _domain index for given factor level ab
           int level = -1;
-          for (int i = 0; i < _keys.length; ++i) {
-            if (ab == _keys[i]) {
-              level = i;
-              break;
-            }
+          int pos = Collections.binarySearch(_valToIndex, new AbstractMap.SimpleEntry<Long,Integer>(ab,0), new Comparator<Map.Entry<Long, Integer>>() {
+            @Override public int compare(Map.Entry<Long, Integer> o1, Map.Entry<Long, Integer> o2) { return o1.getKey().compareTo(o2.getKey()); }
+          });
+          if (pos >= 0) {
+            level = _valToIndex.get(pos).getValue();
+            assert _keys[level] == ab; //confirm that binary search in _valToIndex worked
           }
-          if (level == -1) {
+          if (level < 0) {
+            for (int i=0; i<_keys.length; ++i) {
+              assert (_keys[i] != ab);
+            }
             level = _fr.lastVec().domain().length-1;
-            assert _fr.lastVec().domain()[level] == _other;
+            assert _fr.lastVec().domain()[level].equals(_other);
           }
           cs[cs.length - 1].set0(r, level);
         }
