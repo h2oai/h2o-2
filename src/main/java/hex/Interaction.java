@@ -11,7 +11,7 @@ import water.util.RString;
 /**
  * Create new factors that represent interactions of the given factors
  */
-public class Interaction extends Request2 {
+public class Interaction extends Job {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -35,6 +35,7 @@ public class Interaction extends Request2 {
 
   @Override public Response serve() {
     try {
+      source.read_lock(self());
 //      if (max_factors < 1) throw new IllegalArgumentException("max_factors must be >1.");
       if (factors.length == 0) throw new IllegalArgumentException("factors must be non-empty.");
       for (int v: factors) {
@@ -59,6 +60,8 @@ public class Interaction extends Request2 {
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
+    } finally {
+      source.unlock(self());
     }
   }
 
