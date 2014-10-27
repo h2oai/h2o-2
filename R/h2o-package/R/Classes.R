@@ -1061,7 +1061,6 @@ cbind.H2OParsedData <- function(..., deparse.level = 1) {
   if(!compatible){ stop(paste('cbind: all elements must be of type', klass, 'and in the same H2O instance'))}
   
   # If cbind(x,x), dupe colnames will automatically be renamed by H2O
-  # TODO: cbind(df[,1], df[,2]) should retain colnames of original data frame (not temp keys from slice)
   if(is.null(names(l)))
     tmp <- Map(function(x) x@key, l)
   else
