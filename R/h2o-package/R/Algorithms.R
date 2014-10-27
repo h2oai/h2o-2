@@ -23,29 +23,34 @@ h2o.coxph.control <- function(lre = 9, iter.max = 20, ...)
 
   list(lre = lre, iter.max = as.integer(iter.max))
 }
-h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
+h2o.coxph <- function(x, y, data, key = "", weights, ties = c("efron", "breslow"),
                       init = 0, control = h2o.coxph.control(...), ...)
 {
   if (!is(data, "H2OParsedData"))
     stop("'data' must be an H2O parsed dataset")
 
   cnames <- colnames(data)
-  if (!is.character(x) || length(x) != 1L || !(x %in% cnames))
-    stop("'x' must be a character string specifying a column name from 'data'")
+  if (!is.character(x) || !all(x %in% cnames))
+    stop("'x' must be a character vector specifying column names from 'data'")
 
   ny <- length(y)
   if (!is.character(y) || ny < 2L || ny > 3L || !all(y %in% cnames))
     stop("'y' must be a character vector of column names from 'data' ",
          "specifying a (start, stop, event) triplet or (stop, event) couplet")
 
+  useWeights <- !missing(weights)
+  if (useWeights) {
+    if (!is.character(weights) || length(weights) != 1L || !(weights %in% cnames))
+      stop("'weights' must be missing or a character string specifying a column name from 'data'")
+  } else
+    weights <- NULL
+
   if (!is.character(key) && length(key) == 1L)
     stop("'key' must be a character string")
   if (nchar(key) > 0 && !grepl("^[a-zA-Z_][a-zA-Z0-9_.]*$", key))
     stop("'key' must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
-  if (!nzchar(key)) {
-    key <- sprintf("Last.coxph.%d", .pkg.env$temp_count)
-    .pkg.env$temp_count <- (.pkg.env$temp_count + 1) %% .RESULT_MAX
-  }
+  if (!nzchar(key))
+    key <- .h2o.__uniqID("CoxPHModel")
 
   ties <- match.arg(ties)
 
@@ -53,74 +58,76 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
     stop("'init' must be a numeric vector containing finite coefficient starting values")
 
   job <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPH,
-                           destination_key  = key,
-                           source           = data@key,
-                           use_start_column = as.integer(ny == 3L),
-                           start_column     = y[1L],
-                           stop_column      = y[ny - 1L],
-                           event_column     = y[ny],
-                           x_column         = x,
-                           ties             = ties,
-                           init             = init,
-                           lre_min          = control$lre,
-                           iter_max         = control$iter.max)
+                           destination_key = key,
+                           source          = data@key,
+                           start_column    = if (ny == 3L) y[1L] else NULL,
+                           stop_column     = y[ny - 1L],
+                           event_column    = y[ny],
+                           x_columns       = match(x, cnames) - 1L,
+                           weights_column  = weights,
+                           ties            = ties,
+                           init            = init,
+                           lre_min         = control$lre,
+                           iter_max        = control$iter.max)
   job_key  <- job$job_key
   dest_key <- job$destination_key
   .h2o.__waitOnJob(data@h2o, job_key)
   res      <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CoxPHModelView,
                                 '_modelKey' = dest_key)
+  df <- length(res[[3]]$coef)
+  coef_names <- res[[3L]]$coef_names
   mcall <- match.call()
   model <-
-    list(coefficients = structure(res[[3L]]$coef, names = x),
-         var          = matrix(res[[3L]]$var, 1L, 1L),
+    list(coefficients = structure(res[[3L]]$coef, names = coef_names),
+         var          = do.call(rbind, as.list(res[[3L]]$var_coef)),
          loglik       = c(res[[3L]]$null_loglik, res[[3L]]$loglik),
          score        = res[[3L]]$score_test,
          iter         = res[[3L]]$iter,
-         means        = structure(res[[3L]]$x_mean, names = x),
+         means        = structure(c(unlist(res[[3L]]$x_mean_cat),
+                                    unlist(res[[3L]]$x_mean_num)),
+                                  names = coef_names),
          method       = ties,
          n            = res[[3L]]$n,
          nevent       = res[[3L]]$total_event,
-         wald.test    = structure(res[[3L]]$wald_test, names = x),
+         wald.test    = structure(res[[3L]]$wald_test,
+                                  names = if (df == 1L) coef_names else NULL),
          call         = mcall)
   summary <-
     list(call         = mcall,
          n            = model$n,
          loglik       = model$loglik,
          nevent       = model$nevent,
-         coefficients = matrix(c(res[[3L]]$coef,  res[[3L]]$exp_coef,
-                                 res[[3L]]$se_coef, res[[3L]]$z_coef, NA_real_),
-                               nrow = 1L, ncol = 5L,
-                               dimnames =
-                               list(x,
-                                    c("coef", "exp(coef)", "se(coef)",
-                                      "z", "Pr(>|z|)"))),
-         conf.int     = matrix(c(res[[3L]]$exp_coef, res[[3L]]$exp_neg_coef,
-                                 NA_real_, NA_real_),
-                               nrow = 1L, ncol = 4L,
-                               dimnames =
-                               list(x,
-                               c("exp(coef)", "exp(-coef)",
-                                 "lower .95", "upper .95"))),
-         logtest      = c(test = res[[3L]]$loglik_test, df = 1, pvalue = NA_real_),
-         sctest       = c(test = res[[3L]]$score_test,  df = 1, pvalue = NA_real_),
+         coefficients = structure(cbind(res[[3L]]$coef,    res[[3L]]$exp_coef,
+                                        res[[3L]]$se_coef, res[[3L]]$z_coef,
+                                        1 - pchisq(res[[3L]]$z_coef^2, 1)),
+                                  dimnames =
+                                  list(coef_names,
+                                       c("coef", "exp(coef)", "se(coef)",
+                                         "z", "Pr(>|z|)"))),
+         conf.int     = NULL,
+         logtest      = c(test = res[[3L]]$loglik_test, df = df,
+                          pvalue = 1 - pchisq(res[[3L]]$loglik_test, df)),
+         sctest       = c(test = res[[3L]]$score_test,  df = df,
+                          pvalue = 1 - pchisq(res[[3L]]$score_test, df)),
          rsq          = c(rsq  = res[[3L]]$rsq,     maxrsq = res[[3L]]$maxrsq),
-         waldtest     = c(test = res[[3L]]$wald_test,   df = 1, pvalue = NA_real_),
+         waldtest     = c(test = res[[3L]]$wald_test,   df = df,
+                          pvalue = 1 - pchisq(res[[3L]]$wald_test, df)),
          used.robust  = FALSE)
-  ok <- which((res[[3L]]$n_event + res[[3L]]$n_censor) > 0L)
   survfit <-
     list(n            = model$n,
-         time         = (res[[3L]]$min_time:res[[3L]]$max_time)[ok],
-         n.risk       = res[[3L]]$n_risk[ok],
-         n.event      = res[[3L]]$n_event[ok],
-         n.censor     = res[[3L]]$n_censor[ok],
-         surv         = res[[3L]]$surv[ok],
+         time         = res[[3L]]$time,
+         n.risk       = res[[3L]]$n_risk,
+         n.event      = res[[3L]]$n_event,
+         n.censor     = res[[3L]]$n_censor,
+         surv         = NULL,
          type         = ifelse(ny == 2L, "right", "counting"),
-         cumhaz       = res[[3L]]$cumhaz[ok],
-         std.err      = res[[3L]]$se_cumhaz[ok],
+         cumhaz       = NULL,
+         std.err      = NULL,
          upper        = NULL,
          lower        = NULL,
          conf.type    = NULL,
-         conf.int     = NULL)
+         conf.int     = NULL,
+         call         = NULL)
   new("H2OCoxPHModel", key = key, data = data, model = model,
       summary = summary, survfit = survfit)
 }
@@ -128,7 +135,7 @@ h2o.coxph <- function(x, y, data, key = "", ties = c("efron", "breslow"),
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
-                    n.bins = 100, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
+                    n.bins = 20, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
   args <- .verify_dataxy(data, x, y)
   
   if(!is.character(key)) stop("key must be of class character")
@@ -165,9 +172,9 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
   cols = paste(args$x_i - 1, collapse=",")
   if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation
-    validation = data
+#    validation = data
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
-                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=data@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
                             min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
@@ -594,7 +601,9 @@ h2o.deeplearning <- function(x, y, data, key = "",
                              single_node_mode,
                              shuffle_training_data,
                              sparse,
-                             col_major
+                             col_major,
+                             max_categorical_features,
+                             reproducible
                              # ----- AUTOGENERATED PARAMETERS END -----
 )
 {
@@ -696,6 +705,8 @@ h2o.deeplearning <- function(x, y, data, key = "",
   parms = .addBooleanParm(parms, k="shuffle_training_data", v=shuffle_training_data)
   parms = .addBooleanParm(parms, k="sparse", v=sparse)
   parms = .addBooleanParm(parms, k="col_major", v=col_major)
+  parms = .addIntParm(parms, k="max_categorical_features", v=max_categorical_features)
+  parms = .addBooleanParm(parms, k="reproducible", v=reproducible)
   # ----- AUTOGENERATED PARAMETERS END -----
   
   res = .h2o.__remoteSendWithParms(data@h2o, .h2o.__PAGE_DeepLearning, parms)
@@ -716,7 +727,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
   noGrid <- noGrid && (missing(override_with_best_model) || length(override_with_best_model) == 1)
   noGrid <- noGrid && (missing(seed) || length(seed) == 1)
   noGrid <- noGrid && (missing(input_dropout_ratio) || length(input_dropout_ratio) == 1)
-  noGrid <- noGrid && (missing(hidden_dropout_ratios) || length(hidden_dropout_ratios) == 1)
+  noGrid <- noGrid && (missing(hidden_dropout_ratios) || (!is.list(hidden_dropout_ratios) && length(hidden_dropout_ratios) > 1))
   noGrid <- noGrid && (missing(max_w2) || length(max_w2) == 1)
   noGrid <- noGrid && (missing(initial_weight_distribution) || length(initial_weight_distribution) == 1)
   noGrid <- noGrid && (missing(initial_weight_scale) || length(initial_weight_scale) == 1)
@@ -725,6 +736,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
   noGrid <- noGrid && (missing(max_after_balance_size) || length(max_after_balance_size) == 1)
   noGrid <- noGrid && (missing(fast_mode) || length(fast_mode) == 1)
   noGrid <- noGrid && (missing(shuffle_training_data) || length(shuffle_training_data) == 1)
+  noGrid <- noGrid && (missing(max_categorical_features) || length(max_categorical_features) == 1)
   if(noGrid)
     .h2o.singlerun.internal("DeepLearning", data, res, nfolds, validation, parms)
   else {
@@ -979,7 +991,7 @@ h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.
 
 # ----------------------------------- Random Forest --------------------------------- #
 h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, depth=20, mtries = -1, sample.rate=2/3,
-                             nbins=100, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1,
+                             nbins=20, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1,
                              balance.classes=FALSE, max.after.balance.size=5, doGrpSplit=TRUE, verbose = FALSE,
                              oobee = TRUE, stat.type = "ENTROPY", type = "fast") {
   if (type == "fast") {
@@ -1020,17 +1032,16 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
   cols <- paste(args$x_i - 1, collapse=',')
   if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation
-    validation = data
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, mtries = mtries, seed=seed, importance=as.numeric(importance),
-                            classification=as.numeric(classification), validation=data@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
+                            classification=as.numeric(classification), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
                             classification=as.numeric(classification), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
   } else if(!missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), 
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
                             classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, ntree=ntree, mtries = mtries, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, nodesize=nodesize, h2o = data@h2o)
+  params = list(x=args$x, y=args$y, type="BigData", ntree=ntree, mtries = mtries, depth=depth, nbins=nbins, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, nodesize=nodesize, h2o = data@h2o)
   
   if(.is_singlerun("RF", params))
     .h2o.singlerun.internal("RF", data, res, nfolds, validation, params)
@@ -1047,7 +1058,7 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
   mySum$nbins = res$nbins
   mySum$balance_classes = res$balance_classes
   mySum$max_after_balance_size = res$max_after_balance_size
-  
+
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
   mySum$prediction_error = tail(res$'cms', 1)[[1]]$'_predErr'
@@ -1111,6 +1122,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
     ) {
   nbins <- max(nbins, 1024)
   args <- .verify_dataxy(data, x, y)
+  if(!classification) stop("Use type = \"BigData\" for random forest regression.")
   if(!is.character(key)) stop("key must be of class character")
   if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
     stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
@@ -1135,26 +1147,26 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
   if(!is.logical(verbose)) stop("verbose must be a logical value")
 
   if (missing(validation) && nfolds == 0 && oobee) {
-    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, importance=as.numeric(importance),
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, importance=as.numeric(importance),
                                 sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
 
   } else if(missing(validation) && nfolds >= 2 && oobee) {
-        res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
+        res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, mtries = mtries, n_folds=nfolds, importance=as.numeric(importance),
                                 sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
 
   } else if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation if oobee is false...
-    validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, validation=data@key, importance=as.numeric(importance),
+#    validation = data
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, importance=as.numeric(importance),
                             sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else if(missing(validation) && nfolds >= 2) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, mtries = mtries, n_folds=nfolds, importance=as.numeric(importance),
                             sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else if(!missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, validation=validation@key, importance=as.numeric(importance),
                             sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes),
+  params = list(x=args$x, y=args$y, type="fast", ntree=ntree, depth=depth, mtries=mtries, sample.rate=sample.rate, nbins=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes),
                 sampling_strategy="RANDOM", seed=seed, oobee=oobee, nfolds=nfolds, importance=importance, verbose = as.numeric(verbose), h2o = data@h2o)
   
   if(.is_singlerun("SpeeDRF", params))
@@ -1249,10 +1261,12 @@ h2o.predict <- function(object, newdata) {
   if( missing(newdata) ) newdata <- object@data
   if(class(newdata) != "H2OParsedData") stop('newdata must be a H2O dataset')
   
-  if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2ONBModel", "H2ODeepLearningModel", "H2OSpeeDRFModel")) {
+  if(class(object) %in% c("H2OCoxPHModel", "H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2ONBModel",
+                          "H2ODeepLearningModel", "H2OSpeeDRFModel")) {
     # Set randomized prediction key
-    key_prefix = switch(class(object), "H2OGBMModel" = "GBMPredict", "H2OKMeansModel" = "KMeansPredict",
-                        "H2ODRFModel" = "DRFPredict", "H2OGLMModel" = "GLM2Predict", "H2ONBModel" = "NBPredict",
+    key_prefix = switch(class(object), "H2OCoxPHModel" = "CoxPHPredict", "H2OGBMModel" = "GBMPredict",
+                        "H2OKMeansModel" = "KMeansPredict", "H2ODRFModel" = "DRFPredict",
+                        "H2OGLMModel" = "GLM2Predict", "H2ONBModel" = "NBPredict",
                         "H2ODeepLearningModel" = "DeepLearningPredict", "H2OSpeeDRFModel" = "SpeeDRFPredict")
     rand_pred_key = .h2o.__uniqID(key_prefix)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)

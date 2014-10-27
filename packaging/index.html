@@ -188,20 +188,35 @@
         var zipPanel = document.getElementById('quickstart-zip');
         var rTab = document.getElementById('quickstart-r-tab');
         var rPanel = document.getElementById('quickstart-r');
+        var hadoopTab = document.getElementById('quickstart-hadoop-tab');
+        var hadoopPanel = document.getElementById('quickstart-hadoop');
         var showZipTab = function() {
           zipPanel.style.display = 'block';
           zipTab.className = 'active';
           rPanel.style.display = 'none';
           rTab.className = '';
+          hadoopPanel.style.display = 'none';
+          hadoopTab.className = '';
         };
         var showRTab = function() {
           rPanel.style.display = 'block';
           rTab.className = 'active';
           zipPanel.style.display = 'none';
           zipTab.className = '';
+          hadoopPanel.style.display = 'none';
+          hadoopTab.className = '';
+        };
+        var showHadoopTab = function(){
+          hadoopPanel.style.display = 'block';
+          hadoopTab.className = 'active';
+          rPanel.style.display = 'none';
+          rTab.className = '';
+          zipPanel.style.display = 'none';
+          zipTab.className = '';
         };
         zipTab.onclick = showZipTab
         rTab.onclick = showRTab
+        hadoopTab.onclick = showHadoopTab
         var hash = window.location.hash;
         if(hash && hash.indexOf('#R') == 0) {
           showRTab();
@@ -237,6 +252,7 @@
         <div id="tabs">
           &nbsp; <span id="quickstart-zip-tab" class="active">Download and Run</span>
           <span id="quickstart-r-tab">Install in R</span>
+          <span id = "quickstart-hadoop-tab">Install on Hadoop</span>
         </div>
         <div id="panels">
           <div id="quickstart-zip">
@@ -250,7 +266,7 @@
               cd ~/Downloads<br/>
               unzip h2o-SUBST_PROJECT_VERSION.zip<br/>
               cd h2o-SUBST_PROJECT_VERSION<br/>
-              java -Xmx1g -jar h2o.jar<br/>
+              java -jar h2o.jar<br/>
             </p>
             <p>3. Point your browser to <a href="http://localhost:54321/" target="_blank">http://localhost:54321</a>
           </div>
@@ -268,12 +284,27 @@
               <em># Finally, let's run a demo to see H<sub>2</sub>O at work.</em><br/>
               demo(h2o.glm)
           </div>
+          <div id="quickstart-hadoop" style="display:none">
+            <h2>Run H<sub>2</sub>O on Hadoop in just 3 steps.</h2>
+            <p>1. Download H<sub>2</sub>O. This is a zip file that contains everything you need to get started.</p>
+            <p class="terminal">
+                wget <script type="text/javascript">var url = location.href; var url2 = url.substring(0, url.lastIndexOf("/")); document.write(url2);</script>/h2o-SUBST_PROJECT_VERSION.zip
+            </p>
+            <p>2. Unpack the zip file and launch a 1g instance of H<sub>2</sub>O: </p>
+            <p class="terminal">
+                unzip h2o-SUBST_PROJECT_VERSION.zip<br/>
+                cd h2o-SUBST_PROJECT_VERSION/hadoop<br/>
+                hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName<br/>
+            </p>
+            <p>3. Point your browser to http://[Hadoop Server IP Address]:54321 </p>
+          </div>
         </div>
         <div id="documentation">
           <h2>Documentation</h2>
           <ul>
             <li><a id="ddocall" href="docs-website/index.html">Full Documentation</a></li>
-            <li><a id="ddocr" href="docs-website/bits/h2o_package.pdf">R User Documentation</a></li>
+            <li><a id="ddochadoop" href="docs-website/deployment/hadoop_tutorial.html">Hadoop Documentation</a></li>
+	    <li><a id="ddocr" href="docs-website/bits/h2o_package.pdf">R User Documentation</a></li>
             <li><a id="ddocjavadoc" href="javadoc/index.html">Java Developer Documentation (Javadoc)</a></li>
             <li><a id="ddocrest" href="#"></a>REST API Documentation (Coming soon)</li>
           </ul>

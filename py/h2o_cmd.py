@@ -39,13 +39,6 @@ def runSummary(node=None, key=None, timeoutSecs=30, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.summary_page(key, timeoutSecs=timeoutSecs, **kwargs)
 
-# Not working in H2O yet, but support the test
-def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
-    if not key: raise Exception('No key for Inspect')
-    if not node: node = h2o.nodes[0]
-    # FIX! currently there is no such thing as a timeout on node.inspect
-    return node.Store2HDFS(key, **kwargs)
-
 # since we'll be doing lots of execs on a parsed file, not useful to have parse+exec
 # retryDelaySecs isn't used, 
 def runExec(node=None, timeoutSecs=20, **kwargs):
@@ -170,16 +163,6 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
         h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
 
-def runRFScore(node=None, data_key=None, model_key=None, ntree=None, 
-    timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True, **kwargs):
-    if not node: node = h2o.nodes[0]
-
-    # kind of wasteful re-read, but maybe good for testing
-    rfView = node.random_forest_score(data_key, model_key, timeoutSecs, **kwargs)
-    if doSimpleCheck:
-        h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
-    return rfView
-
 def runStoreView(node=None, timeoutSecs=30, noPrint=None, **kwargs):
     if not node: node = h2o.nodes[0]
     storeView = node.store_view(timeoutSecs, **kwargs)
@@ -240,8 +223,8 @@ def checkKeyDistribution():
 def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     inspect = runInspect(key=key, **kwargs)
 
-    num_rows = inspect['numRows']
-    num_cols = inspect['numCols']
+    numRows = inspect['numRows']
+    numCols = inspect['numCols']
     keyNA = 'naCnt'
     cols = inspect['cols']
     # type
@@ -283,7 +266,7 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
 
 
         if c[keyNA] != 0:
-            pct = ((c[keyNA] + 0.0)/ num_rows) * 100
+            pct = ((c[keyNA] + 0.0)/ numRows) * 100
             msg += (" %s: %s (%0.1f%s)" % (keyNA, c[keyNA], pct, '%'))
             missingValuesDict[k] = c[keyNA]
             printMsg = True
@@ -293,8 +276,8 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
             constantValuesDict[k] = c['min']
             printMsg = True
 
-        # if the naCnt = num_rows, that means it's likely forced NAs..so detect that
-        if c[keyNA]==num_rows:
+        # if the naCnt = numRows, that means it's likely forced NAs..so detect that
+        if c[keyNA]==numRows:
             msg += (" constant value (na count = num rows): %s" % c['min'])
             constantValuesDict[k] = c['min']
             printMsg = True
@@ -312,15 +295,15 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         print len(constantValuesDict), "columns with constant values", ", ".join(m)
 
     print "\n" + key, \
-        "    num_rows:", "{:,}".format(num_rows), \
-        "    num_cols:", "{:,}".format(num_cols)
+        "    numRows:", "{:,}".format(numRows), \
+        "    numCols:", "{:,}".format(numCols)
 
     if missingValuesDict and exceptionOnMissingValues:
         m = [str(k) + ":" + str(v) for k,v in missingValuesDict.iteritems()]
         raise Exception("Looks like columns got flipped to NAs: " + ", ".join(m))
 
-    if num_cols != len(colNameDict): 
-        raise Exception("num_cols: %s doesn't agree with len(colNameDict): %s" % (num_cols, len(colNameDict)))
+    if numCols != len(colNameDict): 
+        raise Exception("numCols: %s doesn't agree with len(colNameDict): %s" % (numCols, len(colNameDict)))
 
     return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 
@@ -487,7 +470,6 @@ def createIgnoredCols(key, cols, response):
     inspect = runInspect(key=key)
     numCols = inspect['numCols']
     ignore = filter(lambda x:(x not in cols and x!=response), range(numCols))
-
     ignored_cols = ','.join(map(str,ignore))
     return ignored_cols
 

@@ -76,12 +76,19 @@ def show_h2o_processes():
                 if hasattr(p.name, '__call__'):
                     pname = p.name()
                     pcmdline = p.cmdline()
-                    pusername = p.username()
+                    # the user name might be uknown here, due to LXC?
+                    try:
+                        pusername = p.username()
+                    except:
+                        pusername = "Unknown-maybe-LXC-user"
                     pstatus = p.status()
                 else:
                     pname = p.name
                     pcmdline = p.cmdline
-                    pusername = p.username
+                    try:
+                        pusername = p.username
+                    except:
+                        pusername = "Unknown-maybe-LXC-user"
                     pstatus = p.status
 
                 if hasattr(p.pid, '__call__'):

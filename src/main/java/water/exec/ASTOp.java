@@ -175,6 +175,15 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTfindInterval());
     putPrefix(new ASTPrint ());
     putPrefix(new ASTLs    ());
+    putPrefix(new ASTStrSplit());
+    putPrefix(new ASTToLower());
+    putPrefix(new ASTToUpper());
+    putPrefix(new ASTGSub());
+    putPrefix(new ASTStrSub());
+    putPrefix(new ASTRevalue());
+    putPrefix(new ASTWhich());
+    putPrefix(new ASTTrim());
+    putPrefix(new ASTSample());
   }
   static private boolean isReserved(String fn) {
     return UNI_INFIX_OPS.containsKey(fn) || BIN_INFIX_OPS.containsKey(fn) || PREFIX_OPS.containsKey(fn);
@@ -388,6 +397,35 @@ class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na";
     return false;
   }
 }
+
+class ASTWhich extends ASTOp {
+
+  ASTWhich() { super(new String[]{"which", "x"},
+                     new Type[]{Type.dblary(), Type.dblary()},
+                     OPF_PREFIX, OPP_PREFIX, OPA_RIGHT);}
+
+  @Override String opStr() { return "which"; }
+  @Override ASTOp  make()  { return new ASTWhich(); }
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if(env.isAry()) {
+      Frame fr = env.popAry();
+      if (fr.numCols() != 1) throw new IllegalArgumentException("`which` accepts at exactly 1 column!");
+      String skey = env.key();
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chk, NewChunk nchk) {
+          for (int r = 0; r < chk._len; ++r)
+            if (chk.at0(r) == 1) nchk.addNum(chk._start + r + 1);
+        }
+      }.doAll(1,fr).outputFrame(new String[]{"which"},null);
+      env.subRef(fr,skey);
+      env.pop();                  // Pop self
+      env.push(fr2);
+    }
+  }
+}
+
+
 
 class ASTRound extends ASTOp {
   @Override String opStr() { return "round"; }
@@ -761,6 +799,313 @@ class ASTasDate extends ASTOp {
       }
     }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
     env.poppush(2, fr2, null);
+  }
+}
+
+class ASTStrSplit extends ASTOp {
+  ASTStrSplit() { super(new String[]{"strsplit", "x", "split"},
+          new Type[]{Type.ARY, Type.ARY, Type.STR},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "strsplit"; }
+  @Override ASTOp make() { return new ASTStrSplit(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    String split = env.popStr();
+    Frame fr = env.ary(-1);
+    if (fr.numCols() != 1) throw new IllegalArgumentException("strsplit requires a single column.");
+    split = split.isEmpty() ? "" : split;
+    final String[]   old_domains = fr.anyVec().domain();
+    final String[][] new_domains = newDomains(old_domains, split);
+    final String[]   col_names   = new String[new_domains.length];
+    for (int i = 1; i <= col_names.length; ++i)
+      col_names[i-1] = "C"+i;
+
+    final String regex = split;
+    Frame fr2 = new MRTask2() {
+      @Override public void map(Chunk[] cs, NewChunk[] ncs) {
+        Chunk c = cs[0];
+        for (int i = 0; i < c._len; ++i) {
+          int idx = (int)c.at0(i);
+          String s = old_domains[idx];
+          String[] ss = s.split(regex);
+          int cnt = 0;
+          for (int j = 0; j < ss.length; ++j) {
+            int n_idx = Arrays.asList(new_domains[cnt]).indexOf(ss[j]);
+            if (n_idx == -1) ncs[cnt++].addNA();
+            else ncs[cnt++].addNum(n_idx);
+          }
+          if (cnt < ncs.length)
+            for (; cnt < ncs.length; ++cnt) ncs[cnt].addNA();
+        }
+      }
+    }.doAll(col_names.length, fr).outputFrame(col_names, new_domains);
+
+    env.poppush(2, fr2, null);
+  }
+
+  private String[][] newDomains(String[] domains, String regex) {
+    ArrayList<HashSet<String>> strs = new ArrayList<HashSet<String>>();
+    for (String domain : domains) {
+      String[] news = domain.split(regex);
+      for (int i = 0; i < news.length; ++i) {
+        if (strs.size() == i) {
+          HashSet<String> x = new HashSet<String>();
+          x.add(news[i]);
+          strs.add(x);
+        } else {
+          HashSet<String> x = strs.get(i);
+          x.add(news[i]);
+          strs.set(i, x);
+        }
+      }
+    }
+    String[][] doms = new String[strs.size()][];
+    for (int i = 0; i < strs.size(); ++i) {
+      HashSet<String> x = strs.get(i);
+      doms[i] = new String[x.size()];
+      for (int j = 0; j < x.size(); ++j)
+        doms[i][j] = (String)x.toArray()[j];
+    }
+    return doms;
+  }
+}
+
+class ASTToLower extends ASTUniPrefixOp {
+
+  @Override String opStr() { return "tolower"; }
+  @Override ASTOp make() { return new ASTToLower(); }
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if( !env.isAry() ) { throw new IllegalArgumentException("tolower only operates on a single vector!"); }
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("tolower only takes a single column of data. Got "+ fr.numCols()+" columns.");
+    String skey = env.key();
+    String[] new_dom = fr.anyVec().domain().clone();
+    for (int i = 0; i < new_dom.length; ++i)
+      new_dom[i] = new_dom[i].toLowerCase(Locale.ENGLISH);
+
+    Frame fr2 = new Frame(fr._names, fr.vecs());
+    fr2.anyVec()._domain = new_dom;
+    env.subRef(fr,skey);
+    env.pop();
+    env.push(fr2);
+  }
+}
+
+class ASTToUpper extends ASTUniPrefixOp {
+
+  @Override String opStr() { return "toupper"; }
+  @Override ASTOp make() { return new ASTToUpper(); }
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if( !env.isAry() ) { throw new IllegalArgumentException("toupper only operates on a single vector!"); }
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("toupper only takes a single column of data. Got "+ fr.numCols()+" columns.");
+    String skey = env.key();
+    String[] new_dom = fr.anyVec().domain().clone();
+    for (int i = 0; i < new_dom.length; ++i)
+      new_dom[i] = new_dom[i].toUpperCase(Locale.ENGLISH);
+
+    Frame fr2 = new Frame(fr._names, fr.vecs());
+    fr2.anyVec()._domain = new_dom;
+    env.subRef(fr,skey);
+    env.pop();
+    env.push(fr2);
+  }
+}
+
+class ASTRevalue extends ASTOp {
+
+  ASTRevalue(){ super(new String[]{"revalue", "x", "replace", "warn_missing"},
+          new Type[]{Type.ARY, Type.ARY, Type.STR, Type.DBL},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+
+  @Override String opStr() { return "revalue"; }
+  @Override ASTOp  make()  { return new ASTRevalue(); }
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final boolean warn_missing = env.popDbl() == 1;
+    final String replace = env.popStr();
+    String skey = env.key();
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("revalue works on a single column at a time.");
+    String[] old_dom = fr.anyVec()._domain;
+    if (old_dom == null) throw new IllegalArgumentException("Column is not a factor column. Can only revalue a factor column.");
+
+    HashMap<String, String> dom_map = hashMap(replace);
+
+    for (int i = 0; i < old_dom.length; ++i) {
+      if (dom_map.containsKey(old_dom[i])) {
+        old_dom[i] = dom_map.get(old_dom[i]);
+        dom_map.remove(old_dom[i]);
+      }
+    }
+    if (dom_map.size() > 0 && warn_missing) {
+      for (String k : dom_map.keySet()) {
+        env._warnings = Arrays.copyOf(env._warnings, env._warnings.length + 1);
+        env._warnings[env._warnings.length - 1] = "Warning: old value " + k + " not a factor level.";
+      }
+    }
+  }
+
+  private HashMap<String, String> hashMap(String replace) {
+    HashMap<String, String> map = new HashMap<String, String>();
+    //replace is a ';' separated string. Each piece after splitting is a key:value pair.
+    String[] maps = replace.split(";");
+    for (String s : maps) {
+      String[] pair = s.split(":");
+      String key   = pair[0];
+      String value = pair[1];
+      map.put(key, value);
+    }
+    return map;
+  }
+}
+
+
+class ASTGSub extends ASTOp {
+  ASTGSub() { super(new String[]{"gsub", "pattern", "replacement", "x", "ignore.case"},
+          new Type[]{Type.ARY, Type.STR, Type.STR, Type.ARY, Type.DBL},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "gsub"; }
+  @Override ASTOp make() { return new ASTGSub(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final boolean ignore_case = env.popDbl() == 1;
+    String skey = env.key();
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("gsub works on a single column at a time.");
+    final String replacement = env.popStr();
+    final String pattern = env.popStr();
+    String[] doms = fr.anyVec().domain().clone();
+    for (int i = 0; i < doms.length; ++i)
+      doms[i] = ignore_case ? doms[i].toLowerCase(Locale.ENGLISH).replaceAll(pattern, replacement)
+                            : doms[i].replaceAll(pattern, replacement);
+
+    Frame fr2 = new Frame(fr.names(), fr.vecs());
+    fr2.anyVec()._domain = doms;
+    env.subRef(fr, skey);
+    env.poppush(1, fr2, null);
+  }
+}
+
+class ASTTrim extends ASTOp {
+  ASTTrim() { super(new String[]{"trim","x"},
+          new Type[]{Type.dblary(), Type.dblary()},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "trim"; }
+  @Override ASTOp make() { return new ASTTrim(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    String skey = env.key();
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("trim works on a single column at a time.");
+    String[] doms = fr.anyVec().domain().clone();
+    for (int i = 0; i < doms.length; ++i) doms[i] = doms[i].trim();
+    Frame fr2 = new Frame(fr.names(), fr.vecs());
+    fr2.anyVec()._domain = doms;
+    env.subRef(fr, skey);
+    env.poppush(1, fr2, null);
+  }
+}
+
+//FIXME: Create new chunks that overlay the frame to avoid ragged chunk issue
+class ASTSample extends ASTOp {
+  ASTSample() { super(new String[]{"sample", "ary", "nobs", "seed"},
+                      new Type[]{Type.ARY, Type.ARY, Type.DBL, Type.DBL},
+                      OPF_PREFIX, OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "sample"; }
+  @Override ASTOp make() { return new ASTSample(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final double seed = env.popDbl();
+    final double nobs = env.popDbl();
+    String skey = env.key();
+    Frame fr = env.popAry();
+    long[] espc = fr.anyVec()._espc;
+    long[] chk_sizes = new long[espc.length];
+    final long[] css = new long[espc.length];
+    for (int i = 0; i < espc.length-1; ++i)
+      chk_sizes[i] = espc[i+1] - espc[i];
+    chk_sizes[chk_sizes.length-1] = fr.numRows() - espc[espc.length-1];
+    long per_chunk_sample = (long) Math.floor(nobs / (double)espc.length);
+    long defecit = (long) (nobs - per_chunk_sample*espc.length) ;
+    // idxs is an array list of chunk indexes for adding to the sample size. Chunks with no defecit can not be "sampled" as candidates.
+    ArrayList<Integer> idxs = new ArrayList<Integer>();
+    for (int i = 0; i < css.length; ++i) {
+      // get the max allowed rows to sample from the chunk
+      css[i] = Math.min(per_chunk_sample, chk_sizes[i]);
+      // if per_chunk_sample > css[i] => spread around the defecit to meet number of rows requirement.
+      long def = per_chunk_sample - css[i];
+      // no more "room" in chunk `i`
+      if (def >= 0) {
+        defecit += def;
+      // else `i` has "room"
+      }
+      if (chk_sizes[i] > per_chunk_sample) idxs.add(i);
+    }
+    if (defecit > 0) {
+      Random rng = new Random(seed != -1 ? (long)seed : System.currentTimeMillis());
+      while (defecit > 0) {
+        if (idxs.size() <= 0) break;
+        // select chunks at random and add to the number of rows they should sample,
+        // up to the number of rows in the chunk.
+        int rand = rng.nextInt(idxs.size());
+        if (css[idxs.get(rand)] == chk_sizes[idxs.get(rand)]) {
+          idxs.remove(rand);
+          continue;
+        }
+        css[idxs.get(rand)]++;
+        defecit--;
+      }
+    }
+
+    Frame fr2 = new MRTask2() {
+      @Override public void map(Chunk[] chks, NewChunk[] nchks) {
+        int N = chks[0]._len;
+        int m = 0;
+        long n = css[chks[0].cidx()];
+        int row = 0;
+        Random rng = new Random(seed != -1 ? (long)seed : System.currentTimeMillis());
+        while( m  < n) {
+          double u = rng.nextDouble();
+          if ( (N - row)* u >= (n - m)) {
+            row++;
+          } else {
+            for (int i = 0; i < chks.length; ++i) nchks[i].addNum(chks[i].at0(row));
+            row++; m++;
+          }
+        }
+      }
+    }.doAll(fr.numCols(), fr).outputFrame(fr.names(), fr.domains());
+    env.subRef(fr, skey);
+    env.poppush(1, fr2, null);
+  }
+}
+
+class ASTStrSub extends ASTOp {
+  ASTStrSub() { super(new String[]{"sub", "pattern", "replacement", "x", "ignore.case"},
+          new Type[]{Type.ARY, Type.STR, Type.STR, Type.ARY, Type.DBL},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "sub"; }
+  @Override ASTOp make() { return new ASTStrSub(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final boolean ignore_case = env.popDbl() == 1;
+    String skey = env.key();
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("sub works on a single column at a time.");
+    final String replacement = env.popStr();
+    final String pattern = env.popStr();
+    String[] doms = fr.anyVec().domain().clone();
+    for (int i = 0; i < doms.length; ++i)
+      doms[i] = ignore_case ? doms[i].toLowerCase(Locale.ENGLISH).replaceFirst(pattern, replacement)
+              : doms[i].replaceFirst(pattern, replacement);
+
+    Frame fr2 = new Frame(fr.names(), fr.vecs());
+    fr2.anyVec()._domain = doms;
+    env.subRef(fr, skey);
+    env.poppush(1, fr2, null);
   }
 }
 
@@ -1550,7 +1895,7 @@ class ASTVar extends ASTOp {
         sdev[i] = fr.vecs()[i].sigma();
 
       // TODO: Might be more efficient to modify DataInfo to allow for separate standardization of mean and std dev
-      DataInfo dinfo = new DataInfo(fr, 0, true, DataInfo.TransformType.STANDARDIZE);
+      DataInfo dinfo = new DataInfo(fr, 0, true, false, DataInfo.TransformType.STANDARDIZE);
       GramTask tsk = new GramTask(null, dinfo, false, false).doAll(dinfo._adaptedFrame);
       double[][] var = tsk._gram.getXX();
       long nobs = tsk._nobs;
@@ -1662,6 +2007,7 @@ class ASTMostCommon extends ASTOp {
       }
     }
     double mc = mode != -1 ? (double)mode : (double)Arrays.asList(dom).indexOf("NA");
+    if (mc == -1) mc = Double.NaN;
     env.pop();
     env.poppush(mc);
   }

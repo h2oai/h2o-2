@@ -11,7 +11,7 @@ H2O: Gradient Boosted Machines
 }
 \usage{
 h2o.gbm(x, y, distribution = "multinomial", data, key = "", n.trees = 10, 
-  interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, 
+  interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1, n.bins = 20,
   importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, 
   max.after.balance.size = 5)
 }
@@ -84,8 +84,9 @@ http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 For more information see: http://docs.0xdata.com
 }
 \examples{
+# -- CRAN examples begin --
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 # Run regression GBM on australia.hex data 
 ausPath = system.file("extdata", "australia.csv", package="h2o")
@@ -95,6 +96,7 @@ independent <- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst",
 dependent <- "runoffnew"
 h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 3, interaction.depth = 3, 
   n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
+# -- CRAN examples end --
 
 \dontrun{
 # Run multinomial classification GBM on australia data 

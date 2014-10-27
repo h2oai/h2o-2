@@ -1,0 +1,10 @@
+./n0.doit test_GLM2_syn_eqns_data.py $*
+./n0.doit test_libsvm.py $*
+./n0.doit test_parse_rand_utf8_3.py $*
+./n0.doit test_parse_rand_utf8_just_double_quote.py $*
+./n0.doit test_parse_rand_utf8_unmatched_double.py $*
+./n0.doit test_parse_specific_case1.py $*
+./n0.doit test_parse_specific_case2.py $*
+./n0.doit test_parse_specific_case3.py $*
+./n0.doit test_rf_covtype_train_oobe_fvec.py $*
+./n0.doit test_rf_float_rand2_fvec.py $*

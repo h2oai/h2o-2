@@ -20,7 +20,7 @@ If \code{return.in.R = FALSE}, a \code{\linkS4class{H2OParsedData}} object conta
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 summary(prostate.hex)

@@ -25,7 +25,7 @@ Returns a numeric vector with the hit ratio for every level in the reference dom
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 iris.gbm = h2o.gbm(x = 1:4, y = 5, data = iris.hex)

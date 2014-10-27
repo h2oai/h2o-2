@@ -57,7 +57,7 @@ h2o.clusterInfo <- function(client) {
   cat("    H2O cluster allowed cores: ", allowedCPU, "\n")
   cat("    H2O cluster healthy:       ", clusterHealth, "\n")
   
-  cpusLimited = sapply(nodeInfo, function(x) { x[['num_cpus']] > 1 && x[['cpus_allowed']] == 1 })
+  cpusLimited = sapply(nodeInfo, function(x) { x[['num_cpus']] > 1 && x[['nthreads']] != 1 && x[['cpus_allowed']] == 1 })
   if(any(cpusLimited))
     warning("Number of CPU cores allowed is limited to 1 on some nodes.  To remove this limit, set environment variable 'OPENBLAS_MAIN_FREE=1' before starting R.")
 }
@@ -124,14 +124,54 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   .h2o.exec2(expr = key, h2o = object, dest_key = key)
 }
 
+h2o.interaction <- function(data, key=NULL, factors, max_factors, min_occurrence) {
+  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(missing(factors)) stop("factors must be specified")
+  if(missing(max_factors)) stop("max_factors must be specified")
+  if(missing(min_occurrence)) stop("min_occurrence must be specified")
+
+  if(!is.numeric(factors)) stop("factors must be a numeric value")
+  if(max_factors < 1) stop("max_factors cannot be < 1")
+  if(!is.numeric(max_factors)) stop("max_factors must be a numeric value")
+  if(min_occurrence < 1) stop("min_occurrence cannot be < 1")
+  if(!is.numeric(min_occurrence)) stop("min_occurrence must be a numeric value")
+
+  factors <- factors - 1 # make 0-based for Java
+  res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_Interaction, source = data@key, target = key, factors = factors, max_factors = max_factors, min_occurrence = min_occurrence)
+  h2o.getFrame(data@h2o, res$target)
+}
+
+h2o.rebalance <- function(data, chunks, key) {
+  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(!is.numeric(chunks)) stop("chunks must be a numeric value")
+  if(chunks < 1) stop("chunks cannot be < 1")
+  if(missing(key))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_ReBalance, source = data@key, chunks = chunks)
+  else
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_ReBalance, source = data@key, after = key, chunks = chunks)
+  h2o.getFrame(data@h2o, res$after)
+}
+
 h2o.splitFrame <- function(data, ratios = 0.75, shuffle = FALSE) {
   if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
   if(!is.numeric(ratios)) stop("ratios must be numeric")
   if(any(ratios < 0 | ratios > 1)) stop("ratios must be between 0 and 1 exclusive")
   if(sum(ratios) >= 1) stop("sum of ratios must be strictly less than 1")
   if(!is.logical(shuffle)) stop("shuffle must be a logical value")
-  
+
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SplitFrame, source = data@key, ratios = ratios, shuffle = as.numeric(shuffle))
+  lapply(res$split_keys, function(key) { .h2o.exec2(expr = key, h2o = data@h2o, dest_key = key) })
+}
+
+h2o.nFoldExtractor <- function(data, nfolds, fold_to_extract) {
+  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(!is.numeric(nfolds)) stop("nfolds must be numeric")
+  if(nfolds <= 1) stop("nfolds must be greater or equal to 2")
+  if(!is.numeric(fold_to_extract)) stop("fold_to_extract must be numeric")
+  if(fold_to_extract < 1) stop("fold_to_extract must be greater or equal to 1")
+  if(fold_to_extract > nfolds) stop("fold_to_extract must be less or equal to nfolds")
+
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NFoldExtractor, source = data@key, nfolds = nfolds, afold = fold_to_extract - 1 ) #R indexing is 1-based, Java is 0-based
   lapply(res$split_keys, function(key) { .h2o.exec2(expr = key, h2o = data@h2o, dest_key = key) })
 }
 

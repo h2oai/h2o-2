@@ -41,16 +41,20 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     #****************************
     # if we are checking after confusion_matrix for predict, the jsonschema is different
-    if 'drf_model' in rfv:
-        rf_model = rfv['drf_model']
-    if 'speedrf_model' in rfv:
-        rf_model = rfv['speedrf_model']
-    if 'rf_model' in rfv:
-        rf_model = rfv['rf_model']
+        
 
     if 'cm' in rfv:
         cm = rfv['cm'] # only one
     else:
+        if 'drf_model' in rfv:
+            rf_model = rfv['drf_model']
+        elif 'speedrf_model' in rfv:
+            rf_model = rfv['speedrf_model']
+        elif 'rf_model' in rfv:
+            rf_model = rfv['rf_model']
+        else:
+            raise Exception("no rf_model in rfv? %s" % h2o.dump_json(rfv))
+
         cms = rf_model['cms']
         print "number of cms:", len(cms)
         print "FIX! need to add reporting of h2o's _perr per class error"
@@ -58,8 +62,13 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         print "cms[-1]['_arr']:", cms[-1]['_arr']
         print "cms[-1]['_predErr']:", cms[-1]['_predErr']
         print "cms[-1]['_classErr']:", cms[-1]['_classErr']
-        # print "cms[-1]:", h2o.dump_json(cms[-1])
+
+        ## print "cms[-1]:", h2o.dump_json(cms[-1])
+        ## for i,c in enumerate(cms):
+        ##    print "cm %s: %s" % (i, c['_arr'])
+
         cm = cms[-1]['_arr'] # take the last one
+
     scoresList = cm
 
     if not checkScoringOnly:
@@ -145,12 +154,16 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     varimp = rf_model['varimp']
     treeStats = rf_model['treeStats']
+    if not treeStats:
+        raise Exception("treeStats not right?: %s" % h2o.dump_json(treeStats))
     # print "json:", h2o.dump_json(rfv)
     data_key = rf_model['_dataKey']
     model_key = rf_model['_key']
     classification_error = pctWrong
 
     if not noPrint: 
+        if 'minLeaves' not in treeStats or not treeStats['minLeaves']:
+            raise Exception("treeStats seems to be missing minLeaves %s" % h2o.dump_json(treeStats))
         print """
          Leaves: {0} / {1} / {2}
           Depth: {3} / {4} / {5}
@@ -171,7 +184,9 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     return (round(classification_error,2), classErrorPctList, totalScores)
 
 def simpleCheckRFScore(node=None, rfv=None, noPrint=False, **kwargs):
-    simpleCheckRFView(node=node, rfv=rfv, noPrint=noPrint, checkScoringOnly=True, **kwargs)
+    (classification_error, classErrorPctList, totalScores) = simpleCheckRFView(node=node, rfv=rfv, 
+        noPrint=noPrint, checkScoringOnly=True, **kwargs)
+    return (classification_error, classErrorPctList, totalScores)
 
 def trainRF(trainParseResult, scoreParseResult=None, **kwargs):
     # Train RF

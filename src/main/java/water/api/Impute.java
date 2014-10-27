@@ -42,18 +42,24 @@ public class Impute extends Request2 {
 
   public Impute() {}
 
-  protected void init() throws IllegalArgumentException {
+  protected boolean init() throws IllegalArgumentException {
     // Input handling
     if (source == null || column == null)
       throw new IllegalArgumentException("Missing data or input column!");
-    if (column.isBad())
-      throw new IllegalArgumentException("Column is 100% NAs, nothing to do.");
+    if (column.isBad()) {
+      Log.info("Column is 100% NAs, nothing to do.");
+      return true;
+    }
     if (method != Method.mean && method != Method.median && method != Method.mode)  // || method != Method.regression || method != Method.randomForest
       throw new IllegalArgumentException("method must be one of (mean, median, mode)"); // regression, randomForest)");
-    if ( !(column.isEnum()) && column.naCnt() <= 0)
-        throw new IllegalArgumentException("No NAs in the column, nothing to do.");
-    if (column.isEnum() &&  !Arrays.asList(column._domain).contains("NA"))
-      throw new IllegalArgumentException("No NAs in the column, nothing to do.");
+    if ( !(column.isEnum()) && column.naCnt() <= 0) {
+      Log.info("No NAs in the column, nothing to do.");
+      return true;
+    }
+    if (column.isEnum() && !Arrays.asList(column._domain).contains("NA") && column.naCnt() <= 0 ) {
+      Log.info("No NAs in the column, nothing to do.");
+      return true;
+    }
 //    if (method == Method.regression && (column.isEnum() || column.isUUID() || column.isTime()))
 //      throw new IllegalArgumentException("Trying to perform regression on non-numeric column! Please select a different column.");
     if (method == Method.mode && (!column.isEnum()))
@@ -62,12 +68,14 @@ public class Impute extends Request2 {
       Log.warn("Column to impute is a factor column, changing method to mode.");
       method = Method.mode;
     }
+    return false;
   }
 
   @Override protected Response serve() {
-    init();
+    if (init()) return Inspect2.redirect(this, source._key.toString());
     final int col_id = source.find(column);
     final int[] _cols = group_by;
+    final Key mykey = Key.make();
     try {
       if (group_by == null) {
         // just use "method" using the input "column"
@@ -89,12 +97,15 @@ public class Impute extends Request2 {
           long maxCounts = -1;
           int mode = -1;
           for (int i = 0; i < counts[0].length; ++i) {
-            if (counts[0][i] > maxCounts && !dom[i].equals("NA")) {
+            if (counts[0][i] > maxCounts && !dom[i].equals("NA")) { // check for "NA" in domain -- corner case from R
               maxCounts = counts[0][i];
               mode = i;
             }
           }
-          _replace_val = mode != -1 ? (double) mode : (double) Arrays.asList(dom).indexOf("NA");
+          _replace_val = mode != -1
+                  ? (double) mode
+                  : (double) Arrays.asList(dom).indexOf("NA");  // could produce -1 if "NA" not in the domain -- that is we don't have the R corner case
+          if (_replace_val == -1) _replace_val = Double.NaN;    // OK to replace, since we're in the elif "mode" block
         }
         final double rv = _replace_val;
         new MRTask2() {
@@ -103,7 +114,9 @@ public class Impute extends Request2 {
             Chunk c = cs[col_id];
             int rows = c.len();
             for (int r = 0; r < rows; ++r) {
-              if (c.isNA0(r) || (c._vec.isEnum() && c._vec.domain()[(int) c.at0(r)].equals("NA"))) c.set0(r, rv);
+              if (c.isNA0(r) || (c._vec.isEnum() && c._vec.domain()[(int) c.at0(r)].equals("NA"))) {
+                if (!Double.isNaN(rv)) c.set0(r, rv); // leave as NA if replace value is NA
+              }
             }
           }
         }.doAll(source);
@@ -111,8 +124,8 @@ public class Impute extends Request2 {
         // collect the groups HashMap and the frame from the ddply.
         // create a vec of group IDs (each row is in some group)
         // MRTask over the rows
-        water.exec.Exec2.exec("Last.value.998 = anonymous <- function(x) \n{\n " + method + "(x[," + (col_id + 1) + "])\n}").remove_and_unlock();
-        Env env = water.exec.Exec2.exec("Last.value.999 = ddply(" + source._key.toString() + ", " + toAryString(_cols) + ", anonymous)");
+        water.exec.Exec2.exec(Key.make().toString() + " = anonymous <- function(x) \n{\n " + method + "(x[," + (col_id + 1) + "])\n}").remove_and_unlock();
+        Env env = water.exec.Exec2.exec(mykey.toString() + " = ddply(" + source._key.toString() + ", " + toAryString(_cols) + ", anonymous)");
         final Frame grp_replacement = new Frame(env.peekAry());
         env.remove_and_unlock();
         final GroupTask grp2val = new GroupTask(grp_replacement.numCols() - 1).doAll(grp_replacement);
@@ -138,7 +151,7 @@ public class Impute extends Request2 {
     } catch( Throwable t ) {
         return Response.error(t);
     } finally {       // Delete frames
-      UKV.remove(Key.make("Last.value.999"));
+      UKV.remove(mykey);
     }
   }
 

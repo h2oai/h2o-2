@@ -47,11 +47,19 @@ class Check:
             r"^Old maintainer\(s\):",
             r"^\s*Anqi Fu",
             r"^NOTE: There was 1 note.",
+
             r"^New submission",
+
             r"^Package was archived on CRAN",
             r"^CRAN repository db overrides:",
             r"^  X-CRAN-Comment: Archived on 2014-09-23 as did not comply with CRAN",
             r"^    policies on use of multiple threads.",
+
+            r"^\* checking installed package size ... NOTE",
+            r"^  installed size is .*Mb",
+            r"^  sub-directories of 1Mb or more:",
+            r"^    java  .*Mb",
+            r"^NOTE: There were 2 notes.",
         ]
 
         s = f.readline()

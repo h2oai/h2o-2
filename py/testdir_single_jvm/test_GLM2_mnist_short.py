@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
             
             # first col is pixel value ..use 0 here
             y = 0
-            ignoreX = h2o_glm.goodXFromColumnInfo(y, key=parseTestResult['destination_key'], timeoutSecs=300, forRF=True)
+            ignoreX = h2o_glm.goodXFromColumnInfo(y, key=parseTestResult['destination_key'], timeoutSecs=300, returnIgnoreX=True)
 
             # PARSE train****************************************
             trainKey = trainCsvFilename + "_" + str(trial) + ".hex"
@@ -65,7 +65,8 @@ class Basic(unittest.TestCase):
 
             # GLM****************************************
             print "This is the pruned x we'll use"
-            ignoreX = h2o_glm.goodXFromColumnInfo(y, key=parseTrainResult['destination_key'], timeoutSecs=300, forRF=True)
+            ignoreX = h2o_glm.goodXFromColumnInfo(y, key=parseTrainResult['destination_key'], timeoutSecs=300, 
+                returnIgnoreX=True)
             print "ignoreX:", ignoreX 
 
             modelKey = 'GLM_model'

@@ -48,7 +48,11 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
 
   @Override public final void processRow(long seed, final double [] nums, final int numcats, final int [] cats, double [] responses){
     if(_output.get_params().self() != null && !Job.isRunning(_output.get_params().self())) throw new Job.JobCancelledException();
-    seed = new Random().nextLong();
+    if (model_info().get_params().reproducible) {
+      seed += model_info().get_processed_global(); //avoid periodicity
+    } else {
+      seed = new Random().nextLong();
+    }
     ((Neurons.Input)_neurons[0]).setInput(seed, nums, numcats, cats);
     step(seed, _neurons, _output, _training, responses);
   }
@@ -109,7 +113,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
     final int[] h = params.hidden;
     Neurons[] neurons = new Neurons[h.length + 2]; // input + hidden + output
     // input
-    neurons[0] = new Neurons.Input(dinfo.fullN(), dinfo);
+    neurons[0] = new Neurons.Input(minfo.units[0], dinfo);
     // hidden
     for( int i = 0; i < h.length + (params.autoencoder ? 1 : 0); i++ ) {
       int n = params.autoencoder && i == h.length ? minfo.units[0] : h[i];

@@ -22,11 +22,11 @@ paramDict = {
     'seed': None,
     }
 
-DO_OOBE = False
-DO_PLOT = False
+DO_OOBE = True
+DO_PLOT = True
 # TRY = 'max_depth'
-# TRY = 'ntrees'
-TRY = 'nbins'
+TRY = 'ntrees'
+# TRY = 'nbins'
 
 
 class Basic(unittest.TestCase):
@@ -120,71 +120,77 @@ class Basic(unittest.TestCase):
 
                 start = time.time()
                 rfResult = h2o_cmd.runSpeeDRF(parseResult=parseTrainResult, timeoutSecs=timeoutSecs,
-                                         noPoll=True, **kwargs)
+                    noPoll=True, **kwargs)
                 trainElapsed = time.time() - start
                 print 'rf train end', i, 'on', csvTrainPathname, 'took', trainElapsed, 'seconds'
 
                 # don't cancel the last one
-                #if not lastOne:
-                #    time.sleep(1)
-                #    h2o_jobs.cancelAllJobs(timeoutSecs=2)
-                h2o_jobs.cancelAllJobs(timeoutSecs=2)
+                if not lastOne:
+                    time.sleep(1)
+                    h2o_jobs.cancelAllJobs(timeoutSecs=2)
+                # h2o_jobs.cancelAllJobs(timeoutSecs=2)
                 
 
 
-            #### print "rfView", h2o.dump_json(rfView)
-            ##print "We have a result from the RF above, completed but didn't do RFView yet"
-            ## could the RF indicate 'done' too soon?
-            ## if rfResult['state']=='RUNNING':
-            ##    raise Exception("Why is this RF still in RUNNING state? %s" % h2o.dump_json(rfResult))
+            ### print "rfView", h2o.dump_json(rfView)
+            #print "We have a result from the RF above, completed but didn't do RFView yet"
+            # could the RF indicate 'done' too soon?
+            # if rfResult['state']=='RUNNING':
+            #    raise Exception("Why is this RF still in RUNNING state? %s" % h2o.dump_json(rfResult))
 
-            ## if 'drf_model' not in rfResult:
-            ##    raise Exception("How come there's no drf_model in this RF result? %s" % h2o.dump_json(rfResult))
-            #h2o_jobs.pollWaitJobs(timeoutSecs=300)
-            #rfView = h2o_cmd.runSpeeDRFView(None, model_key, timeoutSecs=60)
-            #print "rfView:", h2o.dump_json(rfView)
+            # if 'drf_model' not in rfResult:
+            #    raise Exception("How come there's no drf_model in this RF result? %s" % h2o.dump_json(rfResult))
+            h2o_jobs.pollWaitJobs(timeoutSecs=300)
+            rfView = h2o_cmd.runSpeeDRFView(None, model_key, timeoutSecs=60)
+            print "rfView:", h2o.dump_json(rfView)
 
-            #rfView["drf_model"] = rfView.pop("speedrf_model")
-            #rf_model = rfView['drf_model']
-            #cms = rf_model['cms']
-            #### print "cm:", h2o.dump_json(cm)
-            #ntrees = rf_model['N']
-            #errs = rf_model['errs']
-            #N = rf_model['N']
-            #varimp = rf_model['varimp']
-            #treeStats = rf_model['treeStats']
+            rfView["drf_model"] = rfView.pop("speedrf_model")
+            rf_model = rfView['drf_model']
+            cms = rf_model['cms']
+            ### print "cm:", h2o.dump_json(cm)
+            ntrees = rf_model['N']
+            errs = rf_model['errs']
+            N = rf_model['N']
+            varimp = rf_model['varimp']
+            treeStats = rf_model['treeStats']
+            if not treeStats:
+                raise Exception("treeStats not right?: %s" % h2o.dump_json(treeStats))
 
-            #print "maxDepth:", treeStats['maxDepth']
-            #print "maxLeaves:", treeStats['maxLeaves']
-            #print "minDepth:", treeStats['minDepth']
-            #print "minLeaves:", treeStats['minLeaves']
-            #print "meanLeaves:", treeStats['meanLeaves']
-            #print "meanDepth:", treeStats['meanDepth']
-            #print "errs[0]:", errs[0]
-            #print "errs[-1]:", errs[-1]
-            #print "errs:", errs
+            if 'minLeaves' not in treeStats or not treeStats['minLeaves']:
+                raise Exception("treeStats seems to be missing minLeaves %s" % h2o.dump_json(treeStats))
 
-            #(classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
-            ## we iterate over params, so can't really do this check
-            ## self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            print "maxDepth:", treeStats['maxDepth']
+            print "maxLeaves:", treeStats['maxLeaves']
+            print "minDepth:", treeStats['minDepth']
+            print "minLeaves:", treeStats['minLeaves']
+            print "meanLeaves:", treeStats['meanLeaves']
+            print "meanDepth:", treeStats['meanDepth']
 
-            #print "classErrorPctList:", classErrorPctList
-            #self.assertEqual(len(classErrorPctList), 7, "Should be 7 output classes, so should have 7 class error percentages from a reasonable predict")
-            ## FIX! should update this expected classification error
-            #predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=data_key)
+            print "errs[0]:", errs[0]
+            print "errs[-1]:", errs[-1]
+            print "errs:", errs
 
-            #eList.append(classErrorPctList[4])
-            #fList.append(trainElapsed)
-            #if DO_PLOT:
-            #    if TRY == 'max_depth':
-            #        xLabel = 'max_depth'
-            #    elif TRY == 'ntrees':
-            #        xLabel = 'ntrees'
-            #    elif TRY == 'nbins':
-            #        xLabel = 'nbins'
-            #    else:
-            #        raise Exception("huh? %s" % TRY)
-            #    xList.append(paramDict[xLabel])
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
+            # we iterate over params, so can't really do this check
+            # self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+
+            print "classErrorPctList:", classErrorPctList
+            self.assertEqual(len(classErrorPctList), 7, "Should be 7 output classes, so should have 7 class error percentages from a reasonable predict")
+            # FIX! should update this expected classification error
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=data_key)
+
+            eList.append(classErrorPctList[4])
+            fList.append(trainElapsed)
+            if DO_PLOT:
+                if TRY == 'max_depth':
+                    xLabel = 'max_depth'
+                elif TRY == 'ntrees':
+                    xLabel = 'ntrees'
+                elif TRY == 'nbins':
+                    xLabel = 'nbins'
+                else:
+                    raise Exception("huh? %s" % TRY)
+                xList.append(paramDict[xLabel])
 
         if DO_PLOT:
             eLabel = 'class 4 pctWrong'

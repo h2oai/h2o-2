@@ -11,9 +11,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud()
         else:
-            h2o_hosts.build_cloud_with_hosts(1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -31,8 +31,9 @@ class Basic(unittest.TestCase):
 
         for maxx in [6]:
             destination_key='GLM_model_python_0_default_0'
+            # illegal to have output col in the ignored_cols!
             kwargs = {
-                'ignored_cols': '0,1',
+                'ignored_cols': '0',
                 'response':  y, 
                 'n_folds': 5, 
                 'destination_key': destination_key,

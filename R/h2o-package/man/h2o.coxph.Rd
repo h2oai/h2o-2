@@ -20,14 +20,15 @@ H2O: Cox Proportional Hazards Models
 Fit a Cox Proportional Hazards Model.
 }
 \usage{
-h2o.coxph(x, y, data, key = "", ties = c("efron", "breslow"),
+h2o.coxph(x, y, data, key = "", weights, ties = c("efron", "breslow"),
           init = 0, control = h2o.coxph.control(...), ...)
 
 h2o.coxph.control(lre = 9, iter.max = 20, ...)
 
 # H2OCoxPHModel summary functions
-\S4method{summary}{H2OCoxPHModel}(object, ...)
-\S3method{survfit}{H2OCoxPHModel}(formula, ...)
+\S4method{summary}{H2OCoxPHModel}(object, conf.int = 0.95, scale = 1, ...)
+\S3method{survfit}{H2OCoxPHModel}(formula, newdata, conf.int = 0.95,
+        conf.type = c("log", "log-log", "plain", "none"), ...)
 
 # H2OCoxPHModel extractor functions
 \S3method{extractAIC}{H2OCoxPHModel}(fit, scale, k = 2, ...)
@@ -35,14 +36,16 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
 \S3method{vcov}{H2OCoxPHModel}(object, ...)
 }
 \arguments{
-  \item{x}{A character string containing the name of the numeric predictor in
+  \item{x}{A character vector containing the column names of the predictors in
     the model.}
-  \item{y}{The character vector comprise of two or three elements representing
+  \item{y}{A character vector comprised of two or three elements representing
     \code{"(stop, event)"} or \code{"(stop, event)"} respectively.}
   \item{data}{An \code{\linkS4class{H2OParsedData}} object containing the
     variables in the model.}
   \item{key}{An optional unique hex key assigned to the resulting model.
     If none is given, a key will automatically be generated.}
+  \item{weights}{An optional character string representing the case weights in
+    the model.}
   \item{ties}{A character string denoting which approximation method for
     handling ties should be used in the partial likelihood;
     one of either \code{"efron"} or \code{"breslow"}.}
@@ -56,6 +59,12 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
   \item{iter.max}{A positive integer denoting the maximum number of iterations
     to allow for convergence in \code{h2o.coxph}.}
   \item{object, formula, fit}{An object of class \code{H2OCoxPHModel}.}
+  \item{newdata}{An optional \code{\linkS4class{H2OParsedData}} object
+    containing a new data set.}
+  \item{conf.int}{An optional number that specifies the confidence interval
+    level.}
+  \item{conf.type}{An optional string that specifies the confidence interval
+    type.}
   \item{scale}{An optional number that specifies the scale parameter of the
     model.}
   \item{k}{An optional number specifying the weight for the equivalent
@@ -64,6 +73,18 @@ h2o.coxph.control(lre = 9, iter.max = 20, ...)
 }
 \value{
 An object of class \code{\linkS4class{H2OCoxPHModel}}.
+}
+\references{
+Andersen, P. and Gill, R. (1982).
+Cox's regression model for counting processes, a large sample study.
+\emph{Annals of Statistics} \bold{10}, 1100-1120.
+
+Harrell, Jr. F.E., Regression Modeling Strategies: With Applications
+to Linear Models, Logistic Regression, and Survival Analysis.
+Springer-Verlag, 2001.
+
+Therneau, T., Grambsch, P., Modeling Survival Data: Extending the Cox Model.
+Springer-Verlag, 2000.
 }
 \seealso{
 \code{\link[survival]{coxph}},
@@ -75,9 +96,9 @@ An object of class \code{\linkS4class{H2OCoxPHModel}}.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 library(survival)
 bladder.hex <- as.h2o(localH2O, bladder, key = "bladder.hex")
-h2o.coxph(x = "number", y = c("stop", "event"), data = bladder.hex)
+h2o.coxph(x = c("number", "size"), y = c("stop", "event"), data = bladder.hex)
 }

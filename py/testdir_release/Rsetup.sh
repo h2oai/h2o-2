@@ -67,16 +67,21 @@ fi
 # but maybe it was installed in another library (site library)
 # make sure it's removed, so the install installs the new (latest) one
 
-rm -f /tmp/libPaths.cmd
+rm -f /tmp/libPaths.$USER.cmd
 if [[ $REMOVE_H2O_PACKAGES -eq 1 || $CREATE_FILES_ONLY -eq 1 ]]
 then 
-    cat <<!  >> /tmp/libPaths.cmd
+    cat <<!  >> /tmp/libPaths.$USER.cmd
 .libPaths()
 myPackages = rownames(installed.packages())
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 # this will only remove from the first library in .libPaths()
 # may need permission to remove from other libraries
 # remove from all possible locations in .libPaths()
+
+# if this if succeeds, but the remove fails not finding h2o
+# it's likely because h2o was installed as root, and you're not root
+# or some permission problem like that. go to the paths in .libPaths()
+# outside of R and rm -r, if so.
 if ("h2o" %in% rownames(installed.packages())) { 
     remove.packages("h2o",.libPaths()[1]) 
     remove.packages("h2o",.libPaths()[2]) 
@@ -88,7 +93,7 @@ fi
 
 if [[ $INSTALL_R_PACKAGES -eq 1 || $CREATE_FILES_ONLY -eq 1 ]]
 then 
-    cat <<!  >> /tmp/libPaths.cmd
+    cat <<!  >> /tmp/libPaths.$USER.cmd
 # make the install conditional. Don't install if it's already there
 # update if allready there?
 usePackage <- function(p) {
@@ -144,14 +149,14 @@ fi
 # if Jenkins is running this, doing execute it..he'll execute it to logs for stdout/stderr
 if [ $CREATE_FILES_ONLY -eq 0 ]
 then
-    R -f /tmp/libPaths.cmd
+    R -f /tmp/libPaths.$USER.cmd
 else
     echo "If you want to setup R packages the RUnit tests use, like jenkins..then enter the next line at the command prompt"
     echo "Doesn't cover h2o package. Okay for the Runit test to handle that"
     echo ""
-    echo "    R -f /tmp/libPaths.cmd"
+    echo "    R -f /tmp/libPaths.$USER.cmd"
     echo ""
-    echo "Otherwise, I did nothing here, except create /tmp/libPaths.cmd"
+    echo "Otherwise, I did nothing here, except create /tmp/libPaths.$USER.cmd"
 fi
 
 echo "If RCurl didn't install, you probably need libcurl-devel. ('sudo yum install libcurl-devel' on centos). libcurl not enough?"
@@ -168,10 +173,20 @@ echo "sudo apt-get install liblapack-dev"
 
 echo ""
 echo "If rgl didn't install because of GL/gl.h in ubuntu, do this install first"
-echo "sudo apt-get install r-base-dev xorg-dev libglu1-mesa-dev"
-echo "or maybe"
+echo "sudo apt-get install r-base-dev xorg-dev libglu1-mesa-dev mesa-common-dev"
+echo "or as tested 10/21/14 on ubuntu 12.04.5 ..this works"
 echo "sudo apt-get build-dep r-cran-rgl"
+echo "Then go into R and just do install.packages(\"rgl\") and see that it completes without error)"
 echo ""
 echo "If it complained about no package named 'h2o' you need to do a make"
 
-
+# configure: error: missing required header GL/gl.h 
+# normally means you haven't installed the -dev version of a package, in this case GL.
+# 
+# On my system, GL/gl.h is owned by mesa-common-dev
+# 
+# $ dpkg -S /usr/include/GL/gl.h
+# mesa-common-dev: /usr/include/GL/gl.h
+# 
+# which would have been installed with apt-get install mesa-common-dev or 
+# via some GUI magic.

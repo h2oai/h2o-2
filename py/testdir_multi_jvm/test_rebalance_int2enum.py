@@ -61,7 +61,7 @@ class Basic(unittest.TestCase):
 
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=20)
             hex_key=parseResult['destination_key']
             inspect = h2o_cmd.runInspect(key=hex_key)
             print "\n" + csvFilename
@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
             rb_key = "rb_%s" % (hex_key)
             start = time.time()
             print "Rebalancing %s to %s with %s chunks" % (hex_key, rb_key, REBALANCE_CHUNKS)
-            rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, seed=SEEDPERFILE, chunks=REBALANCE_CHUNKS)
+            rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, chunks=REBALANCE_CHUNKS)
             elapsed = time.time() - start
             print "rebalance end on ", csvFilename, 'took', elapsed, 'seconds',\
 

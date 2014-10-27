@@ -20,7 +20,7 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
     max_after_balance_size, score_validation_sampling, diagnostics,
     variable_importances, fast_mode, ignore_const_cols, force_load_balance,
     replicate_training_data, single_node_mode, shuffle_training_data,
-    sparse, col_major)
+    sparse, col_major, max_categorical_features, reproducible)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -82,8 +82,10 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
         \item{replicate_training_data}{ Replicate the entire training dataset onto every node for faster training on small datasets}
         \item{single_node_mode}{ Run on a single node for fine-tuning of model parameters}
         \item{shuffle_training_data}{ Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)}
-        \item{sparse}{ Sparse data handling (Experimental).}
-        \item{col_major}{ Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).}
+        \item{sparse}{ Sparse data handling (Experimental)}
+        \item{col_major}{ Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental)}
+        \item{max_categorical_features}{ Max. number of categorical features, enforced via hashing (Experimental) }
+        \item{reproducible}{ Force reproducibility on small data (will be slow - only uses 1 thread) }
         %- END AUTO-GENERATED CODE
   }
 
@@ -97,12 +99,14 @@ An object of class \code{\linkS4class{H2ODeepLearningModel}} with slots key, dat
 }
 
 \examples{
+# -- CRAN examples begin --
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", 
                  hidden = c(10, 10), epochs = 5)
+# -- CRAN examples end --
 
 \dontrun{
 # DeepLearning variable importance

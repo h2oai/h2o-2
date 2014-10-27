@@ -413,6 +413,7 @@ public class NewChunk extends Chunk {
       }
       _id = id;
       assert j == nzeros;
+      _sparseLen = nzeros;
       return;
     }
     assert _sparseLen == _len:"_sparseLen = " + _sparseLen + ", _len = " + _len + ", nzeros = " + nzeros;

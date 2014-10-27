@@ -547,11 +547,23 @@ public class Utils {
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
+  public static byte[][] add(byte[][] a, byte[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
+  public static byte[][][] add(byte[][][] a, byte[][][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
   public static int[] add(int[] a, int[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
   public static int[][] add(int[][] a, int[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
+  public static int[][][] add(int[][][] a, int[][][] b) {
     for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
     return a;
   }
@@ -564,12 +576,20 @@ public class Utils {
     for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
     return a;
   }
+  public static long[][][] add(long[][][] a, long[][][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
   public static float[] add(float[] a, float[] b) {
     if( b==null ) return a;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
   public static float[][] add(float[][] a, float[][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
+  public static float[][][] add(float[][][] a, float[][][] b) {
     for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
     return a;
   }
@@ -582,7 +602,7 @@ public class Utils {
     for(int i = 0; i < a.length; i++ ) a[i] = add(a[i],b[i]);
     return a;
   }
-  public static long[][][] add(long[][][] a, long[][][] b) {
+  public static double[][][] add(double[][][] a, double[][][] b) {
     for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
     return a;
   }
@@ -802,7 +822,7 @@ public class Utils {
     @Override public String toString() { return Integer.toString(_val); }
   }
   public static class IcedLong extends Iced {
-    public final long _val;
+    public long _val;
     public IcedLong(long v){_val = v;}
     @Override public boolean equals( Object o ) {
       if( !(o instanceof IcedLong) ) return false;
@@ -1711,6 +1731,11 @@ public class Utils {
       suffix = ".hex";
     }
     return Key.make(n+"_shuffled"+suffix);
+  }
+  public static boolean isSorted(int [] ids){
+    for(int i = 1; i < ids.length; ++i)
+      if (ids[i] < ids[i-1])return false;
+    return true;
   }
 
 }

@@ -27,7 +27,7 @@ response with which the model was trained, then the response column will be prep
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package = "h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.dl = h2o.deeplearning(x = 3:9, y = 2, data = prostate.hex, hidden = c(100, 200),

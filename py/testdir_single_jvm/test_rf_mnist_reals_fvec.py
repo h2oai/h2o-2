@@ -61,7 +61,7 @@ class Basic(unittest.TestCase):
             print "parse result:", parseResult['destination_key']
 
             # RF+RFView (train)****************************************
-            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
+            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, returnIgnoreX=True)
             ntrees = 10
             params = {
                 'response': 'C1',

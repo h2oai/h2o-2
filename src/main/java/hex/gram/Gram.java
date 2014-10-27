@@ -13,7 +13,6 @@ import water.nbhm.UtilUnsafe;
 import water.util.Utils;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicIntegerArray;
 
 public final class Gram extends Iced {
   final boolean _hasIntercept;

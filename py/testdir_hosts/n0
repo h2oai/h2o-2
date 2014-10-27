@@ -1,19 +1,20 @@
-./n0.doit test_exec_import_hosts_bigfiles.py
-./n0.doit test_flatfile_with_hosts.py
-# ./n0.doit test_flatfile_w_sudo_iptables.py
-./n0.doit test_from_hdfs_hosts.py
-# ./n0.doit test_hosts_with_a_browser.py
-./n0.doit test_nulls.py
-./n0.doit test_parse_1B_loop.py
-./n0.doit test_parse_covtype20x_loop.py
-./n0.doit test_parse_covtype20x_loop_s3n_hdfs.py
-./n0.doit test_putfile_remote.py
-# ./n0.doit test_remote_cloud1.py
-# ./n0.doit test_remote_cloud.py
-./n0.doit test_rf1_hosts.py
-./n0.doit test_rf2a_hosts.py
-./n0.doit test_rf_311M_rows_hosts.py
-./n0.doit test_rf_from_import_hosts.py
-./n0.doit test_simple_w_hosts.py
-./n0.doit test_w_hosts_fail1.py
-./n0.doit test_w_hosts.py
+./n0.doit test_exec2_ddply_multi.py $*
+./n0.doit test_exec_import_hosts_bigfiles.py $*
+./n0.doit test_flatfile.py $*
+./n0.doit test_flatfile_w_sudo_iptables.py $*
+./n0.doit test_GBM_manyfiles_multijob.py $*
+./n0.doit test_GBM_mnist_restart_many.py $*
+./n0.doit test_GLM_mnist_s3n_fvec.py $*
+# ./n0.doit test_hosts_with_a_browser.py $*
+./n0.doit test_parse_1B_loop_fvec.py $*
+./n0.doit test_parse_covtype20x_loop_fvec.py $*
+./n0.doit test_parse_summary_airline_s3_fvec.py $*
+./n0.doit test_parse_summary_airline_s3n_fvec.py $*
+./n0.doit test_parse_summary_manyfiles_s3_fvec.py $*
+./n0.doit test_parse_summary_manyfiles_s3n_fvec.py $*
+./n0.doit test_parse_summary_zip_s3_fvec.py $*
+./n0.doit test_parse_summary_zip_s3n_fvec.py $*
+./n0.doit test_plot_remove_keys_manyfiles.py $*
+# ./n0.doit test_remote_cloud1.py $*
+# ./n0.doit test_remote_cloud.py $*
+./n0.doit test_rf_parity_fvec.py $*

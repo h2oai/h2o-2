@@ -10,6 +10,8 @@
 \alias{!=,H2OParsedData,H2OParsedData-method}
 \alias{!=,H2OParsedData,numeric-method}
 \alias{!=,numeric,H2OParsedData-method}
+\alias{!=,character,H2OParsedData-method}
+\alias{!=,H2OParsedData,character-method}
 \alias{[,H2OParsedData-method}
 \alias{[<-,H2OParsedData-method}
 \alias{[[,H2OParsedData-method}
@@ -80,7 +82,7 @@
 \alias{h2o<-,H2OParsedData,H2OParsedData-method}
 \alias{h2o<-,H2OParsedData,numeric-method}
 \alias{head,H2OParsedData-method}
-\alias{histograms,H2OParsedData-method}
+\alias{hist,H2OParsedData-method}
 \alias{ifelse,H2OParsedData-method}
 \alias{is.factor,H2OParsedData-method}
 \alias{is.na,H2OParsedData-method}
@@ -102,6 +104,7 @@
 \alias{tail,H2OParsedData-method}
 \alias{trunc,H2OParsedData-method}
 \alias{var,H2OParsedData-method}
+\alias{which,H2OParsedData-method}
 
 \title{Class \code{"H2OParsedData"}}
 \description{
@@ -131,6 +134,8 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
     \item{!=}{\code{signature(e1 = "H2OParsedData", e2 = "H2OParsedData")}: ... }
     \item{!=}{\code{signature(e1 = "H2OParsedData", e2 = "numeric")}: ... }
     \item{!=}{\code{signature(e1 = "numeric", e2 = "H2OParsedData")}: ... }
+    \item{!=}{\code{signature(e1 = "H2OParsedData", e2 = "character")}: ... }
+    \item{!=}{\code{signature(e1 = "character", e2 = "H2OParsedData")}: ... }
     \item{[}{\code{signature(x = "H2OParsedData")}: ... }
     \item{[<-}{\code{signature(x = "H2OParsedData")}: ... }
     \item{[[}{\code{signature(x = "H2OParsedData")}: ... }

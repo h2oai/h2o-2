@@ -53,7 +53,7 @@ public class TCPReceiverThread extends Thread {
         break;                  // Socket closed for shutdown
       } catch( Exception e ) {
         // On any error from anybody, close all sockets & re-open
-        Log.err("IO error on TCP port "+H2O.UDP_PORT+": ",e);
+        Log.err("Retrying after IO error on TCP port "+H2O.UDP_PORT+": ",e);
         saw_error = true;
         errsock = SOCK ;  SOCK = null; // Signal error recovery on the next loop
       }

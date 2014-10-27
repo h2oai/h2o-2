@@ -91,10 +91,10 @@ public class GLMModelView extends Request2 {
           firstRow.append("\t\t<td>" + link(DFORMAT2.format(glm_model.submodels[i].lambda_value), glm_model._key, glm_model.submodels[i].lambda_value) + "</td>\n");
         secondRow.append("\t\t<td>" + Math.max(0,(sm.rank - 1)) + "</td>\n"); // rank counts intercept, that's why -1 is there, however, intercept can be 0 as well, so just prevent -1
         if(sm.xvalidation != null){
-          thirdRow.append("\t\t<td>"  + DFORMAT.format(1 - sm.xvalidation.residual_deviance / sm.xvalidation.null_deviance) + "<sub>x</sub>(" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + ")" + "</td>\n");
+          thirdRow.append("\t\t<td>"  + DFORMAT.format(1 - sm.xvalidation.residual_deviance / glm_model.null_validation.residualDeviance()) + "<sub>x</sub>(" + DFORMAT.format(1 - sm.validation.residual_deviance /glm_model.null_validation.residualDeviance()) + ")" + "</td>\n");
           fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.xvalidation.auc : sm.xvalidation.aic) + "<sub>x</sub>("+ DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.validation.auc : sm.validation.aic) + ")</td>\n");
         } else {
-          thirdRow.append("\t\t<td>" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + "</td>\n");
+          thirdRow.append("\t\t<td>" + DFORMAT.format(1 - sm.validation.residual_deviance / glm_model.null_validation.residualDeviance()) + "</td>\n");
           fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.validation.auc : sm.validation.aic) + "</td>\n");
         }
       }
@@ -133,7 +133,7 @@ public class GLMModelView extends Request2 {
     sb.append("<table class='table table-striped table-bordered table-condensed'>");
     final long null_dof = val.nobs-1, res_dof = Math.max(0,val.nobs-sm.rank);
     sb.append("<tr><th>Degrees of freedom:</th><td>" + null_dof + " total (i.e. Null); " + res_dof + " Residual</td></tr>");
-    sb.append("<tr><th>Null Deviance</th><td>" + val.null_deviance + "</td></tr>");
+    sb.append("<tr><th>Null Deviance</th><td>" + glm_model.null_validation.residualDeviance() + "</td></tr>");
     sb.append("<tr><th>Residual Deviance</th><td>" + val.residual_deviance + "</td></tr>");
     sb.append("<tr><th>AIC</th><td>" + val.aic() + "</td></tr>");
     if(glm_model.glm.family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + DFORMAT.format(val.auc()) + "</td></tr>");

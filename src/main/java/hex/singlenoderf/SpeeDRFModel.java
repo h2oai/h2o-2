@@ -74,6 +74,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Use non-local data")                                       public boolean useNonLocal;
   @API(help = "Dtree keys")                                               public Key[/*ntree*/][/*nclass*/] dtreeKeys;
   @API(help = "DTree Model")                                              public SpeeDRFModel_DTree dtreeTreeModel = null;
+  @API(help = "score_pojo boolean")                                       public boolean score_pojo;
 
   private float _ss; private float _cnt;
   /**
@@ -155,6 +156,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.resp_min = model.resp_min;
     this.validation = model.validation;
     this.src_key = model.src_key;
+    this.score_pojo = model.score_pojo;
   }
 
   public int treeCount() { return t_keys.length; }
@@ -267,28 +269,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
     m.cms[m.cms.length-1] = null;
 
-    // Tree Statistics
-    JsonObject trees = new JsonObject();
-    trees.addProperty(Constants.TREE_COUNT,  m.size());
-    if( m.size() > 0 ) {
-      trees.add(Constants.TREE_DEPTH,  m.depth().toJson());
-      trees.add(Constants.TREE_LEAVES, m.leaves().toJson());
-    }
-    TreeStats treeStats = new TreeStats();
-    double[] depth_stats = stats(trees.get(Constants.TREE_DEPTH));
-    double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
-
-    if(depth_stats != null) {
-      treeStats.minDepth   = (int)depth_stats[0];
-      treeStats.meanDepth  = (float)depth_stats[1];
-      treeStats.maxDepth   = (int)depth_stats[2];
-      treeStats.minLeaves  = (int)leaf_stats[0];
-      treeStats.meanLeaves = (float)leaf_stats[1];
-      treeStats.maxLeaves  = (int)leaf_stats[2];
-    } else {
-      treeStats = null;
-    }
-    m.treeStats = treeStats;
     return m;
   }
 
@@ -310,9 +290,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /** Free all internal tree keys. */
   @Override public Futures delete_impl(Futures fs) {
     for( Key k : t_keys ) UKV.remove(k,fs);
-    if (testKey != null)  UKV.remove(testKey, fs);
-    for (Key[] ka : local_forests) for (Key k : ka) UKV.remove(k, fs);
-
+    for (Key[] ka : local_forests) for (Key k : ka) if (k != null) UKV.remove(k, fs);
     return fs;
   }
 
@@ -545,6 +523,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   public DTree.TreeModel transform2DTreeModel() {
     if (dtreeTreeModel != null) {
+      dtreeTreeModel = new SpeeDRFModel_DTree(dtreeTreeModel, dtreeKeys, treeStats); //freshen the dtreeTreeModel
       return dtreeTreeModel;
     }
     Key key = Key.make();

@@ -48,7 +48,7 @@ public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
   }
 
   /**
-   * Reduce between worker ndoes, with network traffic (if greater than 1 nodes)
+   * Reduce between worker nodes, with network traffic (if greater than 1 nodes)
    * After all reduce()'s are done, postGlobal() will be called
    * @param drt
    */

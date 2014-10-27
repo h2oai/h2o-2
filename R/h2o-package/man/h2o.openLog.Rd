@@ -21,7 +21,7 @@ h2o.openLog(type)
 \dontrun{
 # Skip running this to avoid windows being opened during R CMD check
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 
 h2o.startLogging()
 ausPath = system.file("extdata", "australia.csv", package="h2o")

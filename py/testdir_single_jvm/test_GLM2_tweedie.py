@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
         # regress: glm(CLM_AMT ~ CAR_USE + REVOLKED + GENDER + AREA + MARRIED + CAR_TYPE, data=AutoClaim, family=tweedie(1.34))
         
         coefs = [7, 13, 20, 27, 21, 11]
-        y = "4"
+        y = 4
         ignored_cols = h2o_cmd.createIgnoredCols(key=parseResult['destination_key'], cols=coefs, response=y)
 
         # sapply(c('CLM_AMT', 'CAR_USE', 'REVOLKED', 'GENDER', 'AREA', 'MARRIED', 'CAR_TYPE'), function(x) which(x==colnames(AutoClaim)) - 1)

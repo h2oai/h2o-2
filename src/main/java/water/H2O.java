@@ -16,9 +16,6 @@ import water.util.*;
 import water.util.Log.Tag.Sys;
 import water.license.LicenseManager;
 
-import com.amazonaws.auth.PropertiesCredentials;
-import com.google.common.base.Objects;
-
 /**
 * Start point for creating or joining an <code>H2O</code> Cloud.
 *
@@ -43,6 +40,9 @@ public final class H2O {
 
   // Whether to toggle to single precision as upper limit for storing floating point numbers
   public static boolean SINGLE_PRECISION = false;
+
+  // Max. number of factor levels ber column (before flipping all to NAs)
+  public static int DATA_MAX_FACTOR_LEVELS = 65000;
 
   // The multicast discovery port
   static MulticastSocket  CLOUD_MULTICAST_SOCKET;
@@ -418,10 +418,10 @@ public final class H2O {
       // using google's DNS server as an external IP to find
       // Add a timeout to the touch of google.
       // https://0xdata.atlassian.net/browse/HEX-743
-      s = new Socket(); 
+      s = new Socket();
       // only 3000 milliseconds before giving up
       // Exceptions: IOException, SocketTimeoutException, plus two Illegal* exceptions
-      s.connect(new InetSocketAddress("8.8.8.8", 53), 3000); 
+      s.connect(new InetSocketAddress("8.8.8.8", 53), 3000);
       m+="Using " + s.getLocalAddress() + "\n";
       return s.getLocalAddress();
     } catch( java.net.SocketException se ) {
@@ -558,7 +558,7 @@ public final class H2O {
     private final int _cap;
     FJWThrFact( int cap ) { _cap = cap; }
     @Override public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
-      int cap = _cap==-1 ? OPT_ARGS.nthreads : _cap;
+      int cap = 4 * NUMCPUS;
       return pool.getPoolSize() <= cap ? new FJWThr(pool) : null;
     }
   }
@@ -566,7 +566,13 @@ public final class H2O {
   // A standard FJ Pool, with an expected priority level.
   static class ForkJoinPool2 extends ForkJoinPool {
     final int _priority;
-    private ForkJoinPool2(int p, int cap) { super(NUMCPUS,new FJWThrFact(cap),null,p<MIN_HI_PRIORITY); _priority = p; }
+    private ForkJoinPool2(int p, int cap) {
+      super((OPT_ARGS == null || OPT_ARGS.nthreads <= 0) ? NUMCPUS : OPT_ARGS.nthreads,
+            new FJWThrFact(cap),
+            null,
+            p<MIN_HI_PRIORITY);
+      _priority = p;
+    }
     private H2OCountedCompleter poll2() { return (H2OCountedCompleter)pollSubmission(); }
   }
 
@@ -694,14 +700,16 @@ public final class H2O {
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
-    public int    nthreads=4*NUMCPUS; // Max number of F/J threads in each low-priority batch queue
+    public int    nthreads=NUMCPUS; // desired F/J parallelism level for low priority queues.
     public String license; // License file
     public String h = null;
     public String help = null;
     public String version = null;
     public String single_precision = null;
+    public int data_max_factor_levels;
     public String beta = null;
     public String mem_watchdog = null; // For developer debugging
+    public boolean md5skip = false;
   }
 
   public static void printHelp() {
@@ -747,6 +755,12 @@ public final class H2O {
     "          Reduce the max. (storage) precision for floating point numbers\n" +
     "          from double to single precision to save memory of numerical data.\n" +
     "          (The default is double precision.)\n" +
+    "\n" +
+    "    -data_max_factor_levels <integer>\n" +
+    "          The maximum number of factor levels for categorical columns.\n" +
+    "          Columns with more than the specified number of factor levels\n" +
+    "          are converted into all missing values.\n" +
+    "          (The default is " + DATA_MAX_FACTOR_LEVELS + ".)\n" +
     "\n" +
     "    -nthreads <#threads>\n" +
     "          Maximum number of threads in the low priority batch-work queue.\n" +
@@ -881,6 +895,11 @@ public final class H2O {
     }
     SINGLE_PRECISION = OPT_ARGS.single_precision != null;
     if (SINGLE_PRECISION) Log.info("Using single precision for floating-point numbers.");
+
+    if (OPT_ARGS.data_max_factor_levels != 0) {
+      DATA_MAX_FACTOR_LEVELS = OPT_ARGS.data_max_factor_levels;
+      Log.info("Max. number of factor levels per column: " + DATA_MAX_FACTOR_LEVELS);
+    }
 
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT();
@@ -1058,6 +1077,8 @@ public final class H2O {
 
     while (true) {
       UDP_PORT = API_PORT+1;
+      if( API_PORT<0 || API_PORT>65534 ) // 65535 is max, implied for udp port
+        Log.die("Attempting to use system illegal port, either "+API_PORT+" or "+UDP_PORT);
       try {
         // kbn. seems like we need to set SO_REUSEADDR before binding?
         // http://www.javadocexamples.com/java/net/java.net.ServerSocket.html#setReuseAddress:boolean

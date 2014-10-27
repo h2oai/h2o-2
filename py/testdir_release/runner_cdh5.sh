@@ -26,7 +26,7 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 CDH5_YARN_JOBTRACKER=172.16.2.180:8032
 
 CDH5_YARN_NODES=2
-CDH5_YARN_HEAP=4g
+CDH5_YARN_HEAP=16g
 
 CDH5_YARN_JAR=h2odriver_cdh5.jar
 NAME_NODE=172.16.2.180
@@ -74,7 +74,7 @@ chmod +x /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
 EA=" -ea"
-UDP_DROP=" -random_udp_drop"
+# UDP_DROP=" -random_udp_drop"
 UDP_DROP=""
 echo "port: start looking at 55821. Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port)"
 echo "yarn jar $CDH5_YARN_JAR water.hadoop.h2odriver -jt $CDH5_YARN_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH5_YARN_HEAP -nodes $CDH5_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node $EA $UDP_DROP" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh

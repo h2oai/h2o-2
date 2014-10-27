@@ -21,7 +21,14 @@ class OutWrapper:
         self._out = out
 
     def write(self, x):
-        self._out.write(x.replace('\n', '\n[{0}] '.format(str(datetime.datetime.now()))))
+            # got this with random data to parse.. why? it shows up in our stdout?
+            # UnicodeEncodeError: 'ascii' codec can't encode character u'\x80' in position 41: ordinal not in range(128)
+            # could we be getting unicode object, or is it just the bytes
+            try:
+                s = x.replace('\n', '\n[{0}] '.format(datetime.datetime.now()))
+                self._out.write(s)
+            except: 
+                self._out.write(s.encode('utf8'))
 
     def flush(self):
         self._out.flush()
@@ -76,8 +83,16 @@ def cloud_name():
 def __drain(src, dst):
     for l in src:
         if type(dst) == type(0):
-            os.write(dst, l)
+            # got this with random data to parse.. why? it shows up in our stdout?
+            # UnicodeEncodeError: 'ascii' codec can't encode character u'\x86' in position 60: ordinal not in range(128)
+            # could we be getting unicode object?
+            try:
+                os.write(dst, l)
+            except: 
+                # os.write(dst,"kbn: non-ascii char in the next line?")
+                os.write(dst,l.encode('utf8'))
         else:
+            # FIX! this case probably can have the same issue?
             dst.write(l)
             dst.flush()
     src.close()
@@ -94,9 +109,9 @@ def drain(src, dst):
 # Trickiness because you might have multiple IP addresses (Virtualbox), or Windows.
 # we used to not like giving ip 127.0.0.1 to h2o?
 def get_ip_address():
-    if ipaddr_from_cmd_line:
-        verboseprint("get_ip case 1:", ipaddr_from_cmd_line)
-        return ipaddr_from_cmd_line
+    if ip_from_cmd_line:
+        verboseprint("get_ip case 1:", ip_from_cmd_line)
+        return ip_from_cmd_line
 
     import socket
 
@@ -118,33 +133,33 @@ def get_ip_address():
         verboseprint("get_ip case 3:", ip)
 
     ipa = None
-    badHosts = ['lg1', 'ch-0', 'ch-63']
-    # hack for hosts that don't support this
+    # we had some hosts that didn't support gethostbyname_ex(). hopefully we don't need a hack to exclude
     # the gethostbyname_ex can be slow. the timeout above will save us quickly
-    if hostname not in badHosts:
-        try:
-            # Translate a host name to IPv4 address format, extended interface. 
-            # Return a triple (hostname, aliaslist, ipaddrlist) 
-            # where hostname is the primary host name responding to the given ip_address, 
-            # aliaslist is a (possibly empty) list of alternative host names for the same address, and 
-            # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
-            ghbx = socket.gethostbyname_ex(hostname)
-            for ips in ghbx[2]:
-                # only take the first
-                if ipa is None and not ips.startswith("127."):
-                    ipa = ips[:]
-                    verboseprint("get_ip case 4:", ipa)
-                    if ip != ipa:
-                        print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
-                        print "You might have a vpn active. Best to use '-ip " + ipa + "' to get python and h2o the same."
-        except:
-            pass
-            # print "Timeout during socket.gethostbyname_ex(hostname)"
+    try:
+        # Translate a host name to IPv4 address format, extended interface. 
+        # This should be resolve by dns so it's the right ip for talking to this guy?
+        # Return a triple (hostname, aliaslist, ipaddrlist) 
+        # where hostname is the primary host name responding to the given ip_address, 
+        # aliaslist is a (possibly empty) list of alternative host names for the same address, 
+        # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
+        ghbx = socket.gethostbyname_ex(hostname)
+        for ips in ghbx[2]:
+            # only take the first
+            if ipa is None and not ips.startswith("127."):
+                ipa = ips[:]
+                verboseprint("get_ip case 4:", ipa)
+                if ip != ipa:
+                    print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
+                    print "You might have a vpn active. Best to use '-ip " + ipa + "' to get python and h2o the same."
+    except:
+        pass
+        # print "Timeout during socket.gethostbyname_ex(hostname)"
 
     verboseprint("get_ip_address:", ip)
     # set it back to default higher timeout (None would be no timeout?)
     socket.setdefaulttimeout(5)
     return ip
+
 
 # used to rename the sandbox when running multiple tests in same dir (in different shells)
 def get_sandbox_name():
@@ -156,7 +171,8 @@ def get_sandbox_name():
         return "sandbox"
 
 # used to shift ports when running multiple tests on same machine in parallel (in different shells)
-def get_port_offset():
+def get_base_port(base_port):
+    a = 0
     if os.environ.has_key("H2O_PORT_OFFSET"):
         # this will fail if it's not an integer
         a = int(os.environ["H2O_PORT_OFFSET"])
@@ -165,12 +181,30 @@ def get_port_offset():
         # (54321, 54323, 54325 and 54327 are used in testdir_single_jvm)
         # if we're running multi-node with a config json, then obviously the gap needs to be cognizant 
         # of the number of nodes
-        print "H2O_PORT_OFFSET", a
-        if a<8 or a>256:
-            raise Exception("The H2O_PORT_OFFSET os env variable should be either not set, or between 8 and 256")
-        return a
+        verboseprint("H2O_PORT_OFFSET", a)
+        if a<8 or a>500:
+            raise Exception("H2O_PORT_OFFSET % os env variable should be either not set, or between 8 and 500" % a)
+
+    b = None
+    if os.environ.has_key("H2O_PORT"):
+        # this will fail if it's not an integer
+        b = int(os.environ["H2O_PORT"])
+        verboseprint("H2O_PORT", a)
+        if b<54321 or b>54999:
+            raise Exception("H2O_PORT %s os env variable should be either not set, or between 54321 and 54999." % b)
+
+    if b:
+        base_port = b
     else:
-        return 0
+        if getpass.getuser()=='jenkins': 
+            base_port = 54340
+        else:
+            base_port = 54321
+
+        if a:
+            base_port += a
+
+    return base_port
 
 
 def unit_main():
@@ -197,7 +231,8 @@ def unit_main():
 browse_disable = True
 browse_json = False
 verbose = False
-ipaddr_from_cmd_line = None
+ip_from_cmd_line = None
+network_from_cmd_line = None
 config_json = None
 debugger = False
 random_udp_drop = False
@@ -209,12 +244,13 @@ abort_after_import = False
 clone_cloud_json = None
 disable_time_stamp = False
 debug_rest = False
+long_test_case = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 
 # trust what the user says!
-if ipaddr_from_cmd_line:
-    python_cmd_ip = ipaddr_from_cmd_line
+if ip_from_cmd_line:
+    python_cmd_ip = ip_from_cmd_line
 else:
     python_cmd_ip = get_ip_address()
 
@@ -235,7 +271,9 @@ def parse_our_args():
                         help='Pops a browser to selected json equivalent urls. Selective. Also keeps test alive (and H2O alive) till you ctrl-c. Then should do clean exit',
                         action='store_true')
     parser.add_argument('-v', '--verbose', help='increased output', action='store_true')
+    # I guess we don't have a -port at the command line
     parser.add_argument('-ip', '--ip', type=str, help='IP address to use for single host H2O with psutil control')
+    parser.add_argument('-network', '--network', type=str, help='network/mask (shorthand form) to use to resolve multiple possible IPs')
     parser.add_argument('-cj', '--config_json',
                         help='Use this json format file to provide multi-host defaults. Overrides the default file pytest_config-<username>.json. These are used only if you do build_cloud_with_hosts()')
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms',
@@ -261,6 +299,7 @@ def parse_our_args():
 
     parser.add_argument('-nc', '--nocolor', help="don't emit the chars that cause color printing", action='store_true')
 
+    parser.add_argument('-long', '--long_test_case', help="some tests will vary behavior to more, longer cases", action='store_true')
     parser.add_argument('unittest_args', nargs='*')
     args = parser.parse_args()
 
@@ -268,13 +307,14 @@ def parse_our_args():
     if args.nocolor:
         h2p.disable_colors()
 
-    global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest
+    global browse_disable, browse_json, verbose, ip_from_cmd_line, config_json, debugger, random_udp_drop
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest, long_test_case
 
     browse_disable = args.browse_disable or getpass.getuser() == 'jenkins'
     browse_json = args.browse_json
     verbose = args.verbose
-    ipaddr_from_cmd_line = args.ip
+    ip_from_cmd_line = args.ip
+    network_from_cmd_line = args.network
     config_json = args.config_json
     debugger = args.debugger
     random_udp_drop = args.random_udp_drop
@@ -286,6 +326,7 @@ def parse_our_args():
     clone_cloud_json = args.clone_cloud_json
     disable_time_stamp = args.disable_time_stamp
     debug_rest = args.debug_rest
+    long_test_case = args.long_test_case
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -329,6 +370,7 @@ def handleRemoveError(func, path, exc):
 LOG_DIR = get_sandbox_name()
 
 def clean_sandbox():
+    IS_THIS_FASTER = True
     if os.path.exists(LOG_DIR):
 
         # shutil.rmtree hangs if symlinks in the dir? (in syn_datasets for multifile parse)
@@ -338,11 +380,25 @@ def clean_sandbox():
             os.remove(f)
 
         # shutil.rmtree fails to delete very long filenames on Windoze
-        #shutil.rmtree(LOG_DIR)
+        ### shutil.rmtree(LOG_DIR)
         # was this on 3/5/13. This seems reliable on windows+cygwin
+        # I guess I changed back to rmtree below with something to retry, then ignore, remove errors. 
+        # is it okay now on windows+cygwin?
         ### os.system("rm -rf "+LOG_DIR)
-        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+        print "Removing", LOG_DIR, "(if slow, might be old ice dir spill files)"
+        start = time.time()
+        if IS_THIS_FASTER:
+            try:
+                os.system("rm -rf "+LOG_DIR)
+            except OSError:
+                pass
+        else:
+            shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+
+        elapsed = time.time() - start
+        print "Took %s secs to remove %s" % (elapsed, LOG_DIR)
         # it should have been removed, but on error it might still be there
+
     if not os.path.exists(LOG_DIR):
         os.mkdir(LOG_DIR)
 
@@ -359,6 +415,13 @@ def clean_sandbox_stdout_stderr():
             verboseprint("cleaning", f)
             os.remove(f)
 
+def clean_sandbox_doneToLine():
+    if os.path.exists(LOG_DIR):
+        files = []
+        # glob.glob returns an iterator
+        for f in glob.glob(LOG_DIR + '/*doneToLine*'):
+            verboseprint("cleaning", f)
+            os.remove(f)
 
 def tmp_file(prefix='', suffix='', tmp_dir=None):
     if not tmp_dir:
@@ -467,7 +530,10 @@ nodes = []
 # but it uses hosts, so if that got shuffled, we got it covered?
 # the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
 # FIX! default to random_shuffle for now..then switch to not.
-def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True, port_offset=0):
+def write_flatfile(node_count=2, base_port=None, hosts=None, rand_shuffle=True):
+    # too bad this must be in two places..here and build_cloud()..could do a global above?
+    base_port = get_base_port(base_port)
+    
     # always create the flatfile.
     ports_per_node = 2
     pff = open(flatfile_pathname(), "w+")
@@ -477,12 +543,12 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True,
     if hosts is None:
         ip = python_cmd_ip
         for i in range(node_count):
-            hostPortList.append(ip + ":" + str(port_offset + base_port + ports_per_node * i))
+            hostPortList.append(ip + ":" + str(base_port + ports_per_node * i))
     else:
         for h in hosts:
             for i in range(node_count):
                 # removed leading "/"
-                hostPortList.append(h.addr + ":" + str(port_offset + base_port + ports_per_node * i))
+                hostPortList.append(h.h2o_addr + ":" + str(base_port + ports_per_node * i))
 
     # note we want to shuffle the full list of host+port
     if rand_shuffle:
@@ -615,10 +681,9 @@ def setup_benchmark_log():
     cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
 # node_count is per host if hosts is specified.
-def build_cloud(node_count=1, base_port=54321, hosts=None,
+def build_cloud(node_count=1, base_port=None, hosts=None,
                 timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
                 conservative=False, create_json=False, clone_cloud=None, init_sandbox=True, **kwargs):
-
 
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
@@ -654,22 +719,20 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
 
     ports_per_node = 2
     nodeList = []
-    # see if we need to shift the port used to run groups of tests on the same machine
-    # at the same time
-    port_offset = get_port_offset()
+    # see if we need to shift the port used to run groups of tests on the same machine at the same time
+    base_port  = get_base_port(base_port)
+
     try:
         # if no hosts list, use psutil method on local host.
         totalNodes = 0
         # doing this list outside the loops so we can shuffle for better test variation
         # this jvm startup shuffle is independent from the flatfile shuffle
-        portList = [port_offset + base_port + ports_per_node * i for i in range(node_count)]
+        portList = [base_port + ports_per_node * i for i in range(node_count)]
         if hosts is None:
             # if use_flatfile, we should create it,
             # because tests will just call build_cloud with use_flatfile=True
             # best to just create it all the time..may or may not be used
-
-            # port_offset is added in write_flatfile()
-            write_flatfile(node_count=node_count, base_port=base_port, port_offset=port_offset)
+            write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
             if rand_shuffle:
                 random.shuffle(portList)
@@ -699,11 +762,11 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
         # UPDATE: best to stabilize on the last node!
-        stabilize_cloud(nodeList[0], len(nodeList),
-                        timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorCheck=True)
+        stabilize_cloud(nodeList[0], nodeList,
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorCheck=True)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time() - start, " secs")
-        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList),
-                                                                     hostCount, (time.time() - start)))
+        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % \
+            (len(nodeList), hostCount, (time.time() - start)))
         h2p.red_print("Built cloud:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes")
 
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
@@ -711,10 +774,11 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         # UPDATE: do it for all cases now 2/14/13
         if conservative: # still needed?
             for n in nodeList:
-                stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
+                stabilize_cloud(n, nodeList, timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
 
         # this does some extra checking now
-        verify_cloud_size(nodeList)
+        # verifies cloud name too if param is not None
+        verify_cloud_size(nodeList, expectedCloudName=nodeList[0].cloud_name)
 
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors(python_test_name=python_test_name)
@@ -869,7 +933,11 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
         pass
 
     check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
+    # get rid of all those pesky line marker files. Unneeded now
+    clean_sandbox_doneToLine()
     nodeList[:] = []
+
+
 
 # don't need any more?
 # Used before to make sure cloud didn't go away between unittest defs
@@ -879,16 +947,20 @@ def touch_cloud(nodeList=None):
         n.is_alive()
 
 # timeoutSecs is per individual node get_cloud()
-def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth=False):
+# verify cloud name if cloudName provided
+def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False, timeoutSecs=10, ignoreHealth=False):
     if not nodeList: nodeList = nodes
 
     expectedSize = len(nodeList)
     # cloud size and consensus have to reflect a single grab of information from a node.
     cloudStatus = [n.get_cloud(timeoutSecs=timeoutSecs) for n in nodeList]
 
+    # get cloud_name from all
+
     cloudSizes = [c['cloud_size'] for c in cloudStatus]
     cloudConsensus = [c['consensus'] for c in cloudStatus]
     cloudHealthy = [c['cloud_healthy'] for c in cloudStatus]
+    cloudName = [c['cloud_name'] for c in cloudStatus]
 
     if not all(cloudHealthy):
         msg = "Some node reported cloud_healthy not true: %s" % cloudHealthy
@@ -915,13 +987,26 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
         sizeStr = (",".join(map(str, cloudSizes)))
         if (s != expectedSize):
             raise Exception("Inconsistent cloud size." +
-                            "nodeList report size: %s consensus: %s instead of %d." % \
-                            (sizeStr, consensusStr, expectedSize))
+               "nodeList report size: %s consensus: %s instead of %d." % \
+               (sizeStr, consensusStr, expectedSize))
+
+    # check that all cloud_names are right
+    if expectedCloudName:
+        for i, cn in enumerate(cloudName):
+            if cn != expectedCloudName:
+                # tear everyone down, in case of zombies. so we don't have to kill -9 manually
+                print "node %s has the wrong cloud name: %s expectedCloudName: %s."
+                # print "node %s cloud status: %s" % (i, dump_json(cloudStatus[i]))
+                print "tearing cloud down"
+                tear_down_cloud(nodeList=nodeList, sandboxIgnoreErrors=False)
+                raise Exception("node %s has the wrong cloud name: %s expectedCloudName: %s" % \
+                    (i, cn, expectedCloudName))
+
     return (sizeStr, consensusStr, expectedSize)
 
 
-def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
-    node.wait_for_node_to_accept_connections(timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
+    node_count = len(nodeList)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None, timeoutSecs=14.0):
@@ -968,8 +1053,11 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
 
         return a
 
-    node.stabilize(test, error=('A cloud of size %d' % node_count),
-                   timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
+    # wait to talk to the first one
+    node.wait_for_node_to_accept_connections(nodeList, timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+    # then wait till it says the cloud is the right size
+    node.stabilize(test, error=('trying to build cloud of size %d' % node_count),
+         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
 
 
 def log_rest(s):
@@ -1223,9 +1311,9 @@ class H2O(object):
     def poll_url(self, response,
                  timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=0, pollTimeoutSecs=180,
                  noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
-        ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
-        print "at top of poll_url, timeoutSecs: ", timeoutSecs
+        ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
+        ### print "at top of poll_url, timeoutSecs: ", timeoutSecs
 
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
@@ -1574,7 +1662,6 @@ class H2O(object):
             'source': None,
             'after': None,
             'chunks': None,
-            'seed': None,
         }
         params_dict.update(kwargs)
         a = self.__do_json_request('2/ReBalance.json',
@@ -1604,14 +1691,20 @@ class H2O(object):
         verboseprint("\n to_int result:", dump_json(a))
         return a
 
+    def unlock(self):
+        a = self.__do_json_request('2/UnlockKeys.json', params=None)
+        return a
+
     # There is also a RemoveAck in the browser, that asks for confirmation from
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
     # after parse
     def remove_key(self, key, timeoutSecs=120):
         a = self.__do_json_request('Remove.json',
-                                   params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
+            params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
+        self.unlock()
         return a
+
 
     # this removes all keys!
     def remove_all_keys(self, timeoutSecs=120):
@@ -1712,6 +1805,19 @@ class H2O(object):
         verboseprint("\ninsert_missing_values result:", dump_json(a))
         return a
 
+    def impute(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'source': None,
+            'column': None,
+            'method': None, # mean, mode, median
+            'group_by': None, # comma separated column names
+        }
+        browseAlso = kwargs.pop('browseAlso', False)
+        check_params_update_kwargs(params_dict, kwargs, 'impute', print_params=True)
+        a = self.__do_json_request('2/Impute.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nimpute result:", dump_json(a))
+        return a
+
     def frame_split(self, timeoutSecs=120, **kwargs):
         params_dict = {
             'source': None,
@@ -1763,10 +1869,9 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
         return a
 
-    def speedrf(self, data_key, ntrees=50, max_depth=10, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+    def speedrf(self, data_key, ntrees=50, max_depth=20, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
-
 
         params_dict = {'destination_key': None,
                        'source': data_key,
@@ -1854,7 +1959,8 @@ class H2O(object):
         inspect = h2o_cmd.runInspect(key=data_key)
         # response only takes names. can't use col index..have to look it up
         # or add last col
-        if ('response' not in params_dict) or (not params_dict['response']):
+        # mnist can be col 0 for response!
+        if ('response' not in params_dict) or (params_dict['response'] is None):
             params_dict['response'] = str(inspect['cols'][-1]['name'])
         elif isinstance(params_dict['response'], int): 
             params_dict['response'] = str(inspect['cols'][params_dict['response']]['name'])
@@ -1885,16 +1991,11 @@ class H2O(object):
     def random_forest_view(self, data_key=None, model_key=None, timeoutSecs=300,
         retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, print_params=False, noPoll=False,
-        noPrint=False, useRFScore=False, **kwargs):
+        noPrint=False, **kwargs):
 
         print "random_forest_view not supported in H2O fvec yet. hacking done response"
         r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
             # return r
-
-        # for drf2, you can't pass a new dataset here, compared to what you trained with.
-        # should complain or something if tried with a data_key
-        if data_key:
-            print "Can't pass a new data_key to random_forest_view for v2's DRFModelView. Not using"
 
         algo = '2/DRFModelView'
         # No such thing as 2/DRFScore2
@@ -1917,10 +2018,11 @@ class H2O(object):
             print "\n%s parameters:" % algo, params_dict
             sys.stdout.flush()
 
-        if useRFScore:
-            whichUsed = algoScore
-        else:
-            whichUsed = algo
+        whichUsed = algo
+        # for drf2, you can't pass a new dataset here, compared to what you trained with.
+        # should complain or something if tried with a data_key
+        if data_key:
+            print "Can't pass a new data_key to random_forest_view for v2's DRFModelView. Not using"
 
         a = self.__do_json_request(whichUsed + ".json", timeout=timeoutSecs, params=params_dict)
         verboseprint("\n%s result:" % whichUsed, dump_json(a))
@@ -1950,11 +2052,6 @@ class H2O(object):
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch(whichUsed)
-        return rfView
-
-    def random_forest_score(self, data_key, model_key,
-            timeoutSecs=60, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180, **kwargs):
-        rfView = random_forest_view(useRFScore=True, *args, **kwargs)
         return rfView
 
     def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
@@ -2568,7 +2665,12 @@ class H2O(object):
         # now unzip the files in that directory
         for zname in nameList:
             resultList = h2o_util.flat_unzip(logDir + "/" + zname, logDir)
-            print "logDir:", logDir, "resultList:", resultList
+
+        print "\nlogDir:", logDir
+        for logfile in resultList:
+            numLines = sum(1 for line in open(logfile))
+            print logfile, "Lines:", numLines
+        print
         return resultList
 
 
@@ -2728,7 +2830,7 @@ class H2O(object):
                 msg = error(self, timeTakenSecs, numberOfRetries)
                 raise Exception(msg)
 
-    def wait_for_node_to_accept_connections(self, timeoutSecs=15, noExtraErrorCheck=False):
+    def wait_for_node_to_accept_connections(self, nodeList, timeoutSecs=15, noExtraErrorCheck=False):
         verboseprint("wait_for_node_to_accept_connections")
 
         def test(n, tries=None, timeoutSecs=timeoutSecs):
@@ -2742,9 +2844,11 @@ class H2O(object):
                 # Timeout check will kick in if continued H2O badness.
                 return False
 
-        self.stabilize(test, 'Cloud accepting connections',
-                       timeoutSecs=timeoutSecs, # with cold cache's this can be quite slow
-                       retryDelaySecs=0.1) # but normally it is very fast
+        # get their http addr to represent the nodes
+        expectedCloudStr = ",".join([str(n) for n in nodeList])
+        self.stabilize(test, error=('waiting for initial connection: Expected cloud %s' % expectedCloudStr),
+            timeoutSecs=timeoutSecs, # with cold cache's this can be quite slow
+            retryDelaySecs=0.1) # but normally it is very fast
 
     def sandbox_error_report(self, done=None):
         # not clearable..just or in new value
@@ -2824,12 +2928,17 @@ class H2O(object):
         if beta_features:
             args += ["-beta"]
 
+        if self.network:
+            args += ["-network=" + self.network]
+
         # H2O should figure it out, if not specified
         # DON"T EVER USE on multi-machine...h2o should always get it right, to be able to run on hadoop 
         # where it's not told
-        if (self.addr is not None) and (not self.remoteH2O):
+        # new 10/22/14. Allow forcing the ip when we do remote, for networks with bridges, where
+        # h2o can't self identify (does -network work?)
+        if self.force_ip and self.h2o_addr: # should always have an addr if force_ip...but..
             args += [
-                '--ip=%s' % self.addr,
+                '--ip=%s' % self.h2o_addr,
             ]
 
         # Need to specify port, since there can be multiple ports for an ip in the flatfile
@@ -2896,10 +3005,9 @@ class H2O(object):
 
     def __init__(self,
                  use_this_ip_addr=None, port=54321, capture_output=True,
+                 force_ip=False, network=None,
                  use_debugger=None, classpath=None,
                  use_hdfs=False, use_maprfs=False,
-                 # hdfs_version="cdh4", hdfs_name_node="172.16.2.151",
-                 # hdfs_version="cdh4", hdfs_name_node="172.16.2.176",
                  hdfs_version=None, hdfs_name_node=None, hdfs_config=None,
                  aws_credentials=None,
                  use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None,
@@ -2914,7 +3022,7 @@ class H2O(object):
                  cloud_name=None,
                  disable_assertions=None,
                  sandbox_ignore_errors=False,
-    ):
+        ):
 
         if use_hdfs:
             # see if we can touch a 0xdata machine
@@ -2943,21 +3051,30 @@ class H2O(object):
 
         self.aws_credentials = aws_credentials
         self.port = port
-        # None is legal for self.addr.
+        # None is legal for self.h2o_addr.
         # means we won't give an ip to the jar when we start.
         # Or we can say use use_this_ip_addr=127.0.0.1, or the known address
         # if use_this_addr is None, use 127.0.0.1 for urls and json
-        # Command line arg 'ipaddr_from_cmd_line' dominates:
-        if ipaddr_from_cmd_line:
-            self.addr = ipaddr_from_cmd_line
-        else:
-            self.addr = use_this_ip_addr
+        # Command line arg 'ip_from_cmd_line' dominates:
 
-        if self.addr is not None:
-            self.http_addr = self.addr
+        # ip_from_cmd_line and use_this_ip_addr shouldn't be used for mutli-node
+        if ip_from_cmd_line:
+            self.h2o_addr = ip_from_cmd_line
+        else:
+            self.h2o_addr = use_this_ip_addr
+
+        self.force_ip = force_ip or (self.h2o_addr!=None)
+
+        if self.h2o_addr:
+            self.http_addr = self.h2o_addr
         else:
             self.http_addr = get_ip_address()
 
+        if network_from_cmd_line:
+            self.network = network_from_cmd_line
+        else:
+            self.network = network
+        
         # command line should always dominate for enabling
         if debugger: use_debugger = True
         self.use_debugger = use_debugger
@@ -3018,7 +3135,8 @@ class LocalH2O(H2O):
         # FIX! no option for local /home/username ..always the sandbox (LOG_DIR)
         self.ice = tmp_dir('ice.')
         self.flatfile = flatfile_pathname()
-        self.remoteH2O = False # so we can tell if we're remote or local
+        # so we can tell if we're remote or local. Apparently used in h2o_import.py
+        self.remoteH2O = False 
 
         h2o_os_util.check_port_group(self.port)
         h2o_os_util.show_h2o_processes()
@@ -3189,19 +3307,23 @@ class RemoteHost(object):
         dest = self.uploaded[f]
         for h in hosts:
             if h == self: continue
-            self.run_cmd('scp %s %s@%s:%s' % (dest, h.username, h.addr, dest))
+            self.run_cmd('scp %s %s@%s:%s' % (dest, h.username, h.h2o_addr, dest))
             h.record_file(f, dest)
 
-    def __init__(self, addr, username, password=None, **kwargs):
+    def __init__(self, addr, username=None, password=None, **kwargs):
+
         import paramiko
         # To debug paramiko you can use the following code:
         #paramiko.util.log_to_file('/tmp/paramiko.log')
         #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
 
         # kbn. trying 9/23/13. Never specify -ip on java command line for multi-node
-        # but self.addr is used elsewhere. so look at self.remoteH2O to disable in get_args()
-        self.addr = addr
+        # but self.h2o_addr is used elsewhere. so look at self.remoteH2O to disable in get_args()
+
+        # by definition, this must be the publicly visible addrs, otherwise we can't ssh or browse!
+        self.h2o_addr = addr
         self.http_addr = addr
+
         self.username = username # this works, but it's host state
         self.ssh = paramiko.SSHClient()
 
@@ -3210,16 +3332,16 @@ class RemoteHost(object):
         self.ssh.set_missing_host_key_policy(policy)
         self.ssh.load_system_host_keys()
         if password is None:
-            self.ssh.connect(self.addr, username=username, **kwargs)
+            self.ssh.connect(self.h2o_addr, username=username, **kwargs)
         else:
-            self.ssh.connect(self.addr, username=username, password=password, **kwargs)
+            self.ssh.connect(self.h2o_addr, username=username, password=password, **kwargs)
 
         # keep connection - send keepalive packet evety 5minutes
         self.ssh.get_transport().set_keepalive(300)
         self.uploaded = {}
 
     def remote_h2o(self, *args, **kwargs):
-        return RemoteH2O(self, self.addr, *args, **kwargs)
+        return RemoteH2O(self, self.h2o_addr, *args, **kwargs)
 
     def open_channel(self):
         ch = self.ssh.get_transport().open_session()
@@ -3227,7 +3349,7 @@ class RemoteHost(object):
         return ch
 
     def __str__(self):
-        return 'ssh://%s@%s' % (self.username, self.addr)
+        return 'ssh://%s@%s' % (self.username, self.h2o_addr)
 
 
 #*****************************************************************
@@ -3236,6 +3358,10 @@ class RemoteH2O(H2O):
 
     def __init__(self, host, *args, **kwargs):
         super(RemoteH2O, self).__init__(*args, **kwargs)
+
+        # it gets set True if an address is specified for LocalH2o init. Override.
+        if 'force_ip' in kwargs:
+            self.force_ip = kwargs['force_ip']
 
         self.remoteH2O = True # so we can tell if we're remote or local
         self.jar = host.upload_file('target/h2o.jar')
@@ -3282,7 +3408,7 @@ class RemoteH2O(H2O):
             else:
                 logPrefix = 'remote-h2o'
 
-            logPrefix += '-' + host.addr
+            logPrefix += '-' + host.h2o_addr
 
             outfd, outpath = tmp_file(logPrefix + '.stdout.', '.log')
             errfd, errpath = tmp_file(logPrefix + '.stderr.', '.log')
@@ -3290,11 +3416,11 @@ class RemoteH2O(H2O):
             drain(self.channel.makefile(), outfd)
             drain(self.channel.makefile_stderr(), errfd)
             comment = 'Remote on %s, stdout %s, stderr %s' % (
-                self.addr, os.path.basename(outpath), os.path.basename(errpath))
+                self.h2o_addr, os.path.basename(outpath), os.path.basename(errpath))
         else:
             drain(self.channel.makefile(), sys.stdout)
             drain(self.channel.makefile_stderr(), sys.stderr)
-            comment = 'Remote on %s' % self.addr
+            comment = 'Remote on %s' % self.h2o_addr
 
         log(cmd, comment=comment)
 

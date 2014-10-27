@@ -5,7 +5,7 @@ from jenkinsapi.jenkins import Jenkins
 # only used when we wanted to see what objects were available (below)
 from see import see
 
-DO_LAST_GOOD = False
+DO_LAST_GOOD = True
 
 # using the env variables to force jenkinsapi to use proxy..but after to clear to avoid
 # problems in other python stuff that uses requests!
@@ -65,6 +65,9 @@ allowedJobsE = [
 ]
 
 allowedJobsS = [
+    'testdir_0xdata_only_1_of_1',
+    'testdir_hosts_1_of_1',
+    'testdir_kevin',
     'testdir_multi_jvm_1_of_5',
     'testdir_multi_jvm_2_of_5',
     'testdir_multi_jvm_3_of_5',
@@ -97,6 +100,9 @@ all164Jobs = ['do all', 'h2o_master_test', 'h2o_master_test2', 'h2o_perf_test', 
 allEc2Jobs = ['generic.h2o.build.branch', 'h2o.branch.api-dev', 'h2o.branch.cliffc-drf', 'h2o.branch.hilbert', 'h2o.branch.jobs', 'h2o.branch.jobs1', 'h2o.branch.json_versioning', 'h2o.branch.rel-ito', 'h2o.build', 'h2o.build.api-dev', 'h2o.build.gauss', 'h2o.build.godel', 'h2o.build.h2oscala', 'h2o.build.hilbert', 'h2o.build.jobs', 'h2o.build.master', 'h2o.build.rel-ito', 'h2o.build.rel-ivory', 'h2o.build.rel-iwasawa', 'h2o.build.rel-jacobi', 'h2o.build.rel-jordan', 'h2o.build.rest_api_versioning', 'h2o.build.ux-client', 'h2o.build.va_defaults_renamed', 'h2o.clone', 'h2o.datasets', 'h2o.download.latest', 'h2o.ec2.start', 'h2o.ec2.stop', 'h2o.findbugs', 'h2o.multi.vm.temporary', 'h2o.multi.vm.temporary.cliffc-no-limits', 'h2o.nightly', 'h2o.nightly.1', 'h2o.nightly.cliffc-lock', 'h2o.nightly.ec2', 'h2o.nightly.ec2.cliffc-no-limits', 'h2o.nightly.ec2.erdos', 'h2o.nightly.ec2.hilbert', 'h2o.nightly.ec2.rel-ito', 'h2o.nightly.ec2.rel-jacobi', 'h2o.nightly.ec2.rel-jordan', 'h2o.nightly.fourier', 'h2o.nightly.godel', 'h2o.nightly.multi.vm', 'h2o.nightly.rel-ivory', 'h2o.nightly.rel-iwasawa', 'h2o.nightly.rel-jacobi', 'h2o.nightly.rel-jordan', 'h2o.nightly.va_defaults_renamed', 'h2o.post.push', 'h2o.private.nightly', 'h2o.tests.ec2', 'h2o.tests.ec2.hosts', 'h2o.tests.ec2.multi.jvm', 'h2o.tests.ec2.multi.jvm.fvec', 'h2o.tests.golden', 'h2o.tests.junit', 'h2o.tests.multi.jvm', 'h2o.tests.multi.jvm.fvec', 'h2o.tests.single.jvm', 'h2o.tests.single.jvm.fvec', 'h2o.tests.test']
 
 all184Jobs = [
+    'testdir_0xdata_only_1_of_1',
+    'testdir_hosts_1_of_1',
+    'testdir_kevin',
     'testdir_multi_jvm_1_of_5',
     'testdir_multi_jvm_2_of_5',
     'testdir_multi_jvm_3_of_5',

@@ -55,7 +55,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package = "h2o")
 prostate.hex = h2o.uploadFile(localH2O, path = prosPath, key = "prostate.hex")
 class(prostate.hex)

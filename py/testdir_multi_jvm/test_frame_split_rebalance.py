@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
                 randChunks = random.randint(1, 100)
                 start = time.time()
                 print "Trial %s: Rebalancing %s to %s with %s chunks" % (trial, splitMe, rb_key, randChunks)
-                rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, seed=SEEDPERFILE, chunks=randChunks)
+                rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, chunks=randChunks)
                 elapsed = time.time() - start
                 print "rebalance end on ", csvFilename, 'took', elapsed, 'seconds',\
                 h2o_cmd.runSummary(key=rb_key)

@@ -477,6 +477,12 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
   public double sparsity_beta = 0;
 
+  @API(help = "Max. number of categorical features, enforced via hashing (Experimental).", filter= Default.class, lmin = 1, json = true)
+  public int max_categorical_features = Integer.MAX_VALUE;
+
+  @API(help = "Force reproducibility on small data (will be slow - only uses 1 thread)", filter= Default.class, json = true)
+  public boolean reproducible = false;
+
   public enum MissingValuesHandling {
     Skip, MeanImputation
   }
@@ -536,6 +542,7 @@ public class DeepLearning extends Job.ValidatedJob {
           "autoencoder",
           "average_activation",
           "sparsity_beta",
+          "max_categorical_features",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
@@ -560,6 +567,10 @@ public class DeepLearning extends Job.ValidatedJob {
           "single_node_mode",
           "sparse",
           "col_major",
+          // Allow modification of the regularization parameters after a checkpoint restart
+          "l1",
+          "l2",
+          "max_w2",
   };
 
   /**
@@ -575,6 +586,7 @@ public class DeepLearning extends Job.ValidatedJob {
               || arg._name.equals("replicate_training_data")
               || arg._name.equals("balance_classes")
               || arg._name.equals("n_folds")
+              || arg._name.equals("autoencoder")
               || arg._name.equals("checkpoint")) {
         arg.setRefreshOnChange();
       }
@@ -670,6 +682,12 @@ public class DeepLearning extends Job.ValidatedJob {
     if(arg._name.equals("override_with_best_model") && n_folds != 0) {
       arg.disable("Only without n-fold cross-validation.", inputArgs);
       override_with_best_model = false;
+    }
+    if(arg._name.equals("average_activation") && !autoencoder) {
+      arg.disable("Only for autoencoder.", inputArgs);
+    }
+    if(arg._name.equals("sparsity_beta") && !autoencoder) {
+      arg.disable("Only for autoencoder.", inputArgs);
     }
   }
 
@@ -924,6 +942,7 @@ public class DeepLearning extends Job.ValidatedJob {
     // reason for the error message below is that validation might not have the same horizontalized features as the training data (or different order)
     if (autoencoder && validation != null) throw new UnsupportedOperationException("Cannot specify a validation dataset for auto-encoder.");
     if (autoencoder && activation == Activation.Maxout) throw new UnsupportedOperationException("Maxout activation is not supported for auto-encoder.");
+    if (max_categorical_features < 1) throw new IllegalArgumentException("max_categorical_features must be at least " + 1);
 
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
@@ -941,6 +960,15 @@ public class DeepLearning extends Job.ValidatedJob {
     if (!sparse && col_major) {
       if (!quiet_mode) throw new IllegalArgumentException("Cannot use column major storage for non-sparse data handling.");
     }
+    if (reproducible) {
+      if (!quiet_mode)
+        Log.info("Automatically enabling force_load_balancing, disabling single_node_mode and replicate_training_data\nand setting train_samples_per_iteration to -1 to enforce reproducibility.");
+      force_load_balance = true;
+      single_node_mode = false;
+      train_samples_per_iteration = -1;
+      replicate_training_data = false; //there's no benefit from having multiple nodes compute the exact same thing, and then average it back to the same
+//      replicate_training_data = true; //doesn't hurt, but does replicated identical work
+    }
   }
 
   /**
@@ -950,7 +978,7 @@ public class DeepLearning extends Job.ValidatedJob {
   private DataInfo prepareDataInfo() {
     final boolean del_enum_resp = classification && !response.isEnum();
     final Frame train = FrameTask.DataInfo.prepareFrame(source, autoencoder ? null : response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder || use_all_factor_levels, //use all FactorLevels for auto-encoder
+    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, true, autoencoder || use_all_factor_levels, //use all FactorLevels for auto-encoder
             autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
             classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
     if (!autoencoder) {
@@ -1014,7 +1042,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final long model_size = model.model_info().size();
       if (!quiet_mode) Log.info("Number of model parameters (weights/biases): " + String.format("%,d", model_size));
       train = model.model_info().data_info()._adaptedFrame;
-      if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data /*rebalance into only 4*cores per node*/));
+      if (mp.force_load_balance) train = updateFrame(train, reBalance(train, mp.replicate_training_data));
       if (mp.classification && mp.balance_classes) {
         float[] trainSamplingFactors = new float[train.lastVec().domain().length]; //leave initialized to 0 -> will be filled up below
         if (class_sampling_factors != null) {
@@ -1050,7 +1078,7 @@ public class DeepLearning extends Job.ValidatedJob {
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
       model.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp, train.numRows(), model);
       // Determine whether shuffling is enforced
-      if(mp.replicate_training_data && (model.actual_train_samples_per_iteration == train.numRows()*(mp.single_node_mode?1:H2O.CLOUD.size())) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
+      if(mp.replicate_training_data && (model.actual_train_samples_per_iteration == train.numRows()*(mp.single_node_mode?1:H2O.CLOUD.size())) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1 && !mp.reproducible) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
@@ -1138,10 +1166,13 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return Frame that has potentially more chunks
    */
   private Frame reBalance(final Frame fr, boolean local) {
-    final int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
-    if (fr.anyVec().nChunks() > chunks) {
+    int chunks = (int)Math.min( 4 * H2O.NUMCPUS * (local ? 1 : H2O.CLOUD.size()), fr.numRows());
+    if (fr.anyVec().nChunks() > chunks && !reproducible) {
       Log.info("Dataset already contains " + fr.anyVec().nChunks() + " chunks. No need to rebalance.");
       return fr;
+    } else if (reproducible) {
+      Log.warn("Reproducibility enforced - using only 1 thread - can be slow.");
+      chunks = 1;
     }
     if (!quiet_mode) Log.info("ReBalancing dataset into (at least) " + chunks + " chunks.");
 //      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);

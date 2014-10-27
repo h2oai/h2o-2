@@ -695,7 +695,7 @@ public abstract class Job extends Func {
       int ri = _arguments.indexOf(r);
       _arguments.set(ri, c);
       _arguments.set(ci, r);
-      ((FrameKeyMultiVec) c).setResponse((FrameClassVec) r);
+      ((FrameKeyMultiVec) c).ignoreVec((FrameKeyVec)r);
     }
 
     /**

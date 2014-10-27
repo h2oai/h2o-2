@@ -23,17 +23,18 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         # set node_count to None to make sure we don't use it below. 'h2o_per_host' should be used
         node_count = None
 
-    # randomizing default base_port used
-    offset = random.randint(0,31)
     # for new params:
     # Just update this list with the param name and default and you're done
     allParamsDefault = {
-        'use_flatfile': None,
+        # any combination of force_ip/network could be interesting
+        # network may mean you don't need force_ip
+        'force_ip': False,
+        'network': None,
+        'use_flatfile': False,
         'use_hdfs': True, # default to true, so when we flip import folder to hdfs+s3n import on ec2, the cloud is built correctly
         'hdfs_name_node': None, 
         'hdfs_config': None,
         'hdfs_version': None,
-        'base_port': None,
         'java_heap_GB': None,
         'java_heap_MB': None,
         'java_extra_args': None,
@@ -45,7 +46,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
 
         'h2o_per_host': 2,
         'ip':'["127.0.0.1"]', # this is for creating the hosts list
-        'base_port': 54300 + offset,
+        'base_port': None,
         'username':'0xdiag',
         'password': None,
         'rand_shuffle': True,
@@ -140,13 +141,14 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     h2o.clean_sandbox()
 
     # handles hosts=None correctly
+    base_port = h2o.get_base_port(base_port=paramsToUse['base_port'])
+
     h2o.write_flatfile(
         node_count=paramsToUse['h2o_per_host'],
         # let the env variable H2O_PORT_OFFSET add in there
-        base_port=paramsToUse['base_port'],
+        base_port=base_port,
         hosts=hosts,
         rand_shuffle=paramsToUse['rand_shuffle'],
-        port_offset=h2o.get_port_offset(),
         )
 
     if hosts is not None:

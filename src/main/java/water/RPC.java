@@ -117,6 +117,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Make an initial RPC, or re-send a packet.  Always called on 1st send; also
   // called on a timeout.
   public synchronized RPC<V> call() {
+    ++_callCnt;
     // completer will not be carried over to remote
     // add it to the RPC call.
     if(_dt.getCompleter() != null){
@@ -295,11 +296,13 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     }
   }
 
-  static class RPCCall extends H2OCountedCompleter implements Delayed {
+  public static class RPCCall extends H2OCountedCompleter implements Delayed {
     volatile DTask _dt; // Set on construction, atomically set to null onAckAck
     final H2ONode _client;
     final int _tsknum;
     long _started;              // Retry fields for the ackack
+    int _callCnt;
+    long _cmpStarted;
     long _retry;
     volatile boolean _computedAndReplied; // One time transition from false to true
     volatile boolean _computed; // One time transition from false to true
@@ -319,6 +322,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       assert _dt.getCompleter() == null;
       _dt.setCompleter(this);
       // Run the remote task on this server...
+      _cmpStarted = System.currentTimeMillis();
       _dt.dinvoke(_client);
     }
 
@@ -471,8 +475,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi); // All the resends should be UDP only
         // DROP PACKET
       }
-
     } else if( !old._computedAndReplied) {
+      ++old._callCnt;
       // This packet has not been fully computed.  Hence it's still a work-in-
       // progress locally.  We have no answer to reply but we do not want to
       // re-offer the packet for repeated work.  Just ignore the packet.
@@ -480,6 +484,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       assert !ab.hasTCP():"ERROR: got tcp resend with existing in-progress task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi); // All the resends should be UDP only
       // DROP PACKET
     } else {
+      ++old._callCnt;
       // This is an old re-send of the same thing we've answered to before.
       // Send back the same old answer ACK.  If we sent via TCP before, then
       // we know the answer got there so just send a control-ACK back.  If we
@@ -607,4 +612,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     long nextTime = _started+_retry, dtNextTime = dt._started+dt._retry;
     return nextTime == dtNextTime ? 0 : (nextTime > dtNextTime ? 1 : -1);
   }
+  public final DTask task(){return _dt;}
+  public final int taskNum(){return _tasknum;}
+  public final H2ONode target(){return _target;}
+  public transient int _callCnt;
 }

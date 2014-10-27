@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
 # u'cloud_node_idx': 2, 
 # u'window': 10
 # }
-            print "\nProbing node:", str(node.addr) + ":" + str(node.port)
+            print "\nProbing node:", str(node.h2o_addr) + ":" + str(node.port)
             for k in histogram:
                 ### print k
                 if k['window'] == 10:

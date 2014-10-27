@@ -82,7 +82,7 @@ if __name__ == '__main__':
         h2o_hosts.build_cloud_with_hosts()
     else:
         files = local_files
-        h2o_hosts.build_cloud_with_hosts(use_hdfs=True,base_port=54321)
+        h2o_hosts.build_cloud_with_hosts(use_hdfs=True)
 
     # want to ignore columns with missing values, since GLM throws away those rows, (won't analyze as many rows)
     # Distance, CRSEElapsedTime has some...I guess ignore

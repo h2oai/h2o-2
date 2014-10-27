@@ -1,20 +1,24 @@
 package hex.singlenoderf;
 
 
-import static water.util.MRUtils.sampleFrameStratified;
-import hex.*;
+import dontweave.gson.JsonObject;
 import hex.ConfusionMatrix;
-
-import java.util.*;
-
+import hex.FrameTask;
+import hex.VarImp;
 import hex.drf.DRF;
-import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.Timer;
-import water.api.*;
+import water.api.AUCData;
+import water.api.Constants;
+import water.api.DocGen;
+import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
+
+import java.util.*;
+
+import static water.util.MRUtils.sampleFrameStratified;
 
 public class SpeeDRF extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -48,6 +52,9 @@ public class SpeeDRF extends Job.ValidatedJob {
 
 //  @API(help ="Score each iteration", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean score_each_iteration = false;
+
+  @API(help = "Create the Score POJO", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
+  public boolean score_pojo = true;
 
   /*Imbalanced Classes*/
   /**
@@ -252,6 +259,14 @@ public class SpeeDRF extends Job.ValidatedJob {
         model.variableImportanceCalc(train, resp);
         Log.info("Variable Importance on "+(train.numCols()-1)+" variables and "+ ntrees +" trees done in " + VITimer);
       }
+      Log.info("Generating Tree Stats");
+      JsonObject trees = new JsonObject();
+      trees.addProperty(Constants.TREE_COUNT, model.size());
+      if( model.size() > 0 ) {
+        trees.add(Constants.TREE_DEPTH, model.depth().toJson());
+        trees.add(Constants.TREE_LEAVES, model.leaves().toJson());
+      }
+      model.generateHTMLTreeStats(new StringBuilder(), trees);
       model.current_status = "Model Complete";
     } finally {
       if (model != null) {
@@ -302,6 +317,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.time = 0;
     for( Key tkey : model.t_keys ) assert DKV.get(tkey)!=null;
     model.jobKey = self();
+    model.score_pojo = score_pojo;
     model.current_status = "Initializing Model";
 
     // Model OUTPUTS
@@ -524,7 +540,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       memForNonLocal += fr.numRows() * fr.numCols();
       for(int i = 0; i < H2O.CLOUD._memary.length; i++) {
         HeartBeat hb = H2O.CLOUD._memary[i]._heartbeat;
-        long nodeFreeMemory = (long)( (hb.get_max_mem()-(hb.get_tot_mem()-hb.get_free_mem())) * OVERHEAD_MAGIC);
+        long nodeFreeMemory = (long)(hb.get_max_mem() * 0.8); // * OVERHEAD_MAGIC;
         Log.debug(Log.Tag.Sys.RANDF, i + ": computed available mem: " + PrettyPrint.bytes(nodeFreeMemory));
         Log.debug(Log.Tag.Sys.RANDF, i + ": remote chunks require: " + PrettyPrint.bytes(memForNonLocal));
         if (nodeFreeMemory - memForNonLocal <= 0 || (nodeFreeMemory <= TWO_HUNDRED_MB && memForNonLocal >= ONE_FIFTY_MB)) {
@@ -577,7 +593,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       for (int i = 0; i < ntrees; ++i) {
         long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
         trees[i] = new Tree(jobKey, modelKey, localData, producerId, drfParams.max_depth, drfParams.stat_type, numSplitFeatures, treeSeed,
-                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression, !drfParams._useNonLocalData);
+                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression, !drfParams._useNonLocalData, ((SpeeDRFModel)UKV.get(modelKey)).score_pojo);
       }
 
       Log.info("Invoking the tree build tasks on all nodes.");
