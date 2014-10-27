@@ -158,6 +158,10 @@ public class GLMTest2  extends TestUtil {
     GLMModel model = null;
     File f = TestUtil.find_test_file("smalldata/glm_test/prostate_cat_replaced.csv");
     Frame fr = getFrameForFile(parsed, "smalldata/glm_test/prostate_cat_replaced.csv", new String[]{"ID"}, "CAPSULE");
+    Key k = Key.make("rebalanced");
+    H2O.submitTask(new RebalanceDataSet(fr,k,64)).join();
+    fr.delete();
+    fr = DKV.get(k).get();
     try{
 //      R results:
 //      Call:  glm(formula = CAPSULE ~ . - ID - AGE, family = binomial, data = D,
@@ -294,6 +298,10 @@ public class GLMTest2  extends TestUtil {
     Key modelKey = Key.make("prostate_model");
     GLMModel model = null;
     Frame fr = getFrameForFile(parsed, "smalldata/logreg/prostate.csv", new String[]{"ID"}, "CAPSULE");
+    Key k = Key.make("rebalanced");
+    H2O.submitTask(new RebalanceDataSet(fr,k,64)).join();
+    fr.delete();
+    fr = DKV.get(k).get();
     try{
       // H2O differs on has_intercept and race, same residual deviance though
       String [] cfs1 = new String [] {"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
