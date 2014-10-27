@@ -3,6 +3,7 @@ package water.fvec;
 import hex.Interaction;
 import jsr166y.CountedCompleter;
 import water.*;
+import water.util.Log;
 import water.util.Utils;
 import static water.util.Utils.IcedLong;
 
@@ -203,7 +204,7 @@ public class createInteractions extends H2O.H2OCountedCompleter {
         // add key to hash map, and count occurrences (for pruning)
         IcedLong AB = new IcedLong(ab);
         if (_unsortedMap.containsKey(AB)) {
-          _unsortedMap.get(AB)._val += 1;
+          _unsortedMap.get(AB)._val++;
         } else {
           _unsortedMap.put(AB, new IcedLong(1));
         }
@@ -214,11 +215,10 @@ public class createInteractions extends H2O.H2OCountedCompleter {
     public void reduce(createInteractionDomain mrt) {
       assert(mrt._unsortedMap != null);
       assert(_unsortedMap != null);
-      _unsortedMap.putAll(mrt._unsortedMap);
       for (Map.Entry<IcedLong,IcedLong> e : mrt._unsortedMap.entrySet()) {
         IcedLong x = _unsortedMap.get(e.getKey());
         if (x != null) {
-          x._val++;
+          x._val+=e.getValue()._val;
         } else {
           _unsortedMap.put(e.getKey(), e.getValue());
         }
