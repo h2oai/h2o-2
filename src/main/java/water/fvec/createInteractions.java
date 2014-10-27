@@ -22,7 +22,7 @@ public class createInteractions extends H2O.H2OCountedCompleter {
   static final private int _missing = Integer.MIN_VALUE; //marker for missing factor level
   static final private String _other = "other"; // name for lost factor levels
 
-  private Frame _out;
+  private Frame _target;
   final private Key _job;
 
   private Map<Long, Long> _sortedMap = null;
@@ -105,59 +105,80 @@ public class createInteractions extends H2O.H2OCountedCompleter {
 
   @Override
   public void compute2() {
-    // base frame - same as source
     DKV.remove(Key.make(_ci.target));
 
-    int idx1 = _ci.factors[0];
-    Vec tmp = null;
-    int start = _ci.factors.length == 1 ? 0 : 1;
-    for (int i = start; i < _ci.factors.length; ++i) {
-      String name;
-      int idx2 = _ci.factors[i];
-      if (i > 1) {
-        idx1 = _out.find(tmp);
-        assert idx1 >= 0;
-        name = _out._names[idx1] + "_" + _ci.source._names[idx2];
-      } else {
-        name = _ci.source._names[idx1] + "_" + _ci.source._names[idx2];
+    Frame _out = null;
+    ArrayList<int[]> al = new ArrayList<int[]>();
+    if (!_ci.pairwise) {
+      al.add(_ci.factors);
+    } else {
+      for (int i=0; i<_ci.factors.length; ++i)  {
+        for (int j=i+1; j<_ci.factors.length; ++j) {
+          al.add(new int[]{_ci.factors[i], _ci.factors[j]});
+        }
       }
+    }
+
+    for (int l=0; l<al.size(); ++l) {
+      int[] factors = al.get(l);
+      int idx1 = factors[0];
+      Vec tmp = null;
+      int start = factors.length == 1 ? 0 : 1;
+      for (int i = start; i < factors.length; ++i) {
+        String name;
+        int idx2 = factors[i];
+        if (i > 1) {
+          idx1 = _out.find(tmp);
+          assert idx1 >= 0;
+          name = _out._names[idx1] + "_" + _ci.source._names[idx2];
+        } else {
+          name = _ci.source._names[idx1] + "_" + _ci.source._names[idx2];
+        }
 //      Log.info("Combining columns " + idx1 + " and " + idx2);
-      final Vec A = i > 1 ? _out.vecs()[idx1] : _ci.source.vecs()[idx1];
-      final Vec B = _ci.source.vecs()[idx2];
+        final Vec A = i > 1 ? _out.vecs()[idx1] : _ci.source.vecs()[idx1];
+        final Vec B = _ci.source.vecs()[idx2];
 
-      // Pass 1: compute unique domains of all interaction features
-      createInteractionDomain pass1 = new createInteractionDomain(idx1 == idx2).doAll(A, B);
+        // Pass 1: compute unique domains of all interaction features
+        createInteractionDomain pass1 = new createInteractionDomain(idx1 == idx2).doAll(A, B);
 
-      // Create a new Vec based on the domain
-      final Vec vec = _ci.source.anyVec().makeZero(makeDomain(pass1._unsortedMap, A.domain(), B.domain()));
-      if (i > 1) {
-        _out.add(name, vec);
-        _out.update(_job);
-      } else {
-        _out = new Frame(Key.make(_ci.target), new String[]{name}, new Vec[]{vec});
-        _out.delete_and_lock(_job);
-      }
-      final Vec C = _out.lastVec();
+        // Create a new Vec based on the domain
+        final Vec vec = _ci.source.anyVec().makeZero(makeDomain(pass1._unsortedMap, A.domain(), B.domain()));
+        if (i > 1) {
+          _out.add(name, vec);
+          _out.update(_job);
+        } else {
+          _out = new Frame(Key.make(), new String[]{name}, new Vec[]{vec});
+          _out.delete_and_lock(_job);
+        }
+        final Vec C = _out.lastVec();
 
-      // Create array of enum pairs, in the same (sorted) order as in the _domain map -> for linear lookup
-      // Note: "other" is not mapped in keys, so keys.length can be 1 less than domain.length
-      long[] keys = new long[_sortedMap.size()];
-      int pos = 0;
-      for (long k : _sortedMap.keySet()) {
-        keys[pos++] = k;
-      }
-      assert (C.domain().length == keys.length || C.domain().length == keys.length + 1); // domain might contain _other
+        // Create array of enum pairs, in the same (sorted) order as in the _domain map -> for linear lookup
+        // Note: "other" is not mapped in keys, so keys.length can be 1 less than domain.length
+        long[] keys = new long[_sortedMap.size()];
+        int pos = 0;
+        for (long k : _sortedMap.keySet()) {
+          keys[pos++] = k;
+        }
+        assert (C.domain().length == keys.length || C.domain().length == keys.length + 1); // domain might contain _other
 
-      // Pass 2: fill Vec values
-      new fillInteractionEnums(idx1 == idx2, keys).doAll(A, B, C);
-      tmp = C;
+        // Pass 2: fill Vec values
+        new fillInteractionEnums(idx1 == idx2, keys).doAll(A, B, C);
+        tmp = C;
 
-      // remove temporary vec
-      if (i > 1) {
-        final int idx = _out.vecs().length - 2; //second-last vec
+        // remove temporary vec
+        if (i > 1) {
+          final int idx = _out.vecs().length - 2; //second-last vec
 //        Log.info("Removing column " + _out._names[idx]);
-        _out.remove(idx);
-        _out.update(_job);
+          _out.remove(idx);
+          _out.update(_job);
+        }
+      }
+//    _out.delete();
+      if (_target == null) {
+        _target = new Frame(Key.make(_ci.target), _out.names(), _out.vecs());
+        _target.delete_and_lock(_job);
+      } else {
+        _target.add(_out, true);
       }
     }
     tryComplete();
@@ -165,8 +186,8 @@ public class createInteractions extends H2O.H2OCountedCompleter {
 
   @Override
   public void onCompletion(CountedCompleter caller) {
-    _out.update(_job);
-    _out.unlock(_job);
+    _target.update(_job);
+    _target.unlock(_job);
   }
 
 

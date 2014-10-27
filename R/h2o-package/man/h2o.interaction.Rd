@@ -14,7 +14,8 @@ h2o.interaction(data, key, factors, max_factors, min_occurrence)
 \arguments{
   \item{data}{ An \code{\linkS4class{H2OParsedData}} object containing the variables in the model. }
   \item{key}{The unique hex key assigned to the created frame which has one extra column appended.}
-  \item{factors}{Column indices of factors for which interaction is to be computed}
+  \item{factors}{Column indices of factors for which interaction is to be computed.}
+  \item{pairwise}{Whether to create pairwise quadratic interactions between factors (otherwise create one higher-order interaction). Only applicable if there are 3 or more factors.}
   \item{max_factors}{Max. number of factor levels in pair-wise interaction terms (if enforced, one extra catch-all factor will be made).}
   \item{min_occurrence}{Min. occurrence threshold for factor levels in pair-wise interaction terms.}
 }
@@ -29,7 +30,7 @@ myframe = h2o.createFrame(localH2O, 'myframekey', rows = 20, cols = 5,
                           categorical_fraction = 1.0, factors = 5, real_range = 1,
                           integer_fraction = 0, integer_range = 1, missing_fraction = 0.1,
                           response_factors = 1)[,-1]
-interaction <- h2o.interaction(myframe, factors = c(3,1), max_factors = 10, min_occurrence = 1)
+interaction <- h2o.interaction(myframe, factors = c(3,1,2), pairwise=T, max_factors = 10, min_occurrence = 1)
 head(interaction, 20)
 myframe <- cbind(myframe, interaction)
 head(myframe,20)
