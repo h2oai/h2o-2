@@ -21,9 +21,9 @@ print ("Cloud name: %s" % args.cloudname )
 # Environment variables you MUST set (either here or by passing them in).
 # -----------------------------------------------------------------------
 #
-os.environ['AWS_ACCESS_KEY_ID'] = 'AKIAJFIA2VEGUMLHD5VA'
-os.environ['AWS_SECRET_ACCESS_KEY'] = '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'
-os.environ['AWS_SSH_PRIVATE_KEY_FILE'] = '/opt/play-h2o-ai.pem'
+#os.environ['AWS_ACCESS_KEY_ID'] = '...'
+#os.environ['AWS_SECRET_ACCESS_KEY'] = '...'
+#os.environ['AWS_SSH_PRIVATE_KEY_FILE'] = '...'
 
 
 
@@ -38,7 +38,7 @@ iam_profile_name = None
 # ------------------------------------------------
 
 # SSH key pair name.
-keyName = 'play-h2o-ai' 
+keyName = '...' 
 
 # AWS security group name.
 # Note:
