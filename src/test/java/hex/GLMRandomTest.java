@@ -19,7 +19,9 @@ public class GLMRandomTest extends TestUtil {
 
   private static class GLM2Test extends GLM2 {
     public void invokeServe() {
-      serve();
+      Response r = serve();
+      if(r.error() != null)
+        throw new IllegalArgumentException("Got error " + r.error());
       _fjtask.join();
     }
 

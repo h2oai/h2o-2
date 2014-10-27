@@ -571,7 +571,7 @@ public class CoxPH extends Job {
       n_resp++;
     if (start_column != null)
       n_resp++;
-    final DataInfo dinfo = new DataInfo(source, n_resp, false, DataInfo.TransformType.DEMEAN);
+    final DataInfo dinfo = new DataInfo(source, n_resp, true, false, DataInfo.TransformType.DEMEAN);
     model = new CoxPHModel(this, dest(), source._key, source, null);
     model.initStats(source, dinfo);
   }
@@ -599,11 +599,11 @@ public class CoxPH extends Job {
 
       final double newLoglik = model.calcLoglik(coxMR);
       if (newLoglik > oldLoglik) {
-        model.calcModelStats(newCoef, newLoglik);
-        model.calcCumhaz_0(coxMR);
-
         if (i == 0)
           model.calcCounts(coxMR);
+
+        model.calcModelStats(newCoef, newLoglik);
+        model.calcCumhaz_0(coxMR);
 
         if (newLoglik == 0)
           model.lre = - Math.log10(Math.abs(oldLoglik - newLoglik));

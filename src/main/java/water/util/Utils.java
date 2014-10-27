@@ -1732,5 +1732,10 @@ public class Utils {
     }
     return Key.make(n+"_shuffled"+suffix);
   }
+  public static boolean isSorted(int [] ids){
+    for(int i = 1; i < ids.length; ++i)
+      if (ids[i] < ids[i-1])return false;
+    return true;
+  }
 
 }

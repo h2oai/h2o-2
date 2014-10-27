@@ -978,7 +978,7 @@ public class DeepLearning extends Job.ValidatedJob {
   private DataInfo prepareDataInfo() {
     final boolean del_enum_resp = classification && !response.isEnum();
     final Frame train = FrameTask.DataInfo.prepareFrame(source, autoencoder ? null : response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder || use_all_factor_levels, //use all FactorLevels for auto-encoder
+    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, true, autoencoder || use_all_factor_levels, //use all FactorLevels for auto-encoder
             autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
             classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
     if (!autoencoder) {

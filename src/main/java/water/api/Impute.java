@@ -42,18 +42,24 @@ public class Impute extends Request2 {
 
   public Impute() {}
 
-  protected void init() throws IllegalArgumentException {
+  protected boolean init() throws IllegalArgumentException {
     // Input handling
     if (source == null || column == null)
       throw new IllegalArgumentException("Missing data or input column!");
-    if (column.isBad())
-      throw new IllegalArgumentException("Column is 100% NAs, nothing to do.");
+    if (column.isBad()) {
+      Log.info("Column is 100% NAs, nothing to do.");
+      return true;
+    }
     if (method != Method.mean && method != Method.median && method != Method.mode)  // || method != Method.regression || method != Method.randomForest
       throw new IllegalArgumentException("method must be one of (mean, median, mode)"); // regression, randomForest)");
-    if ( !(column.isEnum()) && column.naCnt() <= 0)
-        throw new IllegalArgumentException("No NAs in the column, nothing to do.");
-    if (column.isEnum() && !Arrays.asList(column._domain).contains("NA") && column.naCnt() <= 0 )
-      throw new IllegalArgumentException("No NAs in the column, nothing to do.");
+    if ( !(column.isEnum()) && column.naCnt() <= 0) {
+      Log.info("No NAs in the column, nothing to do.");
+      return true;
+    }
+    if (column.isEnum() && !Arrays.asList(column._domain).contains("NA") && column.naCnt() <= 0 ) {
+      Log.info("No NAs in the column, nothing to do.");
+      return true;
+    }
 //    if (method == Method.regression && (column.isEnum() || column.isUUID() || column.isTime()))
 //      throw new IllegalArgumentException("Trying to perform regression on non-numeric column! Please select a different column.");
     if (method == Method.mode && (!column.isEnum()))
@@ -62,10 +68,11 @@ public class Impute extends Request2 {
       Log.warn("Column to impute is a factor column, changing method to mode.");
       method = Method.mode;
     }
+    return false;
   }
 
   @Override protected Response serve() {
-    init();
+    if (init()) return Inspect2.redirect(this, source._key.toString());
     final int col_id = source.find(column);
     final int[] _cols = group_by;
     final Key mykey = Key.make();
