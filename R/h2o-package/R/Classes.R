@@ -1049,7 +1049,7 @@ setMethod("[[<-", "H2OParsedData", function(x, i, value) {
 cbind.H2OParsedData <- function(..., deparse.level = 1) {
   if(deparse.level != 1) stop("Unimplemented")
   
-  l <- list(...)
+  l <- unlist(list(...))
   # l_dep <- sapply(substitute(placeholderFunction(...))[-1], deparse)
   if(length(l) == 0) stop('cbind requires an H2O parsed dataset')
   

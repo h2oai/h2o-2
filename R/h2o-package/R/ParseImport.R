@@ -131,6 +131,11 @@ h2o.interaction <- function(data, key=NULL, factors, pairwise, max_factors, min_
   if(missing(max_factors)) stop("max_factors must be specified")
   if(missing(min_occurrence)) stop("min_occurrence must be specified")
 
+  if (is.list(factors)) {
+    res <- lapply(factors, function(factor) h2o.interaction(data, key, factor, max_factors, min_occurrence))
+    return(cbind.H2OParsedData(res))
+  }
+
   if(!is.numeric(factors)) stop("factors must be a numeric value")
   if(max_factors < 1) stop("max_factors cannot be < 1")
   if(!is.numeric(max_factors)) stop("max_factors must be a numeric value")
