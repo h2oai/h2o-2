@@ -94,8 +94,8 @@ if not 'AWS_SSH_PRIVATE_KEY_FILE' in os.environ:
     print 'ERROR: You must set AWS_SSH_PRIVATE_KEY_FILE in the environment.'
     sys.exit(1)
 
-publicFileName = '/usr/share/nginx/html/temp/nodes-public'
-privateFileName = '/usr/share/nginx/html/temp/nodes-private'
+publicFileName = 'nodes-public'
+privateFileName = 'nodes-private'
 
 if not dryRun:
     fpublic = open(publicFileName, 'w')
