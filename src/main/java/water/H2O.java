@@ -41,6 +41,9 @@ public final class H2O {
   // Whether to toggle to single precision as upper limit for storing floating point numbers
   public static boolean SINGLE_PRECISION = false;
 
+  // Max. number of factor levels ber column (before flipping all to NAs)
+  public static int DATA_MAX_FACTOR_LEVELS = 65000;
+
   // The multicast discovery port
   static MulticastSocket  CLOUD_MULTICAST_SOCKET;
   static NetworkInterface CLOUD_MULTICAST_IF;
@@ -703,6 +706,7 @@ public final class H2O {
     public String help = null;
     public String version = null;
     public String single_precision = null;
+    public int data_max_factor_levels;
     public String beta = null;
     public String mem_watchdog = null; // For developer debugging
     public boolean md5skip = false;
@@ -751,6 +755,12 @@ public final class H2O {
     "          Reduce the max. (storage) precision for floating point numbers\n" +
     "          from double to single precision to save memory of numerical data.\n" +
     "          (The default is double precision.)\n" +
+    "\n" +
+    "    -data_max_factor_levels <integer>\n" +
+    "          The maximum number of factor levels for categorical columns.\n" +
+    "          Columns with more than the specified number of factor levels\n" +
+    "          are converted into all missing values.\n" +
+    "          (The default is " + DATA_MAX_FACTOR_LEVELS + ".)\n" +
     "\n" +
     "    -nthreads <#threads>\n" +
     "          Maximum number of threads in the low priority batch-work queue.\n" +
@@ -885,6 +895,11 @@ public final class H2O {
     }
     SINGLE_PRECISION = OPT_ARGS.single_precision != null;
     if (SINGLE_PRECISION) Log.info("Using single precision for floating-point numbers.");
+
+    if (OPT_ARGS.data_max_factor_levels != 0) {
+      DATA_MAX_FACTOR_LEVELS = OPT_ARGS.data_max_factor_levels;
+      Log.info("Max. number of factor levels per column: " + DATA_MAX_FACTOR_LEVELS);
+    }
 
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT();
