@@ -162,6 +162,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
 .h2o.__PAGE_CreateFrame = "2/CreateFrame.json"
+.h2o.__PAGE_Interaction = "2/Interaction.json"
 .h2o.__PAGE_ReBalance = "2/ReBalance.json"
 .h2o.__PAGE_SplitFrame = "2/FrameSplitPage.json"
 .h2o.__PAGE_NFoldExtractor = "2/NFoldFrameExtractPage.json"
