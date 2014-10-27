@@ -162,7 +162,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
 
   // API output parameters END ------------------------------------------------------------
-  private static double GLM_GRAD_EPS = 1e-5; // done (converged) if subgrad < this value.
+  private static double GLM_GRAD_EPS = 1e-4; // done (converged) if subgrad < this value.
 
   private boolean highAccuracy(){return higher_accuracy;}
   private void setHighAccuracy(){
@@ -782,32 +782,32 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       if (_countIteration) ++_iter;
       _callbackStart = System.currentTimeMillis();
 
-      if(_checkLineSearch && needLineSearch(glmt)){
-        LogInfo("invoking line search");
-        new GLMTask.GLMLineSearchTask(_noffsets,GLM2.this.self(),_activeData,_glm, lastBeta(_noffsets) ,glmt._beta,1e-4,_ymu,_nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
-        return;
-      }
-      if(glmt._newThresholds != null) {
-        thresholds = Utils.join(glmt._newThresholds[0], glmt._newThresholds[1]);
-        Arrays.sort(thresholds);
-      }
       double gerr = Double.NaN;
+      boolean needLineSearch = _checkLineSearch && needLineSearch(glmt);
       if (glmt._val != null && glmt._computeGradient) { // check gradient
-        _lastResult = makeIterationInfo(_iter,glmt,_activeCols,null);
         final double[] grad = glmt.gradient(alpha[0], _currentLambda);
         ADMMSolver.subgrad(alpha[0], _currentLambda, glmt._beta, grad);
         gerr = 0;
         for (double d : grad)
-          if(d > gerr)
-            gerr = d;
-          else if(-d > gerr)
-            gerr = -d;
-        if(gerr <= GLM_GRAD_EPS){
+          gerr += d*d;
+        if(gerr <= GLM_GRAD_EPS*GLM_GRAD_EPS || (needLineSearch && gerr <= 5*ADMM_GRAD_EPS*ADMM_GRAD_EPS)){
           LogInfo("converged by reaching small enough gradient, with max |subgradient| = " + gerr );
           checkKKTAndComplete(getCompleter(),glmt, glmt._beta,false);
           return;
         }
       }
+      if(needLineSearch){
+        LogInfo("invoking line search");
+        new GLMTask.GLMLineSearchTask(_noffsets,GLM2.this.self(),_activeData,_glm, lastBeta(_noffsets) ,glmt._beta,1e-4,_ymu,_nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
+        return;
+      }
+      if(glmt._grad != null)
+        _lastResult = makeIterationInfo(_iter,glmt,_activeCols,null);
+      if(glmt._newThresholds != null) {
+        thresholds = Utils.join(glmt._newThresholds[0], glmt._newThresholds[1]);
+        Arrays.sort(thresholds);
+      }
+
       final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       long t1 = System.currentTimeMillis();
       ADMMSolver slvr = new ADMMSolver(_currentLambda,alpha[0], _gradientEps, _addedL2);
