@@ -90,11 +90,11 @@ public class GLMRandomTest extends TestUtil {
 
                               for (GLMParams.Link link : new GLMParams.Link[]{
                                 GLMParams.Link.family_default,
-                                GLMParams.Link.identity,
-                                GLMParams.Link.inverse,
-                                GLMParams.Link.log,
-                                GLMParams.Link.logit,
-                                GLMParams.Link.tweedie,
+//                                GLMParams.Link.identity,
+//                                GLMParams.Link.inverse,
+//                                GLMParams.Link.log,
+//                                GLMParams.Link.logit,
+//                                GLMParams.Link.tweedie,
                               }) {
                                 switch (family) {
                                   case gaussian:
