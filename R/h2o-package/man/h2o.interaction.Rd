@@ -8,7 +8,7 @@ Create interaction terms between categorical features of an H2O Frame
 Create N-th order interaction terms between categorical features of an H2O Frame, N=0,1,2,3,...
 }
 \usage{
-h2o.interaction(data, key, factors, max_factors, min_occurrence)
+h2o.interaction(data, key=NULL, factors, pairwise, max_factors, min_occurrence)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -37,24 +37,28 @@ summary(myframe)
 head(myframe, 20)
 
 # Create pairwise interactions
-pairwise <- h2o.interaction(myframe, key = 'pairwise', factors = list(c(1,2),c(2,3,4)), pairwise=TRUE, max_factors = 10, min_occurrence = 1)
+pairwise <- h2o.interaction(myframe, key = 'pairwise', factors = list(c(1,2),c(2,3,4)),
+                            pairwise=TRUE, max_factors = 10, min_occurrence = 1)
 head(pairwise, 20)
 levels(pairwise[,2])
 
 # Create 5-th order interaction
-higherorder <- h2o.interaction(myframe, key = 'higherorder', factors = c(1,2,3,4,5), pairwise=FALSE, max_factors = 10000, min_occurrence = 1)
+higherorder <- h2o.interaction(myframe, key = 'higherorder', factors = c(1,2,3,4,5),
+                               pairwise=FALSE, max_factors = 10000, min_occurrence = 1)
 head(higherorder, 20)
 
-# Create a categorical variable out of integer column via self-interaction, and keep at most 3 factors, and only if they occur at least twice
+# Create a categorical variable out of integer column via self-interaction,
+# and keep at most 3 factors, and only if they occur at least twice
 summary(myframe[,3])
 head(myframe[,3], 20)
-trim_integer_levels <- h2o.interaction(myframe, key = 'trim_integers', factors = c(3), pairwise = FALSE, max_factors = 3, min_occurrence = 2)
+trim_integer_levels <- h2o.interaction(myframe, key = 'trim_integers', factors = c(3),
+                                       pairwise = FALSE, max_factors = 3, min_occurrence = 2)
 head(trim_integer_levels, 20)
 
 # Put all together and clean up temporaries
 myframe <- cbind(myframe, pairwise, higherorder, trim_integer_levels)
 myframe <- h2o.assign(myframe, 'final.key')
-h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
+h2o.rm(localH2O, grep(pattern = "Last.value", x = h2o.ls(localH2O)$Key, value = TRUE))
 myframe
 head(myframe,20)
 summary(myframe)
