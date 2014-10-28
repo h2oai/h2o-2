@@ -1354,7 +1354,7 @@ class ASTCbind extends ASTOp {
                       new Type[]{Type.ARY,Type.varargs(Type.dblary())},
                       OPF_PREFIX,
                       OPP_PREFIX,OPA_RIGHT); }
-  @Override ASTOp make() {return this;}
+  @Override ASTOp make() {return (ASTOp)clone();}
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     Vec vmax = null;
     for(int i = 0; i < argcnt-1; i++) {
