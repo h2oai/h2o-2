@@ -107,7 +107,6 @@ public class createInteractions extends H2O.H2OCountedCompleter {
   public void compute2() {
     DKV.remove(Key.make(_ci.target));
 
-    Frame _out = null;
     ArrayList<int[]> al = new ArrayList<int[]>();
     if (!_ci.pairwise || _ci.factors.length < 3) {
       al.add(_ci.factors);
@@ -126,6 +125,7 @@ public class createInteractions extends H2O.H2OCountedCompleter {
       int idx1 = factors[0];
       Vec tmp = null;
       int start = factors.length == 1 ? 0 : 1;
+      Frame _out = null;
       for (int i = start; i < factors.length; ++i) {
         String name;
         int idx2 = factors[i];
@@ -147,11 +147,9 @@ public class createInteractions extends H2O.H2OCountedCompleter {
         final Vec vec = _ci.source.anyVec().makeZero(makeDomain(pass1._unsortedMap, A.domain(), B.domain()));
         if (i > 1) {
           _out.add(name, vec);
-          _out.update(_job);
         } else {
-          _out = new Frame(Key.make(), new String[]{name}, new Vec[]{vec});
-          _out.delete_and_lock(_job);
-          _out.unlock(_job);
+          assert(_out == null);
+          _out = new Frame(new String[]{name}, new Vec[]{vec});
         }
         final Vec C = _out.lastVec();
 
@@ -173,10 +171,8 @@ public class createInteractions extends H2O.H2OCountedCompleter {
           final int idx = _out.vecs().length - 2; //second-last vec
 //        Log.info("Removing column " + _out._names[idx]);
           _out.remove(idx);
-          _out.update(_job);
         }
       }
-//    _out.delete();
       if (_target == null) {
         _target = new Frame(Key.make(_ci.target), _out.names(), _out.vecs());
         _target.delete_and_lock(_job);
