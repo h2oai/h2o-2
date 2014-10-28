@@ -151,6 +151,7 @@ public class createInteractions extends H2O.H2OCountedCompleter {
         } else {
           _out = new Frame(Key.make(), new String[]{name}, new Vec[]{vec});
           _out.delete_and_lock(_job);
+          _out.unlock(_job);
         }
         final Vec C = _out.lastVec();
 
