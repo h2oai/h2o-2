@@ -132,8 +132,15 @@ h2o.interaction <- function(data, key=NULL, factors, pairwise, max_factors, min_
   if(missing(min_occurrence)) stop("min_occurrence must be specified")
 
   if (is.list(factors)) {
-    res <- lapply(factors, function(factor) h2o.interaction(data, key, factor, pairwise, max_factors, min_occurrence))
-    return(cbind.H2OParsedData(res))
+    res <- lapply(factors, function(factor) h2o.interaction(data, key=NULL, factor, pairwise, max_factors, min_occurrence))
+    if (!is.null(key)) {
+      old <- cbind.H2OParsedData(res)
+      new <- h2o.assign(old, key)
+      h2o.rm(data@h2o, old@key)
+      return(new)
+    } else {
+      return(cbind.H2OParsedData(res))
+    }
   }
 
   if(!is.numeric(factors)) stop("factors must be a numeric value")
