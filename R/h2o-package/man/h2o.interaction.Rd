@@ -37,18 +37,18 @@ summary(myframe)
 head(myframe, 20)
 
 # Create pairwise interactions
-pairwise <- h2o.interaction(myframe, key = 'pairwise', factors = list(c(1,2),c(2,3,4)), pairwise=T, max_factors = 10, min_occurrence = 1)
+pairwise <- h2o.interaction(myframe, key = 'pairwise', factors = list(c(1,2),c(2,3,4)), pairwise=TRUE, max_factors = 10, min_occurrence = 1)
 head(pairwise, 20)
 levels(pairwise[,2])
 
 # Create 5-th order interaction
-higherorder <- h2o.interaction(myframe, key = 'higherorder', factors = c(1,2,3,4,5), pairwise=F, max_factors = 10000, min_occurrence = 1)
+higherorder <- h2o.interaction(myframe, key = 'higherorder', factors = c(1,2,3,4,5), pairwise=FALSE, max_factors = 10000, min_occurrence = 1)
 head(higherorder, 20)
 
 # Create a categorical variable out of integer column via self-interaction, and keep at most 3 factors, and only if they occur at least twice
 summary(myframe[,3])
 head(myframe[,3], 20)
-trim_integer_levels <- h2o.interaction(myframe, key = 'trim_integers', factors = c(3), pairwise = F, max_factors = 3, min_occurrence = 2)
+trim_integer_levels <- h2o.interaction(myframe, key = 'trim_integers', factors = c(3), pairwise = FALSE, max_factors = 3, min_occurrence = 2)
 head(trim_integer_levels, 20)
 
 # Put all together and clean up temporaries
