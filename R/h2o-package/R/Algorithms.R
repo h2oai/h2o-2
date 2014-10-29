@@ -23,14 +23,15 @@ h2o.coxph.control <- function(lre = 9, iter.max = 20, ...)
 
   list(lre = lre, iter.max = as.integer(iter.max))
 }
-h2o.coxph <- function(x, y, data, key = "", weights, ties = c("efron", "breslow"),
-                      init = 0, control = h2o.coxph.control(...), ...)
+h2o.coxph <- function(x, y, data, key = "", weights = NULL, offset = NULL,
+                      ties = c("efron", "breslow"), init = 0,
+                      control = h2o.coxph.control(...), ...)
 {
   if (!is(data, "H2OParsedData"))
     stop("'data' must be an H2O parsed dataset")
 
   cnames <- colnames(data)
-  if (!is.character(x) || !all(x %in% cnames))
+  if (!is.character(x) || length(x) == 0L || !all(x %in% cnames))
     stop("'x' must be a character vector specifying column names from 'data'")
 
   ny <- length(y)
@@ -38,12 +39,12 @@ h2o.coxph <- function(x, y, data, key = "", weights, ties = c("efron", "breslow"
     stop("'y' must be a character vector of column names from 'data' ",
          "specifying a (start, stop, event) triplet or (stop, event) couplet")
 
-  useWeights <- !missing(weights)
-  if (useWeights) {
-    if (!is.character(weights) || length(weights) != 1L || !(weights %in% cnames))
-      stop("'weights' must be missing or a character string specifying a column name from 'data'")
-  } else
-    weights <- NULL
+  if (!is.null(weights) &&
+      (!is.character(weights) || length(weights) != 1L || !(weights %in% cnames)))
+    stop("'weights' must be NULL or a character string specifying a column name from 'data'")
+
+  if (!is.null(offset) && (!is.character(offset) || !all(offset %in% cnames)))
+    stop("'offset' must be NULL or a character vector specifying a column names from 'data'")
 
   if (!is.character(key) && length(key) == 1L)
     stop("'key' must be a character string")
@@ -65,6 +66,7 @@ h2o.coxph <- function(x, y, data, key = "", weights, ties = c("efron", "breslow"
                            event_column    = y[ny],
                            x_columns       = match(x, cnames) - 1L,
                            weights_column  = weights,
+                           offset_columns  = if (is.null(offset)) offset else match(offset, cnames) - 1L,
                            ties            = ties,
                            init            = init,
                            lre_min         = control$lre,
@@ -86,6 +88,8 @@ h2o.coxph <- function(x, y, data, key = "", weights, ties = c("efron", "breslow"
          means        = structure(c(unlist(res[[3L]]$x_mean_cat),
                                     unlist(res[[3L]]$x_mean_num)),
                                   names = coef_names),
+         means.offset = structure(unlist(res[[3L]]$mean_offset),
+                                  names = unlist(res[[3L]]$offset_names)),
          method       = ties,
          n            = res[[3L]]$n,
          nevent       = res[[3L]]$total_event,
