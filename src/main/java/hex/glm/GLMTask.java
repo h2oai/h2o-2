@@ -283,8 +283,12 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           if(_computeGradient)
             _grad[numStart+i] += grad*nums[i];
         }
-        if(_computeGradient)_grad[numStart + _dinfo._nums] += grad;
-        if(_dinfo._hasIntercept) _xy[_xy.length-1] += wz;
+
+        if(_dinfo._hasIntercept){
+          _xy[_xy.length-1] += wz;
+          if(_computeGradient)
+            _grad[numStart + _dinfo._nums - _noffsets] += grad;
+        }
         if(_computeGram)_gram.addRow(nums, ncats, cats, w);
       }
 
@@ -302,7 +306,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         }
       }
       if(_computeGradient)
-        _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for has_intercept
+        _grad = MemoryManager.malloc8d(_dinfo.fullN()+ (_dinfo._hasIntercept?1:0) - _noffsets);
       if(_glm.family == Family.binomial && _validate){
         _ti = new int[2];
         _newThresholds = new float[2][4*N_THRESHOLDS];

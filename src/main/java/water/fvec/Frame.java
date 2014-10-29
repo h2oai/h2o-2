@@ -323,7 +323,7 @@ public class Frame extends Lockable<Frame> {
       String name = fr._names[i];
       int cnt=0;
       while( find(name) != -1 )
-        name = fr._names[i]+(cnt++);
+        name = fr._names[i]+"_"+(cnt++);
       names[i] = name;
     }
     return add(fr,names);

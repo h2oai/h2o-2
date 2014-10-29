@@ -24,12 +24,13 @@ test.cbind <- function(conn) {
   hdf_filt <- cbind(hdf[,3] <= 5, hdf[,4] >= 4)
   expect_that(dim(hdf_filt), equals(c(12, 2)))
   
+  # cbind unequal rows fails
+  expect_that(cbind(hdf, otherhdf), throws_error())
+
+
   # cbind sets column names correctly
   hdf_names <- cbind(colX = xx, colY = yy)
   expect_that(colnames(hdf_names), equals(c("colX", "colY")))
-  
-  # cbind unequal rows fails
-  expect_that(cbind(hdf, otherhdf), throws_error())
   
   ##### BROKEN #####
   # cbind a df to a slice

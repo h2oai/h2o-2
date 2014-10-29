@@ -822,7 +822,7 @@ public class Utils {
     @Override public String toString() { return Integer.toString(_val); }
   }
   public static class IcedLong extends Iced {
-    public final long _val;
+    public long _val;
     public IcedLong(long v){_val = v;}
     @Override public boolean equals( Object o ) {
       if( !(o instanceof IcedLong) ) return false;
