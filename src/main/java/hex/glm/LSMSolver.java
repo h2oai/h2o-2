@@ -172,13 +172,18 @@ public abstract class LSMSolver extends Iced{
     public long decompTime;
     public boolean normalize() {return _lambda != 0;}
 
+    final double _lambdaMax;
     public double _addedL2;
-    public ADMMSolver (double lambda, double alpha, double gradEps) {
+
+    public ADMMSolver (double lmax, double lambda, double alpha, double gradEps) {
       super(lambda,alpha);
       _gradientEps = gradEps;
+      _lambdaMax = lmax;
     }
-    public ADMMSolver (double lambda, double alpha, double gradEps,double addedL2) {
+
+    public ADMMSolver (double lmax, double lambda, double alpha, double gradEps,double addedL2) {
       super(lambda,alpha);
+      _lambdaMax = lmax;
       _addedL2 = addedL2;
       _gradientEps = gradEps;
     }
@@ -377,6 +382,8 @@ public abstract class LSMSolver extends Iced{
         }
       }
     }
+
+
     final static double RELTOL = 1e-4;
     public boolean solve(Gram gram, double [] xy, double yy, final double[] z, final double rho) {
       gerr = 0;
@@ -397,11 +404,11 @@ public abstract class LSMSolver extends Iced{
       long t1 = System.currentTimeMillis();
       Cholesky chol = gram.cholesky(null,true,_id);
       long t2 = System.currentTimeMillis();
+      double inc = 1e-1*_lambdaMax;
       while(!chol.isSPD() && attempts < 10){
-        if(_addedL2 == 0) _addedL2 = 1e-5;
-        else _addedL2 *= 10;
+        _addedL2 += inc;
         ++attempts;
-        gram.addDiag(_addedL2); // try to add L2 penalty to make the Gram issp
+        gram.addDiag(inc); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
       decompTime = (t2-t1);
@@ -469,83 +476,83 @@ public abstract class LSMSolver extends Iced{
     public String name() {return "ADMM";}
   }
 
-  public static final class ProxSolver extends LSMSolver {
-    public ProxSolver(double lambda, double alpha){super(lambda,alpha);}
-
-    /**
-     * @param newB
-     * @param oldObj
-     * @param oldB
-     * @param
-     * @param t
-     * @return
-     */
-    private static final double f_hat(double [] newB,double oldObj, double [] oldB,double [] xb, double [] xy, double t){
-      double res = oldObj;
-      double l2 = 0;
-      for(int i = 0; i < newB.length; ++i){
-        double diff = newB[i] - oldB[i];
-        res += (xb[i]-xy[i])*diff;
-        l2 += diff*diff;
-      }
-      return res + 0.25*l2/t;
-    }
-  private double penalty(double [] beta){
-    double l1 = 0,l2 = 0;
-    for(int i = 0; i < beta.length; ++i){
-      l1 += Math.abs(beta[i]);
-      l2 += beta[i]*beta[i];
-    }
-    return _lambda*(_alpha*l1 + (1-_alpha)*l2*0.5);
-  }
-    private static double betaDiff(double [] b1, double [] b2){
-      double res = 0;
-      for(int i = 0; i < b1.length; ++i)
-        Math.max(res, Math.abs(b1[i] - b2[i]));
-      return res;
-    }
-    @Override
-    public boolean solve(Gram gram, double [] xy, double yy, double[] beta) {
-      ADMMSolver admm = new ADMMSolver(_lambda,_alpha,1e-2);
-      if(gram != null)return admm.solve(gram,xy,yy,beta);
-      Arrays.fill(beta,0);
-      long t1 = System.currentTimeMillis();
-      final double [] xb = gram.mul(beta);
-      double objval = objectiveVal(xy,yy,beta,xb);
-      final double [] newB = MemoryManager.malloc8d(beta.length);
-      final double [] newG = MemoryManager.malloc8d(beta.length);
-      double step = 1;
-      final double l1pen = _lambda*_alpha;
-      final double l2pen = _lambda*(1-_alpha);
-      double lsmobjval = lsm_objectiveVal(xy,yy,beta,xb);
-      boolean converged = false;
-      final int intercept = beta.length-1;
-      int iter = 0;
-      MAIN:
-      while(!converged && iter < 1000) {
-        ++iter;
-        step = 1;
-        while(step > 1e-12){ // line search
-          double l2shrink = 1/(1+step*l2pen);
-          double l1shrink = l1pen*step;
-          for(int i = 0; i < beta.length-1; ++i)
-            newB[i] = l2shrink*shrinkage((beta[i]-step*(xb[i]-xy[i])),l1shrink);
-          newB[intercept] = beta[intercept] - step*(xb[intercept]-xy[intercept]);
-          gram.mul(newB, newG);
-          double newlsmobj = lsm_objectiveVal(xy, yy, newB,newG);
-          double fhat = f_hat(newB,lsmobjval,beta,xb,xy,step);
-          if(newlsmobj <= fhat){
-            lsmobjval = newlsmobj;
-            converged = betaDiff(beta,newB) < 1e-6;
-            System.arraycopy(newB,0,beta,0,newB.length);
-            System.arraycopy(newG,0,xb,0,newG.length);
-            continue MAIN;
-          } else step *= 0.8;
-        }
-        converged = true;
-      }
-      return converged;
-    }
-    public String name(){return "ProximalGradientSolver";}
-  }
+//  public static final class ProxSolver extends LSMSolver {
+//    public ProxSolver(double lambda, double alpha){super(lambda,alpha);}
+//
+//    /**
+//     * @param newB
+//     * @param oldObj
+//     * @param oldB
+//     * @param
+//     * @param t
+//     * @return
+//     */
+//    private static final double f_hat(double [] newB,double oldObj, double [] oldB,double [] xb, double [] xy, double t){
+//      double res = oldObj;
+//      double l2 = 0;
+//      for(int i = 0; i < newB.length; ++i){
+//        double diff = newB[i] - oldB[i];
+//        res += (xb[i]-xy[i])*diff;
+//        l2 += diff*diff;
+//      }
+//      return res + 0.25*l2/t;
+//    }
+//  private double penalty(double [] beta){
+//    double l1 = 0,l2 = 0;
+//    for(int i = 0; i < beta.length; ++i){
+//      l1 += Math.abs(beta[i]);
+//      l2 += beta[i]*beta[i];
+//    }
+//    return _lambda*(_alpha*l1 + (1-_alpha)*l2*0.5);
+//  }
+//    private static double betaDiff(double [] b1, double [] b2){
+//      double res = 0;
+//      for(int i = 0; i < b1.length; ++i)
+//        Math.max(res, Math.abs(b1[i] - b2[i]));
+//      return res;
+//    }
+//    @Override
+//    public boolean solve(Gram gram, double [] xy, double yy, double[] beta) {
+//      ADMMSolver admm = new ADMMSolver(_lambda,_alpha,1e-2);
+//      if(gram != null)return admm.solve(gram,xy,yy,beta);
+//      Arrays.fill(beta,0);
+//      long t1 = System.currentTimeMillis();
+//      final double [] xb = gram.mul(beta);
+//      double objval = objectiveVal(xy,yy,beta,xb);
+//      final double [] newB = MemoryManager.malloc8d(beta.length);
+//      final double [] newG = MemoryManager.malloc8d(beta.length);
+//      double step = 1;
+//      final double l1pen = _lambda*_alpha;
+//      final double l2pen = _lambda*(1-_alpha);
+//      double lsmobjval = lsm_objectiveVal(xy,yy,beta,xb);
+//      boolean converged = false;
+//      final int intercept = beta.length-1;
+//      int iter = 0;
+//      MAIN:
+//      while(!converged && iter < 1000) {
+//        ++iter;
+//        step = 1;
+//        while(step > 1e-12){ // line search
+//          double l2shrink = 1/(1+step*l2pen);
+//          double l1shrink = l1pen*step;
+//          for(int i = 0; i < beta.length-1; ++i)
+//            newB[i] = l2shrink*shrinkage((beta[i]-step*(xb[i]-xy[i])),l1shrink);
+//          newB[intercept] = beta[intercept] - step*(xb[intercept]-xy[intercept]);
+//          gram.mul(newB, newG);
+//          double newlsmobj = lsm_objectiveVal(xy, yy, newB,newG);
+//          double fhat = f_hat(newB,lsmobjval,beta,xb,xy,step);
+//          if(newlsmobj <= fhat){
+//            lsmobjval = newlsmobj;
+//            converged = betaDiff(beta,newB) < 1e-6;
+//            System.arraycopy(newB,0,beta,0,newB.length);
+//            System.arraycopy(newG,0,xb,0,newG.length);
+//            continue MAIN;
+//          } else step *= 0.8;
+//        }
+//        converged = true;
+//      }
+//      return converged;
+//    }
+//    public String name(){return "ProximalGradientSolver";}
+//  }
 }

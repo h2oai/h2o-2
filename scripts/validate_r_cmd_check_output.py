@@ -44,6 +44,7 @@ class Check:
             r"^Maintainer:",
             r"^New maintainer:",
             r"^\s*Tom Kraljevic",
+            r"^\Days since last update: .*",
             r"^Old maintainer\(s\):",
             r"^\s*Anqi Fu",
             r"^NOTE: There was 1 note.",

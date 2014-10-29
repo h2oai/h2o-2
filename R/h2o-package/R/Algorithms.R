@@ -260,7 +260,8 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
 h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5,
                     epsilon = 1e-4, standardize = TRUE, prior, variable_importances = FALSE, use_all_factor_levels = FALSE,
                     tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100,
-                    higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1) {
+                    higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1,
+                    offset, has_intercept = TRUE) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.character(key)) stop("key must be of class character")
@@ -272,6 +273,13 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
   if( nfolds < 0 ) stop('nfolds must be >= 0')
   if(!is.numeric(alpha)) stop('alpha must be numeric')
   if( any(alpha < 0) ) stop('alpha must be >= 0')
+  if(!is.logical(has_intercept)) stop('has_intercept must be logical')
+  if(missing(offset)) { offset <- "" }
+  else {
+    if(!is.numeric(offset) && !is.character(offset)) stop("offset must be either an index or column name")
+    if(is.character(offset)) offset <- match(offset, colnames(data))
+    offset <- offset - 1
+  }
   
   if(!is.numeric(nlambda)) stop("nlambda must be numeric")
   if((nlambda != -1) && (length(nlambda) > 1 || nlambda < 0)) stop("nlambda must be a single number >= 0")
@@ -317,7 +325,8 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                               max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy),
                               lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p,
                               max_predictors = max_predictors, variable_importances = as.numeric(variable_importances),
-                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link)
+                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link, offset = offset,
+                              has_intercept = as.numeric(has_intercept))
     else if(family == "binomial") {
       if(missing(prior)) prior = -1
       res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
@@ -327,7 +336,8 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                               max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy),
                               lambda_search = as.numeric(lambda_search), prior = prior,
                               max_predictors = max_predictors, variable_importances = as.numeric(variable_importances),
-                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link)
+                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link, offset = offset,
+                              has_intercept = as.numeric(has_intercept))
     } else
       res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
                               response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family,
@@ -336,23 +346,25 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                               max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy),
                               lambda_search = as.numeric(lambda_search),
                               max_predictors = max_predictors, variable_importances = as.numeric(variable_importances),
-                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link)
+                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link, offset = offset,
+                              has_intercept = as.numeric(has_intercept))
 
     params = list(x=args$x, y=args$y, family = .h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds,
                   alpha=alpha, nlambda=nlambda, lambda.min.ratio=lambda.min.ratio, lambda=lambda,
                   beta_epsilon=epsilon, standardize=standardize, max_predictors = max_predictors,
                   variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o,
-                  link = link)
+                  link = link, offset = offset, has_intercept = as.numeric(has_intercept))
     .h2o.__waitOnJob(data@h2o, res$job_key)
     .h2o.get.glm(data@h2o, as.character(res$destination_key), return_all_lambda)
   } else
     .h2o.glm2grid.internal(x_ignore, args$y, data, key, family, link,nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon,
                            standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
-                           variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels)
+                           variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels,
+                           offset = offset, has_intercept = as.numeric(has_intercept))
 }
 
 .h2o.glm2grid.internal <- function(x_ignore, y, data, key, family, link, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
-                                   variable_importances, use_all_factor_levels) {
+                                   variable_importances, use_all_factor_levels, offset, has_intercept) {
   if(family == "tweedie")
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
                             ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds,
@@ -360,7 +372,8 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                             beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
                             higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search),
                             tweedie_variance_power = tweedie.p, variable_importances = as.numeric(variable_importances), 
-                            use_all_factor_levels = as.numeric(use_all_factor_levels), link = link)
+                            use_all_factor_levels = as.numeric(use_all_factor_levels), link = link, offset = offset,
+                            has_intercept = as.numeric(has_intercept))
   else if(family == "binomial") {
     if(missing(prior)) prior = -1
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
@@ -369,7 +382,7 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                             beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
                             higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), prior = prior,
                             variable_importances = as.numeric(variable_importances), use_all_factor_levels = as.numeric(use_all_factor_levels),
-                            link = link)
+                            link = link, offset = offset, has_intercept = as.numeric(has_intercept))
   }
   else
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
@@ -378,12 +391,13 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                             beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
                             higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search),
                             variable_importances = as.numeric(variable_importances), use_all_factor_levels = as.numeric(use_all_factor_levels), 
-                            link = link)
+                            link = link, offset = offset, has_intercept = as.numeric(has_intercept))
 
   params = list(x=setdiff(colnames(data)[-(x_ignore+1)], y), y=y, family=.h2o.__getFamily(family, tweedie.var.p=tweedie.p), 
                 link = link, nfolds=nfolds, alpha=alpha, nlambda=nlambda,
                 lambda.min.ratio=lambda.min.ratio, lambda=lambda, beta_epsilon=epsilon, standardize=standardize,
-                variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o)
+                variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o,
+                offset = offset, has_intercept = as.numeric(has_intercept))
   
   .h2o.__waitOnJob(data@h2o, res$job_key)
   .h2o.get.glm.grid(data@h2o, as.character(res$destination_key), return_all_lambda, data)

@@ -296,7 +296,21 @@
                 cd h2o-SUBST_PROJECT_VERSION/hadoop<br/>
                 hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName<br/>
             </p>
-            <p>3. Point your browser to http://[Hadoop Server IP Address]:54321 </p>
+            <p>3. Point your browser to any of the H2O nodes launched. The IP addresses of the nodes will be available in the output:</p>
+            <p class="terminal">
+                Determining driver host interface for mapper->driver callback...<br/>
+                [Possible callback IP address: 172.16.2.181]<br/>
+                [Possible callback IP address: 127.0.0.1]<br/>
+                ...<br/>
+                Waiting for H2O cluster to come up...<br/>
+                H2O node 172.16.2.184:54321 requested flatfile<br/>
+                Sending flatfiles to nodes...<br/>
+                &nbsp;[Sending flatfile to node 172.16.2.184:54321]<br/>
+                <em>H2O node 172.16.2.184:54321 reports H2O cluster size 1 </em><br/>
+                H2O cluster (1 nodes) is up<br/>
+                Blocking until the H2O cluster shuts down...<br/>
+
+            </p>
           </div>
         </div>
         <div id="documentation">
