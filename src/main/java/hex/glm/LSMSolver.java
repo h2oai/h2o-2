@@ -163,7 +163,9 @@ public abstract class LSMSolver extends Iced{
     //public static final double DEFAULT_LAMBDA = 1e-5;
     public static final double DEFAULT_ALPHA = 0.5;
     public double [] _wgiven;
-    public double _proximalPenalty;
+    public double [] _lb;
+    public double [] _ub;
+    public double [] _proximalPenalties;
     final public double _gradientEps;
     private static final double GLM1_RHO = 1.0e-3;
 
@@ -284,10 +286,10 @@ public abstract class LSMSolver extends Iced{
           gram.addDiag(_lambda*(1-_alpha) + _addedL2);
         if(_alpha > 0 && _lambda > 0)
           gram.addDiag(rho);
-        if(_proximalPenalty > 0 && _wgiven != null){
-          gram.addDiag(_proximalPenalty, true);
+        if(_wgiven != null){
+          gram.addDiag(_proximalPenalties);
           for(int i = 0; i < xy.length; ++i)
-            xy[i] += _proximalPenalty*_wgiven[i];
+            xy[i] += _proximalPenalties[i]*_wgiven[i];
         }
         int attempts = 0;
         long t1 = System.currentTimeMillis();
@@ -386,7 +388,9 @@ public abstract class LSMSolver extends Iced{
 
     final static double RELTOL = 1e-4;
     public boolean solve(Gram gram, double [] xy, double yy, final double[] z, final double rho) {
+      if(xy.length == 0) return true; // special case which can happen if we run with offset and no intercept and have 0 active cols
       gerr = 0;
+      boolean bounds = _lb != null || _ub != null;
       double d = gram._diagAdded;
       final int N = xy.length;
       Arrays.fill(z, 0);
@@ -394,11 +398,11 @@ public abstract class LSMSolver extends Iced{
         gram.addDiag(_lambda*(1-_alpha) + _addedL2);
       if(_alpha > 0 && _lambda > 0)
         gram.addDiag(rho);
-      if(_proximalPenalty > 0 && _wgiven != null){
-        gram.addDiag(_proximalPenalty, true);
+      if(_wgiven != null){
+        gram.addDiag(_proximalPenalties);
         xy = xy.clone();
         for(int i = 0; i < xy.length; ++i)
-          xy[i] += _proximalPenalty*_wgiven[i];
+          xy[i] += _proximalPenalties[i]*_wgiven[i];
       }
       int attempts = 0;
       long t1 = System.currentTimeMillis();
@@ -414,7 +418,7 @@ public abstract class LSMSolver extends Iced{
       decompTime = (t2-t1);
       if(!chol.isSPD())
         throw new NonSPDMatrixException(gram);
-      if(_alpha == 0 || _lambda == 0){ // no l1 penalty
+      if(_alpha == 0 || _lambda == 0 && !bounds){ // no l1 penalty nor upper/lower bounds
         System.arraycopy(xy, 0, z, 0, xy.length);
         chol.solve(z);
         gram.addDiag(-gram._diagAdded + d);
@@ -436,13 +440,17 @@ public abstract class LSMSolver extends Iced{
         xyPrime[N-1] = xy[N-1];
         // updated x
         chol.solve(xyPrime);
-        // compute u and z updateADMM
+        // compute u and z update ADMM
         double rnorm = 0, snorm = 0, unorm = 0, xnorm = 0;
         for( int j = 0; j < N-1; ++j ) {
           double x = xyPrime[j];
           double zold = z[j];
           double x_hat = x * orlx + (1 - orlx) * zold;
           z[j] = shrinkage(x_hat + u[j], kappa);
+          if(_lb != null && z[j] < _lb[j])
+            z[j] = _lb[j];
+          else if(_ub != null && z[j] > _ub[j])
+            z[j] = _ub[j];
           u[j] += x_hat - z[j];
           double r = xyPrime[j] - z[j];
           double s = z[j] - zold;

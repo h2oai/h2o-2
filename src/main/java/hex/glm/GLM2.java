@@ -63,6 +63,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "Include has_intercept term in the model.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   protected boolean has_intercept = true;
 
+  @API(help = "Restrict coefficients to be non-negative.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
+  protected boolean non_negative = false;
+
+  @API(help="lower bounds for coefficients",filter=Default.class,hide=true)
+  protected Frame beta_constraints = null;
+
   @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
   protected int n_folds;
 
@@ -79,7 +85,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   protected double [] alpha = new double[]{0.5};
 
-  public final double DEFAULT_LAMBDA = 0;
+  public final double DEFAULT_LAMBDA = 1e-5;
 
   @API(help = "regularization strength", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   protected double [] lambda = new double[]{DEFAULT_LAMBDA};
@@ -294,10 +300,24 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     this.standardize = src.standardize;
     _jobName = dest.toString() + ((nfolds > 1)?("[" + 0 + "]"):"");
     higher_accuracy = highAccuracy;
+
+  }
+  public GLM2 doInit(){
     init();
+    return this;
   }
 
 
+   public GLM2 setNonNegative(boolean val){
+     non_negative = val;
+     return this;
+   }
+
+  public GLM2 setRegularization(double [] alpha, double [] lambda){
+    this.alpha = alpha;
+    this.lambda = lambda;
+    return this;
+  }
 
   static String arrayToString (double[] arr) {
     if (arr == null) {
@@ -378,8 +398,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private int _noffsets = 0;
   private int _intercept = 1; // 1 or 0
 
+  private double [] _lb;
   @Override public void init(){
     super.init();
+    if(beta_constraints != null){
+      throw H2O.unimpl();
+    }
+
     if(family==Family.gamma)
       setHighAccuracy();
     if(link == Link.family_default)
@@ -426,7 +451,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
     _activeData = _srcDinfo;
     if(higher_accuracy)setHighAccuracy();
-
+    if(non_negative){ // make srue lb is >= 0
+      if(_lb == null)
+        _lb = new double[_srcDinfo.fullN()];
+      for(int i = 0; i < _lb.length; ++i)
+        if(_lb[i] < 0)
+          _lb[i] = 0;
+    }
   }
   @Override protected boolean filterNaCols(){return true;}
   @Override protected Response serve() {
@@ -529,14 +560,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return res;
   }
 
-  private final double [] contractVec(double [] beta, final int [] activeCols){
+  private final double [] contractVec(double [] beta, final int [] activeCols){ return contractVec(beta,activeCols,_intercept);}
+  private final double [] contractVec(double [] beta, final int [] activeCols, int intercept){
     if(beta == null)return null;
     if(activeCols == null)return beta.clone();
     final int N = activeCols.length - _noffsets;
-    double [] res = MemoryManager.malloc8d(N+_intercept);
+    double [] res = MemoryManager.malloc8d(N+intercept);
     for(int i = 0; i < N; ++i)
       res[i] = beta[activeCols[i]];
-    if(_intercept == 1)
+    if(intercept == 1)
       res[res.length-1] = beta[beta.length-1];
     return res;
   }
@@ -544,7 +576,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(beta == null || Arrays.equals(activeCols,oldActiveCols))return beta;
     double [] full = expandVec(beta, oldActiveCols);
     if(activeCols == null)return full;
-    return contractVec(full,activeCols);
+    return contractVec(full,activeCols,_intercept);
   }
 //  protected boolean needLineSearch(final double [] beta,double objval, double step){
   protected boolean needLineSearch(final GLMIterationTask glmt) {
@@ -804,7 +836,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       long t1 = System.currentTimeMillis();
       ADMMSolver slvr = new ADMMSolver(lambda_max, _currentLambda,alpha[0], _gradientEps, _addedL2);
-      slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta,_currentLambda*alpha[0]);
+      if(_lb != null)
+        slvr._lb = _activeCols == null?contractVec(_lb,_activeCols,0):_lb;
+      slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta,Math.max(1e-8*lambda_max,_currentLambda*alpha[0]));
       // print all info about iteration
       LogInfo("Gram computed in " + (_callbackStart - _iterationStartTime) + "ms, " + (Double.isNaN(gerr)?"":"gradient = " + gerr + ",") + ", step = " + 1 + ", ADMM: " + slvr.iterations + " iterations, " + (System.currentTimeMillis() - t1) + "ms (" + slvr.decompTime + "), subgrad_err=" + slvr.gerr);
 //      int [] iBlocks = new int[]{8,16,32,64,128,256,512,1024};

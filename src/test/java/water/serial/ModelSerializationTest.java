@@ -144,7 +144,7 @@ public class ModelSerializationTest extends TestUtil {
     Frame f = parseFrame(dataset);
     Key modelKey = Key.make("GLM_model_for_"+dataset);
     try {
-      new GLM2("GLM test on "+dataset,Key.make(),modelKey,new Source(f,f.vec(response),true),family).fork().get();
+      new GLM2("GLM test on "+dataset,Key.make(),modelKey,new Source(f,f.vec(response),true),family).doInit().fork().get();
       return DKV.get(modelKey).get();
     } finally {
       if (f!=null) f.delete();
