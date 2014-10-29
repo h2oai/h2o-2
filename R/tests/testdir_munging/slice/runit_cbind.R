@@ -26,6 +26,11 @@ test.cbind <- function(conn) {
   
   # cbind unequal rows fails
   expect_that(cbind(hdf, otherhdf), throws_error())
+
+
+  # cbind sets column names correctly
+  hdf_names <- cbind(colX = xx, colY = yy)
+  expect_that(colnames(hdf_names), equals(c("colX", "colY")))
   
   ##### BROKEN #####
   # cbind a df to a slice

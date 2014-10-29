@@ -153,22 +153,23 @@ public final class GLMParams extends Iced {
   }
 
   public final double linkDeriv(double x) {
+    double res = 0;
     switch( link ) {
-      case logit:
-        double res = 1 / (x * (1 - x));
-        if(res > 1e5) return 1e5;
-        return res;
-      case identity:
-        return 1;
-      case log:
-        return 1.0 / x;
-      case inverse:
-        return -1.0 / (x * x);
+      case logit:    res = +1.0 / (x * (1 - x)); break;
+      case identity: res = +1.0                ; break;
+      case log:      res = +1.0 / x            ; break;
+      case inverse:  res = -1.0 / (x * x)      ; break;
       case tweedie:
-        return tweedie_link_power * Math.pow(x, tweedie_link_power - 1);
+        res = tweedie_link_power * Math.pow(x, tweedie_link_power - 1);
+        break;
       default:
         throw H2O.unimpl();
     }
+    if(res > 1e5)
+      res = 1e5;
+    else if(res < -1e5)
+      res = -1e5;
+    return res;
   }
 
   public final double linkInv(double x) {

@@ -7,6 +7,8 @@ import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
 
+import java.util.Arrays;
+
 
 /**
  * Create new factors that represent interactions of the given factors
@@ -25,6 +27,9 @@ public class Interaction extends Job {
   public int[] factors = new int[0];
   class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
 
+  @API(help = "Whether to create pairwise quadratic interactions between factors (otherwise create one higher-order interaction). Only applicable if there are 3 or more factors.", required = false, filter = Default.class, json=true)
+  public boolean pairwise = false;
+
   @API(help = "Max. number of factor levels in pair-wise interaction terms (if enforced, one extra catch-all factor will be made)", required = true, filter = Default.class, lmin = 1, lmax = Integer.MAX_VALUE, json=true)
   public int max_factors = 100;
 
@@ -38,6 +43,7 @@ public class Interaction extends Job {
       source.read_lock(self());
 //      if (max_factors < 1) throw new IllegalArgumentException("max_factors must be >1.");
       if (factors.length == 0) throw new IllegalArgumentException("factors must be non-empty.");
+      if (pairwise && factors.length < 3) Log.info("Ignoring the pairwise option, requires 3 or more factors.");
       for (int v: factors) {
         if (!source.vecs()[v].isEnum()) {
           throw new IllegalArgumentException("Column " + source.names()[v] + " is not a factor.");
@@ -72,15 +78,19 @@ public class Interaction extends Job {
     }
     RString aft = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
     aft.replace("key", target);
-    DocGen.HTML.section(sb, report() + "<br/>Frame '" + aft.toString() + "' contains the interaction feature.");
+    DocGen.HTML.section(sb, report() + "<br/>Frame '" + aft.toString() + "' contains the interaction feature(s).");
     return true;
   }
 
   private String report() {
     Frame res = UKV.get(Key.make(target));
+    if (!pairwise)
     return "Created interaction feature " + res.names()[0]
             + " (order: " + factors.length + ") with " + res.lastVec().domain().length + " factor levels"
             + " in" + PrettyPrint.msecs(_time, true);
+    else
+      return "Created " + res.numCols() + " pair-wise interaction features " + Arrays.deepToString(res.names())
+            + " (order: 2) in" + PrettyPrint.msecs(_time, true);
   }
 
 }

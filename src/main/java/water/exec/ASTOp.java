@@ -1354,7 +1354,7 @@ class ASTCbind extends ASTOp {
                       new Type[]{Type.ARY,Type.varargs(Type.dblary())},
                       OPF_PREFIX,
                       OPP_PREFIX,OPA_RIGHT); }
-  @Override ASTOp make() {return this;}
+  @Override ASTOp make() {return new ASTCbind(); }
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     Vec vmax = null;
     for(int i = 0; i < argcnt-1; i++) {
@@ -1370,6 +1370,7 @@ class ASTCbind extends ASTOp {
     Frame fr = new Frame(new String[0],new Vec[0]);
     for(int i = 0; i < argcnt-1; i++) {
       if( env.isAry(-argcnt+1+i) ) {
+        String name;
         Frame fr2 = env.ary(-argcnt+1+i);
         Frame fr3 = fr.makeCompatible(fr2);
         if( fr3 != fr2 ) {      // If copied into a new Frame, need to adjust refs
@@ -1377,7 +1378,10 @@ class ASTCbind extends ASTOp {
           env.subRef(fr2,null);
         }
         // Take name from an embedded assign: "cbind(colNameX = some_frame, ...)"
-        fr.add(fr3,true);
+        if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null ) {
+          if (name.equals(fr3._key.toString())) fr.add(fr3,true);
+          else fr.add(name, fr3.anyVec());
+        } else fr.add(fr3,true);
       } else {
         double d = env.dbl(-argcnt+1+i);
         Vec v = vmax == null ? Vec.make1Elem(d) : vmax.makeCon(d);
