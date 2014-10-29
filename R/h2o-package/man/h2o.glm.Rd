@@ -12,7 +12,7 @@ h2o.glm(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5, nlambda = -
   prior, variable_importances = FALSE, use_all_factor_levels = FALSE, tweedie.p =
   ifelse(family == 'tweedie', 1.5, as.numeric(NA)), iter.max = 100, 
   higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, 
-  max_predictors = -1)
+  max_predictors = -1, offset, has_intercept = TRUE)
 }
 \arguments{
   \item{x}{
@@ -86,6 +86,8 @@ tweedie: tweedie \cr
   \item{max_predictors}{
   (Optional) When \code{lambda_search = TRUE}, the algorithm will stop training if the number of predictors exceeds this value. Ignored when \code{lambda_search = FALSE} or \code{max_predictors = -1}.
   }
+  \item{offset}{(Optional) Column to be used as an offset, if you have one. }
+  \item{has_intercept}{ A logical value indicating whether or not to include the intercept term. If there are factor columns in your model, then the intercept must be included. }
 }
 \value{
 An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, model and xval. The slot model is a list of the following components:
