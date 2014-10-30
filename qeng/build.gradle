@@ -1,0 +1,79 @@
+apply plugin: 'java'
+//apply plugin: 'groovy'
+description = "Unified Test Framework"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile 'junit:junit:[4.8,)'
+    testCompile 'org.testng:testng:[6.5.1,)'
+    testCompile "org.uncommons:reportng:1.1.4"
+    testCompile "com.google.inject:guice:3.0"
+    testRuntime ("org.easyb:easyb-core:1.4") { transitive = true }
+}
+
+task acceptanceStories << {
+    ant.taskdef(name: "easyb", classname:"org.easyb.ant.BehaviorRunnerTask", classpath: sourceSets.test.runtimeClasspath.asPath)
+    def reports = "${project.buildDir}/reports"
+    new File("${reports}/easyb").mkdirs()
+    ant.easyb( classpath: sourceSets.test.runtimeClasspath.asPath, failureProperty:'easyb_failed' ) {
+        report( location:"${reports}/easyb/index.html", format:"html" )
+        behaviors( dir: "../src/test/easyb" ) {
+            include( name:"**/*.story" )
+        }
+        behaviors( dir: "src/test/easyb" ) {
+            include( name:"**/*.story" )
+        }
+    }
+    ant.fail( if:'easyb_failed', message: 'Failures in easyb stories' )
+}
+
+
+task acceptanceTests(type: Test) {
+    useTestNG(){
+        //excludeGroups = ['functional'] as Set
+        includeGroups = ['acceptance'] as Set
+        //parallel = 'method'
+        //threadCount = 4
+        useDefaultListeners = true
+    }
+    options{
+//        listeners << 'org.uncommons.reportng.HTMLReporter'
+        listeners << 'org.uncommons.reportng.JUnitXMLReporter'
+        listeners << 'org.testng.reporters.EmailableReporter'
+    }
+    //set different folders for reports on integration tests ...
+    reports.junitXml.destination = file("${buildDir}/test-results/testng")
+    reports.html.destination = file("${reporting.baseDir}/testng")
+
+    // Add System property to running tests.
+    systemProperty 'sysProp', 'value'
+
+    // Use the following JVM arguments for each test process.
+    //jvmArgs '-Xms256m', '-Xmx512m'
+
+    // Enable debugging mode.
+    debug = false   // a value of true will start waiting for -Xrunjdwp
+
+    // Ignore any test failues and don't fail the build.
+    ignoreFailures = true
+
+    // Enable assertions for test with the assert keyword.
+    enableAssertions = true
+    //forkEvery = 10
+    //maxParallelForks = 4
+    // Disable automatic inspections.
+    scanForTestClasses = false
+
+    // Include test classes.
+    include '**/*Test.class', '**/*Spec.class'
+
+    // Exclude test classes.
+    exclude '**/Abstract*.class', '**/Run*.class'
+    //test.testReportDir = file("$buildDir/test-reports")
+    //test.testResultsDir = file("$buildDir/test-results")
+    //test.testReport = false
+
+}
