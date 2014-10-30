@@ -21,6 +21,16 @@ test.GLM.zero_intercept <- function(conn) {
   var_family = "binomial"
   var_folds = 0
   var_alpha = 1
+
+  Log.info("Build binomial GLMnet model with and without intercept...")
+  library(glmnet)
+  r_Y = as.matrix(prostate.R[,myY])
+  r_X = as.matrix(prostate.R[,myX])
+  prostate.glmnet1 = glmnet(y = r_Y, x = r_X, family = var_family, alpha = var_alpha, intercept = TRUE)
+  prostate.glmnet2 = glmnet(y = r_Y, x = r_X, family = var_family, alpha = var_alpha, intercept = FALSE)
+  
+  var_lambda1 = tail(prostate.glmnet1$lambda, n = 1)
+  var_lambda2 = tail(prostate.glmnet2$lambda, n = 1)
   
   # Compare coefficients function
   check_coeff <- function(coeff.h2o, coeff.r, threshold = 0.1){
@@ -33,14 +43,14 @@ test.GLM.zero_intercept <- function(conn) {
   }
   
   Log.info("Build logistic model in H2O with intercept...")
-  prostate.glm.h2o1 = h2o.glm(y = myY, x = myX, data = prostate.hex,
+  prostate.glm.h2o1 = h2o.glm(y = myY, x = myX, data = prostate.hex, lambda = var_lambda1,
                              family = var_family, nfolds = var_folds, alpha = var_alpha, has_intercept = TRUE)
   Log.info("Build logistic model in H2O without intercept...")
   ## standardization must be set to false since there are no intercepts, we cannnot regularize
-  prostate.glm.h2o2 = h2o.glm(y = myY, x = myX, data = prostate.hex, standardize = F,
+  prostate.glm.h2o2 = h2o.glm(y = myY, x = myX, data = prostate.hex, lambda = var_lambda2, standardize = F,
                                 family = var_family, nfolds = var_folds, alpha = var_alpha, has_intercept = FALSE)
   Log.info("Build logistic model in H2O w/o intercept w/ rebalanced data...")
-  prostate.glm.h2o3 = h2o.glm(y = myY, x = myX, data = prostate.rebalanced, standardize = F,
+  prostate.glm.h2o3 = h2o.glm(y = myY, x = myX, data = prostate.rebalanced, lambda = var_lambda2, standardize = F,
                               family = var_family, nfolds = var_folds, alpha = var_alpha, has_intercept = FALSE)
   
   check_coeff(prostate.glm.h2o2@model$coefficients, prostate.glm.h2o3@model$coefficients, 1e-10)
@@ -52,13 +62,7 @@ test.GLM.zero_intercept <- function(conn) {
   names(prostate.glm.h2o2@model$coefficients)[length(myX)+1] = "Intercept"
   names(prostate.glm.h2o2@model$normalized_coefficients)[length(myX)+1] = "Intercept"
 
-  Log.info("Build binomial GLMnet model without intercept...")
-  library(glmnet)
-  r_Y = as.matrix(prostate.R[,myY])
-  r_X = as.matrix(prostate.R[,myX])
-  prostate.glmnet1 = glmnet(y = r_Y, x = r_X, family = var_family, alpha = var_alpha, intercept = TRUE)
-  prostate.glmnet2 = glmnet(y = r_Y, x = r_X, family = var_family, alpha = var_alpha, intercept = FALSE)
-  
+  # Function for extracting glmnet coefficients
   glmnet_coeff <- function(myGLM.r) {
     coeff.mat = as.matrix(myGLM.r$beta)
     numcol = ncol(coeff.mat)
