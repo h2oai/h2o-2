@@ -302,6 +302,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     final int _tsknum;
     long _started;              // Retry fields for the ackack
     int _callCnt;
+    int _ackResendCnt;
     long _cmpStarted;
     long _retry;
     volatile boolean _computedAndReplied; // One time transition from false to true
@@ -484,7 +485,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       assert !ab.hasTCP():"ERROR: got tcp resend with existing in-progress task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi); // All the resends should be UDP only
       // DROP PACKET
     } else {
-      ++old._callCnt;
+      ++old._ackResendCnt;
+      if(old._ackResendCnt % 50 == 0)
+        Log.err("Possibly broken network, can not send ack through, got " + old._ackResendCnt + " resends.");
       // This is an old re-send of the same thing we've answered to before.
       // Send back the same old answer ACK.  If we sent via TCP before, then
       // we know the answer got there so just send a control-ACK back.  If we

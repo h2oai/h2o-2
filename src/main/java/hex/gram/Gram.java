@@ -50,6 +50,14 @@ public final class Gram extends Iced {
 
   public final int fullN(){return _fullN;}
   public double _diagAdded;
+
+  public void addDiag(double [] ds) {
+    int i = 0;
+    for(;i < Math.min(_diagN,ds.length); ++i)
+      _diag[i] += ds[i];
+    for(;i < ds.length; ++i)
+      _xx[i-_diagN][i] += ds[i];
+  }
   public void addDiag(double d) {addDiag(d,false);}
   public void addDiag(double d, boolean add2Intercept) {
     _diagAdded += d;

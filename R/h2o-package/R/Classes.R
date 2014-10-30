@@ -146,7 +146,8 @@ survfit.H2OCoxPHModel <-
 function(formula, newdata, conf.int = 0.95,
          conf.type = c("log", "log-log", "plain", "none"), ...) {
   if (missing(newdata))
-    newdata <- as.data.frame(as.list(formula@model$means))
+    newdata <- as.data.frame(c(as.list(formula@model$means),
+                               as.list(formula@model$means.offset)))
   if (is.data.frame(newdata))
     capture.output(newdata <- as.h2o(formula@data@h2o, newdata, header = TRUE))
   conf.type <- match.arg(conf.type)

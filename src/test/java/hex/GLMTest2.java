@@ -41,7 +41,7 @@ public class GLMTest2  extends TestUtil {
      FVecTest.makeByteVec(raw, "x,y\n0,0\n1,0.1\n2,0.2\n3,0.3\n4,0.4\n5,0.5\n6,0.6\n7,0.7\n8,0.8\n9,0.9");
      fr = ParseDataset2.parse(parsed, new Key[]{raw});
      GLMParams glm = new GLMParams(Family.gaussian);
-     new GLM2("GLM test of gaussian(linear) regression.",Key.make(),modelKey,new Source(fr,fr.vec("y"),false),Family.gaussian).fork().get();
+     new GLM2("GLM test of gaussian(linear) regression.",Key.make(),modelKey,new Source(fr,fr.vec("y"),false),Family.gaussian).doInit().fork().get();
      model = DKV.get(modelKey).get();
      testHTML(model);
      Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
@@ -68,7 +68,7 @@ public class GLMTest2  extends TestUtil {
      // make data so that the expected coefficients is icept = col[0] = 1.0
      FVecTest.makeByteVec(raw, "x,y\n0,2\n1,4\n2,8\n3,16\n4,32\n5,64\n6,128\n7,256");
      fr = ParseDataset2.parse(parsed, new Key[]{raw});
-     new GLM2("GLM test of poisson regression.",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.poisson).fork().get();
+     new GLM2("GLM test of poisson regression.",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.poisson).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
      model = DKV.get(modelKey).get();
      for(double c:model.beta())assertEquals(Math.log(2),c,1e-4);
      // Test 2, example from http://www.biostat.umn.edu/~dipankar/bmtry711.11/lecture_13.pdf
@@ -78,11 +78,11 @@ public class GLMTest2  extends TestUtil {
      fr.delete();
      FVecTest.makeByteVec(raw, "x,y\n1,0\n2,1\n3,2\n4,3\n5,1\n6,4\n7,9\n8,18\n9,23\n10,31\n11,20\n12,25\n13,37\n14,45\n");
      fr = ParseDataset2.parse(parsed, new Key[]{raw});
-     new GLM2("GLM test of poisson regression(2).",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.poisson).fork().get();
+     new GLM2("GLM test of poisson regression(2).",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.poisson).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
      model = DKV.get(modelKey).get();
      testHTML(model);
-     assertEquals(0.3396,model.beta()[1],1e-4);
-     assertEquals(0.2565,model.beta()[0],1e-4);
+     assertEquals(0.3396,model.beta()[1],5e-3);
+     assertEquals(0.2565,model.beta()[0],5e-3);
    }finally{
      if( fr != null ) fr.delete();
      if(model != null)model.delete();
@@ -109,7 +109,7 @@ public class GLMTest2  extends TestUtil {
       double [] vals = new double[] {1.0,1.0};
       //public GLM2(String desc, Key dest, Frame src, Family family, Link link, double alpha, double lambda) {
       Key modelKey = Key.make("gamma_test");
-      new GLM2("GLM test of gamma regression.",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.gamma).fork().get();
+      new GLM2("GLM test of gamma regression.",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.gamma).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
       model = DKV.get(modelKey).get();
       testHTML(model);
       for(double c:model.beta())assertEquals(1.0, c,1e-4);
@@ -121,9 +121,9 @@ public class GLMTest2  extends TestUtil {
 
   //simple tweedie test
   @Test public void testTweedieRegression() throws InterruptedException, ExecutionException{
-    Key raw = Key.make("gaussian_test_data_raw");
-    Key parsed = Key.make("gaussian_test_data_parsed");
-    Key modelKey = Key.make("gaussian_test");
+    Key raw = Key.make("tweedie_test_data_raw");
+    Key parsed = Key.make("tweedie_test_data_parsed");
+    Key modelKey = Key.make("tweedie_test");
     Frame fr = null;
     GLMModel model = null;
     try {
@@ -135,11 +135,11 @@ public class GLMTest2  extends TestUtil {
       double [] xs = new double []{-0.260,-0.0284,-0.853};
 
       for(int i = 0; i < powers.length; ++i){
-        GLM2 glm = new GLM2("GLM test of gaussian(linear) regression.",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.tweedie, Link.family_default,0,true);//.fork().get();
+        GLM2 glm = new GLM2("GLM test of tweedie regression.",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.tweedie, Link.family_default,0,true);//.doInit().fork().get();
         glm.setTweediePower(powers[i]);
         glm.setLambda(0);
         glm.max_iter = 1000;
-        glm.fork().get();
+        glm.doInit().fork().get();
         model = DKV.get(modelKey).get();
         testHTML(model);
         HashMap<String, Double> coefs = model.coefficients();
@@ -158,6 +158,10 @@ public class GLMTest2  extends TestUtil {
     GLMModel model = null;
     File f = TestUtil.find_test_file("smalldata/glm_test/prostate_cat_replaced.csv");
     Frame fr = getFrameForFile(parsed, "smalldata/glm_test/prostate_cat_replaced.csv", new String[]{"ID"}, "CAPSULE");
+    Key k = Key.make("rebalanced");
+    H2O.submitTask(new RebalanceDataSet(fr,k,64)).join();
+    fr.delete();
+    fr = DKV.get(k).get();
     try{
 //      R results:
 //      Call:  glm(formula = CAPSULE ~ . - ID - AGE, family = binomial, data = D,
@@ -173,7 +177,7 @@ public class GLMTest2  extends TestUtil {
       // H2O differs on has_intercept and race, same residual deviance though
       String [] cfs1 = new String [] {/*"Intercept","RACE.R2","RACE.R3",*/ "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
       double [] vals = new double [] {/*-95.16718, -0.67663, -2.11848,*/1, 2.31296, 3.47783, 0.10842, -0.08657, 2.90452};
-      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,true,fr.vec("AGE")),Family.binomial).fork().get();
+      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,true,fr.vec("AGE")),Family.binomial).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
       model = DKV.get(modelKey).get();
       Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
       testHTML(model);
@@ -207,7 +211,7 @@ public class GLMTest2  extends TestUtil {
       String[] ignores = new String[]{"name"};
       String response = "power (hp)";
       fr = getFrameForFile(parsed, "smalldata/cars.csv", ignores, response);
-      new GLM2("GLM test on cars.", Key.make(), modelKey, new Source(fr,fr.lastVec(),true),Family.poisson).fork().get();
+      new GLM2("GLM test on cars.", Key.make(), modelKey, new Source(fr,fr.lastVec(),true),Family.poisson).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
       model = DKV.get(modelKey).get();
       testHTML(model);
       HashMap<String, Double> coefs = model.coefficients();
@@ -218,7 +222,7 @@ public class GLMTest2  extends TestUtil {
       // test gamma
       double[] vls2 = new double[]{8.992e-03, 1.818e-04, -1.125e-04, 1.505e-06, -1.284e-06, 4.510e-04, -7.254e-05};
       model.delete();
-      new GLM2("GLM test on cars.", Key.make(), modelKey, new Source(fr,fr.lastVec(),true), Family.gamma).fork().get();
+      new GLM2("GLM test on cars.", Key.make(), modelKey, new Source(fr,fr.lastVec(),true), Family.gamma).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
       model = DKV.get(modelKey).get();
       testHTML(model);
       coefs = model.coefficients();
@@ -227,7 +231,7 @@ public class GLMTest2  extends TestUtil {
       model.delete();
       // test gaussian
       double[] vls3 = new double[]{166.95862, -0.00531, -2.46690, 0.12635, 0.02159, -4.66995, -0.85724};
-      new GLM2("GLM test on cars.", Key.make(), modelKey, new Source(fr,fr.lastVec(),true), Family.gaussian).fork().get();
+      new GLM2("GLM test on cars.", Key.make(), modelKey, new Source(fr,fr.lastVec(),true), Family.gaussian).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
       model = DKV.get(modelKey).get();
       testHTML(model);
       coefs = model.coefficients();
@@ -263,7 +267,7 @@ public class GLMTest2  extends TestUtil {
 //          -8.894088     0.001588    -0.009589     0.231777    -0.459937     0.556231     0.556395     0.027854    -0.011355     1.010179
       String [] cfs1 = new String [] {"Intercept","AGE", "RACE.R2","RACE.R3", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
       double [] vals = new double [] {-8.14867, -0.01368, 0.32337, -0.38028, 0.55964, 0.49548, 0.02794, -0.01104, 0.97704};
-      new GLM2("GLM test on prostate.",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.binomial).fork().get();
+      new GLM2("GLM test on prostate.",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.binomial).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
       model = DKV.get(modelKey).get();
       Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
       testHTML(model);
@@ -280,7 +284,43 @@ public class GLMTest2  extends TestUtil {
     }
   }
 
-  @Test public void testNoIntercept(){
+  @Test public void testNoNNegative() {
+//    glmnet's result:
+//    res2 <- glmnet(x=M,y=D$CAPSULE,lower.limits=0,family='binomial')
+//    res2$beta[,100]
+//    AGE       RACE      DPROS      DCAPS        PSA        VOL    GLEASON
+//    0.00000000 0.00000000 0.54788332 0.53816534 0.02380097 0.00000000 0.98115670
+//    res2$a0[100]
+//    s99
+//      -8.945984
+    Key parsed = Key.make("prostate_parsed");
+    Key modelKey = Key.make("prostate_model");
+    GLMModel model = null;
+    Frame fr = getFrameForFile(parsed, "smalldata/logreg/prostate.csv", new String[]{"ID"}, "CAPSULE");
+    Key k = Key.make("rebalanced");
+    H2O.submitTask(new RebalanceDataSet(fr, k, 64)).join();
+    fr.delete();
+    fr = DKV.get(k).get();
+    try {
+      // H2O differs on has_intercept and race, same residual deviance though
+      String[] cfs1 = new String[]{"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON","Intercept"};
+      double[] vals = new double[]{0, 0, 0.54788332,0.53816534, 0.02380097, 0, 0.98115670,-8.945984};
+      new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source(fr, fr.vec("CAPSULE"), true, true), Family.binomial).setNonNegative(true).setRegularization(new double[]{1},new double[]{2.22E-5}).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
+      model = DKV.get(modelKey).get();
+      Assert.assertTrue(model.get_params().state == Job.JobState.DONE);
+      testHTML(model);
+      HashMap<String, Double> coefs = model.coefficients();
+      for (int i = 0; i < cfs1.length; ++i)
+        assertEquals(vals[i], coefs.get(cfs1[i]), 1e-2);
+      GLMValidation val = model.validation();
+      assertEquals(512.2888, model.null_validation.residualDeviance(), 1e-1);
+      assertEquals(383.8068, val.residualDeviance(), 1e-1);
+    } finally {
+      fr.delete();
+      if(model != null)model.delete();
+    }
+  }
+    @Test public void testNoIntercept(){
 //    Call:  glm(formula = CAPSULE ~ . - ID - 1, family = binomial, data = D)
 //
 //    Coefficients:
@@ -294,11 +334,15 @@ public class GLMTest2  extends TestUtil {
     Key modelKey = Key.make("prostate_model");
     GLMModel model = null;
     Frame fr = getFrameForFile(parsed, "smalldata/logreg/prostate.csv", new String[]{"ID"}, "CAPSULE");
+    Key k = Key.make("rebalanced");
+    H2O.submitTask(new RebalanceDataSet(fr,k,64)).join();
+    fr.delete();
+    fr = DKV.get(k).get();
     try{
       // H2O differs on has_intercept and race, same residual deviance though
       String [] cfs1 = new String [] {"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
       double [] vals = new double [] { -1.23262,-0.07205, 0.47899, 0.13934, 0.03626, -0.01155, 0.63645};
-      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,false),Family.binomial).fork().get();
+      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,false),Family.binomial).setRegularization(new double[]{0},new double[]{0}).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
       model = DKV.get(modelKey).get();
       Assert.assertTrue(model.get_params().state == Job.JobState.DONE);
       testHTML(model);
@@ -354,11 +398,11 @@ public class GLMTest2  extends TestUtil {
           0.3607475,0.1879519,0.9986248,0.2345369,0.4297052,0.028796,0.2803801,0.03908738,0.1887357};
       assertEquals(exp_preds.length,mu.length());
       for(int i = 0; i < mu.length(); ++i)
-        assertEquals(exp_preds[i],mu.at(i),1e-5);
+        assertEquals(exp_preds[i],mu.at(i),1e-4);
       // test that it throws with categoricals
       fr = getFrameForFile(parsed, "smalldata/glm_test/prostate_cat_replaced.csv", new String[]{"ID"}, "CAPSULE");
       try {
-        new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source(fr, fr.vec("CAPSULE"), false,false), Family.binomial).fork().get();
+        new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source(fr, fr.vec("CAPSULE"), false,false), Family.binomial).doInit().fork().get();
         assertTrue("should've thrown",false);
       } catch(IllegalArgumentException iae){}
     } finally {
