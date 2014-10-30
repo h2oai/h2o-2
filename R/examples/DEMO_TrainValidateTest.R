@@ -19,7 +19,7 @@
 # AIRLINES_ALL_PATH <- "/home/0xdiag/datasets/airlines/airlines_all.csv"
 # EXPORT_PREDS_PATH <- "/home/spencer/pp_demo/preds.csv"
 # For local git:
-AIRLINES_ALL_PATH <- "/Users/spencer/master/h2o/smalldata/airlines/allyears2k_headers.zip"
+AIRLINES_ALL_PATH <-"https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip?raw=true"
 # EXPORT_PREDS_PATH <- "/Users/spencer/pp_demo/preds.csv"
 # library(plyr)
 #######################
