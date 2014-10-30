@@ -22,7 +22,7 @@ public class Tutorials extends HTMLOnlyRequest {
       + "<a href='http://h2oworld.eventbrite.com/' class='btn btn-large btn-warning' type='button'>Reserve your spot!</a>"
       + "</p>"
       + "<p class='text-center'>"
-      + "<img src='img/banners/H2O-World-Banner-Product.png' /> "
+      + "<img src='img/banners/h2o_world_banner.png' /> "
       + "</p>"
       + "</div>"
     + "<div class='row'>"
