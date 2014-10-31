@@ -146,7 +146,8 @@ survfit.H2OCoxPHModel <-
 function(formula, newdata, conf.int = 0.95,
          conf.type = c("log", "log-log", "plain", "none"), ...) {
   if (missing(newdata))
-    newdata <- as.data.frame(as.list(formula@model$means))
+    newdata <- as.data.frame(c(as.list(formula@model$means),
+                               as.list(formula@model$means.offset)))
   if (is.data.frame(newdata))
     capture.output(newdata <- as.h2o(formula@data@h2o, newdata, header = TRUE))
   conf.type <- match.arg(conf.type)
@@ -1049,7 +1050,7 @@ setMethod("[[<-", "H2OParsedData", function(x, i, value) {
 cbind.H2OParsedData <- function(..., deparse.level = 1) {
   if(deparse.level != 1) stop("Unimplemented")
   
-  l <- list(...)
+  l <- unlist(list(...))
   # l_dep <- sapply(substitute(placeholderFunction(...))[-1], deparse)
   if(length(l) == 0) stop('cbind requires an H2O parsed dataset')
   
@@ -1061,7 +1062,6 @@ cbind.H2OParsedData <- function(..., deparse.level = 1) {
   if(!compatible){ stop(paste('cbind: all elements must be of type', klass, 'and in the same H2O instance'))}
   
   # If cbind(x,x), dupe colnames will automatically be renamed by H2O
-  # TODO: cbind(df[,1], df[,2]) should retain colnames of original data frame (not temp keys from slice)
   if(is.null(names(l)))
     tmp <- Map(function(x) x@key, l)
   else

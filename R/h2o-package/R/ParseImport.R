@@ -124,6 +124,38 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   .h2o.exec2(expr = key, h2o = object, dest_key = key)
 }
 
+h2o.interaction <- function(data, key=NULL, factors, pairwise, max_factors, min_occurrence) {
+  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(missing(factors)) stop("factors must be specified")
+  if(!is.logical(pairwise)) stop("pairwise must be a boolean value")
+  if(missing(max_factors)) stop("max_factors must be specified")
+  if(missing(min_occurrence)) stop("min_occurrence must be specified")
+
+  if (is.list(factors)) {
+    res <- lapply(factors, function(factor) h2o.interaction(data, key=NULL, factor, pairwise, max_factors, min_occurrence))
+    if (!is.null(key)) {
+      old <- cbind.H2OParsedData(res)
+      new <- h2o.assign(old, key)
+      h2o.rm(data@h2o, old@key)
+      return(new)
+    } else {
+      return(cbind.H2OParsedData(res))
+    }
+  }
+
+  if(!is.numeric(factors)) factors <- match(factors,colnames(data))
+  if(!is.numeric(factors)) stop("factors must be a numeric value")
+  if(is.null(factors)) stop("factors not found")
+  if(max_factors < 1) stop("max_factors cannot be < 1")
+  if(!is.numeric(max_factors)) stop("max_factors must be a numeric value")
+  if(min_occurrence < 1) stop("min_occurrence cannot be < 1")
+  if(!is.numeric(min_occurrence)) stop("min_occurrence must be a numeric value")
+
+  factors <- factors - 1 # make 0-based for Java
+  res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_Interaction, source = data@key, destination_key = key, factors = factors, pairwise = as.numeric(pairwise), max_factors = max_factors, min_occurrence = min_occurrence)
+  h2o.getFrame(data@h2o, res$destination_key)
+}
+
 h2o.rebalance <- function(data, chunks, key) {
   if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
   if(!is.numeric(chunks)) stop("chunks must be a numeric value")

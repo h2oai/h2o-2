@@ -822,7 +822,7 @@ public class Utils {
     @Override public String toString() { return Integer.toString(_val); }
   }
   public static class IcedLong extends Iced {
-    public final long _val;
+    public long _val;
     public IcedLong(long v){_val = v;}
     @Override public boolean equals( Object o ) {
       if( !(o instanceof IcedLong) ) return false;
@@ -1731,6 +1731,11 @@ public class Utils {
       suffix = ".hex";
     }
     return Key.make(n+"_shuffled"+suffix);
+  }
+  public static boolean isSorted(int [] ids){
+    for(int i = 1; i < ids.length; ++i)
+      if (ids[i] < ids[i-1])return false;
+    return true;
   }
 
 }

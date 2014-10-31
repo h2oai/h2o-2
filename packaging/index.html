@@ -188,20 +188,35 @@
         var zipPanel = document.getElementById('quickstart-zip');
         var rTab = document.getElementById('quickstart-r-tab');
         var rPanel = document.getElementById('quickstart-r');
+        var hadoopTab = document.getElementById('quickstart-hadoop-tab');
+        var hadoopPanel = document.getElementById('quickstart-hadoop');
         var showZipTab = function() {
           zipPanel.style.display = 'block';
           zipTab.className = 'active';
           rPanel.style.display = 'none';
           rTab.className = '';
+          hadoopPanel.style.display = 'none';
+          hadoopTab.className = '';
         };
         var showRTab = function() {
           rPanel.style.display = 'block';
           rTab.className = 'active';
           zipPanel.style.display = 'none';
           zipTab.className = '';
+          hadoopPanel.style.display = 'none';
+          hadoopTab.className = '';
+        };
+        var showHadoopTab = function(){
+          hadoopPanel.style.display = 'block';
+          hadoopTab.className = 'active';
+          rPanel.style.display = 'none';
+          rTab.className = '';
+          zipPanel.style.display = 'none';
+          zipTab.className = '';
         };
         zipTab.onclick = showZipTab
         rTab.onclick = showRTab
+        hadoopTab.onclick = showHadoopTab
         var hash = window.location.hash;
         if(hash && hash.indexOf('#R') == 0) {
           showRTab();
@@ -237,6 +252,7 @@
         <div id="tabs">
           &nbsp; <span id="quickstart-zip-tab" class="active">Download and Run</span>
           <span id="quickstart-r-tab">Install in R</span>
+          <span id = "quickstart-hadoop-tab">Install on Hadoop</span>
         </div>
         <div id="panels">
           <div id="quickstart-zip">
@@ -267,6 +283,34 @@
               localH2O = h2o.init()<br/><br/> 
               <em># Finally, let's run a demo to see H<sub>2</sub>O at work.</em><br/>
               demo(h2o.glm)
+          </div>
+          <div id="quickstart-hadoop" style="display:none">
+            <h2>Run H<sub>2</sub>O on Hadoop in just 3 steps.</h2>
+            <p>1. Download H<sub>2</sub>O. This is a zip file that contains everything you need to get started.</p>
+            <p class="terminal">
+                wget <script type="text/javascript">var url = location.href; var url2 = url.substring(0, url.lastIndexOf("/")); document.write(url2);</script>/h2o-SUBST_PROJECT_VERSION.zip
+            </p>
+            <p>2. Unpack the zip file and launch a 1g instance of H<sub>2</sub>O: </p>
+            <p class="terminal">
+                unzip h2o-SUBST_PROJECT_VERSION.zip<br/>
+                cd h2o-SUBST_PROJECT_VERSION/hadoop<br/>
+                hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName<br/>
+            </p>
+            <p>3. Point your browser to any of the H2O nodes launched. The IP addresses of the nodes will be available in the output:</p>
+            <p class="terminal">
+                Determining driver host interface for mapper->driver callback...<br/>
+                [Possible callback IP address: 172.16.2.181]<br/>
+                [Possible callback IP address: 127.0.0.1]<br/>
+                ...<br/>
+                Waiting for H2O cluster to come up...<br/>
+                H2O node 172.16.2.184:54321 requested flatfile<br/>
+                Sending flatfiles to nodes...<br/>
+                &nbsp;[Sending flatfile to node 172.16.2.184:54321]<br/>
+                <em>H2O node 172.16.2.184:54321 reports H2O cluster size 1 </em><br/>
+                H2O cluster (1 nodes) is up<br/>
+                Blocking until the H2O cluster shuts down...<br/>
+
+            </p>
           </div>
         </div>
         <div id="documentation">

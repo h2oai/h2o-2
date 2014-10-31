@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
-  final protected DataInfo _dinfo;
+  public final DataInfo _dinfo;
   final protected Key _jobKey;
 //  double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
@@ -73,7 +73,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   public static class DataInfo extends Iced {
     public Frame _adaptedFrame;
     public int _responses; // number of responses
-    public enum TransformType { NONE, STANDARDIZE, NORMALIZE, DEMEAN };
+    public enum TransformType { NONE, STANDARDIZE, NORMALIZE, DEMEAN, DESCALE };
     public TransformType _predictor_transform;
     public TransformType _response_transform;
     public boolean _useAllFactorLevels;
@@ -88,6 +88,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public int _foldId;
     public int _nfolds;
     public Key _frameKey;
+    public boolean _hasIntercept;
 
     public DataInfo deep_clone() {
       AutoBuffer ab = new AutoBuffer();
@@ -96,7 +97,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       return new DataInfo().read(ab);
     }
 
-    private DataInfo() {_catLvls = null;}
+    private DataInfo() {_catLvls = null; _hasIntercept = true;}
 
     private DataInfo(DataInfo dinfo, int foldId, int nfolds){
       assert dinfo._catLvls == null:"Should not be called with filtered levels (assuming the selected levels may change with fold id) ";
@@ -116,10 +117,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _nfolds = nfolds;
       _useAllFactorLevels = dinfo._useAllFactorLevels;
       _catLvls = null;
+      _hasIntercept = dinfo._hasIntercept;
     }
 
-    public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, TransformType predictor_transform, double [] normRespSub, double [] normRespMul){
-      this(fr,hasResponses,useAllFactorLvls,
+    public DataInfo(Frame fr, int hasResponses, boolean hasIntercept, boolean useAllFactorLvls, double [] normSub, double [] normMul, TransformType predictor_transform, double [] normRespSub, double [] normRespMul){
+      this(fr, hasResponses, hasIntercept, useAllFactorLvls,
               normMul != null && normSub != null ? predictor_transform : TransformType.NONE, //just allocate, doesn't matter whether standardize or normalize is used (will be overwritten below)
               normRespMul != null && normRespSub != null ? TransformType.STANDARDIZE : TransformType.NONE);
       assert (normSub == null) == (normMul == null);
@@ -169,6 +171,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     }
     public static Frame prepareFrame(Frame source, Vec [] response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
       Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
+      if(ignored_cols != null && !Utils.isSorted(ignored_cols))
+        Arrays.sort(ignored_cols);
+      if(response != null && ignored_cols != null)
+        for(Vec v:response){
+          int id = source.find(v);
+          if(Arrays.binarySearch(ignored_cols,id) >= 0)
+            throw new IllegalArgumentException("Column can not be both ignored and used as a response.");
+        }
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
       // compute rollupstats in parallel
@@ -266,12 +276,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       return prepareFrame(source, response, ignored_cols, toEnum, dropConstantCols, false);
     }
 
-    public DataInfo(Frame fr, int nResponses, boolean useAllFactors, TransformType predictor_transform) {
-      this(fr, nResponses, useAllFactors, predictor_transform, TransformType.NONE);
+    public DataInfo(Frame fr, int nResponses, boolean hasIntercept, boolean useAllFactors, TransformType predictor_transform) {
+      this(fr, nResponses, hasIntercept, useAllFactors, predictor_transform, TransformType.NONE);
     }
 
     //new DataInfo(f,catLvls, _responses, _standardize, _response_transform);
-    private DataInfo(Frame fr, int[][] catLevels, int responses, TransformType predictor_transform, TransformType response_transform, int foldId, int nfolds){
+    private DataInfo(Frame fr, int[][] catLevels, int responses, boolean hasIntercept, TransformType predictor_transform, TransformType response_transform, int foldId, int nfolds){
+      _hasIntercept = hasIntercept;
       _adaptedFrame = fr;
       _catOffsets = MemoryManager.malloc4(catLevels.length+1);
       _catMissing = new int[catLevels.length];
@@ -311,6 +322,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
               _normSub[i] = v.mean();
             }
             break;
+          case DESCALE:
+            _normSub = null;
+            _normMul = MemoryManager.malloc8d(_nums);;
+            for (int i = 0; i < _nums; ++i) {
+              Vec v = fr.vec(catLevels.length+i);
+              _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
+            }
+            break;
           case DEMEAN:
             _normMul = null;
             _normSub = MemoryManager.malloc8d(_nums);
@@ -323,6 +342,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             _normMul = null;
             _normSub = null;
             break;
+          default:
+            throw H2O.unimpl();
         }
       }
       _response_transform = response_transform;
@@ -359,7 +380,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             _normRespSub = null;
             break;
           default:
-            break;
+            throw H2O.unimpl();
         }
       }
       _useAllFactorLevels = false;
@@ -367,13 +388,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _nfolds = nfolds;
       _foldId = foldId;
     }
-    public DataInfo(Frame fr, int nResponses, boolean useAllFactorLevels, TransformType predictor_transform, TransformType response_transform) {
+    public DataInfo(Frame fr, int nResponses, boolean hasIntercept, boolean useAllFactorLevels, TransformType predictor_transform, TransformType response_transform) {
       _nfolds = _foldId = 0;
       _predictor_transform = predictor_transform;
       _response_transform = response_transform;
       _responses = nResponses;
       _useAllFactorLevels = useAllFactorLevels;
       _catLvls = null;
+      _hasIntercept = hasIntercept;
       final Vec [] vecs = fr.vecs();
       // compute rollupstats in parallel
       Futures fs = new Futures();
@@ -423,6 +445,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           _normSub = MemoryManager.malloc8d(nnums);
           _normMul = null;
           break;
+        case DESCALE:
+          _normMul = MemoryManager.malloc8d(nnums);
+          _normSub = null;
+          break;
         case NONE:
           _normSub = _normMul = null;
           break;
@@ -440,6 +466,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           case NORMALIZE:
             _normSub[i] = v.mean();
             _normMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
+            break;
+          case DESCALE:
+            _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
             break;
           case DEMEAN:
             _normSub[i] = v.mean();
@@ -465,7 +494,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             _normRespSub = _normRespMul = null;
             break;
           default:
-            break;
+            throw H2O.unimpl();
         }
         for(int i = 0; i < _responses; ++i){
           Vec v = (vecs2[nnums+ncats+i] = vecs[nnums+ncats+i]);
@@ -484,7 +513,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             case NONE:
               break;
             default:
-              break;
+              throw H2O.unimpl();
           }
         }
       }
@@ -532,7 +561,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Frame f = new Frame(_adaptedFrame.names().clone(),_adaptedFrame.vecs().clone());
       if(ignoredCnt > 0) f.remove(Arrays.copyOf(ignoredCols,ignoredCnt));
       assert catLvls.length < f.numCols():"cats = " + catLvls.length + " numcols = " + f.numCols();
-      return new DataInfo(f,catLvls, _responses, _predictor_transform, _response_transform, _foldId, _nfolds);
+      return new DataInfo(f,catLvls, _responses, _hasIntercept, _predictor_transform, _response_transform, _foldId, _nfolds);
     }
     public String toString(){
       return "";
@@ -679,15 +708,15 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
               cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
           }
         }
-        final int n = chunks.length-_dinfo._responses;
+        final int n = chunks.length- _dinfo._responses;
         for(;i < n;++i){
           double d = chunks[i].at0(r); //can be NA if skipMissing() == false
-          if(_dinfo._normSub != null) d -= _dinfo._normSub[i-_dinfo._cats];
-          if(_dinfo._normMul != null) d *= _dinfo._normMul[i-_dinfo._cats];
-          nums[i-_dinfo._cats] = d;
+          if(_dinfo._normSub != null) d -= _dinfo._normSub[i- _dinfo._cats];
+          if(_dinfo._normMul != null) d *= _dinfo._normMul[i- _dinfo._cats];
+          nums[i- _dinfo._cats] = d;
         }
         for(i = 0; i < _dinfo._responses; ++i) {
-          response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
+          response[i] = chunks[chunks.length- _dinfo._responses + i].at0(r);
           if (_dinfo._normRespSub != null) response[i] -= _dinfo._normRespSub[i];
           if (_dinfo._normRespMul != null) response[i] *= _dinfo._normRespMul[i];
           if(Double.isNaN(response[i]))continue OUTER; // skip rows without a valid response (no supervised training possible)

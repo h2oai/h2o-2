@@ -397,7 +397,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     final int noff = data_info.numStart() - data_info._cats;
     for(int i = data_info._cats; i < data.length; ++i)
       eta += b[noff+i]*data[i];
-    eta += b[b.length-1]; // add intercept
+    if(data_info._hasIntercept)
+      eta += b[b.length-1]; // add has_intercept
     double mu = glm.linkInv(eta);
     preds[0] = (float)mu;
     if( glm.family == Family.binomial ) { // threshold for prediction
@@ -414,6 +415,16 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return preds;
   }
   public final int ncoefs() {return beta().length;}
+
+  @Override public int nclasses(){ return glm.family == Family.binomial?2:1;}
+
+  @Override
+  public String [] classNames(){
+    String [] res = super.classNames();
+    if(glm.getFamily() == Family.binomial && res == null)
+      res = new String[]{"0","1"};
+    return res;
+  }
 
   //  public static void setAndTestValidation(final H2OCountedCompleter cmp,final Key modelKey, final double lambda, final GLMValidation val){
 //    if(cmp != null)cmp.addToPendingCount(1);

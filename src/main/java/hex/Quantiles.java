@@ -24,7 +24,7 @@ public class Quantiles extends Iced {
   // for GET.
   static final String DOC_GET = "Returns a quantile of a fluid-vec frame";
 
-  public static final int MAX_ENUM_SIZE = water.parser.Enum.MAX_ENUM_SIZE;
+  public static final int MAX_ENUM_SIZE = H2O.DATA_MAX_FACTOR_LEVELS;
 
   public long      _totalRows;    // non-empty rows per group
   // FIX! not sure if I need to save these here from vec

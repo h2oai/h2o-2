@@ -15,7 +15,7 @@ test.PCA.australia <- function(conn) {
   checkPCAModel(australia.pca.h2o, australia.pca)
   
   Log.info("H2O PCA on standardized Australia coastline data:\n")
-  australia.pca.h2o.std = h2o.prcomp(australia.hex, standardize = TRUE)
+  australia.pca.h2o.std = h2o.prcomp(australia.hex, standardize = TRUE, retx = TRUE)
   print(australia.pca.h2o.std)
   australia.pca.std = prcomp(australia.data, center = TRUE, scale. = TRUE, retx = TRUE)
   checkPCAModel(australia.pca.h2o.std, australia.pca.std)

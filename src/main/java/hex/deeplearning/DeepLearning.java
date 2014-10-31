@@ -1,5 +1,6 @@
 package hex.deeplearning;
 
+import com.amazonaws.services.simpleworkflow.model.Run;
 import hex.*;
 import water.*;
 import water.util.*;
@@ -978,7 +979,7 @@ public class DeepLearning extends Job.ValidatedJob {
   private DataInfo prepareDataInfo() {
     final boolean del_enum_resp = classification && !response.isEnum();
     final Frame train = FrameTask.DataInfo.prepareFrame(source, autoencoder ? null : response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder || use_all_factor_levels, //use all FactorLevels for auto-encoder
+    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, true, autoencoder || use_all_factor_levels, //use all FactorLevels for auto-encoder
             autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
             classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
     if (!autoencoder) {
@@ -1126,8 +1127,18 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Deep Learning model building was cancelled.");
       return model;
     }
+    catch(Throwable t) {
+      t.printStackTrace();
+      model = UKV.get(dest());
+      state = JobState.FAILED; //for JSON REST response
+      if (model != null) {
+        model.get_params().state = state; //for parameter JSON on the HTML page
+        Log.info("Deep Learning model building failed.");
+      }
+      return model;
+    }
     finally {
-      if (model != null) model.unlock(self());
+      if (model != null && DKV.get(model._key) != null) model.unlock(self());
       unlock_data();
     }
   }

@@ -3,14 +3,10 @@ package water.api;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
-import hex.CoxPH;
-import hex.CreateFrame;
+import hex.*;
 import hex.GridSearch.GridSearchProgress;
-import hex.InsertMissingValues;
-import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
-import hex.ReBalance;
 import hex.anomaly.Anomaly;
 import hex.deepfeatures.DeepFeatures;
 import hex.deeplearning.DeepLearning;
@@ -100,6 +96,8 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
     Request.addToNavbar(registerRequest(new Impute()),        "Impute",                 "Data");
+    Request.addToNavbar(registerRequest(new Interaction()),   "Interaction",            "Data");
+    Request.addToNavbar(registerRequest(new CreateFrame()),   "Create Frame",           "Data");
     Request.addToNavbar(registerRequest(new FrameSplitPage()),"Split Frame",            "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
     Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
@@ -133,15 +131,15 @@ public class RequestServer extends NanoHTTPD {
     // Admin
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",                     "Admin");
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",           "Admin");
-    Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",              "Admin");
-    Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
+    Request.addToNavbar(registerRequest(new WaterMeterPerfbar()),  "Water Meter (Perfbar)",    "Admin");
+    Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new JProfile()),    "Profiler",                 "Admin");
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
-    Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new NetworkTest()), "Network Test",             "Admin");
+    Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",              "Admin");
+    Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
     Request.addToNavbar(registerRequest(new UDPDropTest()), "Udp drop",                 "Admin");
     Request.addToNavbar(registerRequest(new TaskStatus()),  "Task status",              "Admin");
-    Request.addToNavbar(registerRequest(new WaterMeterPerfbar()),  "Water Meter (Perfbar)",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials
@@ -161,7 +159,6 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new NFoldFrameExtractPage());
       registerRequest(new Console());
       registerRequest(new GapStatistic());
-      registerRequest(new CreateFrame());
       registerRequest(new InsertMissingValues());
       registerRequest(new KillMinus3());
       registerRequest(new SaveModel());
@@ -176,7 +173,6 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold Frame Extract", "Beta");
       Request.addToNavbar(registerRequest(new Console()),              "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),         "Gap Statistic",        "Beta");
-      Request.addToNavbar(registerRequest(new CreateFrame()),          "Create Frame",         "Beta");
       Request.addToNavbar(registerRequest(new InsertMissingValues()),  "Insert Missing Values","Beta");
       Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
       Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");

@@ -38,6 +38,9 @@ public class CoxPH extends Job {
   @API(help="Weights Column", required=false, filter=CoxPHVecSelect.class, json=true)
   public Vec weights_column = null;
 
+  @API(help="Offset Columns", required=false, filter=CoxPHMultiVecSelect.class, json=true)
+  public int[] offset_columns;
+
   @API(help="Method for Handling Ties", required=true, filter=Default.class, json=true)
   public CoxPHTies ties = CoxPHTies.efron;
 
@@ -120,6 +123,10 @@ public class CoxPH extends Job {
     double[] x_mean_cat;
     @API(help = "x weighted mean vector for numeric variables")
     double[] x_mean_num;
+    @API(help = "unweighted mean vector for numeric offsets")
+    double[] mean_offset;
+    @API(help = "names of offsets")
+    String[] offset_names;
     @API(help = "n")
     long n;
     @API(help = "number of rows with missing values")
@@ -175,15 +182,17 @@ public class CoxPH extends Job {
 
     @Override
     protected float[] score0(double[] data, float[] preds) {
-      final int n_time   = time.length;
-      final int n_coef   = coef.length;
-      final int n_cats   = data_info._cats;
-      final int n_num    = data_info._nums;
-      final int n_data   = n_cats + n_num;
-      final int numStart = data_info.numStart();
-      boolean catsAllNA  = true;
-      boolean catsHasNA  = false;
-      boolean numsHasNA  = false;
+      final int n_offsets = (parameters.offset_columns == null) ? 0 : parameters.offset_columns.length;
+      final int n_time    = time.length;
+      final int n_coef    = coef.length;
+      final int n_cats    = data_info._cats;
+      final int n_nums    = data_info._nums;
+      final int n_data    = n_cats + n_nums;
+      final int n_full    = n_coef + n_offsets;
+      final int numStart  = data_info.numStart();
+      boolean catsAllNA   = true;
+      boolean catsHasNA   = false;
+      boolean numsHasNA   = false;
       for (int j = 0; j < n_cats; ++j) {
         catsAllNA &= Double.isNaN(data[j]);
         catsHasNA |= Double.isNaN(data[j]);
@@ -194,7 +203,7 @@ public class CoxPH extends Job {
         for (int i = 1; i <= 2 * n_time; ++i)
           preds[i] = Float.NaN;
       } else {
-        double[] full_data = MemoryManager.malloc8d(n_coef);
+        double[] full_data = MemoryManager.malloc8d(n_full);
         for (int j = 0; j < n_cats; ++j)
           if (Double.isNaN(data[j])) {
             final int kst = data_info._catOffsets[j];
@@ -202,11 +211,13 @@ public class CoxPH extends Job {
             System.arraycopy(x_mean_cat, kst, full_data, kst, klen);
           } else if (data[j] != 0)
             full_data[data_info._catOffsets[j] + (int) (data[j] - 1)] = 1;
-        for (int j = 0; j < n_num; ++j)
+        for (int j = 0; j < n_nums; ++j)
           full_data[numStart + j] = data[n_cats + j] - data_info._normSub[j];
         double logRisk = 0;
         for (int j = 0; j < n_coef; ++j)
           logRisk += full_data[j] * coef[j];
+        for (int j = n_coef; j < full_data.length; ++j)
+          logRisk += full_data[j];
         final double risk = Math.exp(logRisk);
         for (int t = 0; t < n_time; ++t)
           preds[t + 1] = (float) (risk * cumhaz_0[t]);
@@ -229,8 +240,11 @@ public class CoxPH extends Job {
     protected void initStats(final Frame source, final DataInfo dinfo) {
       n = source.numRows();
       data_info = dinfo;
-      final int n_coef = data_info.fullN();
-      coef_names   = data_info.coefNames();
+      final int n_offsets = (parameters.offset_columns == null) ? 0 : parameters.offset_columns.length;
+      final int n_coef    = data_info.fullN() - n_offsets;
+      final String[] coefNames = data_info.coefNames();
+      coef_names   = new String[n_coef];
+      System.arraycopy(coefNames, 0, coef_names, 0, n_coef);
       coef         = MemoryManager.malloc8d(n_coef);
       exp_coef     = MemoryManager.malloc8d(n_coef);
       exp_neg_coef = MemoryManager.malloc8d(n_coef);
@@ -239,6 +253,11 @@ public class CoxPH extends Job {
       gradient     = MemoryManager.malloc8d(n_coef);
       hessian      = malloc2DArray(n_coef, n_coef);
       var_coef     = malloc2DArray(n_coef, n_coef);
+      x_mean_cat   = MemoryManager.malloc8d(n_coef - (data_info._nums - n_offsets));
+      x_mean_num   = MemoryManager.malloc8d(data_info._nums - n_offsets);
+      mean_offset  = MemoryManager.malloc8d(n_offsets);
+      offset_names = new String[n_offsets];
+      System.arraycopy(coefNames, n_coef, offset_names, 0, n_offsets);
 
       final Vec start_column = source.vec(source.numCols() - 3);
       final Vec stop_column  = source.vec(source.numCols() - 2);
@@ -259,12 +278,11 @@ public class CoxPH extends Job {
     protected void calcCounts(final CoxPHTask coxMR) {
       n_missing = n - coxMR.n;
       n         = coxMR.n;
-      x_mean_cat = coxMR.sumWeightedCatX.clone();
       for (int j = 0; j < x_mean_cat.length; j++)
-        x_mean_cat[j] /= coxMR.sumWeights;
-      x_mean_num = coxMR._dinfo._normSub.clone();
+        x_mean_cat[j] = coxMR.sumWeightedCatX[j] / coxMR.sumWeights;
       for (int j = 0; j < x_mean_num.length; j++)
-        x_mean_num[j] += coxMR.sumWeightedNumX[j] / coxMR.sumWeights;
+        x_mean_num[j] = coxMR._dinfo._normSub[j] + coxMR.sumWeightedNumX[j] / coxMR.sumWeights;
+      System.arraycopy(coxMR._dinfo._normSub, x_mean_num.length, mean_offset, 0, mean_offset.length);
       int nz = 0;
       for (int t = 0; t < coxMR.countEvents.length; ++t) {
         total_event += coxMR.countEvents[t];
@@ -571,7 +589,7 @@ public class CoxPH extends Job {
       n_resp++;
     if (start_column != null)
       n_resp++;
-    final DataInfo dinfo = new DataInfo(source, n_resp, false, DataInfo.TransformType.DEMEAN);
+    final DataInfo dinfo = new DataInfo(source, n_resp, false, false, DataInfo.TransformType.DEMEAN);
     model = new CoxPHModel(this, dest(), source._key, source, null);
     model.initStats(source, dinfo);
   }
@@ -579,7 +597,8 @@ public class CoxPH extends Job {
   @Override
   protected void execImpl() {
     final DataInfo dinfo   = model.data_info;
-    final int n_coef       = dinfo.fullN();
+    final int n_offsets    = (model.parameters.offset_columns == null) ? 0 : model.parameters.offset_columns.length;
+    final int n_coef       = dinfo.fullN() - n_offsets;
     final double[] step    = MemoryManager.malloc8d(n_coef);
     final double[] oldCoef = MemoryManager.malloc8d(n_coef);
     final double[] newCoef = MemoryManager.malloc8d(n_coef);
@@ -594,7 +613,7 @@ public class CoxPH extends Job {
     for (int i = 0; i <= iter_max; ++i) {
       model.iter = i;
 
-      final CoxPHTask coxMR = new CoxPHTask(self(), dinfo, newCoef, model.min_time, n_time,
+      final CoxPHTask coxMR = new CoxPHTask(self(), dinfo, newCoef, model.min_time, n_time, n_offsets,
                                             has_start_column, has_weights_column).doAll(dinfo._adaptedFrame);
 
       final double newLoglik = model.calcLoglik(coxMR);
@@ -645,7 +664,8 @@ public class CoxPH extends Job {
     final boolean use_start_column   = (start_column != null);
     final boolean use_weights_column = (weights_column != null);
     final int x_ncol = x_columns.length;
-    int ncol = x_ncol + 2;
+    final int offset_ncol = offset_columns == null ? 0 : offset_columns.length;
+    int ncol = x_ncol + offset_ncol + 2;
     if (use_weights_column)
       ncol++;
     if (use_start_column)
@@ -653,8 +673,10 @@ public class CoxPH extends Job {
     final String[] names = new String[ncol];
     for (int j = 0; j < x_ncol; ++j)
       names[j] = source.names()[x_columns[j]];
+    for (int j = 0; j < offset_ncol; ++j)
+      names[x_ncol + j] = source.names()[offset_columns[j]];
     if (use_weights_column)
-      names[x_ncol]   = source.names()[source.find(weights_column)];
+      names[x_ncol + offset_ncol] = source.names()[source.find(weights_column)];
     if (use_start_column)
       names[ncol - 3] = source.names()[source.find(start_column)];
     names[ncol - 2]   = source.names()[source.find(stop_column)];
@@ -666,6 +688,7 @@ public class CoxPH extends Job {
     private final double[] _beta;
     private final int      _n_time;
     private final long     _min_time;
+    private final int      _n_offsets;
     private final boolean  _has_start_column;
     private final boolean  _has_weights_column;
 
@@ -688,11 +711,12 @@ public class CoxPH extends Job {
     protected double[][][] rcumsumXXRisk;
 
     CoxPHTask(Key jobKey, DataInfo dinfo, final double[] beta, final long min_time, final int n_time,
-              final boolean has_start_column, final boolean has_weights_column) {
+              final int n_offsets, final boolean has_start_column, final boolean has_weights_column) {
       super(jobKey, dinfo);
       _beta               = beta;
       _n_time             = n_time;
       _min_time           = min_time;
+      _n_offsets          = n_offsets;
       _has_start_column   = has_start_column;
       _has_weights_column = has_weights_column;
     }
@@ -700,7 +724,7 @@ public class CoxPH extends Job {
     @Override
     protected void chunkInit(){
       final int n_coef = _beta.length;
-      sumWeightedCatX  = MemoryManager.malloc8d(n_coef - _dinfo._nums);
+      sumWeightedCatX  = MemoryManager.malloc8d(n_coef - (_dinfo._nums - _n_offsets));
       sumWeightedNumX  = MemoryManager.malloc8d(_dinfo._nums);
       sizeRiskSet      = MemoryManager.malloc8d(_n_time);
       sizeCensored     = MemoryManager.malloc8d(_n_time);
@@ -736,8 +760,10 @@ public class CoxPH extends Job {
       double logRisk = 0;
       for (int j = 0; j < ncats; ++j)
         logRisk += _beta[cats[j]];
-      for (int j = 0; j < nums.length; ++j)
+      for (int j = 0; j < nums.length - _n_offsets; ++j)
         logRisk += nums[j] * _beta[numStart + j];
+      for (int j = nums.length - _n_offsets; j < nums.length; ++j)
+        logRisk += nums[j];
       final double risk = weight * Math.exp(logRisk);
       logRisk *= weight;
       if (event > 0) {
@@ -757,7 +783,7 @@ public class CoxPH extends Job {
         rcumsumRisk[t2]  += risk;
       }
 
-      final int ntotal = ncats + nums.length;
+      final int ntotal = ncats + (nums.length - _n_offsets);
       final int numStartIter = numStart - ncats;
       for (int jit = 0; jit < ntotal; ++jit) {
         final boolean jIsCat = jit < ncats;

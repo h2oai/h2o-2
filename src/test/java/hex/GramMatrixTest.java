@@ -28,7 +28,7 @@ VOL      5245.21  727.5  1173473  2025.82  401647.8  13267.05  6426.31   94428.7
 GLEASON  2172.00  233.0   452757  1069.00  160303.0   5617.00  2725.00   40596.37   37926.78  15940.00  2426.00
           341.00   36.0    72390   153.00   25095.0    863.00   421.00    5855.28    6008.91   2426.00   380.00
  */
-  static double [][] exp_result = new double [][]{// woth some corrections for R's apparent rounding off when pretty printing
+  static double [][] exp_result = new double [][]{// with some corrections for R's apparent rounding off when pretty printing
     {  341.00,    0.0,    65389,   137.00,   22561.0,    763.00,   375.00,    4864.28,    5245.21,   2172.00,   341.00},
     {    0.00,   36.0,     6681,    14.00,    2346.0,     91.00,    42.00,     887.10,     727.50,    233.00,    36.00},
     {65389.00, 6681.0, 18362930, 28351.00, 4737816.0, 161930.00, 78104.00, 1070519.50, 1173473.40, 452757.00, 72390.00},
@@ -49,7 +49,7 @@ GLEASON  2172.00  233.0   452757  1069.00  160303.0   5617.00  2725.00   40596.3
     Frame fr2=null;
     try{
       fr2=ParseDataset2.parse(okey2, new Key[]{ikey2});
-      DataInfo dinfo = new DataInfo(fr2, 0, false, DataInfo.TransformType.NONE);
+      DataInfo dinfo = new DataInfo(fr2, 0, true, false, DataInfo.TransformType.NONE);
       GramTask gt = new GramTask(null, dinfo, true,false);
       gt.doAll(dinfo._adaptedFrame);
       double [][] res = gt._gram.getXX();

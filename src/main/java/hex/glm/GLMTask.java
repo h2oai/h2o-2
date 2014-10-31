@@ -30,7 +30,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     for(int i = 0; i < ncats; ++i)res += beta[cats[i]];
     final int numStart = _dinfo.numStart();
     for (int i = 0; i < nnums; ++i) res += nums[i] * beta[numStart + i];
-    res += beta[beta.length-1]; // intercept
+    if(_dinfo._hasIntercept)
+      res += beta[beta.length-1]; // has_intercept
     return res;
   }
   /**
@@ -210,9 +211,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     public GLMIterationTask(int noff, Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
       super(jobKey, dinfo,glm,cmp);
       assert beta != null;
+
       _ymu = ymu;
       _noffsets = noff;
-      assert beta == null || beta.length == (dinfo.fullN()+1-_noffsets):"beta.length != dinfo.fullN(), beta = " + beta.length + " dinfo = " + dinfo.fullN() + ", noffsets = " + _noffsets;
+      assert beta == null || beta.length == (dinfo.fullN()+(_dinfo._hasIntercept?1:0)-_noffsets):"beta.length != dinfo.fullN(), beta = " + beta.length + " dinfo = " + dinfo.fullN() + ", noffsets = " + _noffsets;
       _beta = beta;
       _reg = reg;
       _computeGram = computeGram;
@@ -281,15 +283,19 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           if(_computeGradient)
             _grad[numStart+i] += grad*nums[i];
         }
-        if(_computeGradient)_grad[numStart + _dinfo._nums] += grad;
-        _xy[numStart + _dinfo._nums-_noffsets] += wz;
+
+        if(_dinfo._hasIntercept){
+          _xy[_xy.length-1] += wz;
+          if(_computeGradient)
+            _grad[numStart + _dinfo._nums - _noffsets] += grad;
+        }
         if(_computeGram)_gram.addRow(nums, ncats, cats, w);
       }
 
     }
     @Override protected void chunkInit(){
-      if(_computeGram)_gram = new Gram(_dinfo.fullN()-_noffsets, _dinfo.largestCat(), _dinfo._nums-_noffsets, _dinfo._cats,true);
-      _xy = MemoryManager.malloc8d(_dinfo.fullN()+1-_noffsets); // + 1 is for intercept
+      if(_computeGram)_gram = new Gram(_dinfo.fullN()-_noffsets, _dinfo.largestCat(), _dinfo._nums-_noffsets, _dinfo._cats, _dinfo._hasIntercept);
+      _xy = MemoryManager.malloc8d(_dinfo.fullN()+(_dinfo._hasIntercept?1:0)-_noffsets); // + 1 is for has_intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
       if(_validate){
@@ -300,7 +306,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         }
       }
       if(_computeGradient)
-        _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
+        _grad = MemoryManager.malloc8d(_dinfo.fullN()+ (_dinfo._hasIntercept?1:0) - _noffsets);
       if(_glm.family == Family.binomial && _validate){
         _ti = new int[2];
         _newThresholds = new float[2][4*N_THRESHOLDS];

@@ -14,6 +14,7 @@
   <artifactId>h2o-core</artifactId>
   <packaging>jar</packaging>
   <name>H2O Core</name>
+  <version>2.8-SNAPSHOT</version>
   <description>A core of distributed platform for large data analysis.</description>
   
   <!-- List of build properties. -->
@@ -102,12 +103,15 @@
       <version>12.0.1</version>
       <scope>compile</scope>
     </dependency>
+    <!-- NOTE: this dependency is intentionally disabled since it is a specific
+         version of gson library with renamed classes. -->
+    <!--
     <dependency>
       <groupId>ai.h2o.gson</groupId>
       <artifactId>gson</artifactId>
       <version>2.3</version>
-      <scope>compile</scope>
-    </dependency>
+      <scope>provided</scope>
+    </dependency>-->
     <!-- ==Jama is given explicitely - it was modified and compiled by @tomas == -->
     <dependency>
       <groupId>gov.nist.math</groupId>
@@ -242,34 +246,27 @@
     </pluginManagement>
     <!-- Plugins activation and setup -->
     <plugins>
-      <plugin>
-         <groupId>org.apache.maven.plugins</groupId>
-         <artifactId>maven-dependency-plugin</artifactId>
-         <version>2.9</version>
-         <executions>
-           <execution>
-             <id>unpack</id>
-             <phase>compile</phase>
-             <goals>
-               <goal>unpack</goal>
-             </goals>
-             <configuration>
-               <artifactItems>
-                 <artifactItem>
-                   <groupId>ai.h2o.gson</groupId>
-                   <artifactId>gson</artifactId>
-                   <version>2.3</version>
-                   <overWrite>true</overWrite>
-                   <outputDirectory>${project.build.directory}/classes</outputDirectory>
-                   <includes>**/*.class,**/*.xml</includes>
-                   <excludes>**/*test.class</excludes>
-                 </artifactItem>
-               </artifactItems>
-             </configuration>
-           </execution>
-         </executions>
-       </plugin>
-
+        <!-- unpack gson library into classes to force packaging of the library into resulting jar -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.6</version>
+            <executions>
+                <execution>
+                    <id>prepare</id>
+                    <phase>validate</phase>
+                    <configuration>
+                        <tasks>
+                            <echo message="prepare phase" />
+                            <unzip src="${project.basedir}/lib/gson/gson-2.3.jar" dest="${project.build.directory}/classes" />
+                        </tasks>
+                    </configuration>
+                    <goals>
+                        <goal>run</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
         <!-- FIXME: DatasetCompare serves as a sandbox for Tomas. It should be
              user private and removed! -->
         <plugin>

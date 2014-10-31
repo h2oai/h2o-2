@@ -21,7 +21,7 @@ public class Summary2 extends Iced {
   // for GET.
   static final String DOC_GET = "Returns a summary of a fluid-vec frame";
 
-  public static final int    MAX_HIST_SZ = water.parser.Enum.MAX_ENUM_SIZE;
+  public static final int    MAX_HIST_SZ = H2O.DATA_MAX_FACTOR_LEVELS;
   public static final int    NMAX = 5;
   // updated boundaries to be 0.1% 1%...99%, 99.9% so R code didn't have to change
   // ideally we extend the array here, and just update the R extraction of 25/50/75 percentiles

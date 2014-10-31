@@ -35,6 +35,21 @@ test.CoxPH.bladder <- function(conn) {
   bladder.coxph <- coxph(Surv(stop, event) ~ enum + rx + number + size, data = bladder, weights = bladder$id)
   checkCoxPHModel(bladder.coxph.h2o, bladder.coxph)
 
+  Log.info("H2O Cox PH Model of bladder Data Set using Efron's Approximation; 2 predictors and 1 offset\n")
+  bladder.coxph.h2o <-
+    h2o.coxph(x = c("enum", "rx"), y = c("stop", "event"), data = bladder.h2o, key = "bladmod.h2o",
+              offset = "size")
+  bladder.coxph <- coxph(Surv(stop, event) ~ enum + rx + offset(size), data = bladder)
+  checkCoxPHModel(bladder.coxph.h2o, bladder.coxph)
+
+  Log.info("H2O Cox PH Model of bladder Data Set using Efron's Approximation; 2 predictors and 2 offsets\n")
+  bladder.coxph.h2o <-
+    h2o.coxph(x = c("enum", "rx"), y = c("stop", "event"), data = bladder.h2o, key = "bladmod.h2o",
+              offset = c("number", "size"), weights = "id")
+  bladder.coxph <- coxph(Surv(stop, event) ~ enum + rx + offset(number) + offset(size), data = bladder,
+                         weights = bladder$id)
+  checkCoxPHModel(bladder.coxph.h2o, bladder.coxph)
+
   Log.info("H2O Cox PH Model of bladder Data Set using Efron's Approximation; init = 0.2\n")
   bladder.coxph.h2o <-
     h2o.coxph(x = "size", y = c("stop", "event"), data = bladder.h2o,
@@ -80,6 +95,21 @@ test.CoxPH.bladder <- function(conn) {
   bladder.coxph <-
     coxph(Surv(stop, event) ~ enum + rx + number + size, data = bladder, weights = bladder$id, ties = "breslow")
   checkCoxPHModel(bladder.coxph.h2o, bladder.coxph)
+
+  Log.info("H2O Cox PH Model of bladder Data Set using Breslow's Approximation; 2 predictors and 1 offset\n")
+  bladder.coxph.h2o <-
+    h2o.coxph(x = c("enum", "rx"), y = c("stop", "event"), data = bladder.h2o, key = "bladmod.h2o",
+              offset = "size", ties = "breslow")
+  bladder.coxph <- coxph(Surv(stop, event) ~ enum + rx + offset(size), data = bladder, ties = "breslow")
+  checkCoxPHModel(bladder.coxph.h2o, bladder.coxph)
+
+  Log.info("H2O Cox PH Model of bladder Data Set using Breslow's Approximation; 2 predictors and 2 offsets\n")
+  bladder.coxph.h2o <-
+    h2o.coxph(x = c("enum", "rx"), y = c("stop", "event"), data = bladder.h2o, key = "bladmod.h2o",
+              offset = c("number", "size"), weights = "id", ties = "breslow")
+  bladder.coxph <- coxph(Surv(stop, event) ~ enum + rx + offset(number) + offset(size), data = bladder,
+                         weights = bladder$id, ties = "breslow")
+  checkCoxPHModel(bladder.coxph.h2o, bladder.coxph, tolerance = 1e-7)
 
   Log.info("H2O Cox PH Model of bladder Data Set using Breslow's Approximation; init = 0.2\n")
   bladder.coxph.h2o <-

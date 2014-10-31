@@ -5,6 +5,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import water.AutoBuffer;
+import water.H2O;
 import water.Iced;
 import water.nbhm.NonBlockingHashMap;
 
@@ -13,7 +14,7 @@ import water.nbhm.NonBlockingHashMap;
  *
  * Basically a wrapper around non blocking hash map.
  * In the first pass, we just collect set of unique strings per column
- * (if there are less than MAX_ENUM_SIZE unique elements).
+ * (if there are less than H2O.DATA_MAX_FACTOR_LEVELS unique elements).
  *
  * After pass1, the keys are sorted and indexed alphabetically.
  * In the second pass, map is used only for lookup and never updated.
@@ -24,7 +25,6 @@ import water.nbhm.NonBlockingHashMap;
  *
  */
 public final class Enum extends Iced implements Cloneable{
-  public static final int MAX_ENUM_SIZE = 65000;
   AtomicInteger _id = new AtomicInteger();
   int _maxId = -1;
   long _nElems;
@@ -55,7 +55,7 @@ public final class Enum extends Iced implements Cloneable{
     Integer newVal = new Integer(_id.incrementAndGet());
     res = m.putIfAbsent(new ValueString(str.toString()), newVal);
     if(res != null)return res;
-    if(m.size() > MAX_ENUM_SIZE){
+    if(m.size() > H2O.DATA_MAX_FACTOR_LEVELS){
       kill();
       return Integer.MAX_VALUE;
     }
@@ -92,7 +92,7 @@ public final class Enum extends Iced implements Cloneable{
       if( myMap == otMap ) return;
       for( ValueString str : otMap.keySet() )
         myMap.put(str, 1);
-      if( myMap.size() <= MAX_ENUM_SIZE ) return;
+      if( myMap.size() <= H2O.DATA_MAX_FACTOR_LEVELS ) return;
     }
     kill(); // too many values, enum should be killed!
   }

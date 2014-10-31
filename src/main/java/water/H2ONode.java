@@ -358,6 +358,9 @@ public class H2ONode extends Iced implements Comparable {
         // Blow it off and go wait again...
         catch( InterruptedException e ) { continue; }
         assert r._computed : "Found RPCCall not computed "+r._tsknum;
+        r._ackResendCnt++;
+        if(r._ackResendCnt % 50 == 0)
+          Log.err("Possibly broken network, can not send ack through, got " + r._ackResendCnt + " resends.");
         if( !H2O.CLOUD.contains(r._client) ) { // RPC from somebody who dropped out of cloud?
           r._client.remove_task_tracking(r._tsknum);
           continue;
@@ -421,7 +424,7 @@ public class H2ONode extends Iced implements Comparable {
       if(i < res.length) {
         DTask dt = rpc._dt;
         if(dt != null) // else we got ackack -> not interested!
-          res[i++] = new TaskInfo(rpc._dt, e.getKey(), _unique_idx, rpc._computedAndReplied ? (dt._repliedTcp ? task_status.RTCP : task_status.RUDP) : rpc._computed ? task_status.DONE : rpc._cmpStarted > 0 ? task_status.CMP : task_status.INIT,rpc._callCnt);
+          res[i++] = new TaskInfo(rpc._dt, e.getKey(), _unique_idx, rpc._computedAndReplied ? (dt._repliedTcp ? task_status.RTCP : task_status.RUDP) : rpc._computed ? task_status.DONE : rpc._cmpStarted > 0 ? task_status.CMP : task_status.INIT,(rpc._callCnt+rpc._ackResendCnt));
       }
     }
     return Arrays.copyOf(res,i);

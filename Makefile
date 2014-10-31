@@ -81,6 +81,11 @@ nightly_build_stuff:
 	@echo
 	@echo Build completed successfully.
 
+build_r:
+	$(MAKE) build_rjar 1> target/logs/rjar_build.log
+	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) BUILD_NUMBER=$(BUILD_NUMBER) 1> target/logs/r_build.log
+	$(MAKE) build_rcran 1> target/logs/rcran_build.log 2> target/logs/rcran_build.err
+
 build:
 	@echo
 	@echo "PHASE: Creating ${BUILD_VERSION_JAVA_FILE}..."
@@ -102,17 +107,15 @@ build:
 	@echo
 	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/hadoop_build.log
 
-	@echo
-	@echo "PHASE: Building Shalala..."
-	@echo
-	$(MAKE) -C h2o-scala PROJECT_VERSION=$(PROJECT_VERSION)
+	# @echo
+	# @echo "PHASE: Building Shalala..."
+	# @echo
+	# $(MAKE) -C h2o-scala PROJECT_VERSION=$(PROJECT_VERSION)
 
 	@echo
 	@echo "PHASE: Building R package..."
 	@echo
-	$(MAKE) build_rjar 1> target/logs/rjar_build.log
-	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) BUILD_NUMBER=$(BUILD_NUMBER) 1> target/logs/r_build.log
-	$(MAKE) build_rcran 1> target/logs/rcran_build.log 2> target/logs/rcran_build.err
+	$(MAKE) build_r
 
 	@echo
 	@echo "PHASE: Building zip package..."
