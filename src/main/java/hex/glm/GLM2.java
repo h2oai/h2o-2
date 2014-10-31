@@ -666,17 +666,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private double [] setSubmodel(final double[] newBeta, GLMValidation val, H2OCountedCompleter cmp){
+    int intercept = (has_intercept?1:0);
     double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
     if(val != null) val.null_deviance = _nullDeviance;
-    if(fullBeta == null){
-      fullBeta = MemoryManager.malloc8d(_srcDinfo.fullN()+1);
-      fullBeta[fullBeta.length-1] = _glm.linkInv(_ymu);
-    } else if(_noffsets > 0){
-      fullBeta = Arrays.copyOf(fullBeta,fullBeta.length + _noffsets);
-      fullBeta[fullBeta.length-1] = fullBeta[fullBeta.length-(has_intercept?1:0)-_noffsets];
-    }
     if(_noffsets > 0){
-      for(int i = fullBeta.length-1-_noffsets; i < fullBeta.length-1; ++i)
+      fullBeta = Arrays.copyOf(fullBeta,fullBeta.length + _noffsets);
+      if(has_intercept)
+        fullBeta[fullBeta.length-1] = fullBeta[fullBeta.length-intercept-_noffsets];
+      for(int i = fullBeta.length-intercept-_noffsets; i < fullBeta.length-intercept; ++i)
         fullBeta[i] = 1;//_srcDinfo.applyTransform(i,1);
     }
     final double [] newBetaDeNorm;
@@ -686,7 +683,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       newBetaDeNorm = fullBeta.clone();
       double norm = 0.0;        // Reverse any normalization on the has_intercept
       // denormalize only the numeric coefs (categoricals are not normalized)
-      for( int i=numoff; i< fullBeta.length-1; i++ ) {
+      for( int i=numoff; i< fullBeta.length-intercept; i++ ) {
         double b = newBetaDeNorm[i]* _srcDinfo._normMul[i-numoff];
         norm += b* _srcDinfo._normSub[i-numoff]; // Also accumulate the has_intercept adjustment
         newBetaDeNorm[i] = b;
