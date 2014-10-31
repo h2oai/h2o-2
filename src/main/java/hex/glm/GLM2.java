@@ -400,67 +400,88 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private int _intercept = 1; // 1 or 0
 
   private double [] _lb;
-  @Override public void init(){
-    super.init();
-    if(beta_constraints != null){
-      throw H2O.unimpl();
-    }
 
-    if(family==Family.gamma)
-      setHighAccuracy();
-    if(link == Link.family_default)
-      link = family.defaultLink;
-    _intercept = has_intercept ?1:0;
-    tweedie_link_power = 1 - tweedie_variance_power;// TODO
-    if(tweedie_link_power == 0)link = Link.log;
-    _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
-    source2 = new Frame(source);
-    assert sorted(ignored_cols);
-    if(offset != null) {
-      if(offset.isEnum())
-        throw new IllegalArgumentException("Categorical offsets are not supported. Can not use column '" + source2.names()[source2.find(offset)] + "' as offset");
-      int id = source.find(offset);
-      int idx = Arrays.binarySearch(ignored_cols, id);
+  boolean toEnum = false;
+
+  @Override public void init(){
+    try {
+      super.init();
+      if (beta_constraints != null) {
+        throw H2O.unimpl();
+      }
+
+      if (family == Family.gamma)
+        setHighAccuracy();
+      if (link == Link.family_default)
+        link = family.defaultLink;
+      _intercept = has_intercept ? 1 : 0;
+      tweedie_link_power = 1 - tweedie_variance_power;// TODO
+      if (tweedie_link_power == 0) link = Link.log;
+      _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
+      source2 = new Frame(source);
+      assert sorted(ignored_cols);
+      if (offset != null) {
+        if (offset.isEnum())
+          throw new IllegalArgumentException("Categorical offsets are not supported. Can not use column '" + source2.names()[source2.find(offset)] + "' as offset");
+        int id = source.find(offset);
+        int idx = Arrays.binarySearch(ignored_cols, id);
         if (idx >= 0) Utils.remove(ignored_cols, idx);
-      String name = source2.names()[id];
-      source2.add(name, source2.remove(id));
-      _noffsets = 1;
+        String name = source2.names()[id];
+        source2.add(name, source2.remove(id));
+        _noffsets = 1;
+      }
+      if (nlambdas == -1)
+        nlambdas = 100;
+      if (lambda_search && lambda.length > 1)
+        throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda_value, representing the lambda_value min (smallest lambda_value in the lambda_value search).");
+      // check the response
+      if (response.isEnum() && family != Family.binomial)
+        throw new IllegalArgumentException("Invalid response variable, trying to run regression with categorical response!");
+      switch (family) {
+        case poisson:
+        case tweedie:
+          if (response.min() < 0)
+            throw new IllegalArgumentException("Illegal response column for family='" + family + "', response must be >= 0.");
+          break;
+        case gamma:
+          if (response.min() <= 0)
+            throw new IllegalArgumentException("Invalid response for family='Gamma', response must be > 0!");
+          break;
+        case binomial:
+          if (response.min() < 0 || response.max() > 1)
+            throw new IllegalArgumentException("Illegal response column for family='Binomial', response must in <0,1> range!");
+          break;
+        default:
+          //pass
+      }
+      toEnum = family == Family.binomial && (!response.isEnum() && (response.min() < 0 || response.max() > 1));
+      Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, toEnum, true, true);
+      TransformType dt = TransformType.NONE;
+      if (standardize)
+        dt = has_intercept ? TransformType.STANDARDIZE : TransformType.DESCALE;
+      _srcDinfo = new DataInfo(fr, 1, has_intercept, use_all_factor_levels || lambda_search, dt, DataInfo.TransformType.NONE);
+      if (!has_intercept && _srcDinfo._cats > 0)
+        throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
+      _activeData = _srcDinfo;
+      if (higher_accuracy) setHighAccuracy();
+      if (non_negative) { // make srue lb is >= 0
+        if (_lb == null)
+          _lb = new double[_srcDinfo.fullN()];
+        for (int i = 0; i < _lb.length; ++i)
+          if (_lb[i] < 0)
+            _lb[i] = 0;
+      }
+    } catch(RuntimeException e) {
+      cleanup();
+      throw e;
     }
-    if(nlambdas == -1)
-      nlambdas = 100;
-    if(lambda_search && lambda.length > 1)
-      throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda_value, representing the lambda_value min (smallest lambda_value in the lambda_value search).");
-    // check the response
-    if( response.isEnum() && family != Family.binomial)throw new IllegalArgumentException("Invalid response variable, trying to run regression with categorical response!");
-    switch( family ) {
-      case poisson:
-      case tweedie:
-        if( response.min() < 0 ) throw new IllegalArgumentException("Illegal response column for family='" + family + "', response must be >= 0.");
-        break;
-      case gamma:
-        if( response.min() <= 0 ) throw new IllegalArgumentException("Invalid response for family='Gamma', response must be > 0!");
-        break;
-      case binomial:
-        if(response.min() < 0 || response.max() > 1) throw new IllegalArgumentException("Illegal response column for family='Binomial', response must in <0,1> range!");
-        break;
-      default:
-        //pass
-    }
-    Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, family==Family.binomial, true,true);
-    TransformType dt = TransformType.NONE;
-    if(standardize)
-      dt = has_intercept?TransformType.STANDARDIZE:TransformType.DESCALE;
-    _srcDinfo = new DataInfo(fr, 1, has_intercept, use_all_factor_levels || lambda_search, dt, DataInfo.TransformType.NONE);
-    if(!has_intercept && _srcDinfo._cats > 0)
-      throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
-    _activeData = _srcDinfo;
-    if(higher_accuracy)setHighAccuracy();
-    if(non_negative){ // make srue lb is >= 0
-      if(_lb == null)
-        _lb = new double[_srcDinfo.fullN()];
-      for(int i = 0; i < _lb.length; ++i)
-        if(_lb[i] < 0)
-          _lb[i] = 0;
+  }
+  @Override protected void cleanup(){
+    super.cleanup();
+    if(toEnum && _srcDinfo != null){
+      Futures fs = new Futures();
+      _srcDinfo._adaptedFrame.lastVec().remove(fs);
+      fs.blockForPending();
     }
   }
   @Override protected boolean filterNaCols(){return true;}
@@ -950,12 +971,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             remove(); // Remove/complete job only for top-level, not xval GLM2s
           }
         }, model._key, self()).forkTask();
+        cleanup();
       }
     }
     @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
       if(_cmp.compareAndSet(null, cmp)) {
         _done = true;
         GLM2.this.cancel(t);
+       cleanup();
         if(_grid){
           _failed = true;
           tryComplete();

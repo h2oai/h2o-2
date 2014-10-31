@@ -282,6 +282,7 @@ public class GLMTest2  extends TestUtil {
       fr.delete();
       if(model != null)model.delete();
     }
+
   }
 
   @Test public void testNoNNegative() {
@@ -305,7 +306,7 @@ public class GLMTest2  extends TestUtil {
       // H2O differs on has_intercept and race, same residual deviance though
       String[] cfs1 = new String[]{"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON","Intercept"};
       double[] vals = new double[]{0, 0, 0.54788332,0.53816534, 0.02380097, 0, 0.98115670,-8.945984};
-      new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source(fr, fr.vec("CAPSULE"), true, true), Family.binomial).setNonNegative(true).setRegularization(new double[]{1},new double[]{2.22E-5}).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
+      new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source((Frame)fr.clone(), fr.vec("CAPSULE"), true, true), Family.binomial).setNonNegative(true).setRegularization(new double[]{1},new double[]{2.22E-5}).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
       model = DKV.get(modelKey).get();
       Assert.assertTrue(model.get_params().state == Job.JobState.DONE);
       testHTML(model);
@@ -338,11 +339,12 @@ public class GLMTest2  extends TestUtil {
     H2O.submitTask(new RebalanceDataSet(fr,k,64)).join();
     fr.delete();
     fr = DKV.get(k).get();
+    Frame score = null;
     try{
       // H2O differs on has_intercept and race, same residual deviance though
       String [] cfs1 = new String [] {"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
       double [] vals = new double [] { -1.23262,-0.07205, 0.47899, 0.13934, 0.03626, -0.01155, 0.63645};
-      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,false),Family.binomial).setRegularization(new double[]{0},new double[]{0}).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
+      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source((Frame)fr.clone(),fr.vec("CAPSULE"),false,false),Family.binomial).setRegularization(new double[]{0},new double[]{0}).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
       model = DKV.get(modelKey).get();
       Assert.assertTrue(model.get_params().state == Job.JobState.DONE);
       testHTML(model);
@@ -354,7 +356,7 @@ public class GLMTest2  extends TestUtil {
       assertEquals(399, val.residualDeviance(),1e-1);
       assertEquals(413, val.aic(),1e-1);
       // test scoring
-      Frame score = model.score(fr);
+      score = model.score((Frame)fr.clone());
       Vec mu = score.vec("1");
       final double [] exp_preds =
         new double []{ // R predictions using R model
@@ -407,6 +409,8 @@ public class GLMTest2  extends TestUtil {
         assertTrue("should've thrown",false);
       } catch(IllegalArgumentException iae){}
     } finally {
+      if(score != null)
+        score.delete();
       fr.delete();
       if(model != null)model.delete();
     }
@@ -434,6 +438,7 @@ public class GLMTest2  extends TestUtil {
     H2O.submitTask(new RebalanceDataSet(fr,k,64)).join();
     fr.delete();
     fr = DKV.get(k).get();
+    Frame score = null;
     try{
       // H2O differs on has_intercept and race, same residual deviance though
       String [] cfs1 = new String [] {"RACE", "AGE", "DPROS", "PSA", "VOL", "GLEASON"};
@@ -450,7 +455,7 @@ public class GLMTest2  extends TestUtil {
       assertEquals(402.9, val.residualDeviance(),1e-1);
       assertEquals(414.9, val.aic(),1e-1);
       // test scoring
-      Frame score = model.score(fr);
+      score = model.score(fr);
       Vec mu = score.vec("1");
       final double [] exp_preds =
         new double []{ // R predictions using R model
@@ -516,6 +521,7 @@ public class GLMTest2  extends TestUtil {
     } finally {
       fr.delete();
       if(model != null)model.delete();
+      if(score != null) score.delete();
     }
   }
 
