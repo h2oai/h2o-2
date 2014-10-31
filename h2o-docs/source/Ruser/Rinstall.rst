@@ -26,12 +26,13 @@ Dependencies
 The H\ :sub:`2`\ O package is built with some required packages. To properly install H\ :sub:`2`\ O's package, remember to install the following dependencies:
 
     - RCurl
-    - bitops
     - rjson
     - statmod
     - survival 
-    - splines
+    - stats
     - tools
+    - utils 
+    - methods
     
 If your machine does not have curl-config, you must install the dependencies outside of R. 
 
