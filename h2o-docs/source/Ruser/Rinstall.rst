@@ -29,6 +29,8 @@ The H\ :sub:`2`\ O package is built with some required packages. To properly ins
     - bitops
     - rjson
     - statmod
+    - survival 
+    - splines
     - tools
     
 If your machine does not have curl-config, you must install the dependencies outside of R. 
