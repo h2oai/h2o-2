@@ -30,7 +30,6 @@ task acceptanceStories << {
     ant.fail( if:'easyb_failed', message: 'Failures in easyb stories' )
 }
 
-
 task acceptanceTests(type: Test) {
     useTestNG(){
         //excludeGroups = ['functional'] as Set
@@ -55,7 +54,7 @@ task acceptanceTests(type: Test) {
     //jvmArgs '-Xms256m', '-Xmx512m'
 
     // Enable debugging mode.
-    debug = false   // a value of true will start waiting for -Xrunjdwp
+    debug = false  // a value of true will start waiting for -Xrunjdwp
 
     // Ignore any test failues and don't fail the build.
     ignoreFailures = true
@@ -77,3 +76,28 @@ task acceptanceTests(type: Test) {
     //test.testReport = false
 
 }
+
+task acceptancePython () {
+    def rootFolder = project.getRootDir()
+    def testResults = [rootFolder, "build/test-results/python/test_results.xml"].join(File.separator)
+    def htmlReports  = [rootFolder, "build/reports/python/index.html"].join(File.separator)
+    new File(testResults).getParentFile().mkdirs()
+    new File(htmlReports).getParentFile().mkdirs()
+
+    println rootFolder
+    assert new File(testResults).getParentFile().exists()
+    assert new File(htmlReports).getParentFile().exists()
+    FileTree tree = fileTree("../src/test/python"){
+        include '**/*.py'
+    }
+    tree.visit{element->
+        exec {
+            println " ** testing now: " + element.file
+            executable "python"
+            workingDir rootFolder
+            args "$element.file", '--group=rgm', '--with-xunit', "--xunit-file=${testResults}",
+                    "--with-html-out", "--html-file=${htmlReports}"
+        }
+    }
+}
+
