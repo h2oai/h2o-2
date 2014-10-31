@@ -1,6 +1,7 @@
 package water.api;
 
 import water.Func;
+import water.Key;
 import water.MRTask2;
 import water.UKV;
 import water.fvec.Chunk;
@@ -37,9 +38,9 @@ public class GainsLiftTable extends Func {
 
   // Results (Output)
   @API(help="Response rates", json=true)
-  private float[] response_rates;
+  public float[] response_rates;
   @API(help="Average response rate", json=true)
-  private float avg_response_rate;
+  public float avg_response_rate;
 
   @Override protected void init() throws IllegalArgumentException {
     // Input handling
@@ -53,6 +54,13 @@ public class GainsLiftTable extends Func {
       throw new IllegalArgumentException("Actual column must contain binary class labels, but found cardinality " + vactual.cardinality() + "!");
     if (vpredict.isEnum())
       throw new IllegalArgumentException("vpredict cannot be class labels, expect probabilities.");
+  }
+
+  public GainsLiftTable() {}
+
+  public GainsLiftTable(float[] response_rates, float avg_response_rate) {
+    this.response_rates = response_rates;
+    this.avg_response_rate = avg_response_rate;
   }
 
   @Override protected void execImpl() {
