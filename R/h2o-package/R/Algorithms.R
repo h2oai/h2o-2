@@ -926,6 +926,7 @@ h2o.prcomp <- function(data, tol=0, cols = "", max_pc = 5000, key = "", standard
   res2 = res2$pca_model
   
   result = list()
+  result$params$x = args$cols
   result$num_pc = res2$num_pc
   result$standardized = standardize
   result$sdev = res2$sdev

@@ -143,6 +143,7 @@ h2o.interaction <- function(data, key=NULL, factors, pairwise, max_factors, min_
     }
   }
 
+  if(!is.numeric(factors)) factors <- match(factors,colnames(data))
   if(!is.numeric(factors)) stop("factors must be a numeric value")
   if(max_factors < 1) stop("max_factors cannot be < 1")
   if(!is.numeric(max_factors)) stop("max_factors must be a numeric value")

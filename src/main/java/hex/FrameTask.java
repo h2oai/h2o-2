@@ -73,7 +73,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   public static class DataInfo extends Iced {
     public Frame _adaptedFrame;
     public int _responses; // number of responses
-    public enum TransformType { NONE, STANDARDIZE, NORMALIZE, DEMEAN };
+    public enum TransformType { NONE, STANDARDIZE, NORMALIZE, DEMEAN, DESCALE };
     public TransformType _predictor_transform;
     public TransformType _response_transform;
     public boolean _useAllFactorLevels;
@@ -322,6 +322,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
               _normSub[i] = v.mean();
             }
             break;
+          case DESCALE:
+            _normSub = null;
+            _normMul = MemoryManager.malloc8d(_nums);;
+            for (int i = 0; i < _nums; ++i) {
+              Vec v = fr.vec(catLevels.length+i);
+              _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
+            }
+            break;
           case DEMEAN:
             _normMul = null;
             _normSub = MemoryManager.malloc8d(_nums);
@@ -334,6 +342,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             _normMul = null;
             _normSub = null;
             break;
+          default:
+            throw H2O.unimpl();
         }
       }
       _response_transform = response_transform;
@@ -370,7 +380,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             _normRespSub = null;
             break;
           default:
-            break;
+            throw H2O.unimpl();
         }
       }
       _useAllFactorLevels = false;
@@ -435,6 +445,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           _normSub = MemoryManager.malloc8d(nnums);
           _normMul = null;
           break;
+        case DESCALE:
+          _normMul = MemoryManager.malloc8d(nnums);
+          _normSub = null;
+          break;
         case NONE:
           _normSub = _normMul = null;
           break;
@@ -452,6 +466,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           case NORMALIZE:
             _normSub[i] = v.mean();
             _normMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
+            break;
+          case DESCALE:
+            _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
             break;
           case DEMEAN:
             _normSub[i] = v.mean();
@@ -477,7 +494,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             _normRespSub = _normRespMul = null;
             break;
           default:
-            break;
+            throw H2O.unimpl();
         }
         for(int i = 0; i < _responses; ++i){
           Vec v = (vecs2[nnums+ncats+i] = vecs[nnums+ncats+i]);
@@ -496,7 +513,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             case NONE:
               break;
             default:
-              break;
+              throw H2O.unimpl();
           }
         }
       }

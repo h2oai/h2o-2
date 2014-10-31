@@ -2,6 +2,7 @@ package hex.glm;
 
 import dontweave.gson.JsonObject;
 import hex.FrameTask.DataInfo;
+import hex.FrameTask.DataInfo.TransformType;
 import hex.GridSearch.GridSearchProgress;
 import hex.glm.GLMModel.GLMXValidationTask;
 import hex.glm.GLMModel.Submodel;
@@ -446,7 +447,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         //pass
     }
     Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, family==Family.binomial, true,true);
-    _srcDinfo = new DataInfo(fr, 1, has_intercept, use_all_factor_levels || lambda_search, standardize ? DataInfo.TransformType.STANDARDIZE : DataInfo.TransformType.NONE, DataInfo.TransformType.NONE);
+    TransformType dt = TransformType.NONE;
+    if(standardize)
+      dt = has_intercept?TransformType.STANDARDIZE:TransformType.DESCALE;
+    _srcDinfo = new DataInfo(fr, 1, has_intercept, use_all_factor_levels || lambda_search, dt, DataInfo.TransformType.NONE);
     if(!has_intercept && _srcDinfo._cats > 0)
       throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
     _activeData = _srcDinfo;
@@ -662,31 +666,35 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private double [] setSubmodel(final double[] newBeta, GLMValidation val, H2OCountedCompleter cmp){
+    int intercept = (has_intercept?1:0);
     double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
     if(val != null) val.null_deviance = _nullDeviance;
-    if(fullBeta == null){
-      fullBeta = MemoryManager.malloc8d(_srcDinfo.fullN()+1);
-      fullBeta[fullBeta.length-1] = _glm.linkInv(_ymu);
-    } else if(_noffsets > 0){
-      fullBeta = Arrays.copyOf(fullBeta,fullBeta.length + _noffsets);
-      fullBeta[fullBeta.length-1] = fullBeta[fullBeta.length-(has_intercept?1:0)-_noffsets];
-    }
     if(_noffsets > 0){
-      for(int i = fullBeta.length-1-_noffsets; i < fullBeta.length-1; ++i)
+      fullBeta = Arrays.copyOf(fullBeta,fullBeta.length + _noffsets);
+      if(has_intercept)
+        fullBeta[fullBeta.length-1] = fullBeta[fullBeta.length-intercept-_noffsets];
+      for(int i = fullBeta.length-intercept-_noffsets; i < fullBeta.length-intercept; ++i)
         fullBeta[i] = 1;//_srcDinfo.applyTransform(i,1);
     }
     final double [] newBetaDeNorm;
+    final int numoff = _srcDinfo.numStart();
     if(_srcDinfo._predictor_transform == DataInfo.TransformType.STANDARDIZE) {
+      assert has_intercept;
       newBetaDeNorm = fullBeta.clone();
       double norm = 0.0;        // Reverse any normalization on the has_intercept
       // denormalize only the numeric coefs (categoricals are not normalized)
-      final int numoff = _srcDinfo.numStart();
-      for( int i=numoff; i< fullBeta.length-1; i++ ) {
+      for( int i=numoff; i< fullBeta.length-intercept; i++ ) {
         double b = newBetaDeNorm[i]* _srcDinfo._normMul[i-numoff];
         norm += b* _srcDinfo._normSub[i-numoff]; // Also accumulate the has_intercept adjustment
         newBetaDeNorm[i] = b;
       }
-      newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
+      if(has_intercept)
+        newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
+    } else if (_srcDinfo._predictor_transform == TransformType.DESCALE) {
+      assert !has_intercept;
+      newBetaDeNorm = fullBeta.clone();
+      for( int i=numoff; i< fullBeta.length; i++ )
+        newBetaDeNorm[i] *= _srcDinfo._normMul[i-numoff];
     } else
       newBetaDeNorm = null;
     GLMModel.setSubmodel(cmp, dest(), _currentLambda, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1), System.currentTimeMillis() - start_time, _srcDinfo.fullN() >= sparseCoefThreshold, val);
@@ -1181,9 +1189,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private double [] nullModelBeta(DataInfo dinfo, double ymu){
-    double icpt = _noffsets == 0?_glm.link(ymu):computeIntercept(dinfo,ymu,offset,response);
     double[] beta = MemoryManager.malloc8d(_srcDinfo.fullN() + (dinfo._hasIntercept?1:0) - _noffsets);
-    if(dinfo._hasIntercept) beta[beta.length-1] = icpt;
+    if(has_intercept) {
+      double icpt = _noffsets == 0?_glm.link(ymu):computeIntercept(dinfo,ymu,offset,response);
+      if (dinfo._hasIntercept) beta[beta.length - 1] = icpt;
+    }
     return beta;
   }
 
