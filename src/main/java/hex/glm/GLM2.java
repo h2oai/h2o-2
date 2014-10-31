@@ -740,7 +740,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return b;
   }
 
-  protected void checkKKTAndComplete(CountedCompleter cc, final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
+  protected void checkKKTAndComplete(final CountedCompleter cc, final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
     H2OCountedCompleter cmp = (H2OCountedCompleter)cc;
     final double [] fullBeta = newBeta == null?MemoryManager.malloc8d(_srcDinfo.fullN()+_intercept-_noffsets):expandVec(newBeta,_activeCols);
     // now we need full gradient (on all columns) using this beta
@@ -753,11 +753,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         // first check KKT conditions!
         final double [] grad = glmt2.gradient(alpha[0],_currentLambda);
         if(Utils.hasNaNsOrInfs(grad)){
+          _failedLineSearch = true;
           if(!failedLineSearch) {
-            LogInfo("Check KKT got NaNs. Invoking line search");
-            setHighAccuracy();
             getCompleter().addToPendingCount(1);
-            new GLMTask.GLMLineSearchTask(_noffsets,self(), _activeData, _glm, lastBeta(_noffsets), glmt._beta, beta_epsilon, _ymu, _nobs, new LineSearchIteration(glmt,getCompleter())).asyncExec(_activeData._adaptedFrame);
+            checkKKTAndComplete(cc,glmt,glmt._beta,true);
+            LogInfo("Check KKT got NaNs. Taking previous solution");
             return;
           } else {
             // TODO: add warning and break th lambda search? Or throw Exception?
@@ -907,7 +907,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           for (int i = 0; i < glmt._beta.length; ++i)
             if (glmt._beta[i] != 0) ++nzs;
           LogInfo("converged (reached a fixed point with ~ 1e" + diff + " precision), got " + nzs + " nzs");
-          checkKKTAndComplete(getCompleter(),glmt, glmt._beta, false); // NOTE: do not use newBeta here, it has not been checked and can lead to NaNs in KKT check, redoing line search, coming up with the same beta and so on.
+          checkKKTAndComplete(getCompleter(),glmt, newBeta, false); // NOTE: do not use newBeta here, it has not been checked and can lead to NaNs in KKT check, redoing line search, coming up with the same beta and so on.
           return;
         } else { // not done yet, launch next iteration
           if (glmt._beta != null)
