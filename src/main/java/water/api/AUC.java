@@ -70,7 +70,6 @@ public class AUC extends Func {
    */
   public AUC(hex.ConfusionMatrix[] cms, float[] thresh, String[] domain) {
     aucdata = new AUCData().compute(cms, thresh, domain, threshold_criterion);
-    computeGainsLift();
   }
 
   private void computeGainsLift() {
