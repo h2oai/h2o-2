@@ -253,7 +253,7 @@ public class AUCData extends Iced {
       if (idxCriter == null) return false;
 
       sb.append("<div>");
-      DocGen.HTML.section(sb, "Scoring for Binary Classification");
+      DocGen.HTML.section(sb, "<a href=\"http://en.wikipedia.org/wiki/Receiver_operating_characteristic\">Scoring for Binary Classification</a>");
 
       // data for JS
       sb.append("\n<script type=\"text/javascript\">");//</script>");
@@ -352,7 +352,9 @@ public class AUCData extends Iced {
       for (int i = 0; i < my_cms.length; ++i)
         sb.append("\t<option value='" + i + "'" + (my_thresholds[i] == threshold() ? "selected='selected'" : "") + ">" + my_thresholds[i] + "</option>\n");
       sb.append("</select></td></tr>");
-      sb.append("</td><tr><td id='GainsLiftTable'><h4>Gains/Lift Table</h4>");
+      sb.append("</td><tr><td id='GainsLiftTable'><h4>"+
+      "<a href=\"http://books.google.com/books?id=-JwptfFItaoC&pg=PA318&lpg=PA319&source=bl&ots=_S6fJI5Wds&sig=Uvff-MosTE7CR4e8LdE8TdJvo44&hl=en&sa=X&ei=b3EcVMnHB6T2iwK3koC4Cw&ved=0CF0Q6AEwBw#v=onepage&q&f=false\">"
+      + "Gains/Lift Table</a></h4>");
       new GainsLiftTable(response_rates, avg_response_rate).toHTML(sb);
       sb.append("</tr>");
       sb.append("</table>");
