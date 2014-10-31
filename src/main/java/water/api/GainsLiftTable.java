@@ -94,6 +94,8 @@ public class GainsLiftTable extends Func {
         response_rates = gt.response_rates();
         avg_response_rate = gt.avg_response_rate();
       }
+    } catch (Throwable t) {
+      // do nothing
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
     }
@@ -131,6 +133,7 @@ public class GainsLiftTable extends Func {
   }
 
   public void toASCII( StringBuilder sb ) {
+    if (response_rates == null) return;
     // Sum up predicted & actuals
     sb.append("Quantile  Response rate    Lift    Cumulative lift\n");
 

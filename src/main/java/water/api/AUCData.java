@@ -402,6 +402,7 @@ public class AUCData extends Iced {
     sb.append(", MCC: " + String.format("%.5f", mcc()));
     sb.append(", Threshold for " + threshold_criterion.toString().replace("_", " ") + ": " + String.format("%g", threshold()));
     sb.append("\n");
+    new GainsLiftTable(response_rates, avg_response_rate).toASCII(sb);
   }
 
   void plotROC(StringBuilder sb) {
