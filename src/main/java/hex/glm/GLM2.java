@@ -190,6 +190,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   int _lambdaIdx = -1;
 
   private double _addedL2;
+  private boolean _failedLineSearch;
 
   public static final double DEFAULT_BETA_EPS = 5e-5;
   private double _ymu;
@@ -644,7 +645,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask> {
-    LineSearchIteration(CountedCompleter cmp){super((H2OCountedCompleter)cmp); cmp.addToPendingCount(1);}
+    final GLMIterationTask _glmt;
+    LineSearchIteration(GLMIterationTask glmt, CountedCompleter cmp){super((H2OCountedCompleter)cmp); cmp.addToPendingCount(1); _glmt = glmt;}
     @Override public void callback(final GLMTask.GLMLineSearchTask glmt) {
       assert getCompleter().getPendingCount() >= 1:"unexpected pending count, expected 1, got " + getCompleter().getPendingCount();
       double step = LS_STEP;
@@ -660,7 +662,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       LogInfo("line search: did not find admissible step, smallest step = " + step + ",  objval = " + objval(glmt._glmts[glmt._glmts.length-1]) + ", old objval = " + objval(_lastResult._glmt));
       // check if objval of smallest step is below the previous step, if so, go on
       LogInfo("Line search did not find feasible step, converged.");
-      GLMIterationTask res = _lastResult._glmt;
+      _failedLineSearch = true;
+      GLMIterationTask res = highAccuracy()?_lastResult._glmt:_glmt;
       if(_activeCols != _lastResult._activeCols && !Arrays.equals(_activeCols,_lastResult._activeCols)) {
         _activeCols = _lastResult._activeCols;
         _activeData = _srcDinfo.filterExpandedColumns(_activeCols);
@@ -754,7 +757,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             LogInfo("Check KKT got NaNs. Invoking line search");
             setHighAccuracy();
             getCompleter().addToPendingCount(1);
-            new GLMTask.GLMLineSearchTask(_noffsets,self(), _activeData, _glm, lastBeta(_noffsets), glmt._beta, beta_epsilon, _ymu, _nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
+            new GLMTask.GLMLineSearchTask(_noffsets,self(), _activeData, _glm, lastBeta(_noffsets), glmt._beta, beta_epsilon, _ymu, _nobs, new LineSearchIteration(glmt,getCompleter())).asyncExec(_activeData._adaptedFrame);
             return;
           } else {
             // TODO: add warning and break th lambda search? Or throw Exception?
@@ -852,7 +855,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           return;
         }
         LogInfo("invoking line search");
-        new GLMTask.GLMLineSearchTask(_noffsets,GLM2.this.self(),_activeData,_glm, lastBeta(_noffsets) ,glmt._beta,1e-4,_ymu,_nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
+        new GLMTask.GLMLineSearchTask(_noffsets, GLM2.this.self(), _activeData,_glm, lastBeta(_noffsets), glmt._beta, 1e-4, _ymu, _nobs, new LineSearchIteration(glmt,getCompleter())).asyncExec(_activeData._adaptedFrame);
         return;
       }
       if(glmt._grad != null)
@@ -960,6 +963,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           String warn = "Added L2 penalty (rho = " + _addedL2 + ")  due to non-spd matrix. ";
           model.addWarning(warn);
         }
+        if(_failedLineSearch && !highAccuracy())
+          model.addWarning("High accuracy settings recommended.");
         state = JobState.DONE;
         DKV.remove(_progressKey);
         model.get_params().state = state;
