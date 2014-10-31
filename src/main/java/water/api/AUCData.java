@@ -25,6 +25,11 @@ public class AUCData extends Iced {
   @API(help="Gini", json=true)
   public double Gini;
 
+  @API(help="Response rates", json=true)
+  public float[] response_rates;
+  @API(help="Average response rate", json=true)
+  public float avg_response_rate;
+
   @API(help = "Confusion Matrices for all thresholds", json=true)
   public long[][][] confusion_matrices;
   @API(help = "F1 for all thresholds", json=true)
@@ -347,6 +352,9 @@ public class AUCData extends Iced {
       for (int i = 0; i < my_cms.length; ++i)
         sb.append("\t<option value='" + i + "'" + (my_thresholds[i] == threshold() ? "selected='selected'" : "") + ">" + my_thresholds[i] + "</option>\n");
       sb.append("</select></td></tr>");
+      sb.append("</td><tr><td id='GainsLiftTable'><h4>Gains/Lift Table</h4>");
+      new GainsLiftTable(response_rates, avg_response_rate).toHTML(sb);
+      sb.append("</tr>");
       sb.append("</table>");
 
 

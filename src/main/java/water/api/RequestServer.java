@@ -138,8 +138,8 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new NetworkTest()), "Network Test",             "Admin");
     Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",              "Admin");
     Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
-    Request.addToNavbar(registerRequest(new UDPDropTest()), "Udp drop",                 "Admin");
-    Request.addToNavbar(registerRequest(new TaskStatus()),  "Task status",              "Admin");
+    Request.addToNavbar(registerRequest(new UDPDropTest()), "UDP Drop Test",            "Admin");
+    Request.addToNavbar(registerRequest(new TaskStatus()),  "Task Status",              "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials

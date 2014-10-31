@@ -70,6 +70,19 @@ public class AUC extends Func {
    */
   public AUC(hex.ConfusionMatrix[] cms, float[] thresh, String[] domain) {
     aucdata = new AUCData().compute(cms, thresh, domain, threshold_criterion);
+    computeGainsLift();
+  }
+
+  private void computeGainsLift() {
+    // Also compute and store Gains/Lift info
+    GainsLiftTable glt = new GainsLiftTable();
+    glt.actual = actual;
+    glt.vactual = vactual;
+    glt.predict = predict;
+    glt.vpredict = vpredict;
+    glt.invoke();
+    aucdata.response_rates = glt.response_rates;
+    aucdata.avg_response_rate = glt.avg_response_rate;
   }
 
   @Override protected void init() throws IllegalArgumentException {
@@ -115,6 +128,7 @@ public class AUC extends Func {
       }
       // compute CMs
       aucdata = new AUCData().compute(new AUCTask(thresholds,va.mean()).doAll(va,vp).getCMs(), thresholds, va._domain, threshold_criterion);
+      computeGainsLift();
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
     }
