@@ -721,7 +721,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         newBetaDeNorm[i] *= _srcDinfo._normMul[i-numoff];
     } else
       newBetaDeNorm = null;
-    GLMModel.setSubmodel(cmp, dest(), _currentLambda, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1), System.currentTimeMillis() - start_time, _srcDinfo.fullN() >= sparseCoefThreshold, val);
+    GLMModel.setSubmodel(cmp, dest(), _currentLambda, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, _iter, System.currentTimeMillis() - start_time, _srcDinfo.fullN() >= sparseCoefThreshold, val);
     return fullBeta;
   }
 
