@@ -416,6 +416,16 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public final int ncoefs() {return beta().length;}
 
+  @Override public int nclasses(){ return glm.family == Family.binomial?2:1;}
+
+  @Override
+  public String [] classNames(){
+    String [] res = super.classNames();
+    if(glm.getFamily() == Family.binomial && res == null)
+      res = new String[]{"0","1"};
+    return res;
+  }
+
   //  public static void setAndTestValidation(final H2OCountedCompleter cmp,final Key modelKey, final double lambda, final GLMValidation val){
 //    if(cmp != null)cmp.addToPendingCount(1);
 //    new TAtomic<GLMModel>(cmp){
