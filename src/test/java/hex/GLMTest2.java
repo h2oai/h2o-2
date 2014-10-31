@@ -400,6 +400,7 @@ public class GLMTest2  extends TestUtil {
       for(int i = 0; i < mu.length(); ++i)
         assertEquals(exp_preds[i],mu.at(i),1e-4);
       // test that it throws with categoricals
+      fr.delete();
       fr = getFrameForFile(parsed, "smalldata/glm_test/prostate_cat_replaced.csv", new String[]{"ID"}, "CAPSULE");
       try {
         new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source(fr, fr.vec("CAPSULE"), false,false), Family.binomial).doInit().fork().get();
@@ -506,6 +507,7 @@ public class GLMTest2  extends TestUtil {
       for(int i = 0; i < mu.length(); ++i)
         assertEquals(exp_preds[i],mu.at(i),1e-4);
       // test that it throws with categoricals
+      fr.delete();
       fr = getFrameForFile(parsed, "smalldata/glm_test/prostate_cat_replaced.csv", new String[]{"ID"}, "CAPSULE");
       try {
         new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source(fr, fr.vec("CAPSULE"), false,false), Family.binomial).doInit().fork().get();
