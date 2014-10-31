@@ -1,5 +1,6 @@
 package hex.deeplearning;
 
+import com.amazonaws.services.simpleworkflow.model.Run;
 import hex.*;
 import water.*;
 import water.util.*;
@@ -1126,8 +1127,18 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Deep Learning model building was cancelled.");
       return model;
     }
+    catch(Throwable t) {
+      t.printStackTrace();
+      model = UKV.get(dest());
+      state = JobState.FAILED; //for JSON REST response
+      if (model != null) {
+        model.get_params().state = state; //for parameter JSON on the HTML page
+        Log.info("Deep Learning model building failed.");
+      }
+      return model;
+    }
     finally {
-      if (model != null) model.unlock(self());
+      if (model != null && DKV.get(model._key) != null) model.unlock(self());
       unlock_data();
     }
   }
