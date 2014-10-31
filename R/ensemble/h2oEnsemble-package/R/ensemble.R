@@ -225,13 +225,6 @@ predict.h2o.ensemble <-
     names(basepreddf) <- names(object$basefits)
     basepreddf[basepreddf < object$ylim[1]] <- object$ylim[1]  #Enforce bounds
     basepreddf[basepreddf > object$ylim[2]] <- object$ylim[2]
-    
-    # basepred <- as.h2o(localH2O, basepreddf, key="basepred")  
-    # If we pull out h2o.gbm, h2o.glm or h2o.deeplearning predicted vals from as.data.frame(basepred), 
-    # the memory locations instead of the actual float values are returned... definitely a bug
-    # Rounding to 3 digits is a silly hack for an h2o bug that causes memory addresses to be returned instead of floats
-    # For some reason, it works okay if we round the pred values
-    basepreddf <- round(basepreddf, digits=3)
     basepred <- as.h2o(localH2O, basepreddf, key="basepred")
     
     if (grepl("H2O", class(object$metafit))) {
