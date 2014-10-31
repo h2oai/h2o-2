@@ -926,6 +926,7 @@ h2o.prcomp <- function(data, tol=0, cols = "", max_pc = 5000, key = "", standard
   res2 = res2$pca_model
   
   result = list()
+  result$x = args$cols
   result$num_pc = res2$num_pc
   result$standardized = standardize
   result$sdev = res2$sdev
@@ -1293,7 +1294,7 @@ h2o.predict <- function(object, newdata) {
   } else if(class(object) == "H2OPCAModel") {
     # Set randomized prediction key
     rand_pred_key = .h2o.__uniqID("PCAPredict")
-    numMatch = colnames(newdata) %in% object@model$params$x
+    numMatch = colnames(newdata) %in% object@model$x
     numPC = min(length(numMatch[numMatch == TRUE]), object@model$num_pc)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     .h2o.__waitOnJob(object@data@h2o, res$job_key)
