@@ -28,6 +28,7 @@ import water.util.RString;
 import water.util.Utils;
 import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -320,6 +321,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     this.lambda = lambda;
     return this;
   }
+  public GLM2 setBetaConstraints(Frame f){
+    beta_constraints = f;
+    return this;
+  }
 
   static String arrayToString (double[] arr) {
     if (arr == null) {
@@ -400,17 +405,27 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private int _noffsets = 0;
   private int _intercept = 1; // 1 or 0
 
-  private double [] _lb;
+  private double [] _lbs;
+  private double [] _ubs;
+  private double [] _bgs;
+  private double [] _rho;
 
   boolean toEnum = false;
 
+  private double [] makeAry(int sz, double val){
+    double [] res = MemoryManager.malloc8d(sz);
+    Arrays.fill(res,val);
+    return res;
+  }
+
+  private double [] mapVec(double [] src, double [] tgt, int [] map){
+    for(int i = 0; i < src.length; ++i)
+      if(map[i] != -1) tgt[map[i]] = src[i];
+    return tgt;
+  }
   @Override public void init(){
     try {
       super.init();
-      if (beta_constraints != null) {
-        throw H2O.unimpl();
-      }
-
       if (family == Family.gamma)
         setHighAccuracy();
       if (link == Link.family_default)
@@ -465,12 +480,52 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
       _activeData = _srcDinfo;
       if (higher_accuracy) setHighAccuracy();
+      if (beta_constraints != null) {
+        Vec v;
+        v = beta_constraints.vec("names");
+        // for now only enums allowed here
+        String [] dom = v.domain();
+        String [] names = _srcDinfo.coefNames();
+        int [] map = Utils.asInts(v);
+        if(!Arrays.deepEquals(dom,names)) { // need mapping
+          HashMap<String,Integer> m = new HashMap<String, Integer>();
+          for(int i = 0; i < names.length; ++i)
+            m.put(names[i],i);
+          int [] newMap = MemoryManager.malloc4(dom.length);
+          for(int i = 0; i < dom.length; ++i) {
+            Integer I = m.get(dom[map[i]]);
+            newMap[i] = I == null?-1:I;
+          }
+          map = newMap;
+        }
+        if((v = beta_constraints.vec("lower_bounds")) != null) {
+          _lbs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.NEGATIVE_INFINITY), map);
+          System.out.println("lower bounds = " + Arrays.toString(_lbs));
+          for(int i = 0; i < _lbs.length; ++i) {
+            if(_lbs[i] > 0) throw new IllegalArgumentException("lower bounds must be non-positive");
+            if(_srcDinfo._normMul != null)
+              _lbs[i] /= _srcDinfo._normMul[i];
+          }
+        }
+        if((v = beta_constraints.vec("upper_bounds")) != null) {
+          _ubs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.POSITIVE_INFINITY), map);
+          System.out.println("upper bounds = " + Arrays.toString(_ubs));
+          for(int i = 0; i < _ubs.length; ++i) {
+            if (_ubs[i] < 0) throw new IllegalArgumentException("lower bounds must be non-positive");
+            if (_srcDinfo._normMul != null)
+              _ubs[i] /= _srcDinfo._normMul[i];
+          }
+        } if((v =  beta_constraints.vec("beta_given")) != null)
+          _bgs = map == null?Utils.asDoubles(v):mapVec(Utils.asDoubles(v),makeAry(names.length,0),map);
+        if((v = beta_constraints.vec("rho")) != null)
+          _rho = map == null?Utils.asDoubles(v):mapVec(Utils.asDoubles(v),makeAry(names.length,0),map);
+      }
       if (non_negative) { // make srue lb is >= 0
-        if (_lb == null)
-          _lb = new double[_srcDinfo.fullN()];
-        for (int i = 0; i < _lb.length; ++i)
-          if (_lb[i] < 0)
-            _lb[i] = 0;
+        if (_lbs == null)
+          _lbs = new double[_srcDinfo.fullN()];
+        for (int i = 0; i < _lbs.length; ++i)
+          if (_lbs[i] < 0)
+            _lbs[i] = 0;
       }
     } catch(RuntimeException e) {
       cleanup();
@@ -721,7 +776,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         newBetaDeNorm[i] *= _srcDinfo._normMul[i-numoff];
     } else
       newBetaDeNorm = null;
-    GLMModel.setSubmodel(cmp, dest(), _currentLambda, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1), System.currentTimeMillis() - start_time, _srcDinfo.fullN() >= sparseCoefThreshold, val);
+    GLMModel.setSubmodel(cmp, dest(), _currentLambda, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, _iter, System.currentTimeMillis() - start_time, _srcDinfo.fullN() >= sparseCoefThreshold, val);
     return fullBeta;
   }
 
@@ -868,8 +923,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       long t1 = System.currentTimeMillis();
       ADMMSolver slvr = new ADMMSolver(lambda_max, _currentLambda,alpha[0], _gradientEps, _addedL2);
-      if(_lb != null)
-        slvr._lb = _activeCols == null?contractVec(_lb,_activeCols,0):_lb;
+      if(_lbs != null)
+        slvr._lb = _activeCols == null?contractVec(_lbs,_activeCols,0):_lbs;
+      if(_ubs != null)
+        slvr._ub = _activeCols == null?contractVec(_ubs,_activeCols,0):_ubs;
+      if(_bgs != null && _rho != null) {
+        slvr._wgiven = _activeCols == null ? contractVec(_bgs, _activeCols, 0) : _bgs;
+        slvr._proximalPenalties = _activeCols == null ? contractVec(_rho, _activeCols, 0) : _rho;
+      }
       slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta,Math.max(1e-8*lambda_max,_currentLambda*alpha[0]));
       // print all info about iteration
       LogInfo("Gram computed in " + (_callbackStart - _iterationStartTime) + "ms, " + (Double.isNaN(gerr)?"":"gradient = " + gerr + ",") + ", step = " + 1 + ", ADMM: " + slvr.iterations + " iterations, " + (System.currentTimeMillis() - t1) + "ms (" + slvr.decompTime + "), subgrad_err=" + slvr.gerr);

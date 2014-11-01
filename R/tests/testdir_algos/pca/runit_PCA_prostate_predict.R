@@ -20,11 +20,11 @@ test.PCA.prostate.predict <- function(conn) {
   print(prostate.pca1)
   
   Log.info("Score on PCA model with prostate data:\n")
-  prostate.pred1 = h2o.predict(object = prostate.pca1, newdata = prostate.hex)
+  prostate.pred1 = h2o.predict(object = prostate.pca1, newdata = prostate.hex, num_pc = 3)
   print(prostate.pred1)
   
   Log.info("H2O PCA on standardized prostate data with retx = T:\n")
-  prostate.pca2 = h2o.prcomp(prostate.hex[,cols], standardize = TRUE, retx = TRUE)
+  prostate.pca2 = h2o.prcomp(prostate.hex[,cols], standardize = TRUE, retx = TRUE, max_pc = 3)
   prostate.pred2 = prostate.pca2@model$x
   print(prostate.pca2)
   Log.info("Scores in the model object:\n")

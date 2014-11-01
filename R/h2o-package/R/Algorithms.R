@@ -939,7 +939,7 @@ h2o.prcomp <- function(data, tol=0, cols = "", max_pc = 5000, key = "", standard
   colnames(temp) = paste("PC", seq(0, ncol(temp)-1), sep="")
   result$rotation = temp
   
-  if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data, model=result))
+  if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data, model=result), num_pc = max_pc)
   new("H2OPCAModel", key=destKey, data=data, model=result)
 }
 
@@ -1275,7 +1275,8 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
 }
 
 # ------------------------------- Prediction ---------------------------------------- #
-h2o.predict <- function(object, newdata) {
+
+h2o.predict <- function(object, newdata, ...) {
   if( missing(object) ) stop('Must specify object')
   if(!inherits(object, "H2OModel")) stop("object must be an H2O model")
   if( missing(newdata) ) newdata <- object@data
@@ -1293,12 +1294,17 @@ h2o.predict <- function(object, newdata) {
 #    res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
     .h2o.exec2(rand_pred_key, h2o = object@data@h2o, rand_pred_key)
   } else if(class(object) == "H2OPCAModel") {
+    # Predict with user imposed number of principle components
+    .args <- list(...)
+    numPC = .args$num_pc
     # Set randomized prediction key
     rand_pred_key = .h2o.__uniqID("PCAPredict")
     # Find the number of columns in new data that match columns used to build pca model, detects expanded cols
-    match_cols <- function(colname) length(grep(pattern = colname , object@model$params$x))    
-    numMatch = sum(sapply(colnames(newdata), match_cols))
-    numPC = min(numMatch, object@model$num_pc)
+    if(is.null(numPC)) {
+      match_cols <- function(colname) length(grep(pattern = colname , object@model$params$x))
+      numMatch = sum(sapply(colnames(newdata), match_cols))
+      numPC = min(numMatch, object@model$num_pc)
+    }
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     .h2o.__waitOnJob(object@data@h2o, res$job_key)
     .h2o.exec2(rand_pred_key, h2o = object@data@h2o, rand_pred_key)
