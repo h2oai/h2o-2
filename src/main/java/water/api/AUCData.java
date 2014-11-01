@@ -25,11 +25,6 @@ public class AUCData extends Iced {
   @API(help="Gini", json=true)
   public double Gini;
 
-  @API(help="Response rates", json=true)
-  public float[] response_rates;
-  @API(help="Average response rate", json=true)
-  public float avg_response_rate;
-
   @API(help = "Confusion Matrices for all thresholds", json=true)
   public long[][][] confusion_matrices;
   @API(help = "F1 for all thresholds", json=true)
@@ -352,11 +347,7 @@ public class AUCData extends Iced {
       for (int i = 0; i < my_cms.length; ++i)
         sb.append("\t<option value='" + i + "'" + (my_thresholds[i] == threshold() ? "selected='selected'" : "") + ">" + my_thresholds[i] + "</option>\n");
       sb.append("</select></td></tr>");
-      sb.append("</td><tr><td id='GainsLiftTable'><h4>"+
-      "<a href=\"http://books.google.com/books?id=-JwptfFItaoC&pg=PA318&lpg=PA319&source=bl&ots=_S6fJI5Wds&sig=Uvff-MosTE7CR4e8LdE8TdJvo44&hl=en&sa=X&ei=b3EcVMnHB6T2iwK3koC4Cw&ved=0CF0Q6AEwBw#v=onepage&q&f=false\">"
-      + "Gains/Lift Table</a></h4>");
-      new GainsLiftTable(response_rates, avg_response_rate).toHTML(sb);
-      sb.append("</tr>");
+      sb.append("</td>");
       sb.append("</table>");
 
 
@@ -404,7 +395,6 @@ public class AUCData extends Iced {
     sb.append(", MCC: " + String.format("%.5f", mcc()));
     sb.append(", Threshold for " + threshold_criterion.toString().replace("_", " ") + ": " + String.format("%g", threshold()));
     sb.append("\n");
-    new GainsLiftTable(response_rates, avg_response_rate).toASCII(sb);
   }
 
   void plotROC(StringBuilder sb) {

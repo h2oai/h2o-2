@@ -72,18 +72,6 @@ public class AUC extends Func {
     aucdata = new AUCData().compute(cms, thresh, domain, threshold_criterion);
   }
 
-  private void computeGainsLift() {
-    // Also compute and store Gains/Lift info
-    GainsLiftTable glt = new GainsLiftTable();
-    glt.actual = actual;
-    glt.vactual = vactual;
-    glt.predict = predict;
-    glt.vpredict = vpredict;
-    glt.invoke();
-    aucdata.response_rates = glt.response_rates;
-    aucdata.avg_response_rate = glt.avg_response_rate;
-  }
-
   @Override protected void init() throws IllegalArgumentException {
     // Input handling
     if( vactual==null || vpredict==null )
@@ -127,7 +115,6 @@ public class AUC extends Func {
       }
       // compute CMs
       aucdata = new AUCData().compute(new AUCTask(thresholds,va.mean()).doAll(va,vp).getCMs(), thresholds, va._domain, threshold_criterion);
-      computeGainsLift();
     }
     catch(Throwable t) {
       t.printStackTrace();

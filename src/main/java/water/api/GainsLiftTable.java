@@ -108,6 +108,8 @@ public class GainsLiftTable extends Func {
     if (response_rates == null) return false;
 
     DocGen.HTML.arrayHead(sb);
+    sb.append("<a href=\"http://books.google.com/books?id=-JwptfFItaoC&pg=PA318&lpg=PA319&source=bl&ots=_S6fJI5Wds&sig=Uvff-MosTE7CR4e8LdE8TdJvo44&hl=en&sa=X&ei=b3EcVMnHB6T2iwK3koC4Cw&ved=0CF0Q6AEwBw#v=onepage&q&f=false\">"
+    + "Gains/Lift Table Reference</a></h4>");
     // Sum up predicted & actuals
     sb.append("<tr class='warning' style='min-width:60px'>");
     sb.append("<th>Quantile</th><th>Response rate</th><th>Lift</th><th>Cumulative lift</th>");
