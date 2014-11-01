@@ -77,27 +77,68 @@ task acceptanceTests(type: Test) {
 
 }
 
-task acceptancePython () {
+task acceptancePython << {
     def rootFolder = project.getRootDir()
     def testResults = [rootFolder, "build/test-results/python/test_results.xml"].join(File.separator)
     def htmlReports  = [rootFolder, "build/reports/python/index.html"].join(File.separator)
     new File(testResults).getParentFile().mkdirs()
     new File(htmlReports).getParentFile().mkdirs()
 
-    println rootFolder
     assert new File(testResults).getParentFile().exists()
     assert new File(htmlReports).getParentFile().exists()
     FileTree tree = fileTree("../src/test/python"){
         include '**/*.py'
     }
+    def results = [:]
+
     tree.visit{element->
         exec {
-            println " ** testing now: " + element.file
             executable "python"
             workingDir rootFolder
+            def name = element.file.name
+            testResults = [rootFolder, "build/test-results/python/results_" + name + ".xml"].join(File.separator)
+            htmlReports = [rootFolder, "build/reports/python/index_" + name + ".html"].join(File.separator)
             args "$element.file", '--group=rgm', '--with-xunit', "--xunit-file=${testResults}",
                     "--with-html-out", "--html-file=${htmlReports}"
+            if ( new File(testResults).exists()){
+                def xmlContent = new XmlSlurper().parseText(new File(testResults).getText())
+                if ( Integer.parseInt(xmlContent.attributes()['tests']) > 0 ){
+                    results.put(name,
+                        [
+                            path: element.file.path,
+                            resultsHtml: htmlReports,
+                            resultsXml: testResults,
+                            tests: xmlContent.attributes()['tests'],
+                            errors: xmlContent.attributes()['errors'],
+                            failures: xmlContent.attributes()['failures'],
+                            skipped: xmlContent.attributes()['skip']
+                        ]
+                    )
+                    println " ** \n" + results.toString()
+                }
+            }
         }
     }
+    new File("build/reports/site").mkdirs()
+    def links = ""
+    def details = ""
+    def q = { "\"" + it + "\""}
+    results.each{k,v->
+        def href = q(v['resultsHtml'])
+        def title= q(k)
+        links += "<a href=${href} title=${title} >$k</a>\n"
+    }
+    println "%%%%%%%%%%%%%%%%%%%%%%%%%\n" + results
+    println "@@@@@@@@@@@@@@@@@@@@@@@@@\n" + links
+    ant.copy(toDir: "build/reports/site", filtering: true, force: true, overwrite: true){
+        fileset(dir: "src/test/resources/site"){
+            include(name: "**/*.*")
+        }
+        filterset(){
+            filter(token: "test_links", value: links)
+            filter(token: "test_results_details", value: "<pre><b>Model Management<b/><br />Tests Passed: 2000<br />Tests Failed: 1000</pre>")
+        }
+    }
+
 }
 
