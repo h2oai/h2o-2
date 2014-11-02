@@ -384,8 +384,6 @@ public abstract class LSMSolver extends Iced{
         }
       }
     }
-
-
     final static double RELTOL = 1e-4;
     public boolean solve(Gram gram, double [] xy, double yy, final double[] z, final double rho) {
       if(xy.length == 0) return true; // special case which can happen if we run with offset and no intercept and have 0 active cols
@@ -449,7 +447,7 @@ public abstract class LSMSolver extends Iced{
           z[j] = shrinkage(x_hat + u[j], kappa);
           if(_lb != null && z[j] < _lb[j])
             z[j] = _lb[j];
-          else if(_ub != null && z[j] > _ub[j])
+          if(_ub != null && z[j] > _ub[j])
             z[j] = _ub[j];
           u[j] += x_hat - z[j];
           double r = xyPrime[j] - z[j];
