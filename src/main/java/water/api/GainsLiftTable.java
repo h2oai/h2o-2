@@ -1,6 +1,7 @@
 package water.api;
 
 import water.Func;
+import water.Key;
 import water.MRTask2;
 import water.UKV;
 import water.fvec.Chunk;
@@ -37,9 +38,9 @@ public class GainsLiftTable extends Func {
 
   // Results (Output)
   @API(help="Response rates", json=true)
-  private float[] response_rates;
+  public float[] response_rates;
   @API(help="Average response rate", json=true)
-  private float avg_response_rate;
+  public float avg_response_rate;
 
   @Override protected void init() throws IllegalArgumentException {
     // Input handling
@@ -53,6 +54,13 @@ public class GainsLiftTable extends Func {
       throw new IllegalArgumentException("Actual column must contain binary class labels, but found cardinality " + vactual.cardinality() + "!");
     if (vpredict.isEnum())
       throw new IllegalArgumentException("vpredict cannot be class labels, expect probabilities.");
+  }
+
+  public GainsLiftTable() {}
+
+  public GainsLiftTable(float[] response_rates, float avg_response_rate) {
+    this.response_rates = response_rates;
+    this.avg_response_rate = avg_response_rate;
   }
 
   @Override protected void execImpl() {
@@ -86,6 +94,8 @@ public class GainsLiftTable extends Func {
         response_rates = gt.response_rates();
         avg_response_rate = gt.avg_response_rate();
       }
+    } catch (Throwable t) {
+      // do nothing
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
     }
@@ -98,6 +108,8 @@ public class GainsLiftTable extends Func {
     if (response_rates == null) return false;
 
     DocGen.HTML.arrayHead(sb);
+    sb.append("<a href=\"http://books.google.com/books?id=-JwptfFItaoC&pg=PA318&lpg=PA319&source=bl&ots=_S6fJI5Wds&sig=Uvff-MosTE7CR4e8LdE8TdJvo44&hl=en&sa=X&ei=b3EcVMnHB6T2iwK3koC4Cw&ved=0CF0Q6AEwBw#v=onepage&q&f=false\">"
+    + "Gains/Lift Table Reference</a></h4>");
     // Sum up predicted & actuals
     sb.append("<tr class='warning' style='min-width:60px'>");
     sb.append("<th>Quantile</th><th>Response rate</th><th>Lift</th><th>Cumulative lift</th>");
@@ -123,6 +135,7 @@ public class GainsLiftTable extends Func {
   }
 
   public void toASCII( StringBuilder sb ) {
+    if (response_rates == null) return;
     // Sum up predicted & actuals
     sb.append("Quantile  Response rate    Lift    Cumulative lift\n");
 

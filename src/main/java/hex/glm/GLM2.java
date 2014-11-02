@@ -28,6 +28,7 @@ import water.util.RString;
 import water.util.Utils;
 import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -190,6 +191,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   int _lambdaIdx = -1;
 
   private double _addedL2;
+  private boolean _failedLineSearch;
 
   public static final double DEFAULT_BETA_EPS = 5e-5;
   private double _ymu;
@@ -319,6 +321,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     this.lambda = lambda;
     return this;
   }
+  public GLM2 setBetaConstraints(Frame f){
+    beta_constraints = f;
+    return this;
+  }
 
   static String arrayToString (double[] arr) {
     if (arr == null) {
@@ -399,68 +405,139 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private int _noffsets = 0;
   private int _intercept = 1; // 1 or 0
 
-  private double [] _lb;
-  @Override public void init(){
-    super.init();
-    if(beta_constraints != null){
-      throw H2O.unimpl();
-    }
+  private double [] _lbs;
+  private double [] _ubs;
+  private double [] _bgs;
+  private double [] _rho;
 
-    if(family==Family.gamma)
-      setHighAccuracy();
-    if(link == Link.family_default)
-      link = family.defaultLink;
-    _intercept = has_intercept ?1:0;
-    tweedie_link_power = 1 - tweedie_variance_power;// TODO
-    if(tweedie_link_power == 0)link = Link.log;
-    _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
-    source2 = new Frame(source);
-    assert sorted(ignored_cols);
-    if(offset != null) {
-      if(offset.isEnum())
-        throw new IllegalArgumentException("Categorical offsets are not supported. Can not use column '" + source2.names()[source2.find(offset)] + "' as offset");
-      int id = source.find(offset);
-      int idx = Arrays.binarySearch(ignored_cols, id);
+  boolean toEnum = false;
+
+  private double [] makeAry(int sz, double val){
+    double [] res = MemoryManager.malloc8d(sz);
+    Arrays.fill(res,val);
+    return res;
+  }
+
+  private double [] mapVec(double [] src, double [] tgt, int [] map){
+    for(int i = 0; i < src.length; ++i)
+      if(map[i] != -1) tgt[map[i]] = src[i];
+    return tgt;
+  }
+  @Override public void init(){
+    try {
+      super.init();
+      if (family == Family.gamma)
+        setHighAccuracy();
+      if (link == Link.family_default)
+        link = family.defaultLink;
+      _intercept = has_intercept ? 1 : 0;
+      tweedie_link_power = 1 - tweedie_variance_power;// TODO
+      if (tweedie_link_power == 0) link = Link.log;
+      _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
+      source2 = new Frame(source);
+      assert sorted(ignored_cols);
+      if (offset != null) {
+        if (offset.isEnum())
+          throw new IllegalArgumentException("Categorical offsets are not supported. Can not use column '" + source2.names()[source2.find(offset)] + "' as offset");
+        int id = source.find(offset);
+        int idx = Arrays.binarySearch(ignored_cols, id);
         if (idx >= 0) Utils.remove(ignored_cols, idx);
-      String name = source2.names()[id];
-      source2.add(name, source2.remove(id));
-      _noffsets = 1;
+        String name = source2.names()[id];
+        source2.add(name, source2.remove(id));
+        _noffsets = 1;
+      }
+      if (nlambdas == -1)
+        nlambdas = 100;
+      if (lambda_search && lambda.length > 1)
+        throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda_value, representing the lambda_value min (smallest lambda_value in the lambda_value search).");
+      // check the response
+      if (response.isEnum() && family != Family.binomial)
+        throw new IllegalArgumentException("Invalid response variable, trying to run regression with categorical response!");
+      switch (family) {
+        case poisson:
+        case tweedie:
+          if (response.min() < 0)
+            throw new IllegalArgumentException("Illegal response column for family='" + family + "', response must be >= 0.");
+          break;
+        case gamma:
+          if (response.min() <= 0)
+            throw new IllegalArgumentException("Invalid response for family='Gamma', response must be > 0!");
+          break;
+        case binomial:
+          if (response.min() < 0 || response.max() > 1)
+            throw new IllegalArgumentException("Illegal response column for family='Binomial', response must in <0,1> range!");
+          break;
+        default:
+          //pass
+      }
+      toEnum = family == Family.binomial && (!response.isEnum() && (response.min() < 0 || response.max() > 1));
+      Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, toEnum, true, true);
+      TransformType dt = TransformType.NONE;
+      if (standardize)
+        dt = has_intercept ? TransformType.STANDARDIZE : TransformType.DESCALE;
+      _srcDinfo = new DataInfo(fr, 1, has_intercept, use_all_factor_levels || lambda_search, dt, DataInfo.TransformType.NONE);
+      if (!has_intercept && _srcDinfo._cats > 0)
+        throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
+      _activeData = _srcDinfo;
+      if (higher_accuracy) setHighAccuracy();
+      if (beta_constraints != null) {
+        Vec v;
+        v = beta_constraints.vec("names");
+        // for now only enums allowed here
+        String [] dom = v.domain();
+        String [] names = _srcDinfo.coefNames();
+        int [] map = Utils.asInts(v);
+        if(!Arrays.deepEquals(dom,names)) { // need mapping
+          HashMap<String,Integer> m = new HashMap<String, Integer>();
+          for(int i = 0; i < names.length; ++i)
+            m.put(names[i],i);
+          int [] newMap = MemoryManager.malloc4(dom.length);
+          for(int i = 0; i < dom.length; ++i) {
+            Integer I = m.get(dom[map[i]]);
+            newMap[i] = I == null?-1:I;
+          }
+          map = newMap;
+        }
+        if((v = beta_constraints.vec("lower_bounds")) != null) {
+          _lbs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.NEGATIVE_INFINITY), map);
+          System.out.println("lower bounds = " + Arrays.toString(_lbs));
+          for(int i = 0; i < _lbs.length; ++i) {
+            if(_lbs[i] > 0) throw new IllegalArgumentException("lower bounds must be non-positive");
+            if(_srcDinfo._normMul != null)
+              _lbs[i] /= _srcDinfo._normMul[i];
+          }
+        }
+        if((v = beta_constraints.vec("upper_bounds")) != null) {
+          _ubs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.POSITIVE_INFINITY), map);
+          System.out.println("upper bounds = " + Arrays.toString(_ubs));
+          for(int i = 0; i < _ubs.length; ++i) {
+            if (_ubs[i] < 0) throw new IllegalArgumentException("lower bounds must be non-positive");
+            if (_srcDinfo._normMul != null)
+              _ubs[i] /= _srcDinfo._normMul[i];
+          }
+        } if((v =  beta_constraints.vec("beta_given")) != null)
+          _bgs = map == null?Utils.asDoubles(v):mapVec(Utils.asDoubles(v),makeAry(names.length,0),map);
+        if((v = beta_constraints.vec("rho")) != null)
+          _rho = map == null?Utils.asDoubles(v):mapVec(Utils.asDoubles(v),makeAry(names.length,0),map);
+      }
+      if (non_negative) { // make srue lb is >= 0
+        if (_lbs == null)
+          _lbs = new double[_srcDinfo.fullN()];
+        for (int i = 0; i < _lbs.length; ++i)
+          if (_lbs[i] < 0)
+            _lbs[i] = 0;
+      }
+    } catch(RuntimeException e) {
+      cleanup();
+      throw e;
     }
-    if(nlambdas == -1)
-      nlambdas = 100;
-    if(lambda_search && lambda.length > 1)
-      throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda_value, representing the lambda_value min (smallest lambda_value in the lambda_value search).");
-    // check the response
-    if( response.isEnum() && family != Family.binomial)throw new IllegalArgumentException("Invalid response variable, trying to run regression with categorical response!");
-    switch( family ) {
-      case poisson:
-      case tweedie:
-        if( response.min() < 0 ) throw new IllegalArgumentException("Illegal response column for family='" + family + "', response must be >= 0.");
-        break;
-      case gamma:
-        if( response.min() <= 0 ) throw new IllegalArgumentException("Invalid response for family='Gamma', response must be > 0!");
-        break;
-      case binomial:
-        if(response.min() < 0 || response.max() > 1) throw new IllegalArgumentException("Illegal response column for family='Binomial', response must in <0,1> range!");
-        break;
-      default:
-        //pass
-    }
-    Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, family==Family.binomial, true,true);
-    TransformType dt = TransformType.NONE;
-    if(standardize)
-      dt = has_intercept?TransformType.STANDARDIZE:TransformType.DESCALE;
-    _srcDinfo = new DataInfo(fr, 1, has_intercept, use_all_factor_levels || lambda_search, dt, DataInfo.TransformType.NONE);
-    if(!has_intercept && _srcDinfo._cats > 0)
-      throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
-    _activeData = _srcDinfo;
-    if(higher_accuracy)setHighAccuracy();
-    if(non_negative){ // make srue lb is >= 0
-      if(_lb == null)
-        _lb = new double[_srcDinfo.fullN()];
-      for(int i = 0; i < _lb.length; ++i)
-        if(_lb[i] < 0)
-          _lb[i] = 0;
+  }
+  @Override protected void cleanup(){
+    super.cleanup();
+    if(toEnum && _srcDinfo != null){
+      Futures fs = new Futures();
+      _srcDinfo._adaptedFrame.lastVec().remove(fs);
+      fs.blockForPending();
     }
   }
   @Override protected boolean filterNaCols(){return true;}
@@ -623,7 +700,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask> {
-    LineSearchIteration(CountedCompleter cmp){super((H2OCountedCompleter)cmp); cmp.addToPendingCount(1);}
+    final GLMIterationTask _glmt;
+    LineSearchIteration(GLMIterationTask glmt, CountedCompleter cmp){super((H2OCountedCompleter)cmp); cmp.addToPendingCount(1); _glmt = glmt;}
     @Override public void callback(final GLMTask.GLMLineSearchTask glmt) {
       assert getCompleter().getPendingCount() >= 1:"unexpected pending count, expected 1, got " + getCompleter().getPendingCount();
       double step = LS_STEP;
@@ -639,7 +717,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       LogInfo("line search: did not find admissible step, smallest step = " + step + ",  objval = " + objval(glmt._glmts[glmt._glmts.length-1]) + ", old objval = " + objval(_lastResult._glmt));
       // check if objval of smallest step is below the previous step, if so, go on
       LogInfo("Line search did not find feasible step, converged.");
-      GLMIterationTask res = _lastResult._glmt;
+      _failedLineSearch = true;
+      GLMIterationTask res = highAccuracy()?_lastResult._glmt:_glmt;
       if(_activeCols != _lastResult._activeCols && !Arrays.equals(_activeCols,_lastResult._activeCols)) {
         _activeCols = _lastResult._activeCols;
         _activeData = _srcDinfo.filterExpandedColumns(_activeCols);
@@ -697,7 +776,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         newBetaDeNorm[i] *= _srcDinfo._normMul[i-numoff];
     } else
       newBetaDeNorm = null;
-    GLMModel.setSubmodel(cmp, dest(), _currentLambda, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1), System.currentTimeMillis() - start_time, _srcDinfo.fullN() >= sparseCoefThreshold, val);
+    GLMModel.setSubmodel(cmp, dest(), _currentLambda, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, _iter, System.currentTimeMillis() - start_time, _srcDinfo.fullN() >= sparseCoefThreshold, val);
     return fullBeta;
   }
 
@@ -716,7 +795,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return b;
   }
 
-  protected void checkKKTAndComplete(CountedCompleter cc, final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
+  protected void checkKKTAndComplete(final CountedCompleter cc, final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
     H2OCountedCompleter cmp = (H2OCountedCompleter)cc;
     final double [] fullBeta = newBeta == null?MemoryManager.malloc8d(_srcDinfo.fullN()+_intercept-_noffsets):expandVec(newBeta,_activeCols);
     // now we need full gradient (on all columns) using this beta
@@ -729,11 +808,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         // first check KKT conditions!
         final double [] grad = glmt2.gradient(alpha[0],_currentLambda);
         if(Utils.hasNaNsOrInfs(grad)){
+          _failedLineSearch = true;
           if(!failedLineSearch) {
-            LogInfo("Check KKT got NaNs. Invoking line search");
-            setHighAccuracy();
             getCompleter().addToPendingCount(1);
-            new GLMTask.GLMLineSearchTask(_noffsets,self(), _activeData, _glm, lastBeta(_noffsets), glmt._beta, beta_epsilon, _ymu, _nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
+            checkKKTAndComplete(cc,glmt,glmt._beta,true);
+            LogInfo("Check KKT got NaNs. Taking previous solution");
             return;
           } else {
             // TODO: add warning and break th lambda search? Or throw Exception?
@@ -831,7 +910,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           return;
         }
         LogInfo("invoking line search");
-        new GLMTask.GLMLineSearchTask(_noffsets,GLM2.this.self(),_activeData,_glm, lastBeta(_noffsets) ,glmt._beta,1e-4,_ymu,_nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
+        new GLMTask.GLMLineSearchTask(_noffsets, GLM2.this.self(), _activeData,_glm, lastBeta(_noffsets), glmt._beta, 1e-4, _ymu, _nobs, new LineSearchIteration(glmt,getCompleter())).asyncExec(_activeData._adaptedFrame);
         return;
       }
       if(glmt._grad != null)
@@ -844,8 +923,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       long t1 = System.currentTimeMillis();
       ADMMSolver slvr = new ADMMSolver(lambda_max, _currentLambda,alpha[0], _gradientEps, _addedL2);
-      if(_lb != null)
-        slvr._lb = _activeCols == null?contractVec(_lb,_activeCols,0):_lb;
+      if(_lbs != null)
+        slvr._lb = _activeCols == null?contractVec(_lbs,_activeCols,0):_lbs;
+      if(_ubs != null)
+        slvr._ub = _activeCols == null?contractVec(_ubs,_activeCols,0):_ubs;
+      if(_bgs != null && _rho != null) {
+        slvr._wgiven = _activeCols == null ? contractVec(_bgs, _activeCols, 0) : _bgs;
+        slvr._proximalPenalties = _activeCols == null ? contractVec(_rho, _activeCols, 0) : _rho;
+      }
       slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta,Math.max(1e-8*lambda_max,_currentLambda*alpha[0]));
       // print all info about iteration
       LogInfo("Gram computed in " + (_callbackStart - _iterationStartTime) + "ms, " + (Double.isNaN(gerr)?"":"gradient = " + gerr + ",") + ", step = " + 1 + ", ADMM: " + slvr.iterations + " iterations, " + (System.currentTimeMillis() - t1) + "ms (" + slvr.decompTime + "), subgrad_err=" + slvr.gerr);
@@ -883,7 +968,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           for (int i = 0; i < glmt._beta.length; ++i)
             if (glmt._beta[i] != 0) ++nzs;
           LogInfo("converged (reached a fixed point with ~ 1e" + diff + " precision), got " + nzs + " nzs");
-          checkKKTAndComplete(getCompleter(),glmt, glmt._beta, false); // NOTE: do not use newBeta here, it has not been checked and can lead to NaNs in KKT check, redoing line search, coming up with the same beta and so on.
+          checkKKTAndComplete(getCompleter(),glmt, newBeta, false); // NOTE: do not use newBeta here, it has not been checked and can lead to NaNs in KKT check, redoing line search, coming up with the same beta and so on.
           return;
         } else { // not done yet, launch next iteration
           if (glmt._beta != null)
@@ -939,6 +1024,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           String warn = "Added L2 penalty (rho = " + _addedL2 + ")  due to non-spd matrix. ";
           model.addWarning(warn);
         }
+        if(_failedLineSearch && !highAccuracy())
+          model.addWarning("High accuracy settings recommended.");
         state = JobState.DONE;
         DKV.remove(_progressKey);
         model.get_params().state = state;
@@ -950,12 +1037,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             remove(); // Remove/complete job only for top-level, not xval GLM2s
           }
         }, model._key, self()).forkTask();
+        cleanup();
       }
     }
     @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
       if(_cmp.compareAndSet(null, cmp)) {
         _done = true;
         GLM2.this.cancel(t);
+       cleanup();
         if(_grid){
           _failed = true;
           tryComplete();

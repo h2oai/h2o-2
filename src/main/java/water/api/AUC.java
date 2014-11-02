@@ -115,7 +115,12 @@ public class AUC extends Func {
       }
       // compute CMs
       aucdata = new AUCData().compute(new AUCTask(thresholds,va.mean()).doAll(va,vp).getCMs(), thresholds, va._domain, threshold_criterion);
-    } finally {       // Delete adaptation vectors
+    }
+    catch(Throwable t) {
+      t.printStackTrace();
+      throw new RuntimeException(t);
+    }
+    finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
     }
   }

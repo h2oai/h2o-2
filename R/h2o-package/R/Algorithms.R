@@ -926,7 +926,8 @@ h2o.prcomp <- function(data, tol=0, cols = "", max_pc = 5000, key = "", standard
   res2 = res2$pca_model
   
   result = list()
-  result$params$x = args$cols
+  result$params$names = res2$'_names'
+  result$params$x = res2$namesExp
   result$num_pc = res2$num_pc
   result$standardized = standardize
   result$sdev = res2$sdev
@@ -938,7 +939,7 @@ h2o.prcomp <- function(data, tol=0, cols = "", max_pc = 5000, key = "", standard
   colnames(temp) = paste("PC", seq(0, ncol(temp)-1), sep="")
   result$rotation = temp
   
-  if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data, model=result))
+  if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data, model=result), num_pc = max_pc)
   new("H2OPCAModel", key=destKey, data=data, model=result)
 }
 
@@ -1274,7 +1275,8 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
 }
 
 # ------------------------------- Prediction ---------------------------------------- #
-h2o.predict <- function(object, newdata) {  
+
+h2o.predict <- function(object, newdata, ...) {
   if( missing(object) ) stop('Must specify object')
   if(!inherits(object, "H2OModel")) stop("object must be an H2O model")
   if( missing(newdata) ) newdata <- object@data
@@ -1292,10 +1294,17 @@ h2o.predict <- function(object, newdata) {
 #    res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
     .h2o.exec2(rand_pred_key, h2o = object@data@h2o, rand_pred_key)
   } else if(class(object) == "H2OPCAModel") {
+    # Predict with user imposed number of principle components
+    .args <- list(...)
+    numPC = .args$num_pc
     # Set randomized prediction key
     rand_pred_key = .h2o.__uniqID("PCAPredict")
-    numMatch = colnames(newdata) %in% object@model$params$x
-    numPC = min(length(numMatch[numMatch == TRUE]), object@model$num_pc)
+    # Find the number of columns in new data that match columns used to build pca model, detects expanded cols
+    if(is.null(numPC)) {
+      match_cols <- function(colname) length(grep(pattern = colname , object@model$params$x))
+      numMatch = sum(sapply(colnames(newdata), match_cols))
+      numPC = min(numMatch, object@model$num_pc)
+    }
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     .h2o.__waitOnJob(object@data@h2o, res$job_key)
     .h2o.exec2(rand_pred_key, h2o = object@data@h2o, rand_pred_key)
@@ -1364,7 +1373,7 @@ h2o.gapStatistic <- function(data, cols = "", K.max = 10, B = 100, boot_frac = 0
   return(result)
 }
 
-h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
+h2o.performance <- function(data, reference, measure = "accuracy", thresholds, gains = TRUE, ...) {
   if(class(data) != "H2OParsedData") stop("data must be an H2O parsed dataset")
   if(class(reference) != "H2OParsedData") stop("reference must be an H2O parsed dataset")
   if(ncol(data) != 1) stop("Must specify exactly one column for data")
@@ -1387,7 +1396,16 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   meas = as.numeric(res$aucdata[[measure]])
   result = .h2o.__getPerfResults(res$aucdata, criterion)
   roc = .get_roc(res$aucdata$confusion_matrices)
-  new("H2OPerfModel", cutoffs = res$aucdata$thresholds, measure = meas, perf = measure, model = result, roc = roc)
+  gains_table <- NULL
+  if (gains) {
+    l <- list(...)
+    percents <- FALSE
+    groups <- 10
+    if ("percents" %in% names(l)) percents <- l$percents
+    if ("groups" %in% names(l)) groups <- l$groups
+    gains_table <- h2o.gains(actual = reference, predicted = data, percents = percents, groups = groups)
+  }
+  new("H2OPerfModel", cutoffs = res$aucdata$thresholds, measure = meas, perf = measure, model = result, roc = roc, gains = gains_table)
 }
 
 .h2o.__getPerfResults <- function(res, criterion) {

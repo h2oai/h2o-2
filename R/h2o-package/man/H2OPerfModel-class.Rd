@@ -32,6 +32,7 @@ Objects can be created by calls of the form \code{new("H2OPerfModel", ...)}.
       }
     }
     \item{\code{roc}:}{A data frame with two columns: TPR = true positive rate and FPR = false positive rate, calculated at the listed cutoffs.}
+    \item{\code{gains}:}{A gains table and lift chart.}
   }
 }
 \section{Methods}{
