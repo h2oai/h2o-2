@@ -78,6 +78,7 @@ task acceptanceTests(type: Test) {
 }
 
 task acceptancePython << {
+    def group = "acceptance"
     def rootFolder = project.getRootDir()
     def testResults = [rootFolder, "build/test-results/python/test_results.xml"].join(File.separator)
     def htmlReports  = [rootFolder, "build/reports/python/index.html"].join(File.separator)
@@ -96,26 +97,25 @@ task acceptancePython << {
             executable "python"
             workingDir rootFolder
             def name = element.file.name
-            testResults = [rootFolder, "build/test-results/python/results_" + name + ".xml"].join(File.separator)
-            htmlReports = [rootFolder, "build/reports/python/index_" + name + ".html"].join(File.separator)
-            args "$element.file", '--group=rgm', '--with-xunit', "--xunit-file=${testResults}",
+            testResults = [rootFolder, "build/test-results/python/results_" + name.split("\\.")[0] + ".xml"].join(File.separator)
+            htmlReports = [rootFolder, "build/reports/python/index_" + name.split("\\.")[0] + ".html"].join(File.separator)
+            args "$element.file", "--group=${group}", '--with-xunit', "--xunit-file=${testResults}",
                     "--with-html-out", "--html-file=${htmlReports}"
-            if ( new File(testResults).exists()){
-                def xmlContent = new XmlSlurper().parseText(new File(testResults).getText())
-                if ( Integer.parseInt(xmlContent.attributes()['tests']) > 0 ){
-                    results.put(name,
-                        [
-                            path: element.file.path,
-                            resultsHtml: htmlReports,
-                            resultsXml: testResults,
-                            tests: xmlContent.attributes()['tests'],
-                            errors: xmlContent.attributes()['errors'],
-                            failures: xmlContent.attributes()['failures'],
-                            skipped: xmlContent.attributes()['skip']
-                        ]
-                    )
-                    println " ** \n" + results.toString()
-                }
+        }
+        if ( new File(testResults).exists()){
+            def xmlContent = new XmlSlurper().parseText(new File(testResults).getText())
+            if ( Integer.parseInt(xmlContent.attributes()['tests']) > 0 ){
+                results.put(element.file.name,
+                    [
+                        path: element.file.path,
+                        resultsHtml: htmlReports,
+                        resultsXml: testResults,
+                        tests: xmlContent.attributes()['tests'],
+                        errors: xmlContent.attributes()['errors'],
+                        failures: xmlContent.attributes()['failures'],
+                        skipped: xmlContent.attributes()['skip']
+                    ]
+                )
             }
         }
     }
@@ -126,19 +126,30 @@ task acceptancePython << {
     results.each{k,v->
         def href = q(v['resultsHtml'])
         def title= q(k)
-        links += "<a href=${href} title=${title} >$k</a>\n"
+        links += "<a href=${href} title=${title}>$k</a>\n"
+        details +=
+                "<pre>" +
+                "<b>${k}<b/><br />Tests: ${v['tests']}<br />" +
+                "Failures: ${v['failures']}<br />" +
+                "Errors: ${v['errors']}<br />" +
+                "Skipped: ${v['skipped']}" +
+                "</pre>\n"
     }
-    println "%%%%%%%%%%%%%%%%%%%%%%%%%\n" + results
-    println "@@@@@@@@@@@@@@@@@@@@@@@@@\n" + links
+    //ant copy seems to choke on token substitution if binary files are included. need to go in two passes
     ant.copy(toDir: "build/reports/site", filtering: true, force: true, overwrite: true){
         fileset(dir: "src/test/resources/site"){
-            include(name: "**/*.*")
+            include(name: "**/*.html")
         }
         filterset(){
             filter(token: "test_links", value: links)
-            filter(token: "test_results_details", value: "<pre><b>Model Management<b/><br />Tests Passed: 2000<br />Tests Failed: 1000</pre>")
+            filter(token: "test_results_details", value: details)
         }
     }
-
+    ant.copy(toDir: "build/reports/site", filtering: true, force: true, overwrite: true){
+        fileset(dir: "src/test/resources/site"){
+            include(name: "**/*.*")
+            exclude(name: "**/*.html")
+        }
+    }
 }
 
