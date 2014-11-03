@@ -118,6 +118,5 @@ class Basic(unittest.TestCase):
         else:
             print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
 
-
 if __name__ == '__main__':
     h2o.unit_main()

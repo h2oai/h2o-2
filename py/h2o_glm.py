@@ -12,22 +12,27 @@ def pickRandGlmParams(paramDict, params):
         if (randomKey=='x'):
             colX = randomValue
 
+        # Only identity, log and inverse links are allowed for family=gaussian.
+
         # force legal family/ink combos
-        if 'family' in params and 'link' in params: 
-            if params['family'] is not None:
-                if params['family'] == 'poisson':
-                    if params['link'] is not None and params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
-                        params['link'] = None 
-                # only tweedie/tweedie is legal?
-                if params['family'] == 'tweedie':
-                    if params['link'] is not None and params['link'] not in ('tweedie'):
-                        params['link'] = None
-                if params['family'] == 'binomial':
-                    if params['link'] is not None and params['link'] not in ('logit', 'identity', 'log', 'inverse', 'familyDefault'):
-                        params['link'] = None
-                if params['family'] == 'gaussian':
-                    if params['link'] is not None and params['link'] not in ('logit', 'identity', 'log', 'inverse', 'familyDefault'):
-                        params['link'] = None
+        if 'family' not in params: # defaults to gaussian
+            if 'link' in params and params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                params['link'] = None
+
+        elif params['family'] is not None and 'link' in params and params['link'] is not None:
+            if params['family'] == 'poisson':
+                if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                    params['link'] = None 
+            # only tweedie/tweedie is legal?
+            if params['family'] == 'tweedie':
+                if params['link'] not in ('tweedie'):
+                    params['link'] = None
+            if params['family'] == 'binomial':
+                if params['link'] not in ('logit', 'identity', 'log', 'inverse', 'familyDefault'):
+                    params['link'] = None
+            if params['family'] == 'gaussian':
+                if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                    params['link'] = None
 
         # case only used if binomial? binomial is default if no family
         # update: apparently case and case_mode always affect things

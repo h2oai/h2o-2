@@ -1,10 +1,11 @@
 import unittest, random, sys, time, re, math
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_util, h2o_gbm
 
 
-SPEEDRF = True
+COLS = 3
+ROWS = 3000
 MULTINOMIAL = 2
 DO_WITH_INT = False
 ENUMS = 100
@@ -17,7 +18,10 @@ def random_enum(randChars, maxEnumSize):
 
 def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=1000):
     if DO_WITH_INT:
-        enumList = range(listSize)
+        if ENUMLIST:
+            enumList = range(len(ENUMLIST))
+        else:
+            enumList = range(listSize)
     else:
         if ENUMLIST:
             enumList = ENUMLIST
@@ -75,11 +79,10 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_rf_enums_mappings_fvec(self):
+    def test_gbm_enums_mappings(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        n = 3000
         tryList = [
             # (n, 1, 'cD', 300), 
             # (n, 2, 'cE', 300), 
@@ -87,9 +90,9 @@ class Basic(unittest.TestCase):
             # (n, 4, 'cG', 300), 
             # (n, 5, 'cH', 300), 
             # (n, 6, 'cI', 300), 
-            (n, 3, 'cI', 300), 
-            (n, 3, 'cI', 300), 
-            (n, 3, 'cI', 300), 
+            (ROWS, COLS, 'cI', 300), 
+            (ROWS, COLS, 'cI', 300), 
+            (ROWS, COLS, 'cI', 300), 
             ]
 
         # SEED_FOR_TRAIN = random.randint(0, sys.maxint)
@@ -150,41 +153,26 @@ class Basic(unittest.TestCase):
             y = colCount
             modelKey = 'enums'
             # limit depth and number of trees to accentuate the issue with categorical split decisions
-
-            if SPEEDRF:
-                kwargs = {
-                    'destination_key': modelKey,
-                    'response': y,
-                    'ntrees': 1,
-                    'max_depth': 100,
-                    'oobee': 1,
-                    'seed': 123456789,
-                }
-            else:
-                kwargs = {
-                    'destination_key': modelKey,
-                    'response': y,
-                    'classification': 1,
-                    'ntrees': 1,
-                    'max_depth': 100,
-                    'min_rows': 1,
-                    'validation': scoreDataKey,
-                    'seed': 123456789,
-                }
+            kwargs = {
+                'destination_key': modelKey,
+                'response': y,
+                'validation': scoreDataKey,
+                'seed': 123456789,
+                # 'learn_rate': .1,
+                'ntrees': 1,
+                'max_depth': 100,
+                'min_rows': 1,
+                'classification': 1,
+            }
 
             for r in range(4):
                 start = time.time()
+                gbmResult = h2o_cmd.runGBM(parseResult=parseResult, 
+                    timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
                 
-                if SPEEDRF:
-                    rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, 
-                        timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
-                else:
-                    rfResult = h2o_cmd.runRF(parseResult=parseResult, 
-                        timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
-                
-                print "rf end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
-                # print h2o.dump_json(rfResult)
-                (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
+                print "gbm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+                # print h2o.dump_json(gbmResult)
+                (classification_error, classErrorPctList, totalScores) = h2o_gbm.simpleCheckGBMView(gbmv=gbmResult)
                 h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, doAUC=not MULTINOMIAL) # , expectedAuc=0.5)
                 
                 errorHistory.append(classification_error)
