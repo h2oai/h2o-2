@@ -1869,33 +1869,36 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
         return a
 
-    def speedrf(self, data_key, ntrees=50, max_depth=20, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
-                noise=None, benchmarkLogging=None, noPoll=False,
-                print_params=True, noPrint=False, **kwargs):
+    def speedrf(self, data_key, ntrees=50, max_depth=20, timeoutSecs=300, 
+        retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+        noise=None, benchmarkLogging=None, noPoll=False,
+        print_params=True, noPrint=False, **kwargs):
 
-        params_dict = {'destination_key': None,
-                       'source': data_key,
-                       'response': None,
-                       'cols': None,
-                       'ignored_cols': None,
-                       'ignored_cols_by_name': None,
-                       'verbose': None,
-                       'balance_classes': None,
-                       'max_after_balance_size': None,
-                       'keep_cross_validation_splits': None,
-                       'classification': 1,
-                       'validation': None,
-                       'nbins': 1024.0,
-                       'max_depth': max_depth,
-                       'mtries': -1.0,
-                       'ntrees': ntrees,
-                       'oobee': 0,
-                       'sample_rate': 0.67,
-                       'sampling_strategy': 'RANDOM',
-                       'seed': -1.0,
-                       'select_stat_type': 'ENTROPY',
-                       'importance': 0,
-                       'n_folds': None
+        params_dict = {
+            'balance_classes': None,
+            'classification': 1,
+            'cols': None,
+            'destination_key': None,
+            'ignored_cols': None,
+            'ignored_cols_by_name': None,
+            'importance': 0,
+            'keep_cross_validation_splits': None,
+            'max_after_balance_size': None,
+            'max_depth': max_depth,
+            'mtries': -1.0,
+            'nbins': 1024.0,
+            'n_folds': None,
+            'ntrees': ntrees,
+            'oobee': 0,
+            'response': None,
+            'sample_rate': 0.67,
+            'sampling_strategy': 'RANDOM',
+            'score_pojo': None, # create the score pojo
+            'seed': -1.0,
+            'select_stat_type': 'ENTROPY', # GINI
+            'source': data_key,
+            'validation': None,
+            'verbose': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
 
@@ -1927,13 +1930,11 @@ class H2O(object):
         algoView = '2/DRFView'
 
         params_dict = {
-            'destination_key': None,
-            'source': data_key,
             # 'model': None,
-            'response': None,
             'balance_classes': None, 
             'classification': 1,
             'cols': None,
+            'destination_key': None,
             'ignored_cols': None,
             'ignored_cols_by_name': None,
             'importance': 1, # enable variable importance by default
@@ -1943,11 +1944,13 @@ class H2O(object):
             'mtries': None,
             'nbins': None,
             'ntrees': trees,
+            'n_folds': None,
+            'response': None,
             'sample_rate': None,
             'score_each_iteration': None,
             'seed': None,
+            'source': data_key,
             'validation': None,
-            'n_folds': None
         }
         if 'model_key' in kwargs:
             kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
@@ -2332,22 +2335,28 @@ class H2O(object):
     def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
             noPoll=False, print_params=True, **kwargs):
         params_dict = {
-            'destination_key': None,
-            'validation': None,
-            'response': None,
-            'source': data_key,
-            'learn_rate': None,
-            'ntrees': None,
-            'max_depth': None,
-            'min_rows': None,
+            'balance_classes': None,
+            'checkpoint': None,
+            'classification': None,
+            'family': None, # can be 'bernoulli'
             'cols': None,
+            'destination_key': None,
+            'grid_parallelism': None,
             'ignored_cols': None,
             'ignored_cols_by_name': None, # either this or cols..not both
-            'nbins': None,
-            'classification': None,
-            'score_each_iteration': None,
-            'grid_parallelism': None,
+            'importance': None,
+            'keep_cross_validation_splits': None,
+            'learn_rate': None,
+            'max_depth': None,
+            'min_rows': None,
             'n_folds': None,
+            'nbins': None,
+            'ntrees': None,
+            'response': None,
+            'source': data_key,
+            'seed': None,
+            'score_each_iteration': None,
+            'validation': None,
         }
 
         # only lets these params thru
@@ -2681,34 +2690,33 @@ class H2O(object):
 
         browseAlso = kwargs.pop('browseAlso', False)
         params_dict = {
-            'strong_rules_enabled': None,
-            'lambda_search': None,
-            'nlambdas': None,
-            'lambda_min_ratio': None,
-            'prior': None,
-
-            'source': key,
-            'destination_key': None,
-            'response': None,
+            'alpha': None,
+            'beta_epsilon': None, # GLMGrid doesn't use this name
             'cols': None,
+            'destination_key': None,
+            'family': None,
+            'has_intercept': None, # use intercept in the model
+            'higher_accuracy': None, # use line search (use if no convergence otherwise)
             'ignored_cols': None,
             'ignored_cols_by_name': None,
-            'max_iter': None,
-            'standardize': None,
-            'family': None,
-            'link': None,
-            'alpha': None,
             'lambda': None,
-            'beta_epsilon': None, # GLMGrid doesn't use this name
-            'tweedie_variance_power': None,
+            'lambda_min_ratio': None, # min lambda used in lambda search, ratio of lambda_max
+            'lambda_search': None, # use lambda search, start at lambda max. lambda is used as lambda min
+            'link': None,
+            'max_iter': None,
+            'max_predictors': None, # lambda_search stop condition. Stop when more than this # of predictors.
             'n_folds': None,
+            'nlambdas': None, # number of lambdas to be used in a search
+            'non_negative': None, # require coefficients to be non-negative
+            'prior': None, # prior probability for y=1. For logistic, if the data is sampled and mean is skewed
+            'response': None,
+            'source': key,
+            'standardize': None,
+            'strong_rules_enabled': None, # use strong rules to filter out inactive columns
+            'tweedie_variance_power': None,
+            'use_all_factor_levels': None, # normally first factor is skipped. Set to use all levels.
+            'variable_importances': None, # if use_all_factor_levels is off, base level is not shown
 
-            # only GLMGrid has this..we should complain about it on GLM?
-            'parallelism': None,
-            'beta_eps': None,
-            'higher_accuracy': None,
-            'use_all_factor_levels': None,
-            'variable_importances': None,
         }
 
         check_params_update_kwargs(params_dict, kwargs, parentName, print_params=True)
