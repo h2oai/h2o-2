@@ -489,7 +489,7 @@ public final class ParseDataset2 extends Job {
     MultiFileParseTask(VectorGroup vg,  CustomParser.ParserSetup setup, Key progress ) {
       _vg = vg; _setup = setup; _progress = progress;
       _vecIdStart = _vg.reserveKeys(setup._pType == ParserType.SVMLight ? 100000000 : setup._ncols);
-      _runSingleThreaded = true;
+      //_runSingleThreaded = true;
     }
 
     @Override
