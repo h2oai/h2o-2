@@ -131,6 +131,6 @@ if (usefullmodel) {
 submission <- read.csv(path_submission, colClasses = c("character"))
 submission[,2] <- as.data.frame(pred)
 colnames(submission) <- c("id", "click")
-#cat("\nWriting predictions on test data.")
+cat("\nWriting predictions on test data.")
 write.csv(as.data.frame(submission), file = paste(path,"./submission.csv", sep = ''), quote = F, row.names = F)
 sink()
