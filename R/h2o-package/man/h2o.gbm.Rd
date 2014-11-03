@@ -12,7 +12,7 @@ H2O: Gradient Boosted Machines
 \usage{
 h2o.gbm(x, y, distribution = "multinomial", data, key = "", n.trees = 10, 
   interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1, n.bins = 20,
-  importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, 
+  group_split = TRUE, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE,
   max.after.balance.size = 5)
 }
 \arguments{
@@ -45,6 +45,10 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
 }
   \item{n.bins}{
 (Optional) Number of bins to use in building histogram.
+}
+
+\item{group_split}{
+(Optional) default is TRUE. If FALSE, does not do the bit-set group splitting categoricals, but 1 vs. many.
 }
   \item{importance}{
 (Optional) A logical value indicating whether variable importance should be calculated. This will increase the amount of time for the algorithm to complete.

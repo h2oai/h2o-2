@@ -3,6 +3,9 @@ package hex.gbm;
 import water.MemoryManager;
 import water.util.Utils;
 
+import java.util.Arrays;
+import java.util.Comparator;
+
 /**
    A Histogram, computed in parallel over a Vec.
    <p>
@@ -61,6 +64,22 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
   @Override public DTree.Split scoreMSE( int col ) {
     final int nbins = nbins();
     assert nbins > 1;
+
+    // Store indices from sort to determine group split later
+    Integer idx[] = new Integer[nbins];
+    for(int b = 0; b < nbins; b++) idx[b] = b;
+
+    // Sort predictor levels in ascending order of mean response within each bin
+    if(_isInt == 2 && _step == 1.0f && nbins >= 4 && _doGrpSplit) {
+      final double[] means = new double[nbins];
+      System.arraycopy(_sums, 0, means, 0, nbins);
+      Arrays.sort(idx, new Comparator<Integer>() {
+        @Override
+        public int compare(Integer o1, Integer o2) {
+          return ((Double)means[o1]).compareTo(means[o2]);
+        }
+      });
+    }
 
     // Compute mean/var for cumulative bins from 0 to nbins inclusive.
     double sums0[] = MemoryManager.malloc8d(nbins+1);
@@ -150,7 +169,27 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
     long   n1 = equal == 0 ?   ns1[best] : _bins[best]              ;
     double p0 = equal == 0 ? sums0[best] : sums0[best]+sums1[best+1];
     double p1 = equal == 0 ? sums1[best] : _sums[best]              ;
-    return new DTree.Split(col,best,null,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
+
+    // For categorical predictors, set bits for levels grouped to right of split
+    Utils.IcedBitSet bs = null;
+    if(_isInt == 2 && _step == 1.0f && nbins >= 4 && _doGrpSplit) {
+      // Small cats: always use 4B to store and prepend offset # of zeros at front
+      // Big cats: save offset and store only nbins # of bits that are left after trimming
+      int offset = (int)_min;
+      if(_maxEx <= 32) {
+        equal = 2;
+        bs = new Utils.IcedBitSet(32);
+        for(int i = best; i < nbins; i++)
+          bs.set(idx[i] + offset);
+      } else {
+        equal = 3;
+        bs = new Utils.IcedBitSet(nbins, offset);
+        for(int i = best; i < nbins; i++)
+          bs.set(idx[i]);
+      }
+    }
+
+    return new DTree.Split(col,best,bs,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
   }
 
   @Override public long byteSize0() {

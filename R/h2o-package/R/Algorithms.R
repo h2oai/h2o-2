@@ -139,7 +139,7 @@ h2o.coxph <- function(x, y, data, key = "", weights = NULL, offset = NULL,
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
-                    n.bins = 20, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
+                    n.bins = 20, group_split = TRUE, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
   args <- .verify_dataxy(data, x, y)
   
   if(!is.character(key)) stop("key must be of class character")
@@ -174,20 +174,21 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
   
   # NB: externally, 1 based indexing; internally, 0 based
   cols = paste(args$x_i - 1, collapse=",")
+  group_split <- as.numeric(group_split)
   if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation
 #    validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family, group_split = group_split,
                             min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else if(missing(validation) && nfolds >= 2) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family, group_split = group_split,
                             min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else if(!missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family, group_split = group_split,
                             min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else stop("Cannot set both validation and nfolds at the same time")
   params = list(x=args$x, y=args$y, distribution=distribution, n.trees=n.trees, interaction.depth=interaction.depth, shrinkage=shrinkage, n.minobsinnode=n.minobsinnode, n.bins=n.bins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size,
-                h2o = data@h2o)
+                h2o = data@h2o, group_split = group_split)
   
   if(.is_singlerun("GBM", params))
     .h2o.singlerun.internal("GBM", data, res, nfolds, validation, params)
