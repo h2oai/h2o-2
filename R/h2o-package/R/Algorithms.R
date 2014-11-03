@@ -1302,11 +1302,13 @@ h2o.predict <- function(object, newdata, ...) {
     # Set randomized prediction key
     rand_pred_key = .h2o.__uniqID("PCAPredict")
     # Find the number of columns in new data that match columns used to build pca model, detects expanded cols
-    if(is.null(numPC)) {
-      match_cols <- function(colname) length(grep(pattern = colname , object@model$params$x))
-      numMatch = sum(sapply(colnames(newdata), match_cols))
-      numPC = min(numMatch, object@model$num_pc)
-    }
+    if(is.null(numPC)) numPC = 1
+# Taken out so that default numPC = 1 instead of # of principle components resulting from analysis     
+#    {
+#      match_cols <- function(colname) length(grep(pattern = colname , object@model$params$x))
+#      numMatch = sum(sapply(colnames(newdata), match_cols))
+#      numPC = min(numMatch, object@model$num_pc)
+#    }
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     .h2o.__waitOnJob(object@data@h2o, res$job_key)
     .h2o.exec2(rand_pred_key, h2o = object@data@h2o, rand_pred_key)
