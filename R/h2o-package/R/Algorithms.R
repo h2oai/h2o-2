@@ -262,8 +262,7 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                     tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100,
                     higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1,
                     offset, has_intercept = TRUE) {
-  args <- .verify_dataxy(data, x, y)
-
+  
   if(!is.character(key)) stop("key must be of class character")
   if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
     stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
@@ -277,9 +276,12 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
   if(missing(offset)) { offset <- "" }
   else {
     if(!is.numeric(offset) && !is.character(offset)) stop("offset must be either an index or column name")
-    if(is.character(offset)) offset <- match(offset, colnames(data))
+    if(is.character(offset)) x = unique(c(x, offset))
+    offset <- match(offset, colnames(data))
     offset <- offset - 1
   }
+  
+  args <- .verify_dataxy(data, x, y)
   
   if(!is.numeric(nlambda)) stop("nlambda must be numeric")
   if((nlambda != -1) && (length(nlambda) > 1 || nlambda < 0)) stop("nlambda must be a single number >= 0")
