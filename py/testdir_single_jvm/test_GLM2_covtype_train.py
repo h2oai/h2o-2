@@ -70,6 +70,7 @@ class Basic(unittest.TestCase):
             'alpha': 0.1, 
             'lambda': 1e-5, 
             'family': 'binomial',
+            'higher_accuracy': 1,
         }
         timeoutSecs = 180
 
