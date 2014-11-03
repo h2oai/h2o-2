@@ -262,8 +262,7 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                     tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100,
                     higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1,
                     offset, has_intercept = TRUE) {
-  args <- .verify_dataxy(data, x, y)
-
+  
   if(!is.character(key)) stop("key must be of class character")
   if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
     stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
@@ -277,9 +276,12 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
   if(missing(offset)) { offset <- "" }
   else {
     if(!is.numeric(offset) && !is.character(offset)) stop("offset must be either an index or column name")
-    if(is.character(offset)) offset <- match(offset, colnames(data))
+    if(is.character(offset)) x = unique(c(x, offset))
+    offset <- match(offset, colnames(data))
     offset <- offset - 1
   }
+  
+  args <- .verify_dataxy(data, x, y)
   
   if(!is.numeric(nlambda)) stop("nlambda must be numeric")
   if((nlambda != -1) && (length(nlambda) > 1 || nlambda < 0)) stop("nlambda must be a single number >= 0")
@@ -1300,11 +1302,13 @@ h2o.predict <- function(object, newdata, ...) {
     # Set randomized prediction key
     rand_pred_key = .h2o.__uniqID("PCAPredict")
     # Find the number of columns in new data that match columns used to build pca model, detects expanded cols
-    if(is.null(numPC)) {
-      match_cols <- function(colname) length(grep(pattern = colname , object@model$params$x))
-      numMatch = sum(sapply(colnames(newdata), match_cols))
-      numPC = min(numMatch, object@model$num_pc)
-    }
+    if(is.null(numPC)) numPC = 1
+# Taken out so that default numPC = 1 instead of # of principle components resulting from analysis     
+#    {
+#      match_cols <- function(colname) length(grep(pattern = colname , object@model$params$x))
+#      numMatch = sum(sapply(colnames(newdata), match_cols))
+#      numPC = min(numMatch, object@model$num_pc)
+#    }
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     .h2o.__waitOnJob(object@data@h2o, res$job_key)
     .h2o.exec2(rand_pred_key, h2o = object@data@h2o, rand_pred_key)
