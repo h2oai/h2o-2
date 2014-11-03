@@ -100,7 +100,7 @@ task acceptancePython << {
             testResults = [rootFolder, "build/test-results/python/results_" + name.split("\\.")[0] + ".xml"].join(File.separator)
             htmlReports = [rootFolder, "build/reports/python/index_" + name.split("\\.")[0] + ".html"].join(File.separator)
             args "$element.file", "--group=${group}", '--with-xunit', "--xunit-file=${testResults}",
-                    "--with-html-out", "--html-file=${htmlReports}"
+                    "--with-html", "--html-file=${htmlReports}"
         }
         if ( new File(testResults).exists()){
             def xmlContent = new XmlSlurper().parseText(new File(testResults).getText())
