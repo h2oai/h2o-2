@@ -128,14 +128,9 @@ if (usefullmodel) {
   pred <- h2o.predict(cvmodel, test_hex)[,3]
 }
 
-cat("\nWriting predictions to file. Please paste together with ids from sampleSubmission.csv")
-colnames(pred) <- c("click")
-write.csv(as.data.frame(pred), file = "./preds", quote = F, row.names = F) 
-
-#submission <- read.csv(path_submission)
-#submission[,2] <- as.data.frame(pred)
-#colnames(submission) <- c("id", "click")
+submission <- read.csv(path_submission, colClasses = c("character"))
+submission[,2] <- as.data.frame(pred)
+colnames(submission) <- c("id", "click")
 #cat("\nWriting predictions on test data.")
-## FIXME: Bug in R? Can't preserve long integer precision, all ids are WRONG! <- replace outside of R
-#write.csv(as.data.frame(submission), file = "./submission.csv", quote = F, row.names = F)
+write.csv(as.data.frame(submission), file = paste(path,"./submission.csv", sep = ''), quote = F, row.names = F)
 sink()
