@@ -8,8 +8,7 @@ Downloading and Sending Logs
 ----------------------------
 
 1. From the drop-down **Admin** menu, select **Inspect Log** or go to http://localhost:54321/LogView.html.
-2. On the **Log View** page, click the **Download Logs** button in the
-upper left hand corner to download your logs.
+2. On the **Log View** page, click the **Download Logs** button in the upper left hand corner to download your logs.
 
 .. Image:: Logsdownload.png 
    :width: 70%
