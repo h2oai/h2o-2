@@ -1,24 +1,24 @@
 package hex.gbm;
 
-import static water.util.ModelUtils.getPrediction;
-import static water.util.Utils.div;
-import hex.*;
-import hex.VarImp.VarImpRI;
 import hex.ConfusionMatrix;
+import hex.VarImp;
+import hex.VarImp.VarImpRI;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.Split;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
-
-import java.util.Arrays;
-
 import water.*;
 import water.api.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+
+import java.util.Arrays;
+
+import static water.util.ModelUtils.getPrediction;
+import static water.util.Utils.div;
 
 // Gradient Boosted Trees
 //
@@ -441,7 +441,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // DRF picks a random different set of columns for the 2nd tree.
         if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
-        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],false,false) ); // The "root" node
+        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],true,false) ); // The "root" node
       }
     }
     int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
