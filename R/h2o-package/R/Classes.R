@@ -9,7 +9,8 @@ setClass("H2OParsedData", representation(h2o="H2OClient", key="character", logic
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
 # setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
-setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame"))
+setClassUnion("data.frameORnull", c("data.frame", "NULL"))
+setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame", gains="data.frameORnull"))
 
 setClass("H2OCoxPHModel", contains="H2OModel", representation(summary="list", survfit="list"))
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
@@ -1420,6 +1421,43 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
+
+#'
+#' The H2O Gains Method
+#'
+#' Construct the gains table and lift charts for binary outcome algorithms. Lift charts and gains tables
+#' are commonly applied to marketing.
+#'
+#' Ties are broken by building quantiles over the data (tie-breaking needed in deciding which group an observation
+#' belongs). Please examine the GainsTask within the GainsLiftTable.java class for more details on ranking.
+#'
+#' The values returned are in percent form if `percents` is TRUE.
+h2o.gains <- function(actual, predicted, groups=10, percents = FALSE) {
+  if(class(actual) != "H2OParsedData") stop("`actual` must be an H2O parsed dataset")
+  if(class(predicted) != "H2OParsedData") stop("`predicted` must be an H2O parsed dataset")
+  if(ncol(actual) != 1) stop("Must specify exactly one column for `actual`")
+  if(ncol(predicted) != 1) stop("Must specify exactly one column for `predicted`")
+  if(groups < 1) stop("`groups` must be  >= 1. Got: " %p0% groups)
+
+  h2o <- actual@h2o
+  res <- .h2o.__remoteSend(h2o, .h2o.__GAINS, actual = actual@key, vactual = 0, predict = predicted@key, vpredict = 0, groups = groups)
+  resp_rates <- res$response_rates
+  avg <- res$avg_response_rate
+  groups <- res$groups
+  percents <- 99*percents + 1  # multiply by 100 or by 1
+  lifts <- resp_rates / avg
+
+  # need to build a data frame with 4 columns: Quantile, Response Rate, Lift, Cum. Lift
+  col_names <- c("Quantile", "Response.Rate", "Lift", "Cumulative.Lift")
+
+  gains_table <- data.frame(
+    Qunatile        = qtiles <- seq(0,1,1/groups)[-1] * percents,
+    Response.Rate   = resp_rates * percents,
+    Lift            = (resp_rates / avg),
+    Cumulative.Lift = cumsum(lifts/groups) * percents
+  )
+  gains_table
+}
 
 setMethod("which", "H2OParsedData", function(x, arr.ind = FALSE, useNames = TRUE) {
   .h2o.__unop2("which", x)

@@ -473,7 +473,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       if (testKey != null)
         sb.append("<div class=\"alert\">Reported on ").append(Inspect2.link(testKey.toString(), testKey)).append("</div>");
       else
-        sb.append("<div class=\"alert\">Reported on ").append( oobee ? "OOB data" : "training" ).append(" data</div>");
+        sb.append("<div class=\"alert\">Reported on ").append( oobee ? "OOB" : "training" ).append(" data</div>");
     }
 
     //build cm

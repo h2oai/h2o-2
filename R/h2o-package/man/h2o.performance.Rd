@@ -7,7 +7,7 @@ Performance Measures
 Evaluate the predictive performance of a model via various measures.
 }
 \usage{
-h2o.performance(data, reference, measure = "accuracy", thresholds)
+h2o.performance(data, reference, measure = "accuracy", thresholds, gains = TRUE, ...)
 }
 \arguments{
   \item{data}{
@@ -31,6 +31,8 @@ h2o.performance(data, reference, measure = "accuracy", thresholds)
   (Optional) A numeric vector from 0 to 1 indicating the threshold values at which to compute the performance measure. If missing, the range will be automatically generated.
   TODO: Still not sure I understand what exactly these thresholds are, is it the FPR or something else?
   }
+  \item{gains}{If TRUE, then `h2o.performance` will additionally compute the gains and lift charts. These can be accessed via @gains}
+  \item{\dots}{Additional arguments to pass to the `h2o.gains` method. Accepts "percents" and "groups".}
 }
 \value{
 An object of class \code{\linkS4class{H2OPerfModel}} with slots cutoffs, measure, perf (the performance measure selected), roc (data frame used to plot ROC) and model, where the last is a list of the following components:
