@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
                 hex_key=hex_key, timeoutSecs=10, doSummary=False, separator=H2O_COL_SEPARATOR) 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)
             
-            print "Parsed with special unichr(%s) which is %s:" % (unicodeNum, unichr(unicodeNum))
+            print "Parsed with special unichr(%s):" % unicodeNum
             # print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
             self.assertEqual(numRows, expNumRows, msg='Using unichr(0x%x) Wrong numRows: %s Expected: %s' % \
