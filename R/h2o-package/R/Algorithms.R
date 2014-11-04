@@ -966,7 +966,7 @@ h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.
   x_ignore <- args$x_ignore
   x_ignore <- ifelse( x_ignore=='', y, c(x_ignore,y) )
   myModel <- .h2o.prcomp.internal(data=data, x_ignore=x_ignore, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
-  myScore <- h2o.predict(myModel)
+  myScore <- h2o.predict(myModel, num_pc = ncomp)
   
   myScore[,ncomp+1] = data[,args$y_i]    # Bind response to frame of principal components
   myGLMData = .h2o.exec2(myScore@key, h2o = data@h2o, myScore@key)

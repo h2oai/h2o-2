@@ -1451,7 +1451,7 @@ h2o.gains <- function(actual, predicted, groups=10, percents = FALSE) {
   col_names <- c("Quantile", "Response.Rate", "Lift", "Cumulative.Lift")
 
   gains_table <- data.frame(
-    Qunatile        = qtiles <- seq(0,1,1/groups)[-1] * percents,
+    Quantile        = qtiles <- seq(0,1,1/groups)[-1] * percents,
     Response.Rate   = resp_rates * percents,
     Lift            = (resp_rates / avg),
     Cumulative.Lift = cumsum(lifts/groups) * percents
