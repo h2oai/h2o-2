@@ -28,7 +28,8 @@ def pickRandGlmParams(paramDict, params):
                 if params['link'] not in ('tweedie'):
                     params['link'] = None
             if params['family'] == 'binomial':
-                if params['link'] not in ('logit', 'identity', 'log', 'inverse', 'familyDefault'):
+                # only logit and log
+                if params['link'] not in ('logit', 'log', 'familyDefault'):
                     params['link'] = None
             if params['family'] == 'gaussian':
                 if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
