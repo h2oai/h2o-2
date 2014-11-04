@@ -35,24 +35,9 @@ def pickRandGlmParams(paramDict, params):
                 if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
                     params['link'] = None
 
-        # case only used if binomial? binomial is default if no family
-        # update: apparently case and case_mode always affect things
-        # make sure the combo of case and case_mode makes sense
-        # there needs to be some entries in both effective cases
-        if ('case_mode' in params):
-            if ('case' not in params) or (params['case'] is None):
-                params['case'] = 1
-            else:
-                maxCase = max(paramDict['case'])
-                minCase = min(paramDict['case'])
-                if params['case_mode']=="<" and params['case']==minCase:
-                    params['case'] += 1
-                elif params['case_mode']==">" and params['case']==maxCase:
-                    params['case'] -= 1
-                elif params['case_mode']==">=" and params['case']==minCase:
-                    params['case'] += 1
-                elif params['case_mode']=="<=" and params['case']==maxCase:
-                    params['case'] -= 1
+        if 'lambda_search' in params and params['lambda_search']==1:
+            if 'nlambdas' in params and params['nlambdas']<=1:
+                params['nlambdas'] = 2
 
     return colX
 
@@ -204,7 +189,6 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         # have to look up the index for the cm, from the thresholds list
         best_index = None
 
-        # FIX! best_threshold isn't necessarily in the list. jump out if >=
         for i,t in enumerate(thresholds):
             if t >= best_threshold: # ends up using next one if not present
                 best_index = i
@@ -215,7 +199,10 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
         # cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]
         submodels = glm['glm_model']['submodels']
+        # FIX! this isn't right if we have multiple lambdas? different submodels?
         cms = submodels[0]['validation']['_cms']
+        self.assertEqual(len(thresholds), len(cms), msg="thresholds %s and cm %s should be lists of the same size" % (len(thresholds), len(cms)))
+        # FIX! best_threshold isn't necessarily in the list. jump out if >=
         assert best_index<len(cms), "%s %s" % (best_index, len(cms))
         # if we want 0.5..rounds to int
         # mid = len(cms)/2
