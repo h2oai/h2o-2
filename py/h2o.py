@@ -1691,8 +1691,8 @@ class H2O(object):
         verboseprint("\n to_int result:", dump_json(a))
         return a
 
-    def unlock(self):
-        a = self.__do_json_request('2/UnlockKeys.json', params=None)
+    def unlock(self, timeoutSecs=30):
+        a = self.__do_json_request('2/UnlockKeys.json', params=None, timeout=timeoutSecs)
         return a
 
     # There is also a RemoveAck in the browser, that asks for confirmation from
