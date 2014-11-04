@@ -202,7 +202,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         submodels = glm['glm_model']['submodels']
         # FIX! this isn't right if we have multiple lambdas? different submodels?
         cms = submodels[0]['validation']['_cms']
-        self.assertEqual(len(thresholds), len(cms), msg="thresholds %s and cm %s should be lists of the same size" % (len(thresholds), len(cms)))
+        self.assertEqual(len(thresholds), len(cms), 
+            msg="thresholds %s and cm %s should be lists of the same size. %s" % (len(thresholds), len(cms), thresholds))
         # FIX! best_threshold isn't necessarily in the list. jump out if >=
         assert best_index<len(cms), "%s %s" % (best_index, len(cms))
         # if we want 0.5..rounds to int
