@@ -77,7 +77,7 @@ class Basic(unittest.TestCase):
                 hex_key=hex_key, timeoutSecs=10, doSummary=False)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)
             
-            print "Parsed with special unichr(%s) which is %s:" % (unicodeNum, unichr(unicodeNum))
+            print "Parsed with special unichr(%s)" % unicodeNum
             print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
             numCols = inspect['numCols']
