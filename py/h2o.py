@@ -1932,6 +1932,7 @@ class H2O(object):
         params_dict = {
             # 'model': None,
             'balance_classes': None, 
+            'build_tree_one_node': None,
             'classification': 1,
             'cols': None,
             'destination_key': None,

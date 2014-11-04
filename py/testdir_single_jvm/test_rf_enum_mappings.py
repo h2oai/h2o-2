@@ -2,15 +2,20 @@ import unittest, random, sys, time, re, math
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
+import itertools
 
 
 COLS = 3
-ROWS = 3000
+ROWS = 300
 SPEEDRF = False
 MULTINOMIAL = 2
 DO_WITH_INT = False
 ENUMS = 100
 ENUMLIST = ['bacaa', 'cbcbcacd', 'dccdbda', 'efg', 'hij', 'jkl']
+ENUMLIST = ['a', 'b', 'c', 'd', 'e', 'f']
+# ENUMLIST = ['efg', 'hij', 'jkl']
+# ENUMLIST = ['bacaa', 'efg', 'hij', 'jkl']
+# ENUMLIST = ['bacaa', 'cbcbcacd', 'efg', 'hij', 'jkl']
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
     choiceStr = randChars
@@ -44,6 +49,7 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1,
         rowIndex = []
         # keep a sum of all the index mappings for the enum chosen (for the features in a row)
         riIndexSum = 0
+
         for col in range(colCount):
             riIndex = robj.randint(0, len(enumList)-1)
             rowData.append(enumList[riIndex])
@@ -155,6 +161,11 @@ class Basic(unittest.TestCase):
             modelKey = 'enums'
             # limit depth and number of trees to accentuate the issue with categorical split decisions
 
+            # use mtries so both look at all cols at every split? doesn't matter for speedrf
+            # does speedrf try one more time? with 3 cols, mtries=2, so another try might 
+            # get a look at the missing col
+            # does matter for drf2. does it "just stop"
+            # trying mtries always looking at all columns or 1 col might be interesting
             if SPEEDRF:
                 kwargs = {
                     'sample_rate': 0.999,
@@ -165,6 +176,8 @@ class Basic(unittest.TestCase):
                     # 'oobee': 1,
                     'validation': scoreDataKey,
                     'seed': 123456789,
+                    'mtries': 1,
+                    # 'mtries': COLS,
                 }
             else:
                 kwargs = {
@@ -174,10 +187,13 @@ class Basic(unittest.TestCase):
                     'classification': 1,
                     'ntrees': 1,
                     'max_depth': 100,
-                    # 'min_rows': 1,
-                    'validation': scoreDataKey,
+                    'min_rows': 1,
+                    'validation': hex_key,
+                    # 'validation': scoreDataKey,
                     'seed': 123456789,
                     'nbins': 1024,
+                    'mtries': COLS,
+                    # 'mtries': COLS,
                 }
 
             for r in range(4):
