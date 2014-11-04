@@ -10,7 +10,7 @@ When starting a new project, please use the already configured _parent pom_ to a
 {{{
 <parent>
   <groupId>ai.h2o</groupId>
-  <artifactId>h2o-parent</artifactId>
+  <artifactId>h2o-classic-parent</artifactId>
 </parent>
 }}}
 
