@@ -20,18 +20,19 @@ def pickRandGlmParams(paramDict, params):
                 params['link'] = None
 
         elif params['family'] is not None and 'link' in params and params['link'] is not None:
+            # only log/identity is legal?
             if params['family'] == 'poisson':
-                if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                if params['link'] not in ('identity', 'log', 'familyDefault'):
                     params['link'] = None 
             # only tweedie/tweedie is legal?
-            if params['family'] == 'tweedie':
+            elif params['family'] == 'tweedie':
                 if params['link'] not in ('tweedie'):
                     params['link'] = None
-            if params['family'] == 'binomial':
+            elif params['family'] == 'binomial':
                 # only logit and log
                 if params['link'] not in ('logit', 'log', 'familyDefault'):
                     params['link'] = None
-            if params['family'] == 'gaussian':
+            elif params['family'] == 'gaussian':
                 if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
                     params['link'] = None
 
