@@ -66,7 +66,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     h2o.cloudPerfH2O.message(msg)
 
                 if DO_GLM:
-                    # remove the output too! (378)
+                    # output 378 can't be in this
                     ignore_x = [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]
                     ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
 
