@@ -2,6 +2,8 @@ import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
 
+NA_POSS = ('', 'NA', '"NA"')
+ZERO_POSS = ('0', ' 0', '0 ')
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED, choices):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
@@ -11,7 +13,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED, choices):
         rowData = []
         for j in range(colCount):
             ri = random.choice(choices)
-            if ri=='0' or ri==' 0' or ri=='':
+            if (ri in ZERO_POSS) or (ri in NA_POSS):
                 naCnt[j] += 1
             rowData.append(ri)
         rowDataCsv = ",".join(map(str,rowData))
@@ -21,7 +23,8 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED, choices):
     # FIX..temp hack to fix the naCnt if we only got 2 choices (assumes choices is always len(3) here
     assert len(choices)==3
     # I guess don't worry about case where 0 dominates, but there are other NA's  (besides the enums)
-    if choices[0]==choices[1] and choices[2]!='': # the numbers will dominate if single enum, not na. the enums na
+    # the numbers will dominate if single enum, not na. the enums na
+    if choices[0]==choices[1] and choices[2] not in NA_POSS:
         for j in range(colCount):
             naCnt[j] = rowCount - naCnt[j]
     return naCnt
@@ -49,6 +52,8 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         choicesList = [
+            (' a', ' b',  'NA'),
+            (' a', ' b',  '"NA"'),
             # only one enum?
             # the NA count has to get flipped if just one enum and 0
             (' a', ' b',  ''),
@@ -69,6 +74,8 @@ class Basic(unittest.TestCase):
         # white space is stripped
         expectedList = [
             # only one enum?
+            (' a', ' b',  ''),
+            (' a', ' b',  ''),
             ('a', 'b', ''),
             ('a', 'a', ''),
             # ('a', 'a', '0'),
@@ -104,6 +111,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 60
         for (rowCount, colCount, hex_key, choices, expected) in tryList:
             # max error = half the bin size?
+            print "choices:", choices
         
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
