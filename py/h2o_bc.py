@@ -346,8 +346,7 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
 def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
     if h2o_args.sleep_at_tear_down:
         print "Opening browser to cloud, and sleeping for 3600 secs, before cloud teardown (for debug)"
-        import h2o_browse
-
+        import h2o_browse as h2b
         h2b.browseTheCloud()
         sleep(3600)
 

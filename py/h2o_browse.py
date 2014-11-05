@@ -49,10 +49,10 @@ def browseJsonHistoryAsUrlLastMatch(matchme, swapme=None):
 # go from end, backwards and see what breaks! (in json to html hack url transform)
 # note that put/upload  and rf/rfview methods are different for html vs json
 def browseJsonHistoryAsUrl(retryDelaySecs=0.25):
-    if not h2o.browse_disable:
+    if not h2o_args.browse_disable:
         # stop if you get to -50, don't want more than 50 tabs on browser
         tabCount = 0
-        for url in h2o.json_url_history:
+        for url in h2o_nodes.json_url_history:
             # ignore the Cloud "alive" views
             # FIX! we probably want to expand ignoring to more than Cloud?
             if not re.search('Cloud', url):

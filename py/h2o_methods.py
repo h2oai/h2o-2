@@ -3,6 +3,7 @@ import os, sys, time, requests, zipfile, StringIO
 import h2o_args
 # from h2o_cmd import runInspect, infoFromSummary
 import h2o_cmd, h2o_util
+import h2o_browse as h2b
 
 from h2o_objects import H2O
 from h2o_test import verboseprint, dump_json, check_sandbox_for_errors, get_sandbox_name, log
