@@ -22,24 +22,27 @@ class Basic(unittest.TestCase):
         avgSynSize = 4020000
         covtype200xSize = 15033863400
         synSize =  183
-        if 1==0:
+        if 1==1:
             bucket = 'home-0xdiag-datasets'
-            importFolderPath = 'more1_1200_link'
+            importFolderPath = 'manyfiles-nflx-gz'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
                 # this should hit the "more" files too?
                 # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
                 # ("*.dat.gz", "file_200.dat.gz", 1200 * avgMichalSize, 1800),
                 # ("*[1][0-2][0-9].dat.gz", "file_30.dat.gz", 50 * avgMichalSize, 1800), 
-                ("*file_[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
-                ("*file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 1800), 
-                ("*file_[34][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 1800), 
-                ("*file_[56][0-9][0-9].dat.gz", "file_200_C.dat.gz", 200 * avgMichalSize, 1800), 
-                ("*file_[78][0-9][0-9].dat.gz", "file_200_D.dat.gz", 200 * avgMichalSize, 1800), 
+                # ("*file_[0-9][0-9].dat.gz", "file_100.dat.gz", 100 * avgMichalSize, 1800), 
+                ("*file_[12][01][0-7].dat.gz", "file_32.dat.gz", 100 * avgMichalSize, 1800), 
+                # ("*file_[12][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 1800), 
+
+                # ("*file_*.dat.gz", "file_300_A.dat.gz", 300 * avgMichalSize, 1800), 
+                # ("*file_[34][0-9][0-9].dat.gz", "file_200_B.dat.gz", 200 * avgMichalSize, 1800), 
+                # ("*file_[56][0-9][0-9].dat.gz", "file_200_C.dat.gz", 200 * avgMichalSize, 1800), 
+                # ("*file_[78][0-9][0-9].dat.gz", "file_200_D.dat.gz", 200 * avgMichalSize, 1800), 
                 # ("*.dat.gz", "file_1200.dat.gz", 1200 * avgMichalSize, 3600),
             ]
 
-        if 1==1:
+        if 1==0:
             bucket = 'home-0xdiag-datasets'
             importFolderPath = 'more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
@@ -236,7 +239,6 @@ class Basic(unittest.TestCase):
                     print l
                     h2o.cloudPerfH2O.message(l)
 
-                print csvFilepattern, 'parse time:', parseResult['response']['time']
                 print "Parse result['destination_key']:", parseResult['destination_key']
 
                 # BUG here?
@@ -249,7 +251,8 @@ class Basic(unittest.TestCase):
                 # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
                 origKey = parseResult['destination_key']
                 # execExpr = 'a = randomFilter('+origKey+',200,12345678)' 
-                execExpr = 'a = slice('+origKey+',1,200)' 
+                # execExpr = 'a = slice('+origKey+',1,200)' 
+                execExpr = 'a = %s[1:200,]' % origKey
                 h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
                 # runRF takes the parseResult directly
                 newParseKey = {'destination_key': 'a'}

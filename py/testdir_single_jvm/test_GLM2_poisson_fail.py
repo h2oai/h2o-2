@@ -4,7 +4,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import as h2i
 
 print "Just do a failing case"
 def define_params(): 
-    paramDict = {'destination_key': None, 'standardize': None, 'family': 'poisson', 'beta_epsilon': None, 'max_iter': None, 'higher_accuracy': None, 'tweedie_variance_power': None, 'lambda_search': 1, 'ignored_cols': 0, 'source': u'covtype.20k.hex', 'parallelism': None, 'beta_eps': None, 'n_folds': 1, 'alpha': 0.8, 'use_all_factor_levels': None, 'response': 54, 'lambda': 0}
+    paramDict = {'destination_key': None, 'standardize': None, 'family': 'poisson', 'beta_epsilon': None, 'max_iter': None, 'higher_accuracy': None, 'tweedie_variance_power': None, 'lambda_search': 1, 'ignored_cols': 0, 'source': u'covtype.20k.hex', 'n_folds': 1, 'alpha': 0.8, 'use_all_factor_levels': None, 'response': 54, 'lambda': 0}
 
     return paramDict
     

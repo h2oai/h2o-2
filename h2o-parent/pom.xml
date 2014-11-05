@@ -9,8 +9,8 @@
   </parent>
   <!-- This is H2O parent project for sharing common settings cross H2O build stack -->
   <groupId>ai.h2o</groupId>
-  <artifactId>h2o-parent</artifactId>
-  <version>2.5-SNAPSHOT</version>
+  <artifactId>h2o-classic-parent</artifactId>
+  <version>2.6-SNAPSHOT</version>
   <packaging>pom</packaging>
   
   <name>H2O Project Parent POM</name>

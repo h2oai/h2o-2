@@ -1,4 +1,4 @@
-import h2o, h2o_cmd, re, os
+import h2o, h2o_cmd, h2o_jobs, re, os
 import h2o_print as h2p
 import getpass, time
 
@@ -456,14 +456,17 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
     # this is really the count that we attempted. Some could have failed.
     return deletedCnt
 
-# if pattern is used, don't use the heavy h2o method
+# could detect if pattern is used, and use the h2o "delete all keys" method if not
 def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
+    print "Going to delete all keys one at a time (slower than 'remove all keys')"
     # TEMP: change this to remove_all_keys which ignores locking and removes keys?
     # getting problems when tests fail in multi-test-on-one-h2o-cluster runner*sh tests
     if not node: node = h2o.nodes[0]
-    # unlock all keys first to make sure broken keys get removed
+    print "Will cancel any running jobs, because we can't unlock keys on running jobs"
+    # I suppose if we used a pattern, we wouldn't have to worry about running jobs..oh well.
+    h2o_jobs.cancelAllJobs()
+    print "unlock all keys first to make sure broken keys get removed"
     node.unlock()
-
     totalDeletedCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff
     # this will be interesting if the others don't have a complete set

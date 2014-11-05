@@ -12,41 +12,33 @@ def pickRandGlmParams(paramDict, params):
         if (randomKey=='x'):
             colX = randomValue
 
-        # force legal family/ink combos
-        if 'family' in params and 'link' in params: 
-            if params['family'] is not None:
-                if params['family'] == 'poisson':
-                    if params['link'] is not None and params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
-                        params['link'] = None 
-                # only tweedie/tweedie is legal?
-                if params['family'] == 'tweedie':
-                    if params['link'] is not None and params['link'] not in ('tweedie'):
-                        params['link'] = None
-                if params['family'] == 'binomial':
-                    if params['link'] is not None and params['link'] not in ('logit', 'identity', 'log', 'inverse', 'familyDefault'):
-                        params['link'] = None
-                if params['family'] == 'gaussian':
-                    if params['link'] is not None and params['link'] not in ('logit', 'identity', 'log', 'inverse', 'familyDefault'):
-                        params['link'] = None
+        # Only identity, log and inverse links are allowed for family=gaussian.
 
-        # case only used if binomial? binomial is default if no family
-        # update: apparently case and case_mode always affect things
-        # make sure the combo of case and case_mode makes sense
-        # there needs to be some entries in both effective cases
-        if ('case_mode' in params):
-            if ('case' not in params) or (params['case'] is None):
-                params['case'] = 1
-            else:
-                maxCase = max(paramDict['case'])
-                minCase = min(paramDict['case'])
-                if params['case_mode']=="<" and params['case']==minCase:
-                    params['case'] += 1
-                elif params['case_mode']==">" and params['case']==maxCase:
-                    params['case'] -= 1
-                elif params['case_mode']==">=" and params['case']==minCase:
-                    params['case'] += 1
-                elif params['case_mode']=="<=" and params['case']==maxCase:
-                    params['case'] -= 1
+        # force legal family/ink combos
+        if 'family' not in params: # defaults to gaussian
+            if 'link' in params and params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                params['link'] = None
+
+        elif params['family'] is not None and 'link' in params and params['link'] is not None:
+            # only log/identity is legal?
+            if params['family'] == 'poisson':
+                if params['link'] not in ('identity', 'log', 'familyDefault'):
+                    params['link'] = None 
+            # only tweedie/tweedie is legal?
+            elif params['family'] == 'tweedie':
+                if params['link'] not in ('tweedie'):
+                    params['link'] = None
+            elif params['family'] == 'binomial':
+                # only logit and log
+                if params['link'] not in ('logit', 'log', 'familyDefault'):
+                    params['link'] = None
+            elif params['family'] == 'gaussian':
+                if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                    params['link'] = None
+
+        if 'lambda_search' in params and params['lambda_search']==1:
+            if 'nlambdas' in params and params['nlambdas']<=1:
+                params['nlambdas'] = 2
 
     return colX
 
@@ -198,7 +190,6 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         # have to look up the index for the cm, from the thresholds list
         best_index = None
 
-        # FIX! best_threshold isn't necessarily in the list. jump out if >=
         for i,t in enumerate(thresholds):
             if t >= best_threshold: # ends up using next one if not present
                 best_index = i
@@ -209,7 +200,11 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
         # cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]
         submodels = glm['glm_model']['submodels']
+        # FIX! this isn't right if we have multiple lambdas? different submodels?
         cms = submodels[0]['validation']['_cms']
+        self.assertEqual(len(thresholds), len(cms), 
+            msg="thresholds %s and cm %s should be lists of the same size. %s" % (len(thresholds), len(cms), thresholds))
+        # FIX! best_threshold isn't necessarily in the list. jump out if >=
         assert best_index<len(cms), "%s %s" % (best_index, len(cms))
         # if we want 0.5..rounds to int
         # mid = len(cms)/2

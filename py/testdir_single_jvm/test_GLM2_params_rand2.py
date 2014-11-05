@@ -6,17 +6,27 @@ def define_params():
 
     
     paramDict = {
-        'standardize': [None, 0,1],
+        'alpha': [0,0.2,0.4],
         'beta_epsilon': [None, 0.0001],
         'family': [None, 'gaussian', 'binomial', 'poisson'],
-        'lambda': [0,1e-8,1e-4,1e-3],
-        'alpha': [0,0.2,0.4],
-        'ignored_cols': [1,'C1','1,2','C1,C2'],
-        'max_iter': [None, 25],
+        # this is always the default 1 for now, until we adjust h2o_glm.py to accept no intercept
+        # 'has_intercept': [None, 0, 1],
         'higher_accuracy': [None, 0, 1],
-        'use_all_factor_levels': [None, 0, 1],
-        'lambda_search': [None, 0], # FIX! what if lambda is set when lambda_search=1
+        'ignored_cols': [1,'C1','1,2','C1,C2'],
+        'lambda': [0,1e-8,1e-4,1e-3],
+        'lambda_min_ratio': [None, .1, 1], # ratio of lambda max
+        'lambda_search': [None, 0, 1], # FIX! what if lambda is set when lambda_search=1
+        'link': ['family_default', 'identity', 'logit', 'log', 'inverse', 'tweedie'],
+        'max_iter': [None, 25],
+        'max_predictors': [None, 1, 54], # lambda_search stop condition
+        'n_folds': [0,1],
+        'nlambdas': [None, 1,2,5], # number of lambdas to be used in a search
+        'non_negative': [None, 0,1], # require coefficents to be non-negative
+        'prior': [None, 0, .8], # prior probability for y=1
+        'standardize': [None, 0,1],
         'tweedie_variance_power': [None, 0, 1],
+        'use_all_factor_levels': [None, 0, 1],
+        'variable_importances': [None, 0, 1],
         }
     return paramDict
 

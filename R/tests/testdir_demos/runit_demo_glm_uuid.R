@@ -66,15 +66,15 @@ test <- function(conn) {
     summary(air.results) 
   
   print("Check performce and AUC")
-    perf = h2o.performance(air.results$NO,airline.test.hex$IsArrDelayed )
+    perf = h2o.performance(air.results$YES,airline.test.hex$IsArrDelayed )
     print(perf)
     perf@model$auc
 
   print("Show distribution of predictions with quantile.")
-    quantile.H2OParsedData(air.results$NO)
+    quant = quantile.H2OParsedData(air.results$YES)
   
   print("Extract strongest predictions.")
-    top.air <- h2o.assign(air.results[air.results$NO > 0.75],key="top.air")
+    top.air <- h2o.assign(air.results[air.results$YES > quant['75%'] ],key="top.air")
     print("Dimension of strongest predictions: ")
     dim(top.air)
     print("Head of strongest predictions: ")

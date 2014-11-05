@@ -2,13 +2,30 @@ import unittest, random, sys, time, re, math
 sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
+import itertools
 
 
+
+PRODUCT_SEQ = True
+MULTIPLIER = 1
+
+COLS = 3
+ROWS = 300
 SPEEDRF = True
+GBM = False
 MULTINOMIAL = 2
 DO_WITH_INT = False
 ENUMS = 100
-ENUMLIST = ['bacaa', 'cbcbcacd', 'dccdbda', 'efg', 'hij', 'jkl']
+
+# remember since the output is parity, that only 3 values out of the 6 affect the output
+# so 3 * 3 * 3 = 27 leaves min? for 3 cols
+# ENUMLIST = ['bacaa', 'cbcbcacd', 'dccdbda', 'efg', 'hij', 'jkl']
+ENUMLIST = ['a', 'b', 'c', 'd', 'e', 'f']
+# ENUMLIST = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
+
+# ENUMLIST = ['efg', 'hij', 'jkl']
+# ENUMLIST = ['bacaa', 'efg', 'hij', 'jkl']
+# ENUMLIST = ['bacaa', 'cbcbcacd', 'efg', 'hij', 'jkl']
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
     choiceStr = randChars
@@ -16,13 +33,17 @@ def random_enum(randChars, maxEnumSize):
     return r
 
 def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=1000):
+
     if DO_WITH_INT:
-        enumList = range(listSize)
+        if ENUMLIST:
+            enumList = range(len(ENUMLIST))
+        else:
+            enumList = range(listSize)
     else:
         if ENUMLIST:
             enumList = ENUMLIST
         else:
-            enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
+            enumList = [random_enum(randChars, random.randint(2, maxEnumSize)) for i in range(listSize)]
 
     return enumList
 
@@ -33,17 +54,27 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1,
     # for each call? But the enum list is randomized
     robj = random.Random(SEED)
     dsf = open(csvPathname, "w+")
-    for row in range(rowCount):
-        rowData = []
-        # keep a list of the indices used..return that for comparing multiple datasets
-        rowIndex = []
+
+    # just one of all permutations: ignore row count
+    if PRODUCT_SEQ:
+        indexList = range(len(ENUMLIST))
+        rowIndexList = list(itertools.product(indexList, repeat=COLS))
+        # do it 10x!
+        rowsToDo = MULTIPLIER * len(rowIndexList)
+    else:
+        rowsToDo = rowCount
+
+    
+    for row in range(rowsToDo):
+        if PRODUCT_SEQ:
+            rowIndex = rowIndexList[row % len(rowIndexList)]
+        else:
+            rowIndex = [robj.randint(0, len(enumList)-1) for col in range(colCount)]
+
         # keep a sum of all the index mappings for the enum chosen (for the features in a row)
-        riIndexSum = 0
-        for col in range(colCount):
-            riIndex = robj.randint(0, len(enumList)-1)
-            rowData.append(enumList[riIndex])
-            rowIndex.append(riIndex)
-            riIndexSum += riIndex
+        riIndexSum  = sum(rowIndex)
+
+        rowData = [enumList[riIndex] for riIndex in rowIndex]
 
         # output column
         # make the output column match odd/even row mappings.
@@ -52,6 +83,7 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1,
         rowData.append(ri)
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         dsf.write(rowDataCsv)
+
     dsf.close()
     rowIndexCsv = colSepChar.join(map(str,rowIndex)) + rowSepChar
     return rowIndexCsv # last line as index
@@ -75,11 +107,10 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_rf_enums_mappings_fvec(self):
+    def test_rf_enums_mappings(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        n = 3000
         tryList = [
             # (n, 1, 'cD', 300), 
             # (n, 2, 'cE', 300), 
@@ -87,9 +118,9 @@ class Basic(unittest.TestCase):
             # (n, 4, 'cG', 300), 
             # (n, 5, 'cH', 300), 
             # (n, 6, 'cI', 300), 
-            (n, 3, 'cI', 300), 
-            (n, 3, 'cI', 300), 
-            (n, 3, 'cI', 300), 
+            (ROWS, COLS, 'cI', 300), 
+            (ROWS, COLS, 'cI', 300), 
+            (ROWS, COLS, 'cI', 300), 
             ]
 
         # SEED_FOR_TRAIN = random.randint(0, sys.maxint)
@@ -151,40 +182,75 @@ class Basic(unittest.TestCase):
             modelKey = 'enums'
             # limit depth and number of trees to accentuate the issue with categorical split decisions
 
+            # use mtries so both look at all cols at every split? doesn't matter for speedrf
+            # does speedrf try one more time? with 3 cols, mtries=2, so another try might 
+            # get a look at the missing col
+            # does matter for drf2. does it "just stop"
+            # trying mtries always looking at all columns or 1 col might be interesting
             if SPEEDRF:
                 kwargs = {
+                    'sample_rate': 0.999,
                     'destination_key': modelKey,
                     'response': y,
                     'ntrees': 1,
                     'max_depth': 100,
-                    'oobee': 1,
+                    # 'oobee': 1,
+                    'validation': hex_key,
+                    # 'validation': scoreDataKey,
                     'seed': 123456789,
+                    'mtries': COLS,
+                }
+            elif GBM:
+                kwargs = {
+                    'destination_key': modelKey,
+                    'response': y,
+                    'validation': scoreDataKey,
+                    'seed': 123456789,
+                    # 'learn_rate': .1,
+                    'ntrees': 1,
+                    'max_depth': 100,
+                    'min_rows': 1,
+                    'classification': 1,
                 }
             else:
                 kwargs = {
+                    'sample_rate': 0.999,
                     'destination_key': modelKey,
                     'response': y,
                     'classification': 1,
                     'ntrees': 1,
                     'max_depth': 100,
                     'min_rows': 1,
-                    'validation': scoreDataKey,
+                    'validation': hex_key,
+                    # 'validation': scoreDataKey,
                     'seed': 123456789,
+                    'nbins': 1024,
+                    'mtries': COLS,
                 }
 
-            for r in range(4):
+            for r in range(2):
                 start = time.time()
+
+                if GBM:
+                    gbmResult = h2o_cmd.runGBM(parseResult=parseResult,
+                        timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+
+                    print "gbm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+                    # print h2o.dump_json(gbmResult)
+                    (classification_error, classErrorPctList, totalScores) = h2o_gbm.simpleCheckGBMView(gbmv=gbmResult)
                 
-                if SPEEDRF:
+                elif SPEEDRF:
                     rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, 
                         timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+                    print "speedrf end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+                    (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
+
                 else:
                     rfResult = h2o_cmd.runRF(parseResult=parseResult, 
                         timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+                    print "rf end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+                    (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
                 
-                print "rf end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
-                # print h2o.dump_json(rfResult)
-                (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
                 h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, doAUC=not MULTINOMIAL) # , expectedAuc=0.5)
                 
                 errorHistory.append(classification_error)
