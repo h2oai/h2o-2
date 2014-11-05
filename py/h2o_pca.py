@@ -1,7 +1,10 @@
-import h2o_cmd, h2o,time,math,string
+import time, math, string
+import h2o_cmd
 from pprint import pprint
+from h2o_test import verboseprint, dump_json, check_sandbox_for_errors
+
 def simpleCheckPCA(self, pca, **kwargs):
-    #print h2o.dump_json(pca)
+    #print dump_json(pca)
     warnings = None
     if 'warnings' in pca:
         warnings = pca['warnings']
@@ -13,12 +16,12 @@ def simpleCheckPCA(self, pca, **kwargs):
 
     # Check other things in the json response dictionary 'pca' here
     pcaResult = pca
-    h2o.verboseprint('pcaResult Inspect:', h2o.dump_json(pcaResult))
+    verboseprint('pcaResult Inspect:', dump_json(pcaResult))
     
     #Check no NaN in sdevs, propVars, or in PCs 
     print "Checking sdevs..."
     sdevs = pcaResult["pca_model"]["sdev"]
-    h2o.verboseprint("pca sdevs:", h2o.dump_json(sdevs))
+    verboseprint("pca sdevs:", dump_json(sdevs))
     
     # sdevs is supposed to be a list sorted by s 
     # sFirst = sdevs[0].s
@@ -32,14 +35,14 @@ def simpleCheckPCA(self, pca, **kwargs):
 
     print "Checking propVars...",
     propVars = pcaResult["pca_model"]["propVar"]
-    h2o.verboseprint("pca propVars:", h2o.dump_json(propVars))
+    verboseprint("pca propVars:", dump_json(propVars))
     for PC,propvar in enumerate(propVars):
         if math.isnan(propvar):
             raise Exception("propVar %s is NaN: %s", (PC, propvar))
     print " Good!"
     print "Checking eigVec...",
     pcs = pcaResult["pca_model"]["eigVec"]
-    h2o.verboseprint("pca eigVec:", h2o.dump_json(pcs))
+    verboseprint("pca eigVec:", dump_json(pcs))
     for i,s in enumerate(pcs):
         for r,e in enumerate(s):
             if math.isnan(e):
@@ -63,7 +66,7 @@ def simpleCheckPCA(self, pca, **kwargs):
     print "The sort should be on the abs(), since the signs can be + or -"
 
     # shouldn't have any errors
-    h2o.check_sandbox_for_errors()
+    check_sandbox_for_errors()
     return warnings
 
 def resultsCheckPCA(self, pca, **kwargs):

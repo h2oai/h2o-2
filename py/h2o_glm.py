@@ -1,5 +1,7 @@
 import h2o_cmd, h2o, h2o_util, h2o_gbm
 import re, random, math
+from h2o_test import check_sandbox_for_errors, dump_json, verboseprint
+import h2o_nodes
 
 def pickRandGlmParams(paramDict, params):
     colX = 0
@@ -107,7 +109,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # different when cross validation  is used? No trainingErrorDetails?
     GLMModel = glm['glm_model']
     if not GLMModel:
-        raise Exception("GLMModel didn't exist in the glm response? %s" % h2o.dump_json(glm))
+        raise Exception("GLMModel didn't exist in the glm response? %s" % dump_json(glm))
 
     warnings = None
     if 'warnings' in GLMModel and GLMModel['warnings']:
@@ -166,7 +168,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             raise Exception("Convergence issue? GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
 
     if 'validation' not in submodels1:
-        raise Exception("Should be a 'validation' key in submodels1: %s" % h2o.dump_json(submodels1))
+        raise Exception("Should be a 'validation' key in submodels1: %s" % dump_json(submodels1))
     validationsList = submodels1['validation']
     validations = validationsList
         
@@ -211,7 +213,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         # cm = cms[mid]
         cm = cms[best_index]
 
-        print "cm:", h2o.dump_json(cm['_arr'])
+        print "cm:", dump_json(cm['_arr'])
         predErr = cm['_predErr']
         classErr = cm['_classErr']
         # compare to predErr
@@ -388,7 +390,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     print "submodels1, run_time (milliseconds):", submodels1['run_time']
 
     # shouldn't have any errors
-    h2o.check_sandbox_for_errors()
+    check_sandbox_for_errors()
 
     return (warnings, cList, intercept)
 
@@ -398,8 +400,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 def compareToFirstGlm(self, key, glm, firstglm):
     # if isinstance(firstglm[key], list):
     # in case it's not a list allready (err is a list)
-    h2o.verboseprint("compareToFirstGlm key:", key)
-    h2o.verboseprint("compareToFirstGlm glm[key]:", glm[key])
+    verboseprint("compareToFirstGlm key:", key)
+    verboseprint("compareToFirstGlm glm[key]:", glm[key])
     # key could be a list or not. if a list, don't want to create list of that list
     # so use extend on an empty list. covers all cases?
     if type(glm[key]) is list:
@@ -429,14 +431,14 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
 #   ]
 # }, 
     destination_key = glmGridResult['grid']['destination_keys'][0]
-    inspectGG = h2o.nodes[0].glm_view(destination_key)
+    inspectGG = h2o_nodes.nodes[0].glm_view(destination_key)
     models = inspectGG['glm_model']['submodels']
-    h2o.verboseprint("GLMGrid inspect GLMGrid model 0(best):", h2o.dump_json(models[0]))
+    verboseprint("GLMGrid inspect GLMGrid model 0(best):", dump_json(models[0]))
     g = simpleCheckGLM(self, inspectGG, colX, allowFailWarning=allowFailWarning, **kwargs)
     # just to get some save_model testing
     for i,m in enumerate(glmGridResult['grid']['destination_keys']):
         print "Saving model", m, "to model"+str(i)
-        h2o.nodes[0].save_model(model=m, path='model'+str(i), force=1)
+        h2o_nodes.nodes[0].save_model(model=m, path='model'+str(i), force=1)
 
     return g
 

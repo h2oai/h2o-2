@@ -7,16 +7,15 @@ Data Science in H\ :sub:`2`\ O
 .. toctree::
    :maxdepth: 1
 
-   glm
-   kmeans
-   rf
-   pca
-   summary
-   gbm
-   naivebayes
+   coxph
    deeplearning
+   glm
+   gbm
+   kmeans
+   naivebayes
+   pca
+   rf
+   summary
    machlearning
    sgd
    references
- 
-

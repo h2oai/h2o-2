@@ -32,8 +32,10 @@ class Basic(unittest.TestCase):
         hex_key = 'train.hex'
         validation_key = 'test.hex'
         timeoutSecs = 300
-        parseResult  = h2i.import_parse(path=csvPathname_train, hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
-        parseResultV = h2i.import_parse(path=csvPathname_test, hex_key=validation_key, timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
+        parseResult  = h2i.import_parse(path=csvPathname_train, hex_key=hex_key, 
+            timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
+        parseResultV = h2i.import_parse(path=csvPathname_test, hex_key=validation_key, 
+            timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
         inspect = h2o_cmd.runInspect(None, hex_key)
         print "\n" + csvPathname_train, \
             "    numRows:", "{:,}".format(inspect['numRows']), \

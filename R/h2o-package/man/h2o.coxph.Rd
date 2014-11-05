@@ -99,9 +99,18 @@ Springer-Verlag, 2000.
 }
 \examples{
 library(h2o)
-localH2O = h2o.init()
+localH2O <- h2o.init()
 
-library(survival)
-bladder.hex <- as.h2o(localH2O, bladder, key = "bladder.hex")
-h2o.coxph(x = c("number", "size"), y = c("stop", "event"), data = bladder.hex)
+# Use pbc data set from the survival package
+pbc.hex <- as.h2o(localH2O, pbc, key = "pbc.hex")
+pbc.hex$statusOf2  <- pbc.hex$status == 2
+pbc.hex$logBili    <- log(pbc.hex$bili)
+pbc.hex$logProtime <- log(pbc.hex$protime)
+pbc.hex$logAlbumin <- log(pbc.hex$albumin)
+pbcmodel <- h2o.coxph(x = c("age", "edema", "logBili", "logProtime", "logAlbumin"),
+                      y = c("time", "statusOf2"), data = pbc.hex)
+summary(pbcmodel)
+pbcsurv <- survfit(pbcmodel)
+summary(pbcsurv)
+plot(pbcsurv)
 }

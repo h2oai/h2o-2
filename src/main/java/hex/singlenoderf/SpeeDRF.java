@@ -328,7 +328,11 @@ public class SpeeDRF extends Job.ValidatedJob {
     return model;
   }
 
-  private void setStatType() { if (regression) stat_type = Tree.StatType.MSE; stat_type = select_stat_type == Tree.SelectStatType.ENTROPY ? Tree.StatType.ENTROPY : Tree.StatType.GINI; }
+  private void setStatType() {
+    if (regression) stat_type = Tree.StatType.MSE;
+    stat_type = select_stat_type == Tree.SelectStatType.ENTROPY ? Tree.StatType.ENTROPY : Tree.StatType.GINI;
+    if (select_stat_type == Tree.SelectStatType.TWOING) stat_type = Tree.StatType.TWOING;
+  }
   private void setSeed(long s) {
     if (s == -1) { seed = _seedGenerator.nextLong(); use_seed = seed; }
     else {
