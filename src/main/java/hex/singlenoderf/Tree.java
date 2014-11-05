@@ -21,8 +21,8 @@ import java.util.regex.Pattern;
 
 public class Tree extends H2OCountedCompleter {
 
-  static public enum SelectStatType {ENTROPY, GINI};
-  static public enum StatType { ENTROPY, GINI, MSE};
+  static public enum SelectStatType {ENTROPY, GINI, TWOING};
+  static public enum StatType { ENTROPY, GINI, MSE, TWOING};
 
   /** Left and right seed initializer number for statistics */
   public static final long LTSS_INIT = 0xe779aef0a6fd0c16L;
@@ -97,9 +97,13 @@ public class Tree extends H2OCountedCompleter {
       result.forgetFeatures();
     } else {
     if( result==null ) {
-      result  = _type == StatType.GINI ?
-              new GiniStatistic(data,_numSplitFeatures, _seed, exclusiveSplitLimit) :
-              new EntropyStatistic(data,_numSplitFeatures, _seed, exclusiveSplitLimit);
+    if (_type == StatType.TWOING) {
+      result = new TwoingStatistic(data,_numSplitFeatures,_seed,exclusiveSplitLimit);
+    } else {
+      result = _type == StatType.GINI ?
+              new GiniStatistic(data, _numSplitFeatures, _seed, exclusiveSplitLimit) :
+              new EntropyStatistic(data, _numSplitFeatures, _seed, exclusiveSplitLimit);
+    }
       _stats[index].set(result);
     }
     }
