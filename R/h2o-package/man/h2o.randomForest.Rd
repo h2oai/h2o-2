@@ -68,7 +68,7 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   class counts (can be less than 1.0)}
   \item{doGrpSplit}{Check non-contiguous group splits for categorical predictors}
   \item{verbose}{(Optional) A logical value indicating whether verbose results should be returned.}
-  \item{stat.type}{(Optional) Type of statistic to use, equal to either "ENTROPY" or "GINI".}
+  \item{stat.type}{(Optional) Type of statistic to use, equal to either "ENTROPY" or "GINI" or "TWOING".}
   \item{oobee}{(Optional) A logical value indicating whether to calculate the out of bag error estimate.}
   \item{type}{(Optional) Default is "fast" mode, which builds trees in parallel and distributed,
   but requires all of the data to fit on a single node.
