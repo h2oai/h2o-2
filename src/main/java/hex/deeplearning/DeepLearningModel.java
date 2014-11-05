@@ -71,6 +71,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   public float error() { return (float) (isClassifier() ? cm().err() : mse()); }
 
   @Override public boolean isClassifier() { return super.isClassifier() && !model_info.get_params().autoencoder; }
+  @Override public boolean isSupervised() { return !model_info.get_params().autoencoder; }
 
   @Override public int nfeatures() { return model_info.get_params().autoencoder ? _names.length : _names.length - 1; }
 
