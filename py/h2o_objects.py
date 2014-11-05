@@ -221,7 +221,7 @@ class H2O(object):
                 h2p.red_print(
                     "ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
                 time.sleep(2)
-                check_sandbox_for_errors(python_test_name=python_test_name);
+                check_sandbox_for_errors(python_test_name=h2o_args.python_test_name);
             log_rest("")
             log_rest("EXCEPTION CAUGHT DOING REQUEST: " + str(e.message))
             raise exc_info[1], None, exc_info[2]

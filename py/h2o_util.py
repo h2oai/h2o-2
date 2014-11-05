@@ -1,9 +1,8 @@
 import subprocess
 import gzip, shutil, random, time, re
 import os, zipfile, simplejson as json, csv
-import h2o
-import sys
-import math
+import sys, math
+from h2o_test import verboseprint
 
 # Return file size.
 def get_file_size(f):
@@ -402,14 +401,14 @@ def file_cat(file1, file2, outfile):
 
 # used in loop, so doing always print
 def file_append(infile, outfile):
-    h2o.verboseprint("\nAppend'ing", infile, "to", outfile)
+    verboseprint("\nAppend'ing", infile, "to", outfile)
     start = time.time()
     in_file = open(infile,'rb')
     out_file = open(outfile,'a')
     out_file.write(in_file.read())
     in_file.close()
     out_file.close()
-    h2o.verboseprint("\nAppend took",  (time.time() - start), "secs")
+    verboseprint("\nAppend took",  (time.time() - start), "secs")
 
 
 def file_shuffle(infile, outfile):
