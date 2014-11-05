@@ -196,12 +196,6 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
         if getpass.getuser() == 'jenkins':
             check_h2o_version()
 
-    # keep this param in kwargs, because we pass it to the H2O node build, so state
-    # is created that polling and other normal things can check, to decide to dump
-    # info to benchmark.log
-    if kwargs.setdefault('enable_benchmark_log', False):
-        setup_benchmark_log()
-
     ports_per_node = 2
     nodeList = []
     # shift the port used to run groups of tests on the same machine at the same time?

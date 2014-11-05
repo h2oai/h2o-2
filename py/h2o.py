@@ -16,15 +16,28 @@ from h2o_test import get_sandbox_name
 
 print "h2o"
 
+# h2o.cloudPerfH2O is used in tests. Simplest to have the instance here.
+def setup_benchmark_log():
+    # an object to keep stuff out of h2o.py
+    import h2o_perf
+    global cloudPerfH2O
+    cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
+
 # want to keep the global state nodes here
 nodes = []
 def build_cloud(*args, **kwargs):
     global nodes
     nodes = h2o_bc.build_cloud(*args, **kwargs)
-    
     # watch out with nodes. multiple copies. make sure set/cleared in sync
     # done already
     # h2o_nodes.nodes[:] = nodes
+
+    # keep this param in kwargs, because we pass it to the H2O node build, so state
+    # is created that polling and other normal things can check, to decide to dump
+    # info to benchmark.log
+    if kwargs.setdefault('enable_benchmark_log', False):
+        setup_benchmark_log()
+
     return nodes
 
 def build_cloud_with_json(*args, **kwargs):
@@ -69,10 +82,4 @@ from h2o_test import \
 
 from h2o_args import unit_main
 
-# h2o.cloudPerfH2O is used in tests. Simplest to have the instance here.
-def setup_benchmark_log():
-    # an object to keep stuff out of h2o.py
-    import h2o_perf
-    global cloudPerfH2O
-    cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
                                                          
