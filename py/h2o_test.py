@@ -1,26 +1,8 @@
 
-import os
-# jenkins gets this assign, but not the unit_main one?
+import sys, os, glob, time, datetime, stat, json, tempfile, shutil, psutil, random, urlparse, getpass
 import h2o_args
-import datetime
-
-if 1==0:
-    import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
-    import requests, psutil, argparse, sys, unittest, glob
-    import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
-    import h2o_sandbox, h2o_print as h2p
-    import re, random
-    # used in shutil.rmtree permission hack for windows
-    import errno
-    # use to unencode the urls sent to h2o?
-    import urlparse
-    import logging
-    # for log_download
-    import requests, zipfile, StringIO
-
-    # For checking ports in use, using netstat thru a subprocess.
-    from subprocess import Popen, PIPE
-    import stat
+import h2o_nodes
+import h2o_sandbox
 
 # this is just for putting timestamp in front of all stdout
 class OutWrapper:
@@ -40,10 +22,6 @@ class OutWrapper:
 
     def flush(self):
         self._out.flush()
-
-# used to get a browser pointing to the last RFview
-global json_url_history
-json_url_history = []
 
 def verboseprint(*args, **kwargs):
     if h2o_args.verbose:
@@ -167,24 +145,28 @@ def clean_sandbox_doneToLine():
             verboseprint("cleaning", f)
             os.remove(f)
 
+
+# just use a global here for the sticky state
+sandbox_error_was_reported = False
 def check_sandbox_for_errors(cloudShutdownIsError=False, sandboxIgnoreErrors=False, python_test_name=''):
     # dont' have both tearDown and tearDownClass report the same found error
     # only need the first
-    if nodes and nodes[0].sandbox_error_report(): # gets current state
+    global sandbox_error_was_reported
+    if sandbox_error_was_reported: # gets current state
         return
 
     # Can build a cloud that ignores all sandbox things that normally fatal the test
     # Kludge, test will set this directly if it wants, rather than thru build_cloud parameter.
     # we need the sandbox_ignore_errors, for the test teardown_cloud..the state disappears!
-    ignore = sandboxIgnoreErrors or (nodes and nodes[0].sandbox_ignore_errors)
+    ignore = sandboxIgnoreErrors or (h2o_nodes.nodes and h2o_nodes.nodes[0].sandbox_ignore_errors)
     errorFound = h2o_sandbox.check_sandbox_for_errors(
         LOG_DIR=LOG_DIR,
         sandboxIgnoreErrors=ignore,
         cloudShutdownIsError=cloudShutdownIsError,
         python_test_name=python_test_name)
 
-    if errorFound and nodes:
-        nodes[0].sandbox_error_report(True) # sets
+    if errorFound:
+        sandbox_error_was_reported = True
 
 def tmp_file(prefix='', suffix='', tmp_dir=None):
     if not tmp_dir:
@@ -214,6 +196,13 @@ def make_syn_dir():
     os.mkdir(SYNDATASETS_DIR)
     return SYNDATASETS_DIR
 
+def log_rest(s):
+    if not h2o_args.debug_rest:
+        return
+    rest_log_file = open(os.path.join(LOG_DIR, "rest.log"), "a")
+    rest_log_file.write(s)
+    rest_log_file.write("\n")
+    rest_log_file.close()
 
 def log(cmd, comment=None):
     filename = LOG_DIR + '/commands.log'
@@ -294,8 +283,8 @@ def check_h2o_version():
 
 
 def setup_random_seed(seed=None):
-    if random_seed is not None:
-        SEED = random_seed
+    if h2o_args.random_seed is not None:
+        SEED = h2o_args.random_seed
     elif seed is not None:
         SEED = seed
     else:
@@ -304,7 +293,3 @@ def setup_random_seed(seed=None):
     print "\nUsing random seed:", SEED
     return SEED
 
-def setup_benchmark_log():
-    # an object to keep stuff out of h2o.py
-    global cloudPerfH2O
-    cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)

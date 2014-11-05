@@ -41,7 +41,6 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     #****************************
     # if we are checking after confusion_matrix for predict, the jsonschema is different
-        
 
     if 'cm' in rfv:
         cm = rfv['cm'] # only one
@@ -78,7 +77,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         print "errs[-1]:", errs[-1]
         print "errs:", errs
         # if we got the ntree for comparison. Not always there in kwargs though!
-        param_ntrees = kwargs.get('ntrees',None)
+        param_ntrees = kwargs.get('ntrees', None)
         if (param_ntrees is not None and used_trees != param_ntrees):
             raise Exception("used_trees should == param_ntree. used_trees: %s"  % used_trees)
         if (used_trees+1)!=len(cms) or (used_trees+1)!=len(errs):
@@ -139,11 +138,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         classification_error = pctWrong
         return (round(classification_error,2), classErrorPctList, totalScores)
 
-    #****************************
-    # more testing for RFView
-
     # it's legal to get 0's for oobe error # if sample_rate = 1
-
     sample_rate = kwargs.get('sample_rate', None)
     validation = kwargs.get('validation', None)
     print "kevin:", sample_rate, validation
@@ -153,6 +148,18 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         raise Exception("scores in RFView seems wrong. scores:", scoresList)
 
     varimp = rf_model['varimp']
+
+
+    if 'importance' in kwargs and kwargs['importance']:
+        max_var = varimp['max_var']
+        variables = varimp['variables']
+        varimpSD = varimp['varimpSD']
+        varimp = varimp['varimp']
+        # check that they all have the same length and that the importance is not all zero
+        if len(varimpSD)!=max_var or len(varimp)!=max_var or len(variables)!=max_var:
+            raise Exception("varimp lists seem to be wrong length: %s %s %s" % (max_var, len(varimpSD), len(varimp), len(variables)))
+        h2o_util.assertApproxEqual(sum(varimp), 0.0, tol=1e-5, msg="Shouldn't have all 0's in varimp %s" % varimp)
+
     treeStats = rf_model['treeStats']
     if not treeStats:
         raise Exception("treeStats not right?: %s" % h2o.dump_json(treeStats))

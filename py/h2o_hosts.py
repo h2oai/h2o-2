@@ -1,5 +1,12 @@
-import getpass, json, h2o
-import random, os, sys
+import getpass, json, random, os
+import h2o
+import h2o_args
+import h2o_bc
+
+from h2o_objects import RemoteHost
+from h2o_bc import write_flatfile
+from h2o_bc import upload_jar_to_remote_hosts
+
 # UPDATE: all multi-machine testing will pass list of IP and base port addresses to H2O
 # means we won't realy on h2o self-discovery of cluster
 
@@ -76,8 +83,8 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         paramsToUse[k] = allParamsDefault.setdefault(k, v)
 
     # allow user to specify the config json at the command line. config_json is a global.
-    if h2o.config_json:
-        configFilename = find_config(h2o.config_json)
+    if h2o_args.config_json:
+        configFilename = find_config(h2o_args.config_json)
     else:
         # configs may be in the testdir_hosts
         configFilename = find_config(h2o.default_hosts_file())
@@ -126,7 +133,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
             key_filename = paramsToUse['key_filename']
             if key_filename: # don't try to expand if None
                key_filename=os.path.expanduser(key_filename)
-            hosts.append(h2o.RemoteHost(addr=h, 
+            hosts.append(RemoteHost(addr=h, 
                 username=paramsToUse['username'], password=paramsToUse['password'], key_filename=key_filename))
 
     # done with these, don't pass to build_cloud
@@ -141,9 +148,9 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     h2o.clean_sandbox()
 
     # handles hosts=None correctly
-    base_port = h2o.get_base_port(base_port=paramsToUse['base_port'])
+    base_port = h2o_bc.get_base_port(base_port=paramsToUse['base_port'])
 
-    h2o.write_flatfile(
+    write_flatfile(
         node_count=paramsToUse['h2o_per_host'],
         # let the env variable H2O_PORT_OFFSET add in there
         base_port=base_port,
@@ -153,7 +160,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
 
     if hosts is not None:
         # this uploads the flatfile too
-        h2o.upload_jar_to_remote_hosts(hosts, slow_connection=paramsToUse['slow_connection'])
+        upload_jar_to_remote_hosts(hosts, slow_connection=paramsToUse['slow_connection'])
         # timeout wants to be larger for large numbers of hosts * h2oPerHost
         # use 60 sec min, 5 sec per node.
         timeoutSecs = max(60, 8*(len(hosts) * paramsToUse['h2o_per_host']))
