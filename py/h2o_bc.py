@@ -5,7 +5,7 @@ import h2o_print as h2p, h2o_util
 
 from h2o_test import \
     get_sandbox_name, clean_sandbox, check_sandbox_for_errors, clean_sandbox_doneToLine,\
-    verboseprint, OutWrapper, log, flatfile_pathname, dump_json, find_file
+    verboseprint, OutWrapper, log, flatfile_pathname, dump_json, find_file, check_h2o_version
 
 from h2o_objects import LocalH2O, RemoteH2O, ExternalH2O
 
@@ -190,8 +190,11 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
 
     # start up h2o to report the java version (once). output to python stdout
     # only do this for regression testing
-    if getpass.getuser() == 'jenkins':
-        check_h2o_version()
+
+    # temporarily disable this, to go a little faster
+    if 1==0:
+        if getpass.getuser() == 'jenkins':
+            check_h2o_version()
 
     # keep this param in kwargs, because we pass it to the H2O node build, so state
     # is created that polling and other normal things can check, to decide to dump
