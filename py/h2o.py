@@ -10,9 +10,20 @@
 # so all h2o.nodes[0].get_cloud() style stuff still works
 
 import h2o_args
-import h2o_bc
 import h2o_nodes
+
+# others reference these from outside
 from h2o_test import get_sandbox_name
+from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size, \
+    build_cloud as build_cloud2, build_cloud_with_json as build_cloud_with_json2, tear_down_cloud as tear_down_cloud2
+
+from h2o_test import \
+    make_syn_dir, tmp_file, tmp_dir, check_sandbox_for_errors, clean_sandbox, \
+    clean_sandbox_stdout_stderr, \
+    find_file, dump_json, sleep, spawn_cmd, spawn_cmd_and_wait, \
+    spawn_wait, verboseprint, setup_random_seed
+from h2o_args import unit_main
+from h2o_get_ip import get_ip_address
 
 print "h2o"
 
@@ -27,7 +38,7 @@ def setup_benchmark_log():
 nodes = []
 def build_cloud(*args, **kwargs):
     global nodes
-    nodes = h2o_bc.build_cloud(*args, **kwargs)
+    nodes = build_cloud2(*args, **kwargs)
     # watch out with nodes. multiple copies. make sure set/cleared in sync
     # done already
     # h2o_nodes.nodes[:] = nodes
@@ -42,7 +53,7 @@ def build_cloud(*args, **kwargs):
 
 def build_cloud_with_json(*args, **kwargs):
     global nodes
-    nodes = h2o_bc.build_cloud_with_json(*args, **kwargs)
+    nodes = build_cloud_with_json2(*args, **kwargs)
     
     # done already
     # h2o_nodes.nodes[:] = nodes
@@ -50,7 +61,7 @@ def build_cloud_with_json(*args, **kwargs):
 
 # do it this way to make sure we destory the local nodes copy too
 def tear_down_cloud(*args, **kwargs):
-    h2o_bc.tear_down_cloud(*args, **kwargs)
+    tear_down_cloud2(*args, **kwargs)
     h2o_nodes.nodes[:] = []
     global nodes
     nodes = []
@@ -72,15 +83,5 @@ clone_cloud_json = h2o_args.clone_cloud_json
 
 LOG_DIR = get_sandbox_name()
 
-from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size
-from h2o_get_ip import get_ip_address
-
-from h2o_test import \
-    make_syn_dir, tmp_file, tmp_dir, check_sandbox_for_errors, clean_sandbox, \
-    clean_sandbox_stdout_stderr, \
-    find_file, dump_json, sleep, spawn_cmd, spawn_cmd_and_wait, \
-    spawn_wait, verboseprint, setup_random_seed
-
-from h2o_args import unit_main
 
                                                          

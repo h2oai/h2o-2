@@ -1,10 +1,8 @@
 import getpass, json, random, os
-import h2o
 import h2o_args
-import h2o_bc
 
 from h2o_objects import RemoteHost
-from h2o_bc import write_flatfile, upload_jar_to_remote_hosts, default_hosts_file
+from h2o_bc import write_flatfile, upload_jar_to_remote_hosts, default_hosts_file, build_cloud, get_base_port
 from h2o_test import verboseprint, clean_sandbox
 
 # UPDATE: all multi-machine testing will pass list of IP and base port addresses to H2O
@@ -20,8 +18,6 @@ def find_config(base):
 
 # node_count is sometimes used positionally...break that out. all others are keyword args
 def build_cloud_with_hosts(node_count=None, **kwargs):
-    ## if not h2o.disable_time_stamp:
-    ##      sys.stdout = h2o.OutWrapper(sys.stdout)
     # legacy: we allow node_count to be positional. 
     # if it's used positionally, stick in in kwargs (overwrite if there too)
     if node_count is not None:
@@ -148,7 +144,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     clean_sandbox()
 
     # handles hosts=None correctly
-    base_port = h2o_bc.get_base_port(base_port=paramsToUse['base_port'])
+    base_port = get_base_port(base_port=paramsToUse['base_port'])
 
     write_flatfile(
         node_count=paramsToUse['h2o_per_host'],
@@ -174,4 +170,4 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     paramsToUse.pop('h2o_per_host')
     print "java_heap_GB", paramsToUse['java_heap_GB']
     # don't wipe out or create the sandbox. already did here, and put flatfile there
-    h2o.build_cloud(node_count, hosts=hosts, init_sandbox=False, **paramsToUse)
+    build_cloud(node_count, hosts=hosts, init_sandbox=False, **paramsToUse)

@@ -1,4 +1,5 @@
-import h2o_cmd, h2o
+import h2o_cmd
+import h2o_nodes
 import re, math, random
 
 def pickRandKMeansParams(paramDict, params):
@@ -10,7 +11,6 @@ def pickRandKMeansParams(paramDict, params):
         params[randomKey] = randomValue
 
 def simpleCheckKMeans(self, kmeans, **kwargs):
-    ### print h2o.dump_json(kmeans)
     warnings = None
     if 'warnings' in kmeans:
         warnings = kmeans['warnings']
@@ -61,8 +61,8 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, predictKey, **kwargs
     max_iter = model["max_iter"]
     kmeansResult = kmeans
 
-    predictResult = h2o.nodes[0].generate_predictions(data_key=parseResult['destination_key'], model_key=model_key, destination_key=predictKey)
-    summaryResult = h2o.nodes[0].summary_page(key=predictKey, timeoutSecs=120)
+    predictResult = h2o_nodes.nodes[0].generate_predictions(data_key=parseResult['destination_key'], model_key=model_key, destination_key=predictKey)
+    summaryResult = h2o_nodes.nodes[0].summary_page(key=predictKey, timeoutSecs=120)
     hcnt = summaryResult['summaries'][0]['hcnt'] # histogram
     rows_per_cluster = hcnt
     # FIX! does the cluster order/naming match, compared to cluster variances
