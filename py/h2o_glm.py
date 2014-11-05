@@ -1,6 +1,7 @@
 import h2o_cmd, h2o, h2o_util, h2o_gbm
 import re, random, math
 from h2o_test import check_sandbox_for_errors, dump_json, verboseprint
+import h2o_nodes
 
 def pickRandGlmParams(paramDict, params):
     colX = 0

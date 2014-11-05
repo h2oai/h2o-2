@@ -1,6 +1,7 @@
 import h2o_cmd
 import h2o_nodes
 import re, math, random
+from h2o_test import check_sandbox_for_errors
 
 def pickRandKMeansParams(paramDict, params):
     randomGroupSize = random.randint(1,len(paramDict))
@@ -42,7 +43,7 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
                 raise Exception("center", i, "has NaN:", n, "center:", c)
 
     # shouldn't have any errors
-    h2o.check_sandbox_for_errors()
+    check_sandbox_for_errors()
 
     return warnings
 
