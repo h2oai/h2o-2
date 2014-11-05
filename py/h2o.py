@@ -55,6 +55,7 @@ abort_after_import = h2o_args.abort_after_import
 python_username = h2o_args.python_username
 python_test_name = h2o_args.python_test_name
 python_cmd_line = h2o_args.python_cmd_line
+clone_cloud_json = h2o_args.clone_cloud_json
 
 LOG_DIR = get_sandbox_name()
 
