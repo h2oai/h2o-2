@@ -76,7 +76,8 @@ from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size
 from h2o_get_ip import get_ip_address
 
 from h2o_test import \
-    make_syn_dir, tmp_file, check_sandbox_for_errors, clean_sandbox, clean_sandbox_stdout_stderr, \
+    make_syn_dir, tmp_file, tmp_dir, check_sandbox_for_errors, clean_sandbox, \
+    clean_sandbox_stdout_stderr, \
     find_file, dump_json, sleep, spawn_cmd, spawn_cmd_and_wait, \
     spawn_wait, verboseprint, setup_random_seed
 
