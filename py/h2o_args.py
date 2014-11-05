@@ -28,7 +28,7 @@ long_test_case = False
 # jenkins gets this assign, but not the unit_main one?
 # python_test_name = inspect.stack()[1][1]
 python_test_name = python_test_name = inspect.stack()[1][1]
-python_cmd_ip = ""
+python_cmd_ip = get_ip_address(ipFromCmdLine=ip_from_cmd_line)
 
 # no command line args if run with just nose
 python_cmd_args = ""
