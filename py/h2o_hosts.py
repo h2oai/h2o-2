@@ -4,8 +4,8 @@ import h2o_args
 import h2o_bc
 
 from h2o_objects import RemoteHost
-from h2o_bc import write_flatfile
-from h2o_bc import upload_jar_to_remote_hosts
+from h2o_bc import write_flatfile, upload_jar_to_remote_hosts, default_hosts_file
+from h2o_test import verboseprint, clean_sandbox
 
 # UPDATE: all multi-machine testing will pass list of IP and base port addresses to H2O
 # means we won't realy on h2o self-discovery of cluster
@@ -87,9 +87,9 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         configFilename = find_config(h2o_args.config_json)
     else:
         # configs may be in the testdir_hosts
-        configFilename = find_config(h2o.default_hosts_file())
+        configFilename = find_config(default_hosts_file())
 
-    h2o.verboseprint("Loading host config from", configFilename)
+    verboseprint("Loading host config from", configFilename)
     with open(configFilename, 'rb') as fp:
          hostDict = json.load(fp)
 
@@ -114,7 +114,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     if paramsToUse['username']:
         paramsToUse['h2o_remote_buckets_root'] = "/home/" + paramsToUse['username']
 
-    h2o.verboseprint("All build_cloud_with_hosts params:", paramsToUse)
+    verboseprint("All build_cloud_with_hosts params:", paramsToUse)
 
     #********************
     global hosts
@@ -125,10 +125,10 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     if paramsToUse['ip']== ["127.0.0.1"]:
         hosts = None
     else:
-        h2o.verboseprint("About to RemoteHost, likely bad ip if hangs")
+        verboseprint("About to RemoteHost, likely bad ip if hangs")
         hosts = []
         for h in paramsToUse['ip']:
-            h2o.verboseprint("Connecting to:", h)
+            verboseprint("Connecting to:", h)
             # expand any ~ or ~user in the string
             key_filename = paramsToUse['key_filename']
             if key_filename: # don't try to expand if None
@@ -145,7 +145,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     paramsToUse.pop('key_filename')
 
     # flatfile is going into sandbox (LOG_DIR) now..so clean it first (will make sandbox dir if it doesn't exist already)    
-    h2o.clean_sandbox()
+    clean_sandbox()
 
     # handles hosts=None correctly
     base_port = h2o_bc.get_base_port(base_port=paramsToUse['base_port'])

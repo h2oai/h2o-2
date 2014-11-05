@@ -100,6 +100,7 @@ class H2O(object):
         if self.h2o_addr:
             self.http_addr = self.h2o_addr
         else:
+            print "kevin", h2o_args.python_cmd_ip
             self.http_addr = h2o_args.python_cmd_ip
 
         if h2o_args.network_from_cmd_line:
