@@ -162,6 +162,8 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     return nodeList
 
 # node_count is per host if hosts is specified.
+# don't wrap more than once
+stdout_wrapped = False
 def build_cloud(node_count=1, base_port=None, hosts=None,
                 timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
                 conservative=False, create_json=False, clone_cloud=None, init_sandbox=True, **kwargs):
@@ -171,8 +173,11 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
     # (both come thru here)
     # clone_cloud is just another way to get the effect (maybe ec2 config file thru
     # build_cloud_with_hosts?
-    if not h2o_args.disable_time_stamp:
+    global stdout_wrapped
+    if not h2o_args.disable_time_stamp and not stdout_wrapped:
         sys.stdout = OutWrapper(sys.stdout)
+        stdout_wrapped = True
+
     if h2o_args.clone_cloud_json or clone_cloud:
         nodeList = build_cloud_with_json(
             h2o_nodes_json=h2o_args.clone_cloud_json if h2o_args.clone_cloud_json else clone_cloud)
