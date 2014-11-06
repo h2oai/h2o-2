@@ -351,17 +351,20 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # FIX! temporary hack to deal with disappearing/renaming columns in GLM
     if (not allowZeroCoeff) and (colX is not None):
         absXCoeff = abs(float(coefficients[str(colX)]))
+        # add kwargs to help debug without looking at console log
         self.assertGreater(absXCoeff, 1e-26, (
             "abs. value of GLM coefficients['" + str(colX) + "'] is " +
-            str(absXCoeff) + ", not >= 1e-26 for X=" + str(colX)
+            str(absXCoeff) + ", not >= 1e-26 for X=" + str(colX) +  "\n" +
+            dump_json(kwargs)
             ))
 
     # intercept is buried in there too
     absIntercept = abs(float(intercept))
     self.assertGreater(absIntercept, 1e-26, (
         "abs. value of GLM coefficients['Intercept'] is " +
-        str(absIntercept) + ", not >= 1e-26 for Intercept"
-                ))
+        str(absIntercept) + ", not >= 1e-26 for Intercept" + "\n" +
+        dump_json(kwargs)
+        ))
 
     # this is good if we just want min or max
     # maxCoeff = max(coefficients, key=coefficients.get)
