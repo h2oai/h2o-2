@@ -25,9 +25,7 @@ clone_cloud_json = None
 disable_time_stamp = False
 debug_rest = False
 long_test_case = False
-# jenkins gets this assign, but not the unit_main one?
-# python_test_name = inspect.stack()[1][1]
-python_test_name = python_test_name = inspect.stack()[1][1]
+
 python_cmd_ip = get_ip_address(ipFromCmdLine=ip_from_cmd_line)
 
 # no command line args if run with just nose
@@ -36,6 +34,21 @@ python_cmd_args = ""
 python_cmd_line = ""
 python_username = getpass.getuser()
 
+# The stack is deeper with nose, compared to command line with python 
+# Walk thru the stack looking for ^test_", since we know tests always start with "test_"
+# from nose case:
+# inspect.stack()[2] (<frame object at 0x11e7150>, 'test_speedrf_many_cols_enum.py', 5, '<module>', ['import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_gbm\n'], 0)
+python_test_name = "unknown"
+for s in inspect.stack():
+    # print s
+    if s[1].startswith('test_') or '/test_' in s[1]:
+        # jenkins gets this assign, but not the unit_main one?
+        python_test_name = s[1]
+        break
+
+# for debug
+if python_username=='jenkins' or python_username=='kevin':
+    print "    Test: %s" % python_test_name
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
@@ -125,22 +138,20 @@ def parse_our_args():
     # sys.argv[1:] = args.unittest_args
 
 def unit_main():
-    # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
-    # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
-    # jenkins with nosetests
-    parse_our_args()
+    print "unit_main"
 
+    parse_our_args()
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
-    python_test_name = inspect.stack()[1][1]
+    # Use the top of stack!
+    python_test_name = inspect.stack()[-1][1]
     python_cmd_args = " ".join(sys.argv[1:])
     python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
     python_username = getpass.getuser()
-    # if test was run with nosestests, it wouldn't execute unit_main() so we won't see this
-    # so this is correct, for stuff run with 'python ..."
-    print "\nTest: %s    command line: %s" % (python_test_name, python_cmd_line)
-
     # depends on ip_from_cmd_line
     python_cmd_ip = get_ip_address(ipFromCmdLine=ip_from_cmd_line)
+    # if test was run with nosetests, it wouldn't execute unit_main() so we won't see this
+    # so this is correct, for stuff run with 'python ..."
+    print "\nunit_main. Test: %s    command line: %s" % (python_test_name, python_cmd_line)
     unittest.main()

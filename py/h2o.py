@@ -1,4 +1,3 @@
-
 # refactored: 11/4/14 kbn
 # if you're looking for the h2o methods on nodes, look in h2o_methods.py
 # the h2o node and host classes are in h2o_objects.py
@@ -12,31 +11,59 @@
 import h2o_args
 import h2o_nodes
 
-# others reference these from outside
-from h2o_test import get_sandbox_name
+# tests reference the first line of stuff, through h2o.* 
 from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size, \
-    build_cloud as build_cloud2, build_cloud_with_json as build_cloud_with_json2, tear_down_cloud as tear_down_cloud2
+    build_cloud as build_cloud2, \
+    build_cloud_with_json as build_cloud_with_json2, \
+    tear_down_cloud as tear_down_cloud2
 
 from h2o_test import \
     make_syn_dir, tmp_file, tmp_dir, check_sandbox_for_errors, clean_sandbox, \
     clean_sandbox_stdout_stderr, \
     find_file, dump_json, sleep, spawn_cmd, spawn_cmd_and_wait, \
-    spawn_wait, verboseprint, setup_random_seed
+    spawn_wait, verboseprint, setup_random_seed, get_sandbox_name
+
 from h2o_args import unit_main
 from h2o_get_ip import get_ip_address
 
 print "h2o"
 
-# h2o.cloudPerfH2O is used in tests. Simplest to have the instance here.
 def setup_benchmark_log():
+    # h2o.cloudPerfH2O is used in tests. Simplest to have the instance here.
     # an object to keep stuff out of h2o.py
     import h2o_perf
     global cloudPerfH2O
+    global python_test_name
     cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
-# want to keep the global state nodes here
+def copy_h2o_args_to_here():
+    # if we only copy after the build cloud, the unit_main will have run (if not jenkins) 
+    # and no one should be looking here during import (because these won't exist yet)
+    # hack to support legacy tests that look at h2o.* for these
+    global beta_features, long_test_case, browse_disable, verbose, abort_after_import, clone_cloud_json
+    global python_username, python_test_name, python_cmd_line
+    # Warning: only legacy tests should use these.
+    # all others should use h2o_args (and not as module globals that execute during module import)
+    # to be sure the updated h2o_args is used.
+    beta_features = h2o_args.beta_features
+    long_test_case = h2o_args.long_test_case
+    browse_disable = h2o_args.browse_disable
+    verbose = h2o_args.verbose
+    abort_after_import = h2o_args.abort_after_import
+    clone_cloud_json = h2o_args.clone_cloud_json
+    python_username = h2o_args.python_username
+    python_test_name = h2o_args.python_test_name
+    python_cmd_line = h2o_args.python_cmd_line
+    # print "python stuff in h2o:", python_username, python_test_name, python_cmd_line
+
+# get an initial copy, in case ray looks at something before cloud building!
+copy_h2o_args_to_here()
+# want to keep the global state nodes here in addition to h2o_nodes.nodes[], for legacy h2o.nodes[] refs.
+# empty until cloud build!
 nodes = []
+
 def build_cloud(*args, **kwargs):
+    copy_h2o_args_to_here()
     global nodes
     nodes = build_cloud2(*args, **kwargs)
     # watch out with nodes. multiple copies. make sure set/cleared in sync
@@ -52,6 +79,7 @@ def build_cloud(*args, **kwargs):
     return nodes
 
 def build_cloud_with_json(*args, **kwargs):
+    copy_h2o_args_to_here()
     global nodes
     nodes = build_cloud_with_json2(*args, **kwargs)
     
@@ -70,18 +98,6 @@ def tear_down_cloud(*args, **kwargs):
 def cloud_name():
     return nodes[0].cloud_name
 
-# these are used in existing tests
-beta_features = h2o_args.beta_features
-long_test_case = h2o_args.long_test_case
-browse_disable = h2o_args.browse_disable
-verbose = h2o_args.verbose
-abort_after_import = h2o_args.abort_after_import
-python_username = h2o_args.python_username
-python_test_name = h2o_args.python_test_name
-python_cmd_line = h2o_args.python_cmd_line
-clone_cloud_json = h2o_args.clone_cloud_json
-
+# doesn't depend on h2o_args
 LOG_DIR = get_sandbox_name()
-
-
                                                          

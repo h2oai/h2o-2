@@ -25,7 +25,7 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 NAME_NODE=172.16.2.172
 MAPR_JOBTRACKER=172.16.2.172:9001
 MAPR_NODES=4
-MAPR_HEAP=12g
+MAPR_HEAP=7g
 # MAPR_JAR=h2odriver_mapr2.1.3.jar
 MAPR_JAR=h2odriver_mapr3.1.1.jar
 H2O_JAR=h2o.jar
@@ -184,13 +184,14 @@ fi
 
 echo ""
 echo "Check if the background ssh/hadoop/cloud job is still running here"
-ps aux | grep 0xcustomer_id_rsa | grep -v 'grep'
+# don't exit code 1 if no match on the grep
+ps aux | grep 0xcustomer_id_rsa | grep -v 'grep' || /bin/true
 echo "check on jobs I backgrounded locally"
 jobs -l
 
 echo ""
 echo "Check if h2odriver is running on the remote machine"
-$REMOTE_SSH_USER "ps aux | grep h2odriver | grep -v 'grep'"
+$REMOTE_SSH_USER "ps aux | grep h2odriver | grep -v 'grep' || /bin/true"
 
 echo "The background job with the remote ssh that does h2odriver should be gone. It was pid $CLOUD_PID"
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"

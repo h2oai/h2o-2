@@ -4,6 +4,7 @@ import h2o_args
 import h2o_nodes
 import h2o_sandbox
 
+print "h2o_test"
 # this is just for putting timestamp in front of all stdout
 class OutWrapper:
     def __init__(self, out):

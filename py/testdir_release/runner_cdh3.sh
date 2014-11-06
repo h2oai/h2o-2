@@ -156,11 +156,12 @@ then
     # may take a second?
     sleep 1
 fi
-ps aux | grep h2odriver
+# don't exit code 1 if you fail the grep
+ps aux | grep h2odriver || /bin/true
 
 jobs -l
 echo ""
 
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
 echo "The hadoop job(s) should be gone?"
-$REMOTE_SSH_USER "hadoop job -list"
+$REMOTE_SSH_USER "hadoop job -list || /bin/true"

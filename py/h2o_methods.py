@@ -7,8 +7,8 @@ import h2o_browse as h2b
 
 from h2o_objects import H2O
 from h2o_test import verboseprint, dump_json, check_sandbox_for_errors, get_sandbox_name, log
-import h2o
 
+print "h2o_methods"
 
 def check_params_update_kwargs(params_dict, kw, function, print_params):
     # only update params_dict..don't add
@@ -214,6 +214,7 @@ def poll_url(self, response,
             raise Exception(emsg)
 
         if benchmarkLogging:
+            import h2o
             h2o.cloudPerfH2O.get_log_save(benchmarkLogging)
 
         # every other one?
@@ -377,6 +378,7 @@ def parse(self, key, key2=None,
         kwargs['header'] = 1
 
     if benchmarkLogging:
+        import h2o
         h2o.cloudPerfH2O.get_log_save(initOnly=True)
 
     a = self.do_json_request(algo + ".json", timeout=timeoutSecs, params=params_dict)
