@@ -1,11 +1,21 @@
 # Hackery: find the ip address that gets you to Google's DNS
 # Trickiness because you might have multiple IP addresses (Virtualbox), or Windows.
 # we used to not like giving ip 127.0.0.1 to h2o?
-import socket, os, getpass
+import sys, socket, os, getpass
 import h2o_args
-from h2o_test import verboseprint
 
 print "h2o_get_ip"
+
+# copied here from h2o_test.py to eliminate a circular import 
+def verboseprint(*args, **kwargs):
+    if h2o_args.verbose:
+        for x in args: # so you don't have to create a single string
+            print x,
+        for x in kwargs: # so you don't have to create a single string
+            print x,
+        print
+        # so we can see problems when hung?
+        sys.stdout.flush()
 
 def get_ip_address(ipFromCmdLine=None):
     if ipFromCmdLine:
