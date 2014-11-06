@@ -19,7 +19,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
         csvFilenameList= [
-            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 900),
+            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1200),
             # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
         ]
 
@@ -75,7 +75,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     h2o.cloudPerfH2O.message(msg)
 
                 if DO_GLM:
-                    # remove the output too! (378)
+                    # 378 (output) can't be in this list
                     ignore_x = [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]
                     ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
 

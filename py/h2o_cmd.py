@@ -1,13 +1,17 @@
 import os, json, unittest, time, shutil, sys, socket
-import h2o
 import h2o_browse as h2b, h2o_rf as h2f, h2o_exec, h2o_gbm, h2o_util
+
+import h2o_nodes
+from h2o_test import dump_json, check_sandbox_for_errors, verboseprint
+
+print "h2o_cmd"
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, **kwargs):
     ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       
     if not bucket  : raise Exception('No S3 bucket')
     if not filename: raise Exception('No filename in bucket')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     
     import_result = node.import_s3(bucket)
     s3_key = [f['key'] for f in import_result['succeeded'] if f['file'] == filename ][0]
@@ -28,125 +32,125 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
 # in specific tests
 def runInspect(node=None, key=None, timeoutSecs=30, verbose=False, **kwargs):
     if not key: raise Exception('No key for Inspect')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     a = node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
     if verbose:
-        print "inspect of %s:" % key, h2o.dump_json(a)
+        print "inspect of %s:" % key, dump_json(a)
     return a
 
 def runSummary(node=None, key=None, timeoutSecs=30, **kwargs):
     if not key: raise Exception('No key for Summary')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     return node.summary_page(key, timeoutSecs=timeoutSecs, **kwargs)
 
 # since we'll be doing lots of execs on a parsed file, not useful to have parse+exec
 # retryDelaySecs isn't used, 
 def runExec(node=None, timeoutSecs=20, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     # no such thing as GLMView..don't use retryDelaySecs
     a = node.exec_query(timeoutSecs, **kwargs)
-    h2o.check_sandbox_for_errors()
+    check_sandbox_for_errors()
     return a
 
 def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for KMeans')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     return node.kmeans(parseResult['destination_key'], None, timeoutSecs, retryDelaySecs, **kwargs)
 
 def runGLM(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for GLM')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     return node.GLM(parseResult['destination_key'], 
         timeoutSecs, retryDelaySecs, **kwargs)
 
 def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     return node.GLMScore(key, model_key, timeoutSecs, **kwargs)
 
 def runGLMGrid(node=None, parseResult=None, timeoutSecs=60, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for GLMGrid')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
 def runPCA(node=None, parseResult=None, timeoutSecs=600, **kwargs):
     if not parseResult: raise Exception('No parseResult for PCA')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     data_key = parseResult['destination_key']
     return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
 def runNNetScore(node=None, key=None, model=None, timeoutSecs=600, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     return node.neural_net_score(key, model, timeoutSecs=timeoutSecs, **kwargs)
 
 def runNNet(node=None, parseResult=None, timeoutSecs=600, **kwargs):
     if not parseResult: raise Exception('No parseResult for Neural Net')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     data_key = parseResult['destination_key']
     return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
 def runDeepLearning(node=None, parseResult=None, timeoutSecs=600, **kwargs):
     if not parseResult: raise Exception('No parseResult for Deep Learning')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     data_key = parseResult['destination_key']
     return node.deep_learning(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
 def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     data_key = parseResult['destination_key']
     return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs) 
 
 def runPredict(node=None, data_key=None, model_key=None, timeoutSecs=500, **kwargs):
     if not data_key: raise Exception('No data_key for run Predict')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     return node.generate_predictions(data_key, model_key, timeoutSecs=timeoutSecs,**kwargs) 
 
 def runSpeeDRF(node=None, parseResult=None, ntrees=5, max_depth=10, timeoutSecs=20, **kwargs):
     if not parseResult: raise Exception("No parseResult for SpeeDRF")
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     Key = parseResult['destination_key']
     return node.speedrf(Key, ntrees=ntrees, max_depth=max_depth, timeoutSecs=timeoutSecs, **kwargs)
 
 def runSpeeDRFView(node=None, modelKey=None, timeoutSecs=20, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     return node.speedrf_view(modelKey=modelKey, timeoutSecs=timeoutSecs, **kwargs)
 
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
 def runRF(node=None, parseResult=None, trees=5, timeoutSecs=20, **kwargs):
     if not parseResult: raise Exception('No parseResult for RF')
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     Key = parseResult['destination_key']
     return node.random_forest(Key, trees, timeoutSecs, **kwargs)
 
 def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=20, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
 def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     if not model_key: 
         raise Exception("\nNo model_key was supplied to the gbm view!")
     gbmView = node.gbm_view(model_key, timeoutSecs=timeoutSecs)
     return gbmView
 
 def runNeuralView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     if not model_key: 
         raise Exception("\nNo model_key was supplied to the neural view!")
     neuralView = node.neural_view(model_key, timeoutSecs=timeoutSecs, retryDelaysSecs=retryDelaysecs)
     return neuralView
 
 def runPCAView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     if not modelKey:
         raise Exception("\nNo modelKey was supplied to the pca view!")
     pcaView = node.pca_view(modelKey, timeoutSecs=timeoutSecs)
     return pcaView
 
 def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     if not modelKey:
         raise Exception("\nNo modelKey was supplied to the glm view!")
     glmView = node.glm_view(modelKey,timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
@@ -155,7 +159,7 @@ def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, **kw
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
     timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,
     noPrint=False, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
 
     # kind of wasteful re-read, but maybe good for testing
     rfView = node.random_forest_view(data_key, model_key, ntree=ntree, timeoutSecs=timeoutSecs, **kwargs)
@@ -164,13 +168,13 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
     return rfView
 
 def runStoreView(node=None, timeoutSecs=30, noPrint=None, **kwargs):
-    if not node: node = h2o.nodes[0]
+    if not node: node = h2o_nodes.nodes[0]
     storeView = node.store_view(timeoutSecs, **kwargs)
     if not noPrint:
         for s in storeView['keys']:
             print "StoreView: key:", s['key']
             if 'rows' in s: 
-                h2o.verboseprint("StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes'])
+                verboseprint("StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes'])
     print node, 'storeView has', len(storeView['keys']), 'keys'
     return storeView
 
@@ -184,7 +188,7 @@ def port_live(ip, port):
         return False
 
 def wait_for_live_port(ip, port, retries=3):
-    h2o.verboseprint("Waiting for {0}:{1} {2}times...".format(ip,port,retries))
+    verboseprint("Waiting for {0}:{1} {2}times...".format(ip,port,retries))
     if not port_live(ip,port):
         count = 0
         while count < retries:
@@ -201,7 +205,7 @@ def wait_for_live_port(ip, port, retries=3):
 # checks the key distribution in the cloud, and prints warning if delta against avg
 # is > expected
 def checkKeyDistribution():
-    c = h2o.nodes[0].get_cloud()
+    c = h2o_nodes.nodes[0].get_cloud()
     nodes = c['nodes']
     print "Key distribution post parse, should be balanced"
     # get average
@@ -377,12 +381,12 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
                 print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (colname, stattype)
             else:
                 if not mins:
-                    print h2o.dump_json(column)
+                    print dump_json(column)
                     # raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows))
                     print "Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows)
                 if not maxs:
                     # this is failing on maprfs best buy...why? (va only?)
-                    print h2o.dump_json(column)
+                    print dump_json(column)
                     # raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colname, nacnt, numRows))
                     print "Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colname, nacnt, numRows)
 
@@ -490,11 +494,11 @@ def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex',
         timeoutSecs=timeoutSecs)
 
     # inspect = runInspect(key=dataKey)
-    # print dataKey, h2o.dump_json(inspect)
+    # print dataKey, dump_json(inspect)
 
     # just get a predict and AUC on the same data. has to be binomial result
     if doAUC:
-        resultAUC = h2o.nodes[0].generate_auc(
+        resultAUC = h2o_nodes.nodes[0].generate_auc(
             thresholds=None,
             actual=dataKey,
             predict='Predict.hex',
@@ -508,14 +512,14 @@ def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex',
                 msg="actual auc: %s not close enough to %s" % (auc, expectedAuc))
 
     # don't do this unless binomial
-    predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+    predictCMResult = h2o_nodes.nodes[0].predict_confusion_matrix(
         actual=dataKey,
         predict=predictKey,
         vactual=vactual,
         vpredict='predict',
         )
 
-    # print "cm", h2o.dump_json(predictCMResult)
+    # print "cm", dump_json(predictCMResult)
 
     # These will move into the h2o_gbm.py
     # if doAUC=False, means we're not binomial, and the cm is not what we expect

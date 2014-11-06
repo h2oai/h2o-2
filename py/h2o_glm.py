@@ -1,5 +1,7 @@
 import h2o_cmd, h2o, h2o_util, h2o_gbm
 import re, random, math
+from h2o_test import check_sandbox_for_errors, dump_json, verboseprint
+import h2o_nodes
 
 def pickRandGlmParams(paramDict, params):
     colX = 0
@@ -20,20 +22,25 @@ def pickRandGlmParams(paramDict, params):
                 params['link'] = None
 
         elif params['family'] is not None and 'link' in params and params['link'] is not None:
+            # only log/identity is legal?
             if params['family'] == 'poisson':
-                if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                if params['link'] not in ('identity', 'log', 'familyDefault'):
                     params['link'] = None 
             # only tweedie/tweedie is legal?
-            if params['family'] == 'tweedie':
+            elif params['family'] == 'tweedie':
                 if params['link'] not in ('tweedie'):
                     params['link'] = None
-            if params['family'] == 'binomial':
+            elif params['family'] == 'binomial':
                 # only logit and log
                 if params['link'] not in ('logit', 'log', 'familyDefault'):
                     params['link'] = None
-            if params['family'] == 'gaussian':
+            elif params['family'] == 'gaussian':
                 if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
                     params['link'] = None
+
+        elif params['family'] is None: # defaults to gaussian
+            if 'link' in params and params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                params['link'] = None
 
         if 'lambda_search' in params and params['lambda_search']==1:
             if 'nlambdas' in params and params['nlambdas']<=1:
@@ -106,7 +113,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # different when cross validation  is used? No trainingErrorDetails?
     GLMModel = glm['glm_model']
     if not GLMModel:
-        raise Exception("GLMModel didn't exist in the glm response? %s" % h2o.dump_json(glm))
+        raise Exception("GLMModel didn't exist in the glm response? %s" % dump_json(glm))
 
     warnings = None
     if 'warnings' in GLMModel and GLMModel['warnings']:
@@ -165,7 +172,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             raise Exception("Convergence issue? GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
 
     if 'validation' not in submodels1:
-        raise Exception("Should be a 'validation' key in submodels1: %s" % h2o.dump_json(submodels1))
+        raise Exception("Should be a 'validation' key in submodels1: %s" % dump_json(submodels1))
     validationsList = submodels1['validation']
     validations = validationsList
         
@@ -201,7 +208,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         submodels = glm['glm_model']['submodels']
         # FIX! this isn't right if we have multiple lambdas? different submodels?
         cms = submodels[0]['validation']['_cms']
-        self.assertEqual(len(thresholds), len(cms), msg="thresholds %s and cm %s should be lists of the same size" % (len(thresholds), len(cms)))
+        self.assertEqual(len(thresholds), len(cms), 
+            msg="thresholds %s and cm %s should be lists of the same size. %s" % (len(thresholds), len(cms), thresholds))
         # FIX! best_threshold isn't necessarily in the list. jump out if >=
         assert best_index<len(cms), "%s %s" % (best_index, len(cms))
         # if we want 0.5..rounds to int
@@ -209,7 +217,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         # cm = cms[mid]
         cm = cms[best_index]
 
-        print "cm:", h2o.dump_json(cm['_arr'])
+        print "cm:", dump_json(cm['_arr'])
         predErr = cm['_predErr']
         classErr = cm['_classErr']
         # compare to predErr
@@ -343,17 +351,20 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # FIX! temporary hack to deal with disappearing/renaming columns in GLM
     if (not allowZeroCoeff) and (colX is not None):
         absXCoeff = abs(float(coefficients[str(colX)]))
+        # add kwargs to help debug without looking at console log
         self.assertGreater(absXCoeff, 1e-26, (
             "abs. value of GLM coefficients['" + str(colX) + "'] is " +
-            str(absXCoeff) + ", not >= 1e-26 for X=" + str(colX)
+            str(absXCoeff) + ", not >= 1e-26 for X=" + str(colX) +  "\n" +
+            dump_json(kwargs)
             ))
 
     # intercept is buried in there too
     absIntercept = abs(float(intercept))
     self.assertGreater(absIntercept, 1e-26, (
         "abs. value of GLM coefficients['Intercept'] is " +
-        str(absIntercept) + ", not >= 1e-26 for Intercept"
-                ))
+        str(absIntercept) + ", not >= 1e-26 for Intercept" + "\n" +
+        dump_json(kwargs)
+        ))
 
     # this is good if we just want min or max
     # maxCoeff = max(coefficients, key=coefficients.get)
@@ -386,7 +397,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     print "submodels1, run_time (milliseconds):", submodels1['run_time']
 
     # shouldn't have any errors
-    h2o.check_sandbox_for_errors()
+    check_sandbox_for_errors()
 
     return (warnings, cList, intercept)
 
@@ -396,8 +407,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 def compareToFirstGlm(self, key, glm, firstglm):
     # if isinstance(firstglm[key], list):
     # in case it's not a list allready (err is a list)
-    h2o.verboseprint("compareToFirstGlm key:", key)
-    h2o.verboseprint("compareToFirstGlm glm[key]:", glm[key])
+    verboseprint("compareToFirstGlm key:", key)
+    verboseprint("compareToFirstGlm glm[key]:", glm[key])
     # key could be a list or not. if a list, don't want to create list of that list
     # so use extend on an empty list. covers all cases?
     if type(glm[key]) is list:
@@ -427,14 +438,14 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
 #   ]
 # }, 
     destination_key = glmGridResult['grid']['destination_keys'][0]
-    inspectGG = h2o.nodes[0].glm_view(destination_key)
+    inspectGG = h2o_nodes.nodes[0].glm_view(destination_key)
     models = inspectGG['glm_model']['submodels']
-    h2o.verboseprint("GLMGrid inspect GLMGrid model 0(best):", h2o.dump_json(models[0]))
+    verboseprint("GLMGrid inspect GLMGrid model 0(best):", dump_json(models[0]))
     g = simpleCheckGLM(self, inspectGG, colX, allowFailWarning=allowFailWarning, **kwargs)
     # just to get some save_model testing
     for i,m in enumerate(glmGridResult['grid']['destination_keys']):
         print "Saving model", m, "to model"+str(i)
-        h2o.nodes[0].save_model(model=m, path='model'+str(i), force=1)
+        h2o_nodes.nodes[0].save_model(model=m, path='model'+str(i), force=1)
 
     return g
 

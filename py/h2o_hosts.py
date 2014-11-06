@@ -1,5 +1,14 @@
-import getpass, json, h2o
-import random, os, sys
+import getpass, json, random, os
+import h2o_args
+
+from h2o_objects import RemoteHost
+from h2o_bc import write_flatfile, upload_jar_to_remote_hosts, default_hosts_file, get_base_port
+from h2o_test import verboseprint, clean_sandbox
+# build cloud in h2o updates the local h2o.nodes there
+from h2o import build_cloud
+
+print "h2o_hosts"
+
 # UPDATE: all multi-machine testing will pass list of IP and base port addresses to H2O
 # means we won't realy on h2o self-discovery of cluster
 
@@ -13,8 +22,6 @@ def find_config(base):
 
 # node_count is sometimes used positionally...break that out. all others are keyword args
 def build_cloud_with_hosts(node_count=None, **kwargs):
-    ## if not h2o.disable_time_stamp:
-    ##      sys.stdout = h2o.OutWrapper(sys.stdout)
     # legacy: we allow node_count to be positional. 
     # if it's used positionally, stick in in kwargs (overwrite if there too)
     if node_count is not None:
@@ -76,13 +83,13 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         paramsToUse[k] = allParamsDefault.setdefault(k, v)
 
     # allow user to specify the config json at the command line. config_json is a global.
-    if h2o.config_json:
-        configFilename = find_config(h2o.config_json)
+    if h2o_args.config_json:
+        configFilename = find_config(h2o_args.config_json)
     else:
         # configs may be in the testdir_hosts
-        configFilename = find_config(h2o.default_hosts_file())
+        configFilename = find_config(default_hosts_file())
 
-    h2o.verboseprint("Loading host config from", configFilename)
+    verboseprint("Loading host config from", configFilename)
     with open(configFilename, 'rb') as fp:
          hostDict = json.load(fp)
 
@@ -107,7 +114,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     if paramsToUse['username']:
         paramsToUse['h2o_remote_buckets_root'] = "/home/" + paramsToUse['username']
 
-    h2o.verboseprint("All build_cloud_with_hosts params:", paramsToUse)
+    verboseprint("All build_cloud_with_hosts params:", paramsToUse)
 
     #********************
     global hosts
@@ -118,15 +125,15 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     if paramsToUse['ip']== ["127.0.0.1"]:
         hosts = None
     else:
-        h2o.verboseprint("About to RemoteHost, likely bad ip if hangs")
+        verboseprint("About to RemoteHost, likely bad ip if hangs")
         hosts = []
         for h in paramsToUse['ip']:
-            h2o.verboseprint("Connecting to:", h)
+            verboseprint("Connecting to:", h)
             # expand any ~ or ~user in the string
             key_filename = paramsToUse['key_filename']
             if key_filename: # don't try to expand if None
                key_filename=os.path.expanduser(key_filename)
-            hosts.append(h2o.RemoteHost(addr=h, 
+            hosts.append(RemoteHost(addr=h, 
                 username=paramsToUse['username'], password=paramsToUse['password'], key_filename=key_filename))
 
     # done with these, don't pass to build_cloud
@@ -138,12 +145,12 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     paramsToUse.pop('key_filename')
 
     # flatfile is going into sandbox (LOG_DIR) now..so clean it first (will make sandbox dir if it doesn't exist already)    
-    h2o.clean_sandbox()
+    clean_sandbox()
 
     # handles hosts=None correctly
-    base_port = h2o.get_base_port(base_port=paramsToUse['base_port'])
+    base_port = get_base_port(base_port=paramsToUse['base_port'])
 
-    h2o.write_flatfile(
+    write_flatfile(
         node_count=paramsToUse['h2o_per_host'],
         # let the env variable H2O_PORT_OFFSET add in there
         base_port=base_port,
@@ -153,7 +160,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
 
     if hosts is not None:
         # this uploads the flatfile too
-        h2o.upload_jar_to_remote_hosts(hosts, slow_connection=paramsToUse['slow_connection'])
+        upload_jar_to_remote_hosts(hosts, slow_connection=paramsToUse['slow_connection'])
         # timeout wants to be larger for large numbers of hosts * h2oPerHost
         # use 60 sec min, 5 sec per node.
         timeoutSecs = max(60, 8*(len(hosts) * paramsToUse['h2o_per_host']))
@@ -167,4 +174,4 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     paramsToUse.pop('h2o_per_host')
     print "java_heap_GB", paramsToUse['java_heap_GB']
     # don't wipe out or create the sandbox. already did here, and put flatfile there
-    h2o.build_cloud(node_count, hosts=hosts, init_sandbox=False, **paramsToUse)
+    build_cloud(node_count, hosts=hosts, init_sandbox=False, **paramsToUse)

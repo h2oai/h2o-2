@@ -64,10 +64,10 @@ ifneq ($(BUILDNUMBER_PROPERTIES_FILE),)
 include ci/buildnumber.properties
 else
 BUILD_NUMBER=99999
-RELEASE_NAME = "master"
 endif
 
 PROJECT_VERSION ?= $(BUILD_MAJOR_VERSION).$(BUILD_MINOR_VERSION).$(BUILD_INCREMENTAL_VERSION).$(BUILD_NUMBER)
+RELEASE_NAME = "master"
 
 ###########################################################################
 

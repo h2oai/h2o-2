@@ -3,8 +3,6 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import as h2i, h2o_exec as h2e
 
 def define_params():
-
-    
     paramDict = {
         'alpha': [0,0.2,0.4],
         'beta_epsilon': [None, 0.0001],
@@ -14,7 +12,7 @@ def define_params():
         'higher_accuracy': [None, 0, 1],
         'ignored_cols': [1,'C1','1,2','C1,C2'],
         'lambda': [0,1e-8,1e-4,1e-3],
-        'lambda_min_ratio': [None, .1, 1], # ratio of lambda max
+        'lambda_min_ratio': [None, .1, 0.9], # ratio of lambda max. Evidently can't take 1 ?
         'lambda_search': [None, 0, 1], # FIX! what if lambda is set when lambda_search=1
         'link': ['family_default', 'identity', 'logit', 'log', 'inverse', 'tweedie'],
         'max_iter': [None, 25],
