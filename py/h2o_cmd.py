@@ -4,6 +4,8 @@ import h2o_browse as h2b, h2o_rf as h2f, h2o_exec, h2o_gbm, h2o_util
 import h2o_nodes
 from h2o_test import dump_json, check_sandbox_for_errors, verboseprint
 
+print "h2o_cmd"
+
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, **kwargs):
     ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       

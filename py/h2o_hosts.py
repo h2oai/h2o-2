@@ -5,6 +5,8 @@ from h2o_objects import RemoteHost
 from h2o_bc import write_flatfile, upload_jar_to_remote_hosts, default_hosts_file, build_cloud, get_base_port
 from h2o_test import verboseprint, clean_sandbox
 
+print "h2o_hosts"
+
 # UPDATE: all multi-machine testing will pass list of IP and base port addresses to H2O
 # means we won't realy on h2o self-discovery of cluster
 

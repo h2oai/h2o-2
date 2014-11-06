@@ -5,6 +5,8 @@ import socket, os, getpass
 import h2o_args
 from h2o_test import verboseprint
 
+print "h2o_get_ip"
+
 def get_ip_address(ipFromCmdLine=None):
     if ipFromCmdLine:
         verboseprint("get_ip case 1:", ipFromCmdLine)

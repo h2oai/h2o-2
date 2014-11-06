@@ -38,6 +38,10 @@ def pickRandGlmParams(paramDict, params):
                 if params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
                     params['link'] = None
 
+        elif params['family'] is None: # defaults to gaussian
+            if 'link' in params and params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                params['link'] = None
+
         if 'lambda_search' in params and params['lambda_search']==1:
             if 'nlambdas' in params and params['nlambdas']<=1:
                 params['nlambdas'] = 2

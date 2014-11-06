@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_RF_many_cols_enum(self):
-        h2o.beta_features = True
+        assert h2o.beta_features==True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
 
