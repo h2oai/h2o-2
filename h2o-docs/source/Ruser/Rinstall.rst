@@ -157,7 +157,7 @@ Upgrading Packages
 """"""""""""""""""
 
 When upgrading H\ :sub:`2`\ O, upgrade the R package as well. To prevent a version mismatch, we
-recommended that manually upgrading R packages. For example, if you are running the bleeding edge developer build,
+recommend manually upgrading R packages. For example, if you are running the bleeding edge developer build,
 it’s possible that the code has changed, but that the revision number has not. In this case, manually upgrading ensures the most
 current version of not only the H\ :sub:`2`\ O code, but the corresponding R code as well.
 
