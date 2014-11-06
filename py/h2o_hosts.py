@@ -2,8 +2,10 @@ import getpass, json, random, os
 import h2o_args
 
 from h2o_objects import RemoteHost
-from h2o_bc import write_flatfile, upload_jar_to_remote_hosts, default_hosts_file, build_cloud, get_base_port
+from h2o_bc import write_flatfile, upload_jar_to_remote_hosts, default_hosts_file, get_base_port
 from h2o_test import verboseprint, clean_sandbox
+# build cloud in h2o updates the local h2o.nodes there
+from h2o import build_cloud
 
 print "h2o_hosts"
 
