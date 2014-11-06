@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         # time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_benchmark_import(self):
+    def test_parse_manyfiles_fvec(self):
         # typical size of the michal files
         avgMichalSizeUncompressed = 237270000 
         avgMichalSize = 116561140 

@@ -56,8 +56,12 @@ def copy_h2o_args_to_here():
     python_cmd_line = h2o_args.python_cmd_line
     # print "python stuff in h2o:", python_username, python_test_name, python_cmd_line
 
-# want to keep the global state nodes here
+# get an initial copy, in case ray looks at something before cloud building!
+copy_h2o_args_to_here()
+# want to keep the global state nodes here in addition to h2o_nodes.nodes[], for legacy h2o.nodes[] refs.
+# empty until cloud build!
 nodes = []
+
 def build_cloud(*args, **kwargs):
     copy_h2o_args_to_here()
     global nodes
