@@ -1,14 +1,16 @@
 import time, sys, json, re, getpass, os, shutil
+import h2o_print as h2p
+
 from h2o_test import get_sandbox_name, dump_json, verboseprint
 
 #*********************************************************************************************
-# duplicate do_json_request here, because the normal one is a method on a node object which 
+# duplicate do_json_request here, because the normal one is a method on a h2o node object which 
 # doesn't exist yet. copied this from find_cloud.py
 def create_url(addr, port, loc):
     return 'http://%s:%s/%s' % (addr, port, loc)
 
 #*********************************************************************************************
-def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeout=5, **kwargs):
+def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeout=7, **kwargs):
     if params is not None:
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
     else:
@@ -20,17 +22,29 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
         r = requests.get(url, timeout=timeout, params=params, **kwargs)
         # the requests json decoder might fail if we didn't get something good
         rjson = r.json()
+        emsg = "ERROR: Probing claimed existing cloud with Cloud.json"
         if not isinstance(rjson, (list,dict)):
             # probably good
-            print "INFO: h2o json responses should always be lists or dicts"
-            rjson = None
+            raise Exception(emsg + "h2o json responses should always be lists or dicts. Got %s" % dump_json(rj))
         elif r.status_code != requests.codes.ok:
-            print "INFO: Could not decode any json from the request. code:" % r.status_code
             rjson = None
+            raise Exception(emsg + "Couldn't decode. Status: %s" % r.status_code)
 
     except requests.ConnectionError, e:
-        print "INFO: json got ConnectionError or other exception"
         rjson = None
+        print "ERROR: json got ConnectionError or other exception"
+        # Rethrow the exception after we've checked for stack trace from h2o.
+        # Out of memory errors maybe don't show up right away? so we should wait for h2o
+        # to get it out to h2o stdout. 
+        # Don't want to rely on cloud teardown to check because there's no delay, 
+        # and we don't want to delay all cloud teardowns by waiting.
+        exc_info = sys.exc_info()
+        # we don't expect to have connection errors, so any exception is a bad thing.
+        h2p.red_print(
+            emsg + "\nGot exception %s on request. \nGoing to check sandbox, then rethrow.." % (exc_info, url + paramsStr))
+        time.sleep(2)
+        check_sandbox_for_errors()
+        raise exc_info[1], None, exc_info[2]
 
     # print rjson
     return rjson
@@ -50,6 +64,7 @@ def probe_node(line, h2oNodes, expectedSize):
     if gc is None:
         return probes
         
+    # we'll just exception out, if we don't get a json response with the stuff that makes up what we think is "legal"
     consensus  = gc['consensus']
     locked     = gc['locked']
     cloud_size = gc['cloud_size']
@@ -59,17 +74,28 @@ def probe_node(line, h2oNodes, expectedSize):
 
     if expectedSize and (cloud_size!=expectedSize):
         raise Exception("cloud_size %s at %s disagrees with -expectedSize %s" % \
-            (cloud_size, node_name, args.expectedSize))
+            (cloud_size, node_name, expectedSize))
 
-    for n in nodes:
-        # print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
-        # print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
+    print "here's some info about the java heaps in the cloud you said you already built for me"
+    print "Also some info about ncpus"
+    # will use these for comparing. All should be equal for normal clouds
+    java_heap_GB_list = []
+    num_cpus_list = []
+    name_list = []
+    for i, n in enumerate(nodes):
+        print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
+        print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
         java_heap_GB = (n['tot_mem_bytes']+0.0)/(1024*1024*1024)
         java_heap_GB = int(round(java_heap_GB,0))
-        # print "java_heap_GB:", java_heap_GB
-        # print 'num_cpus:', n['num_cpus']
+        print "java_heap_GB:", java_heap_GB
+        print 'num_cpus:', n['num_cpus']
+
+        java_heap_GB_list.append(java_heap_GB)
+        num_cpus_list.append(num_cpus)
 
         name = n['name'].lstrip('/')
+        name_list.append(name)
+
         # print 'name:', name
         ### print dump_json(n)
 
@@ -79,12 +105,22 @@ def probe_node(line, h2oNodes, expectedSize):
         if not ip or not port:
             raise Exception("bad ip or port parsing from h2o get_cloud nodes 'name' %s" % n['name'])
 
+        # if you have more than one node, compare to the last one
+        if i>0:
+            lasti = i-1
+            if java_heap_GB != java_heap_GB_list[lasti]:
+                raise Exception("You have two nodes %s %s with different java heap sizes %s %s. Assuming that's bad/not your intent)" % \
+                    (i, lasti, java_heap_GB, java_heap_GB_list[lasti])
+
+            if num_cpus != num_cpus_list[lasti]:
+                raise Exception("You have two nodes %s %s with different number of cpus (threads) %s %s. Assuming that's bad/not your intent)" % \
+                    (i, lasti, num_cpus, num_cpus_list[lasti])
+
         # creating the list of who this guy sees, to return
         probes.append(name)
-
         node_id = len(h2oNodes)
 
-        use_maprfs = 'mapr' in args.hdfs_version
+        use_maprfs = 'mapr' in hdfs_version
         use_hdfs = not use_maprfs # we default to enabling cdh4 on 172.16.2.176
         node = { 
             'http_addr': ip, 
@@ -102,9 +138,9 @@ def probe_node(line, h2oNodes, expectedSize):
             'use_hdfs': use_hdfs,
             'use_maprfs': use_maprfs,
             'h2o_remote_buckets_root': 'false',
-            'hdfs_version': args.hdfs_version, # something is checking for this.
-            'hdfs_name_node': args.hdfs_name_node, # hmm. do we have to set this to do hdfs url generation correctly?
-            'hdfs_config': args.hdfs_config,
+            'hdfs_version': hdfs_version, # something is checking for this.
+            'hdfs_name_node': hdfs_name_node, # hmm. do we have to set this to do hdfs url generation correctly?
+            'hdfs_config': hdfs_config,
         }
 
         # this is the total list so far

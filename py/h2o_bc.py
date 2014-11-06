@@ -247,7 +247,7 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
         start = time.time()
         # UPDATE: best to stabilize on the last node!
         stabilize_cloud(nodeList[0], nodeList,
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorCheck=True)
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noSandboxErrorCheck=True)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time() - start, " secs")
         verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % \
             (len(nodeList), hostCount, (time.time() - start)))
@@ -259,7 +259,7 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
         # UPDATE: do it for all cases now 2/14/13
         if conservative: # still needed?
             for n in nodeList:
-                stabilize_cloud(n, nodeList, timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
+                stabilize_cloud(n, nodeList, timeoutSecs=timeoutSecs, noSandboxErrorCheck=True)
 
         # this does some extra checking now
         # verifies cloud name too if param is not None
@@ -455,12 +455,12 @@ def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False,
     return (sizeStr, consensusStr, expectedSize)
 
 
-def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
+def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noSandboxErrorCheck=False):
     node_count = len(nodeList)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None, timeoutSecs=14.0):
-        c = n.get_cloud(noExtraErrorCheck=True, timeoutSecs=timeoutSecs)
+        c = n.get_cloud(noSandboxErrorCheck=True, timeoutSecs=timeoutSecs)
         # don't want to check everything. But this will check that the keys are returned!
         consensus = c['consensus']
         locked = c['locked']
@@ -507,7 +507,7 @@ def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noExt
 
     # wait to talk to the first one
     node.wait_for_node_to_accept_connections(nodeList,
-        timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+        timeoutSecs=timeoutSecs, noSandboxErrorCheck=noSandboxErrorCheck)
     # then wait till it says the cloud is the right size
     node.stabilize(test, error=('trying to build cloud of size %d' % node_count),
          timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)

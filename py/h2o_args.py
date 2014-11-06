@@ -38,6 +38,10 @@ python_username = getpass.getuser()
 # Walk thru the stack looking for ^test_", since we know tests always start with "test_"
 # from nose case:
 # inspect.stack()[2] (<frame object at 0x11e7150>, 'test_speedrf_many_cols_enum.py', 5, '<module>', ['import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_gbm\n'], 0)
+
+# h2o_sandbox.py has some attempts (commented out) at looking for python test names (logged) in h2o stdout
+# to serve as marker boundaries for log scraping (instead of incremental line counting)
+# so good to get this correct (will be used by the h2o_nodes[0].h2o_log_msg() (2/LogAndEcho)
 python_test_name = "unknown"
 for s in inspect.stack():
     # print s
