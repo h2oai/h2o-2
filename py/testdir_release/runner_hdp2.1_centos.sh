@@ -209,7 +209,7 @@ myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
 # We don't want to hang waiting for the cloud to terminate.
 myPy shutdown test_shutdown.py
 
-echo "Maybe it takes some time for hadoop to shut it down? sleep 10"
+# echo "Maybe it takes some time for hadoop to shut it down? sleep 10"
 sleep 10
 if ps -p $CLOUD_PID > /dev/null
 then
@@ -221,13 +221,14 @@ fi
 
 echo ""
 echo "Check if the background ssh/hadoop/cloud job is still running here"
-ps aux | grep 0xcustomer_id_rsa | grep -v 'grep'
+# don't exit code 1 if no match on the grep
+ps aux | grep 0xcustomer_id_rsa | grep -v 'grep' || /bin/true
 echo "check on jobs I backgrounded locally"
 jobs -l
 
 echo ""
-echo "Check if h2odriver is running on the remote machine"
-$REMOTE_SSH_USER "ps aux | grep h2odriver | grep -v 'grep'"
+echo "Check if h2odriver is running on the remote machine."
+$REMOTE_SSH_USER "ps aux | grep h2odriver | grep -v 'grep || /bin/true'"
 
 echo "The background job with the remote ssh that does h2odriver should be gone. It was pid $CLOUD_PID"
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
