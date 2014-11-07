@@ -355,7 +355,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         self.assertGreater(absXCoeff, 1e-26, (
             "abs. value of GLM coefficients['" + str(colX) + "'] is " +
             str(absXCoeff) + ", not >= 1e-26 for X=" + str(colX) +  "\n" +
-            dump_json(kwargs)
+            "kwargs:" + dump_json(kwargs)
             ))
 
     # intercept is buried in there too
@@ -363,7 +363,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     self.assertGreater(absIntercept, 1e-26, (
         "abs. value of GLM coefficients['Intercept'] is " +
         str(absIntercept) + ", not >= 1e-26 for Intercept" + "\n" +
-        dump_json(kwargs)
+        "kwargs:" + dump_json(kwargs)
         ))
 
     # this is good if we just want min or max
@@ -391,7 +391,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             s += abs(float(v))
 
         self.assertGreater(s, 1e-26, (
-            "sum of abs. value of GLM coefficients/intercept is " + str(s) + ", not >= 1e-26"
+            "sum of abs. value of GLM coefficients/intercept is " + str(s) + ", not >= 1e-26\n" +
+            "kwargs:" + dump_json(kwargs)
             ))
 
     print "submodels1, run_time (milliseconds):", submodels1['run_time']

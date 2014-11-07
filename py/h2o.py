@@ -12,7 +12,7 @@ import h2o_args
 import h2o_nodes
 
 # tests reference the first line of stuff, through h2o.* 
-from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size, \
+from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size, stabilize_cloud, \
     build_cloud as build_cloud2, \
     build_cloud_with_json as build_cloud_with_json2, \
     tear_down_cloud as tear_down_cloud2
@@ -40,7 +40,8 @@ def copy_h2o_args_to_here():
     # if we only copy after the build cloud, the unit_main will have run (if not jenkins) 
     # and no one should be looking here during import (because these won't exist yet)
     # hack to support legacy tests that look at h2o.* for these
-    global beta_features, long_test_case, browse_disable, verbose, abort_after_import, clone_cloud_json
+    global beta_features, long_test_case, browse_disable, verbose, abort_after_import
+    global clone_cloud_json, config_json
     global python_username, python_test_name, python_cmd_line
     # Warning: only legacy tests should use these.
     # all others should use h2o_args (and not as module globals that execute during module import)
@@ -51,6 +52,7 @@ def copy_h2o_args_to_here():
     verbose = h2o_args.verbose
     abort_after_import = h2o_args.abort_after_import
     clone_cloud_json = h2o_args.clone_cloud_json
+    config_json = h2o_args.config_json
     python_username = h2o_args.python_username
     python_test_name = h2o_args.python_test_name
     python_cmd_line = h2o_args.python_cmd_line
