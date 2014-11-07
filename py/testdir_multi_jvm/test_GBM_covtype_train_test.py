@@ -89,11 +89,7 @@ class Basic(unittest.TestCase):
 
                 # GBM train****************************************
                 trainStart = time.time()
-                gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
-                    noPoll=True, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
-                # hack
-                if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+                gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
                 trainElapsed = time.time() - trainStart
                 print "GBM training completed in", trainElapsed, "seconds. On dataset: ", trainFilename
 

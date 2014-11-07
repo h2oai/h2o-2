@@ -16,9 +16,11 @@ class ModelManagementTestCase(unittest.TestCase):
         cloud_size = 5
 
         if h2o.clone_cloud_json != None:
-            print "NOTE: Connecting to existing cloud, and leaving the cloud running afterwards: " + os.path.abspath(h2o.clone_cloud_json)
-            print "Calling h2o.init(" + str(cloud_size) + "). . ."
-            h2o.init(cloud_size, java_heap_GB=2, timeoutSecs=120)
+            print "NOTE: Connecting to existing cloud, and leaving the cloud running afterwards: " + \
+                os.path.abspath(h2o.clone_cloud_json)
+
+        print "Calling h2o.init(" + str(cloud_size) + "). . ."
+        h2o.init(cloud_size, java_heap_GB=2, timeoutSecs=120)
         
     @classmethod
     def tearDownClass(cls):

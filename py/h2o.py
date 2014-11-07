@@ -110,9 +110,10 @@ import h2o_hosts
 def init(*args, **kwargs):
     global localhost
     localhost = decide_if_localhost()
+    global nodes
     if (localhost):
-        build_cloud(*args, **kwargs)
+        nodes = build_cloud(*args, **kwargs)
     else:
-        h2o_hosts.build_cloud_with_hosts(*args, **kwargs)
+        nodes = h2o_hosts.build_cloud_with_hosts(*args, **kwargs)
 
 

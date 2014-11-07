@@ -44,7 +44,6 @@ class Basic(unittest.TestCase):
         global SEED
         SEED = h2o.setup_random_seed()
         h2o.init(2,java_heap_GB=7,use_flatfile=True)
-            import 
         h2b.browseTheCloud()
 
     @classmethod

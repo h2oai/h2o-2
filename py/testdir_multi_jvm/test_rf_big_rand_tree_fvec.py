@@ -41,7 +41,6 @@ class Basic(unittest.TestCase):
         global SEED
         SEED = h2o.setup_random_seed()
         h2o.init(2, java_heap_GB=7)
-            import 
 
     @classmethod
     def tearDownClass(cls):
