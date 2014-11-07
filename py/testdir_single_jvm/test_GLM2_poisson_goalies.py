@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_import as h2i
 
 def define_params():
 
@@ -23,20 +23,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GLM2_poisson_goalies_gg(self):
-        h2o.beta_features = True
         csvPathname = 'poisson/Goalies.csv'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

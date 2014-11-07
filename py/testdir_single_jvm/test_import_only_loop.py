@@ -1,6 +1,6 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 ITERATIONS = 20
 DELETE_ON_DONE = 1
@@ -13,20 +13,13 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=3)
-        else:
-            # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=3)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_parse_manyfiles_1(self):
-        h2o.beta_features = True
         # these will be used as directory imports/parse
         csvDirname = "manyfiles-nflx-gz"
         timeoutSecs = 600

@@ -1,6 +1,6 @@
 import unittest, sys, random, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs as h2j
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_jobs as h2j
 
 RANDOM_UDP_DROP = False
 if RANDOM_UDP_DROP:
@@ -29,20 +29,13 @@ class Basic(unittest.TestCase):
 
     def test_parse_airline_multi_hdfs_many(self):
 
-        h2o.beta_features = True
         # default
         csvFilename = "hex_10"
         csvFilePattern = '*' # all files in the folder
 
         for tryHeap in [24]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import mr-0x6 hdfs, then parse"
-            localhost = h2o.decide_if_localhost()
-            if (localhost):
-                h2o.build_cloud(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP,
-                    use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
-            else:
-                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, disable_assertions=False,
-                    use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
+            h2o.init(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
             # h2o.nodes[0].sandboxIgnoreErrors = True

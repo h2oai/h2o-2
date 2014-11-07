@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_browse as h2b, h2o_util, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_kmeans, h2o_browse as h2b, h2o_util, h2o_import as h2i
 
 # a truly uniform sphere
 # http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
@@ -119,20 +119,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2, java_heap_GB=7)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(2, java_heap_GB=7)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_kmeans_sphere100_fvec(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = 'syn_spheres100.csv'
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename

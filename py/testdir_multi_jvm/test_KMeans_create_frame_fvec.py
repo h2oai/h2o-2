@@ -1,6 +1,6 @@
 import unittest, random, sys, time, json
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_kmeans, h2o_import as h2i, h2o_util
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_kmeans, h2o_import as h2i, h2o_util
 
 def define_create_frame_params(SEED):
     paramDict = {
@@ -40,13 +40,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3,java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3,java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):

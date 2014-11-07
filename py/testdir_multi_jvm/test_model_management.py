@@ -1,6 +1,6 @@
 import unittest, time, sys, os, re
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_exec
 import h2o_glm, h2o_gbm, h2o_rf
 
 class ModelManagementTestCase(unittest.TestCase):
@@ -12,24 +12,14 @@ class ModelManagementTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
 
         cloud_size = 5
 
         if h2o.clone_cloud_json != None:
             print "NOTE: Connecting to existing cloud, and leaving the cloud running afterwards: " + os.path.abspath(h2o.clone_cloud_json)
-
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            print "Calling h2o.build_cloud(" + str(cloud_size) + "). . ."
-            h2o.build_cloud(cloud_size, java_heap_GB=2, timeoutSecs=120)
-        else:
-            print "Calling h2o_hosts.build_cloud_with_hosts(1). . ."
-            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=2, timeoutSecs=120)
+            print "Calling h2o.init(" + str(cloud_size) + "). . ."
+            h2o.init(cloud_size, java_heap_GB=2, timeoutSecs=120)
         
-        # USE FVec!
-        h2o.beta_features = True
-
     @classmethod
     def tearDownClass(cls):
         if h2o.clone_cloud_json == None:

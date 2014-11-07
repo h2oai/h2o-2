@@ -1,6 +1,6 @@
 import unittest, random, sys, time, string
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_pca, h2o_jobs as h2j, h2o_gbm
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_pca, h2o_jobs as h2j, h2o_gbm
 
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
@@ -32,13 +32,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10, enable_benchmark_log=True)
-        else:
-            h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
+        h2o.init(1,java_heap_GB=10, enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -46,7 +42,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_PCA_many_cols_enum_fvec(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [

@@ -1,11 +1,9 @@
 import unittest, sys, random, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm, h2o_jobs, logging
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_jobs, logging
 
 class Basic(unittest.TestCase):
     def tearDown(self):
-        ### print "FAILED: waiting for you to terminate after looking at things"
-        ### time.sleep(360000)
         h2o.check_sandbox_for_errors()
 
     @classmethod
@@ -79,9 +77,9 @@ class Basic(unittest.TestCase):
                 
                 # jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
                 # jea = "-Dh2o.find-ByteBuffer-leaks=true"
-                h2o_hosts.build_cloud_with_hosts(h2oPerNode, java_heap_GB=tryHeap, 
-                    # java_extra_args=jea,
-                    enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10)
+                h2o.init(h2oPerNode, java_heap_GB=tryHeap, enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10)
+                # java_extra_args=jea,
+
                 # don't raise exception if we find something bad in h2o stdout/stderr?
                 h2o.nodes[0].sandboxIgnoreErrors = True
 

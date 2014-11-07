@@ -25,7 +25,7 @@ def decide_if_localhost():
         print "* Using config JSON you passed as -cj argument:", h2o_args.config_json
         return False
     if os.path.exists(hostsFile):
-        print "* Using config JSON file discovered in this directory: {0}.".format(hostsFile)
+        print "* Using config JSON file that matches your username, discovered in this directory: {0}.".format(hostsFile)
         return False
     if 'hosts' in os.getcwd():
         print "Since you're in a *hosts* directory, we're using a config json"

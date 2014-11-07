@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -8,19 +8,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            # maybe fails more reliably with just 2 jvms?
-            h2o.build_cloud(2,java_heap_GB=5)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(2,java_heap_GB=5)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GLM2_big2(self):
-        h2o.beta_features = True
         csvPathname = "hhp_107_01.data.gz"
         print "\n" + csvPathname
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=15)

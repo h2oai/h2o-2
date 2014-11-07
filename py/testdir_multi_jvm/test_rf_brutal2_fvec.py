@@ -1,6 +1,6 @@
 import unittest, time, sys, os
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_rf, h2o_util, h2o_import as h2i
 
 # with 100% bagging, (sample_rate), the results are always the same with fixed seed.
 # for sorted or unsorted dataset. So that's good. That says the algo histograming is working right.
@@ -53,12 +53,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1, java_heap_GB=14)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1, java_heap_GB=14)
         
     @classmethod
     def tearDownClass(cls):
@@ -85,7 +80,6 @@ class Basic(unittest.TestCase):
         return trainKey
     
     def test_RF(self):
-        h2o.beta_features = True
 
         paramsTrainRF = {
             'seed': '1234567890',

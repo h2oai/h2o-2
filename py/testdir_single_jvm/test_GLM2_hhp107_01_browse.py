@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_import as h2i
 import h2o_browse as h2b
 
 argcaseList = [
@@ -21,18 +21,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1,java_heap_GB=1)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GLM2_hhp_107_01_browse(self):
-        h2o.beta_features = True
         csvPathname = 'hhp_107_01.data.gz'
         print "\n" + csvPathname
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',

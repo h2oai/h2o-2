@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i, h2o_cmd, h2o_util
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_import as h2i, h2o_cmd, h2o_util
 
 DO_UNIMPLEMENTED = False
 class Basic(unittest.TestCase):
@@ -9,20 +9,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(1)
+        h2o.init(1)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_exec2_runif(self):
-        h2o.beta_features = True
         print "h2o syntax is not full R. Doesn't take min/max interval params. assumed 0/1 interval"
         print " just one param, it must be a column or row vector. Result is same length"
         print " R allows a scalar to be param"

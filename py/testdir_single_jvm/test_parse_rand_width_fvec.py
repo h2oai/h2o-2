@@ -1,6 +1,6 @@
 import unittest, re, sys, random, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_browse as h2b
 
 print "Same as test_parse_many_cases.py but randomize the number of tokens in each line"
 print "parser should do not crash?"
@@ -10,16 +10,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1) 
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1) 
+        h2o.init()
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # h2b.browseTheCloud()
-        h2o.beta_features = True
 
     @classmethod 
     def tearDownClass(cls): 

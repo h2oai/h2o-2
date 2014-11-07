@@ -1,8 +1,8 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
 
-import h2o, h2o_hosts, h2o_util
+import h2o, h2o_util
 import itertools
 
 def file_to_put():
@@ -15,11 +15,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3)
 
     @classmethod
     def tearDownClass(cls):
@@ -27,7 +23,6 @@ class Basic(unittest.TestCase):
         #pass
 
     def test_A_putfile(self):
-        h2o.beta_features = True
         cvsfile    = file_to_put()
         node       = h2o.nodes[0]
         key        = node.put_file(cvsfile)

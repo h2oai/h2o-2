@@ -1,5 +1,5 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 def write_syn_dataset(csvPathname, rowCount, colCount):
@@ -38,21 +38,16 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2, java_heap_GB=7)
-        else:
-            import h2o_hosts
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(2, java_heap_GB=7)
+            import 
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
     
     def test_rf_big_rand_tree_fvec(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename

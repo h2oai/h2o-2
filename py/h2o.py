@@ -11,7 +11,7 @@
 import h2o_args
 import h2o_nodes
 
-# tests reference the first line of stuff, through h2o.* 
+# tests reference the first line of stuff, through h2o.*
 from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size, stabilize_cloud, \
     build_cloud as build_cloud2, \
     build_cloud_with_json as build_cloud_with_json2, \
@@ -37,7 +37,7 @@ def setup_benchmark_log():
     cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
 def copy_h2o_args_to_here():
-    # if we only copy after the build cloud, the unit_main will have run (if not jenkins) 
+    # if we only copy after the build cloud, the unit_main will have run (if not jenkins)
     # and no one should be looking here during import (because these won't exist yet)
     # hack to support legacy tests that look at h2o.* for these
     global beta_features, long_test_case, browse_disable, verbose, abort_after_import
@@ -84,7 +84,7 @@ def build_cloud_with_json(*args, **kwargs):
     copy_h2o_args_to_here()
     global nodes
     nodes = build_cloud_with_json2(*args, **kwargs)
-    
+
     # done already
     # h2o_nodes.nodes[:] = nodes
     return nodes
@@ -102,4 +102,17 @@ def cloud_name():
 
 # doesn't depend on h2o_args
 LOG_DIR = get_sandbox_name()
-                                                         
+
+# have to wait until def build_cloud() above, because h2o_hosts will import it
+# so keep the import down here
+import h2o_hosts
+
+def init(*args, **kwargs):
+    global localhost
+    localhost = decide_if_localhost()
+    if (localhost):
+        build_cloud(*args, **kwargs)
+    else:
+        h2o_hosts.build_cloud_with_hosts(*args, **kwargs)
+
+

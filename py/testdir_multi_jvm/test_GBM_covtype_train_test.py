@@ -1,20 +1,16 @@
 import unittest
 import random, sys, time, re
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import h2o_browse as h2b, h2o_gbm
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, java_heap_GB=28)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3, java_heap_GB=28)
 
     @classmethod
     def tearDownClass(cls):
@@ -87,7 +83,6 @@ class Basic(unittest.TestCase):
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
 
-                h2o.beta_features = True
                 # translate it (only really need to do once . out of loop?
                 h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
                 ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])

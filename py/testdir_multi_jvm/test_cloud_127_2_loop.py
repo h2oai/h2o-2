@@ -1,5 +1,5 @@
 import unittest, time, sys 
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import h2o
 import h2o_browse as h2b
 
@@ -25,8 +25,7 @@ class Basic(unittest.TestCase):
                 ### this works
                 ### h2o.build_cloud(use_this_ip_addr="192.168.0.37",
                 # this intermittently fails
-                h2o.build_cloud(use_this_ip_addr="127.0.0.1", 
-                    node_count=tryNodes, java_heap_GB=1, timeoutSecs=15, retryDelaySecs=2)
+                h2o.init(use_this_ip_addr="127.0.0.1", node_count=tryNodes, java_heap_GB=1, timeoutSecs=15, retryDelaySecs=2)
                 print "trial #%d: Build cloud of %d in %d secs" % (trial, tryNodes, (time.time() - start)) 
 
                 h2o.verify_cloud_size()
