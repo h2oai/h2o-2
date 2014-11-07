@@ -52,7 +52,9 @@ class Basic(unittest.TestCase):
             trial +=1
 
             start = time.time() 
-            parseResult = h2i.parse_only(pattern=importKey, 
+            # some data has ,, in the header row. can't have multiple NAs. h2o doesn't like
+            # force header=0..should mean headers get treated as NAs
+            parseResult = h2i.parse_only(pattern=importKey, header=0,
                 timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
             elapsed = time.time() - start
             print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \

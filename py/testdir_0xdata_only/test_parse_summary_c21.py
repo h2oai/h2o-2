@@ -32,8 +32,8 @@ class Basic(unittest.TestCase):
         # self.assertEqual(missingValuesList, [], "%s should have 3 cols of NAs: %s" % (csvPathname_train, missingValuesList)
         numCols = inspect['numCols']
         numRows = inspect['numRows']
-        rSummary = h2o_cmd.runSummary(key=hex_key, rows=numRows, cols=numCols)
-        h2o_cmd.infoFromSummary(rSummary)
+        rSummary = h2o_cmd.runSummary(key=hex_key)
+        h2o_cmd.infoFromSummary(rSummary, rows=numRows, cols=numCols)
 
         csvPathname_test  = importFolderPath + '/persona_clean_deep.tsv.zip'
         validation_key = 'test.hex'
