@@ -25,7 +25,7 @@ clone_cloud_json = None
 disable_time_stamp = False
 debug_rest = False
 long_test_case = False
-usecloud = False
+usecloud = None
 # optionally checks expected size if usecloud is used
 # None means no check
 usecloud_size = None
@@ -115,8 +115,8 @@ def parse_our_args():
         help="some tests will vary behavior to more, longer cases",
         action='store_true')
     parser.add_argument('-uc', '--usecloud',
+        nargs='?', const='localhost:54321', type=str,
         help="ip:port of cloud to send tests to instead of starting clouds.")
-
     parser.add_argument('-ucs', '--usecloud_size',
         help="optionally say the size of the usecloud, code will check size is as expected")
 
