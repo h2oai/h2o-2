@@ -322,20 +322,20 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
               _normSub[i] = v.mean();
             }
             break;
-          case DESCALE:
-            _normSub = null;
-            _normMul = MemoryManager.malloc8d(_nums);;
-            for (int i = 0; i < _nums; ++i) {
-              Vec v = fr.vec(catLevels.length+i);
-              _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
-            }
-            break;
           case DEMEAN:
             _normMul = null;
             _normSub = MemoryManager.malloc8d(_nums);
             for (int i = 0; i < _nums; ++i) {
               Vec v = fr.vec(catLevels.length+i);
               _normSub[i] = v.mean();
+            }
+            break;
+          case DESCALE:
+            _normSub = null;
+            _normMul = MemoryManager.malloc8d(_nums);;
+            for (int i = 0; i < _nums; ++i) {
+              Vec v = fr.vec(catLevels.length+i);
+              _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
             }
             break;
           case NONE:
@@ -354,7 +354,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             _normRespSub = MemoryManager.malloc8d(responses);
             for (int i = 0; i < responses; ++i) {
               Vec v = fr.vec(fr.numCols()-responses+i);
-              _normRespSub[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
+              _normRespMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
               _normRespSub[i] = v.mean();
             }
             break;
@@ -363,7 +363,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             _normRespSub = MemoryManager.malloc8d(responses);
             for (int i = 0; i < responses; ++i) {
               Vec v = fr.vec(fr.numCols()-responses+i);
-              _normRespSub[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
+              _normRespMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
               _normRespSub[i] = v.mean();
             }
             break;
@@ -373,6 +373,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             for (int i = 0; i < responses; ++i) {
               Vec v = fr.vec(fr.numCols()-responses+i);
               _normRespSub[i] = v.mean();
+            }
+            break;
+          case DESCALE:
+            _normRespMul = MemoryManager.malloc8d(responses);
+            _normRespSub = null;
+            for (int i = 0; i < responses; ++i) {
+              Vec v = fr.vec(fr.numCols()-responses+i);
+              _normRespMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
             }
             break;
           case NONE:
@@ -446,8 +454,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           _normMul = null;
           break;
         case DESCALE:
-          _normMul = MemoryManager.malloc8d(nnums);
           _normSub = null;
+          _normMul = MemoryManager.malloc8d(nnums);
           break;
         case NONE:
           _normSub = _normMul = null;
@@ -467,11 +475,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
             _normSub[i] = v.mean();
             _normMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
             break;
-          case DESCALE:
-            _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
-            break;
           case DEMEAN:
             _normSub[i] = v.mean();
+            break;
+          case DESCALE:
+            _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
             break;
           case NONE:
             break;
@@ -489,6 +497,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           case DEMEAN:
             _normRespSub = MemoryManager.malloc8d(_responses);
             _normRespMul = null;
+            break;
+          case DESCALE:
+            _normRespSub = null;
+            _normRespMul = MemoryManager.malloc8d(_responses);
             break;
           case NONE:
             _normRespSub = _normRespMul = null;
@@ -508,7 +520,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
               _normRespMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
               break;
             case DEMEAN:
-              _normSub[i] = v.mean();
+              _normRespSub[i] = v.mean();
+              break;
+            case DESCALE:
+              _normRespMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
               break;
             case NONE:
               break;
