@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_os_util
+sys.path.extend(['.','..','../..','py'])
+import h2o_cmd, h2o, h2o_browse as h2b, h2o_os_util
 
 node_count = 5
 portsPerNode = 2
@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
         # so we don't repeatedly copy the jar
         start = time.time()
         # writes it's own flatfile
-        h2o_hosts.build_cloud_with_hosts(node_count, use_flatfile=True, java_heap_GB=1)
+        h2o.init(node_count, use_flatfile=True, java_heap_GB=1)
         print "jar/flatfile copied and Cloud of", len(h2o.nodes), "built in", time.time()-start, "seconds"
         # have to remember total # of nodes for the next class. it will stay the same
         # when we tear down the cloud, we zero the nodes list
@@ -49,7 +49,7 @@ class Basic(unittest.TestCase):
         # FIX! we should increment this from 1 to N? 
         for i in range(1,10):
             # timeout wants to be larger for large numbers of hosts * node_count
-            # don't want to reload jar/flatfile, so use build_cloud
+            # don't want to reload jar/flatfile, so use build cloud
             timeoutSecs = max(60, 8 * totalNodes)
             print "totalNodes:", totalNodes, "timeoutSecs:", timeoutSecs
 
@@ -57,8 +57,8 @@ class Basic(unittest.TestCase):
             # Could make the biggest cloud first and count down? supposed to not matter if flatfile has too many?
             start = time.time()
             # it should know not to upload the jars again
-            # the flatfile was deleted, so we can't do build_cloud with hosts defined..it assumed flatfile was created for upload
-            h2o_hosts.build_cloud_with_hosts(node_count, use_flatfile=False, timeoutSecs=timeoutSecs, retryDelaySecs=0.5)
+            # the flatfile was deleted, so we can't do build cloud with hosts defined..it assumed flatfile was created for upload
+            h2o.init(node_count, use_flatfile=False, timeoutSecs=timeoutSecs, retryDelaySecs=0.5)
             print "Cloud of", len(h2o.nodes), "built in", time.time()-start, "seconds"
             check_cloud_and_setup_next()
 

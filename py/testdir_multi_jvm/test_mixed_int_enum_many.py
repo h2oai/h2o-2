@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, getpass
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p, h2o_browse as h2b
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_util, h2o_print as h2p, h2o_browse as h2b
 
 
 ENABLE_ASSERTS = False
@@ -41,20 +41,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_mixed_int_enum_many(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         # this should be a sorted list for comparing to hbrk in the histogram in h2o summary?

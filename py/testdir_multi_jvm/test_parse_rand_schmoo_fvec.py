@@ -1,6 +1,6 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rowData):
     dsf = open(csvPathname, "w+")
@@ -30,15 +30,10 @@ class test_parse_rand_schmoo_fvec(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2,java_heap_GB=10,use_flatfile=True)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(2,java_heap_GB=10,use_flatfile=True)
         # h2b.browseTheCloud()
-        h2o.beta_features = True
         
 
     @classmethod

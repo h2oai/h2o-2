@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_util
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_import as h2i, h2o_util
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -8,19 +8,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(1)
+        h2o.init(1)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GLM2_tweedie(self):
-        h2o.beta_features = True
         csvFilename = "AutoClaim.csv"
         csvPathname = 'standard/' + csvFilename
         print "\nStarting", csvPathname

@@ -1,6 +1,6 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 import getpass
 
 class Basic(unittest.TestCase):
@@ -10,19 +10,13 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1, use_hdfs=True, hdfs_version='cdh5', hdfs_name_node='172.16.2.180')
-        else:
-            h2o_hosts.build_cloud_with_hosts(1, use_hdfs=True, hdfs_version='cdh5', hdfs_name_node='172.16.2.180')
+        h2o.init(1, use_hdfs=True, hdfs_version='cdh5', hdfs_name_node='172.16.2.180')
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_hdfs_cdh5_fvec(self):
-        h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir

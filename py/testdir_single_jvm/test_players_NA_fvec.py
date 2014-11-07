@@ -1,7 +1,7 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_import as h2i
-import h2o_hosts
+import 
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -9,18 +9,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud()
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_players_NA_fvec(self):
-        h2o.beta_features = True
         csvFilename = 'Players.csv'
         csvPathname = 'ncaa/' + csvFilename
         # hack it to ignore header (NA?) because it has duplicate col names

@@ -1,6 +1,6 @@
 import unittest, os, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i
 
 def runLinuxCmds(cmds):
     for c in cmds:
@@ -109,14 +109,14 @@ class Basic(unittest.TestCase):
         print "\nno flatfile, Build allowing anything"
         allAcceptIptables()
         showIptables()
-        h2o_hosts.build_cloud_with_hosts(nodes_per_host, use_flatfile=False)
+        h2o.init(nodes_per_host, use_flatfile=False)
         h2o.tear_down_cloud()
 
     def test_B(self):
         print "\nwith flatfile, Build allowing anything"
         allAcceptIptables()
         showIptables()
-        h2o_hosts.build_cloud_with_hosts(nodes_per_host, use_flatfile=True)
+        h2o.init(nodes_per_host, use_flatfile=True)
         h2o.tear_down_cloud()
 
     def test_C_no_mc_rcv(self):
@@ -124,7 +124,7 @@ class Basic(unittest.TestCase):
         allAcceptIptables()
         multicastDropReceiveIptables()
         showIptables()
-        h2o_hosts.build_cloud_with_hosts(nodes_per_host, use_flatfile=True)
+        h2o.init(nodes_per_host, use_flatfile=True)
         h2o.tear_down_cloud()
 
     def test_D_no_mc_snd(self):
@@ -132,7 +132,7 @@ class Basic(unittest.TestCase):
         allAcceptIptables()
         multicastBlockSendIptables()
         showIptables()
-        h2o_hosts.build_cloud_with_hosts(nodes_per_host, use_flatfile=True)
+        h2o.init(nodes_per_host, use_flatfile=True)
         h2o.tear_down_cloud()
 
     def test_E_no_mc_snd_no_mc_rcv(self):
@@ -141,7 +141,7 @@ class Basic(unittest.TestCase):
         multicastDropReceiveIptables()
         multicastBlockSendIptables()
         showIptables()
-        h2o_hosts.build_cloud_with_hosts(nodes_per_host, use_flatfile=True)
+        h2o.init(nodes_per_host, use_flatfile=True)
         h2o.tear_down_cloud()
 
     def test_F_no_mc_loop(self):
@@ -151,7 +151,7 @@ class Basic(unittest.TestCase):
         showIptables()
 
         for x in range(1,5):
-            h2o_hosts.build_cloud_with_hosts(nodes_per_host, use_flatfile=True)
+            h2o.init(nodes_per_host, use_flatfile=True)
             parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker1000', schema='put')
             h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=10)
             h2o.tear_down_cloud()

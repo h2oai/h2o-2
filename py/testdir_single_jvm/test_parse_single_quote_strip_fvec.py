@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_browse as h2b
 
 print "h2o should automatically strip the single quotes if we say single_quotes=1"
 print "should probably check the names too ..right now failing on rows"
@@ -57,12 +57,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
@@ -70,7 +65,6 @@ class Basic(unittest.TestCase):
 
     def test_parse_single_quote_strip_fvec(self):
         # h2b.browseTheCloud()
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvPathname = SYNDATASETS_DIR + '/bad.data'
         dsf = open(csvPathname, "w+")

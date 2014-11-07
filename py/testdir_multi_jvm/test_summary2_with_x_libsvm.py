@@ -1,7 +1,7 @@
 import unittest
 import random, sys, time, os
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     # we can do all sorts of methods off the r object
@@ -43,20 +43,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2,java_heap_GB=5)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(2,java_heap_GB=5)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_summary_with_x_libsvm (self):
-        h2o.beta_features = True
         print "Empty rows except for the last, with all zeros for class. Single col at max"
         h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()

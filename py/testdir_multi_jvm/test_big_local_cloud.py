@@ -1,5 +1,5 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
 import h2o
 import time
@@ -19,9 +19,7 @@ class Basic(unittest.TestCase):
                 # start by cleaning sandbox (in build_cloud). 
                 # so nosetest works which doesn't do unit_main
 
-                # done in build_cloud now
-                h2o.build_cloud(node_count=tryNodes, java_heap_GB=1,
-                    timeoutSecs=30, retryDelaySecs=2, use_flatfile=True)
+                h2o.init(node_count=tryNodes, java_heap_GB=1, timeoutSecs=30, retryDelaySecs=2, use_flatfile=True)
                 print "loop %d: Build cloud of %d in %d s" % (trials, tryNodes, (time.time() - start)) 
 
                 for i in range(2):

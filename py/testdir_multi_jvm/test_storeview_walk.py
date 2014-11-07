@@ -1,6 +1,6 @@
 import unittest, time, random, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -9,19 +9,13 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_storeview_walk(self):
-        h2o.beta_features = True
         print "Walk storeview using offset, and just view=1"
         print "Do an import to get keys"
         # importFolderPath = "/home/0xdiag/datasets/manyfiles-nflx-gz"

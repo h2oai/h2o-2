@@ -1,9 +1,9 @@
 import unittest
 import random, sys, time, re
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import h2o_browse as h2b, h2o_gbm
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 
 doPredict = False
 class Basic(unittest.TestCase):
@@ -12,12 +12,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts(8, java_heap_GB=3)
+        h2o.init(3, java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):
@@ -26,7 +21,7 @@ class Basic(unittest.TestCase):
     def test_GBM_manyfiles_train_test(self):
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
-        if localhost:
+        if h2o.localhost:
             files = [
                 # None forces num_cols to be used. assumes you set it from Inspect
                 ('manyfiles-nflx-gz', 'file_1[0-9][0-9].dat.gz', 'file_100.hex', 1800, None, 'file_1.dat.gz', 'file_1_test.hex')
@@ -124,7 +119,6 @@ class Basic(unittest.TestCase):
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
-                h2o.beta_features = True
 
                 # GBM train****************************************
                 trainStart = time.time()

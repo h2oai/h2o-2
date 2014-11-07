@@ -1,6 +1,6 @@
 import unittest, time, sys, os
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_rf, h2o_util, h2o_import as h2i
 
 USE_LOCAL = True
 
@@ -45,12 +45,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2, java_heap_GB=7)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(2, java_heap_GB=7)
         
     @classmethod
     def tearDownClass(cls):
@@ -76,7 +71,6 @@ class Basic(unittest.TestCase):
         return trainKey
     
     def test_RF(self):
-        h2o.beta_features = True
         paramsTrainRF = { 
             'seed': '1234567890',
             # if I use 100, and just one tree, I should get same results for sorted/shuffled?

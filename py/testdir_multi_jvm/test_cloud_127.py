@@ -1,5 +1,5 @@
 import unittest, time, sys 
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
 import h2o
 
@@ -15,8 +15,7 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
 
             start = time.time()
-            h2o.build_cloud(use_this_ip_addr="127.0.0.1", 
-                node_count=tryNodes, timeoutSecs=30, retryDelaySecs=2, java_heap_GB=1)
+            h2o.init(use_this_ip_addr="127.0.0.1", node_count=tryNodes, timeoutSecs=30, retryDelaySecs=2, java_heap_GB=1)
             print "Build cloud of %d in %d secs" % (tryNodes, (time.time() - start)) 
 
             h2o.verboseprint(h2o.nodes)

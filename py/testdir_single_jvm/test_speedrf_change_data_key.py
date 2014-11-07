@@ -1,6 +1,6 @@
 import unittest, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i, h2o_jobs
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_rf, h2o_import as h2i, h2o_jobs
 
 paramDict = {
     'response': [None,'C55'],
@@ -23,20 +23,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1, java_heap_GB=14)
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.init(java_heap_GB=14)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_rf_change_data_key_fvec(self):
-        h2o.beta_features = True
         importFolderPath = 'standard'
 
         csvFilenameTrain = 'covtype.data'

@@ -1,6 +1,6 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 # bug with summary (NPE?)
 DO_SUMMARY=False
@@ -11,18 +11,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='172.16.2.176')
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3, use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='172.16.2.176')
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_hdfs2_3(self):
-        h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir

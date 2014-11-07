@@ -1,7 +1,7 @@
 import unittest
 import random, sys, time, os
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_kmeans
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_kmeans
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -9,13 +9,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2,java_heap_GB=7)
-        else:
-            h2o_hosts.build_cloud_with_hosts() # uses import Hdfs for s3n instead of import folder
+        h2o.init(2,java_heap_GB=7)
 
     @classmethod
     def tearDownClass(cls):
@@ -24,7 +20,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_KMeans_libsvm_fvec(self):
-        h2o.beta_features = True
         # just do the import folder once
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200

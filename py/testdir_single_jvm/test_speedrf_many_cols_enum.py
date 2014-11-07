@@ -1,8 +1,8 @@
 import unittest, random, sys, time, getpass
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
 # FIX! add cases with shuffled data!
-import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_gbm
+import h2o, h2o_cmd, h2o_rf, h2o_gbm
 import h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_jobs as h2j
 
 
@@ -46,14 +46,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost, tryHeap
+        global SEED, tryHeap
         tryHeap = 12
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1, enable_benchmark_log=True, java_heap_GB=tryHeap)
-        else:
-            h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
+        h2o.init(1, enable_benchmark_log=True, java_heap_GB=tryHeap)
 
     @classmethod
     def tearDownClass(cls):

@@ -1,11 +1,11 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_rf
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_rf
 
 class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
         
     @classmethod
     def tearDownClass(cls):

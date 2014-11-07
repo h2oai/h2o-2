@@ -1,6 +1,6 @@
 import unittest, time, sys, random, os
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b, h2o_util
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_browse as h2b, h2o_util
 
 # ord('a') gives 97. Use that when you pass it as url param to h2o
 # str(unichr(97)) gives 'a'
@@ -86,20 +86,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=4,use_flatfile=True)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=4,use_flatfile=True)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
     
     def test_parse_multi_header_rand_fvec(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_ints.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename

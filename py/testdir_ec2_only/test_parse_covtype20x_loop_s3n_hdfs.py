@@ -1,6 +1,6 @@
 import unittest, sys, random, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         for tryHeap in [4,12]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import folder,", \
                 "then parse 'covtype20x.data'"
-            h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap)
+            h2o.init(java_heap_GB=tryHeap)
             # don't raise exception if we find something bad in h2o stdout/stderr?
             h2o.nodes[0].sandboxIgnoreErrors = True
 

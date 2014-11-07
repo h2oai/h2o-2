@@ -1,6 +1,6 @@
 import unittest, time, sys, re
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, rowDataTrue, rowDataFalse, outputTrue, outputFalse):
     dsf = open(csvPathname, "w+")
@@ -18,12 +18,7 @@ class GLM_twovalues(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # fails with 3
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(1)
+        h2o.init(1)
         # h2b.browseTheCloud()
 
     @classmethod
@@ -31,7 +26,6 @@ class GLM_twovalues(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_GLM2_twovalues(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_twovalues.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename

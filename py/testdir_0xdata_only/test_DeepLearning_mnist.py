@@ -1,7 +1,7 @@
 import unittest, time, sys, random, string
 
-sys.path.extend(['.','..','py'])
-import h2o, h2o_gbm, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_gbm, h2o_cmd, h2o_import as h2i, h2o_browse as h2b
 
 RANDOM_UDP_DROP = False
 class Basic(unittest.TestCase):
@@ -10,13 +10,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
         # want detail on the cloud building to see what node fails
         h2o.verbose = True
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=2, random_udp_drop=RANDOM_UDP_DROP)
-        else:
-            h2o_hosts.build_cloud_with_hosts(random_udp_drop=RANDOM_UDP_DROP)
+        h2o.init(java_heap_GB=2, random_udp_drop=RANDOM_UDP_DROP)
         h2o.verbose = False
 
     @classmethod
@@ -26,7 +22,6 @@ class Basic(unittest.TestCase):
 
     def test_DeepLearning_mnist(self):
         #h2b.browseTheCloud()
-        h2o.beta_features = True
         csvPathname_train = 'mnist/train.csv.gz'
         csvPathname_test  = 'mnist/test.csv.gz'
         hex_key = 'mnist_train.hex'
@@ -86,7 +81,6 @@ class Basic(unittest.TestCase):
             'model_key': model_key
             }
 
-        h2o.beta_features = True
         predictResult = h2o_cmd.runPredict(timeoutSecs=timeoutSecs, **kwargs)
 
         h2o_cmd.runInspect(key=predict_key, verbose=True)
