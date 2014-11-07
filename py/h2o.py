@@ -12,7 +12,7 @@ import h2o_args
 import h2o_nodes
 
 # tests reference the first line of stuff, through h2o.* 
-from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size, \
+from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size, stabilize_cloud, \
     build_cloud as build_cloud2, \
     build_cloud_with_json as build_cloud_with_json2, \
     tear_down_cloud as tear_down_cloud2

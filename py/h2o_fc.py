@@ -1,7 +1,7 @@
-import time, sys, json, re, getpass, os, shutil
+import time, sys, json, re, getpass, os, shutil, requests
 import h2o_print as h2p
 
-from h2o_test import get_sandbox_name, dump_json, verboseprint
+from h2o_test import get_sandbox_name, check_sandbox_for_errors, dump_json, verboseprint
 
 #*********************************************************************************************
 # duplicate do_json_request here, because the normal one is a method on a h2o node object which 
@@ -25,14 +25,15 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
         emsg = "ERROR: Probing claimed existing cloud with Cloud.json"
         if not isinstance(rjson, (list,dict)):
             # probably good
-            raise Exception(emsg + "h2o json responses should always be lists or dicts. Got %s" % dump_json(rj))
+            raise Exception(emsg + "h2o json responses should always be lists or dicts. Got %s" %\
+                dump_json(rj))
         elif r.status_code != requests.codes.ok:
             rjson = None
             raise Exception(emsg + "Couldn't decode. Status: %s" % r.status_code)
 
     except requests.ConnectionError, e:
         rjson = None
-        print "ERROR: json got ConnectionError or other exception"
+        emsg = "ERROR: json got ConnectionError or other exception"
         # Rethrow the exception after we've checked for stack trace from h2o.
         # Out of memory errors maybe don't show up right away? so we should wait for h2o
         # to get it out to h2o stdout. 
@@ -41,7 +42,7 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
         exc_info = sys.exc_info()
         # we don't expect to have connection errors, so any exception is a bad thing.
         h2p.red_print(
-            emsg + "\nGot exception %s on request. \nGoing to check sandbox, then rethrow.." % (exc_info, url + paramsStr))
+            "%s\n %s\n %s\nGoing to check sandbox, then rethrow.." % (emsg, exc_info, url + paramsStr))
         time.sleep(2)
         check_sandbox_for_errors()
         raise exc_info[1], None, exc_info[2]
@@ -52,7 +53,7 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
 #*********************************************************************************************
 def probe_node(line, h2oNodes, expectedSize):
     http_addr, sep, port = line.rstrip('\n').partition(":")
-    http_addr = http_addr.lstrip('/') # just in case it's an old-school flatfile with leading /
+    http_addr = http_addr.lstrip('/') # just in case it's an old-school flatfile format with leading /
     if port == '':
         port = '54321'
     if http_addr == '':
@@ -72,6 +73,7 @@ def probe_node(line, h2oNodes, expectedSize):
     cloud_name = gc['cloud_name']
     nodes      = gc['nodes']
 
+    # None means don't check
     if expectedSize and (cloud_size!=expectedSize):
         raise Exception("cloud_size %s at %s disagrees with -expectedSize %s" % \
             (cloud_size, node_name, expectedSize))
@@ -94,12 +96,13 @@ def probe_node(line, h2oNodes, expectedSize):
         num_cpus_list.append(num_cpus)
 
         name = n['name'].lstrip('/')
-        name_list.append(name)
-
         # print 'name:', name
         ### print dump_json(n)
+        name_list.append(name)
+        probes.append(name)
 
         ip, sep, port = name.partition(':')
+
         # print "ip:", ip
         # print "port:", port
         if not ip or not port:
@@ -109,15 +112,16 @@ def probe_node(line, h2oNodes, expectedSize):
         if i>0:
             lasti = i-1
             if java_heap_GB != java_heap_GB_list[lasti]:
-                raise Exception("You have two nodes %s %s with different java heap sizes %s %s. Assuming that's bad/not your intent)" % \
-                    (i, lasti, java_heap_GB, java_heap_GB_list[lasti])
+                raise Exception("You have two nodes %s %s with different java heap sizes %s %s. \
+                    Assuming that's bad/not your intent)" % \
+                    (name[i], name[lasti], java_heap_GB, java_heap_GB_list[lasti]))
 
             if num_cpus != num_cpus_list[lasti]:
-                raise Exception("You have two nodes %s %s with different number of cpus (threads) %s %s. Assuming that's bad/not your intent)" % \
-                    (i, lasti, num_cpus, num_cpus_list[lasti])
+                raise Exception("You have two nodes %s %s with different # of cpus (threads) %s %s. \
+                    Assuming that's bad/not your intent)" % \
+                    (name[i], name[lasti], num_cpus, num_cpus_list[lasti]))
 
-        # creating the list of who this guy sees, to return
-        probes.append(name)
+        # this will be this guys "node id"
         node_id = len(h2oNodes)
 
         use_maprfs = 'mapr' in hdfs_version
@@ -129,9 +133,9 @@ def probe_node(line, h2oNodes, expectedSize):
             # this list is based on what tests actually touch (fail without these)
             'node_id': node_id,
             'remoteH2O': 'true',
-            'sandbox_error_was_reported': 'false', # odd this is touched..maybe see about changing h2o.py
+            'sandbox_error_was_reported': 'false', # maybe see about changing h2o*py stuff here
             'sandbox_ignore_errors': 'false',
-            'username': '0xcustomer', # most found clouds are run by 0xcustomer. This doesn't really matter
+            'username': '0xcustomer', # most found clouds are run by 0xcustomer. This doesn't matter?
             'redirect_import_folder_to_s3_path': 'false', # no..we're not on ec2
             'redirect_import_folder_to_s3n_path': 'false', # no..we're not on ec2
             'delete_keys_at_teardown': 'true', # yes we want each test to clean up after itself
@@ -139,7 +143,7 @@ def probe_node(line, h2oNodes, expectedSize):
             'use_maprfs': use_maprfs,
             'h2o_remote_buckets_root': 'false',
             'hdfs_version': hdfs_version, # something is checking for this.
-            'hdfs_name_node': hdfs_name_node, # hmm. do we have to set this to do hdfs url generation correctly?
+            'hdfs_name_node': hdfs_name_node, # Do we need this for hdfs url generation correctly?
             'hdfs_config': hdfs_config,
         }
 
@@ -154,9 +158,12 @@ def probe_node(line, h2oNodes, expectedSize):
 #*********************************************************************************************
 # returns a json expandedCloud object that should be the same as what -ccj gets after json loads?
 # also writes h2o_fc-nodes.json for debug
-def find_cloud(ip_port='localhost:54321', 
-    hdfs_version='cdh4', hdfs_config=None, hdfs_name_node='172.16.1.176', 
-    expectedSize=1, nodesJsonPathname="h2o_fc-nodes.json"):
+def find_cloud(ip_port=None,
+    expectedSize=1, nodesJsonPathname="h2o_fc-nodes.json",
+    hdfs_version='cdh4', hdfs_config=None, hdfs_name_node='172.16.1.176', **kwargs):
+
+    if not ip_port:
+        ip_port='localhost:54321'
     # hdfs_config can be the hdfs xml config file
     # hdfs_name_node an be ip, ip:port, hostname, hostname:port", 
     # None on expected size means don't check
@@ -181,7 +188,7 @@ def find_cloud(ip_port='localhost:54321',
                     probes.add(member2)
                     probe_node(member2, h2oNodes)
 
-    print "\nWe did %s tries" % tries
+    print "\nDid %s tries" % tries
     print "len(probe):", len(probes)
 
     # get rid of the name key we used to hash to it
