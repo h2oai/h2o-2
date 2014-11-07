@@ -1,0 +1,259 @@
+\documentclass[11pt]{article}
+\usepackage[english]{babel}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,epsfig}
+\usepackage[left=1.1in,top=1in,right=1.1in]{geometry}
+\usepackage{array}
+\usepackage{datetime}
+\usepackage{lipsum}
+\usepackage{spverbatim}
+\usepackage{hyperref}
+\hypersetup{colorlinks, urlcolor={blue}}
+\usepackage{graphicx}
+\graphicspath{ {images/} }
+
+\begin{document}
+
+\thispagestyle{empty} %removes page number
+
+\begin{center}
+\textsc{\Large\bf{Generalized Linear Modeling  with H2O's R Package}}
+\\
+\bigskip
+\textsc{November 2014}
+\end{center}
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\tableofcontents
+
+\newpage
+
+
+\section{Introduction} \label{1}
+
+This vignette presents the generalized linear modeling (GLM) framework in the \href{http://cran.r-project.org/web/packages/h2o/index.html}{H2O} package. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} and the R package \href{http://cran.r-project.org/web/packages/h2o/h2o.pdf}{manual}. The full datasets and code of this vignette can be found at the \href{https://github.com/0xdata/h2o}{H2O Github}. This introductory section provides instructions on getting H2O started, followed by a brief overview of generalized linear models.
+
+
+\subsection{Installation} \label{1.1}
+
+You can load the latest CRAN H2O package by running
+
+\begin{spverbatim}
+install.packages("h2o")
+\end{spverbatim}
+\bigskip
+\noindent
+Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O \href{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}{download table}. Open your R Console and run the following to install the latest H2O build in R:
+
+\begin{spverbatim}
+# The following two commands remove any previously installed H2O packages for R.
+if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+
+if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+
+# Next, we download, install and initialize the H2O package for R (filling in the *'s with the matching digits in the download table)
+install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/
+****/R", getOption("repos"))))
+
+library(h2o)
+
+\end{spverbatim}
+\noindent
+If you are operating on a single node, initialize H2O with
+
+\begin{spverbatim}
+h2o_server = h2o.init()
+
+\end{spverbatim}
+\noindent
+With this command, the H2O R module will start an instance of H2O automatically at localhost:54321. Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but do not directly paste; you should specify the IP and port number appropriate to your specific environment.
+
+\begin{spverbatim}
+h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE)
+
+\end{spverbatim}
+\noindent
+An automatic demo is available to see h2o.gbm at work. Run the following command to observe an example classification model built through H2O's GLM.
+
+\begin{spverbatim}
+demo(h2o.glm)
+\end{spverbatim}
+
+\subsection{Support} \label{1.2}
+
+Users of the H2O package may submit general enquiries and bug reports to the 0xdata \href{h2ostream@googlegroups.com}{support address}. Alternatively, specific bugs or issues may be filed to the 0xdata \href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{JIRA}.
+
+\subsection{Generalized Linear Modeling overview} \label{1.3}
+
+\subsubsection{Summary of features} \label{2.1}
+H2O's GLM functionalities include:
+
+\begin{itemize} % @TODO TBD. CURRENTLY SAME AS GBM 
+
+\item supervised learning for regression and classification tasks
+
+\item distributed and parallelized computation to be run on either a single node or a multi-node cluster
+
+\item fast and memory-efficient Java implementations of the underlying algorithms
+
+\item elegant web interface to mirror the model building and scoring process running in R
+
+\item grid search for hyperparameter optimization and model selection
+
+\item model export in plain java code for deployment in production environments
+
+\item additional parameters for model tuning
+
+\end{itemize}
+
+\subsubsection{Theory and framework} 
+% Strong Rules paper
+
+\subsubsection{Key parameters}
+%@NOTE Cursory definition of features listed in full at end of doc; currently labeled appendix
+%Specific parameters to elaborate on?
+%—Family
+%—Link function
+%—Cross Validation
+%—Alpha Penalties
+%—Strong Rules
+%—etc.
+
+\section{Use case: Classification with Airline data} \label{3}
+
+
+\subsection{Airline dataset overview} \label{3.1}
+
+The Airline dataset can be downloaded \href{https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip}{here}. Remember to save the .csv file to your working directory. Before running the Airline demo we first review how to load data with H2O. 
+
+\subsubsection{Loading data} \label{2.5}
+
+Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For an example, we use a toy weather dataset which can be downloaded \href{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/weather.csv}{here}. First load the data to your current working directory in your R Console (do this henceforth for dataset downloads), and then run the following command.
+\begin{spverbatim}
+weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", header = TRUE, sep = ",", key = "weather.hex")
+\end{spverbatim}
+\bigskip
+\noindent
+To see a quick summary of the data, run the following command.
+\begin{spverbatim}
+summary(weather.hex)
+\end{spverbatim}
+
+
+\subsection{Performing a trial run} \label{3.2}
+Returning to the Airline dataset demo, we first load the dataset with H2O and select which variables we wish to use to predict a chosen response. For example, we may want to model whether flights are delayed based on the departure's scheduled day of the week and day of the month.
+\begin{spverbatim}
+
+#Load the data and prepare for modeling
+% @TODO h2o_server not found FIXXXXXXX & CHECK VARIABLES
+air_train.hex = h2o.uploadFile(h2o_server, path = "AirlinesTrain.csv", header = TRUE, sep = ",", key = "airline_train.hex")
+
+air_test.hex = h2o.uploadFile(h2o_server, path = "AirlinesTest.csv", header = TRUE, sep = ",", key = "airline_test.hex")
+
+x = c("Year", "Month", "DayofMonth", "DayOfWeek", "UniqueCarrier", "FlightNum", "Origin", "Dest", "Distance")
+y = "IsArrDelayed" 
+
+\end{spverbatim}
+
+Now we train the GLM model
+
+\begin{spverbatim}
+airline.glm <- h2o.glm(x=x, 
+                     y=y, 
+                     data=airline.train.hex,
+                     key = "glm_model",
+                     family="binomial",
+                     lambda_search = TRUE,
+                     return_all_lambda = TRUE,
+                     use_all_factor_levels = TRUE,
+                     variable_importances = TRUE)
+\end{spverbatim}
+
+\subsubsection{Extracting and handling the results} \label{3.2.1}
+
+We can extract the parameters of our model, examine the scoring process, and make predictions on new data.
+
+%@ NOTE typoe in R demo test… i spelled performance wrong :(
+\begin{spverbatim}
+print("Check performance and AUC")
+perf = h2o.performance(air.results$YES,airline.test.hex$IsArrDelayed )
+print(perf)
+perf@model\$auc
+print("Show distribution of predictions with quantile.")
+quantile.H2OParsedData(air.results\$YES)  
+print("Extract strongest predictions.")
+top.air <- h2o.assign(air.results[air.results\$YES > quant[‘75%] ],key="top.air")
+top.air
+\end{spverbatim}
+\noindent
+\\
+\\
+Once we have a satisfactory model, the \texttt{h2o.predict()} command can be used to compute and store predictions on new data, which can then be used for further tasks in the interactive modeling process.
+\begin{spverbatim}
+#Perform classification on the held out data
+prediction = h2o.predict(airline.glm, newdata=air_test.hex)
+#Copy predictions from H2O to R
+pred = as.data.frame(prediction)
+head(pred)
+\end{spverbatim}
+\subsection{Web interface} \label{3.3}
+H2O R users have access to a slick web interface to mirror the model building process in R. After loading data or training a model in R, point your browser to your IP address+port number (e.g., localhost:12345) to launch the web interface. From here you can click on \textsc{Admin} $>$ \textsc{Jobs} to view your specific model details. You can also click on \textsc{Data} $>$ \textsc{View All} to view and keep track of your datasets in current use. 
+\subsubsection{Variable importances} \label{3.3.1}
+One useful feature is the variable importances option, which can be enabled with the additional argument \texttt{importance=TRUE}. This features allows us to view the absolute and relative predictive strength of each feature in the prediction task. From R, you can access these strengths with the command \texttt{air.model@model\$varimp}. You can also view a visualization of the variable
+importances on the web interface.
+\subsubsection{Java model} \label{3.3.2}
+Another important feature of the web interface is the Java (POJO) model, accessible from the \textsc{Java model} button in the top right of a model summary page. This button allows access to Java code which, when called from a main method in a Java program, builds the model at hand. When the model is small enough, the java code for the model will be made available to inspect from within the GUI, larger models can be inspected after users have downloaded the model.
+\\
+\\
+To download the model open the terminal window, create a directory where the model will be saved, set the new directory as the working directory and follow the curl and java compile commands displayed in the instructions at the top of the java model.
+\section{Conclusion}
+\newpage
+\section{Appendix A: Complete parameter list}
+\begin{itemize}
+\item \texttt{x}: A vector containing the names of the predictors in the model. No default.
+\item \texttt{y}: The name of the response variable in the model. No default.
+\item \texttt{data}: An \texttt{H2OParsedData} object containing the training data. No default.
+\item \texttt{key}: The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.
+\item \texttt{family}: A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported. When a model is specified as Tweedie, users must also specify the appropriate Tweedie power. No default.
+\item \texttt{link}: The link function relates the linear predictor to the distribution function. Default is the canonical link for the specified family. The full list of supported links: 
+	gaussian: identity, log, inverse 
+	binomial: logit, log 
+	poisson: log, identity
+	gamma: inverse, log, identity
+	tweedie: tweedie 
+\item \texttt{nfolds}: A logical value indicating whether the algorithm should conduct classification. Otherwise, regression is performed on a numeric response variable.
+\item \texttt{nfolds}: Number of folds for cross-validation. Default is 0.
+\item \texttt{validation}: An \texttt{H2OParsedData} object indicating the validation dataset used to construct confusion matrix. If left blank, default is the training data.
+\item \texttt{alpha}: The elastic-net mixing parameter, which must be in $[0,1]$. The penalty is defined to be $P(\alpha,\beta) = (1-\alpha)/2||\beta||_2^2 + \alpha||\beta||_1 = \sum_j [(1-\alpha)/2 \beta_j^2 + \alpha|\beta_j|] $ so \texttt{alpha=1} is the lasso penalty, while \texttt{alpha=0} is the ridge penalty. Default is 0.5.
+\item \texttt{nlambda}: The number of lambda values when performing a search. Default is -1.
+\item \texttt{lambda.min.ratio}: Smallest value for lambda as a fraction of lambda.max, the entry value, which is the smallest value for which all coefficients in the model are zero. Default is -1.
+\item \texttt{lambda}: The shrinkage parameter, which multiplies $P(\alpha,\beta)$ in the objective. The larger lambda is, the more the coefficients are shrunk toward zero (and each other). Default is 1e-5.
+\item \texttt{epsilon}: Number indicating the cutoff for determining if a coefficient is zero. Default is 1e-4.
+\item \texttt{standardize}: Logical value indicating whether the data should be standardized (set to mean = 0, variance = 1) before running GLM. Default is true.
+\item \texttt{prior}: Prior probability of class 1. Only used if \texttt{family = "binomial"}. Default is the frequency of class 1 in the response column. 
+\item \texttt{variable\_importances}: A logical value either TRUE or FALSE to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If \texttt{use\_all\_factor\_levels} is off the importance of the base level will NOT be shown. Default is false.
+\item \texttt{use\_all\_factor\_levels}: A logical value either TRUE or FALSE to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Note: Needs sufficient regularization to solve! Default is false.
+\item \texttt{tweedie.p}: The index of the power variance function for the tweedie distribution. Only used if \texttt{family = “tweedie"}. Default is 1.5.
+\item \texttt{iter.max}: Maximum number of iterations allowed. Default is 100.
+\item \texttt{higher\_accuracy}: A logical value indicating whether to use line search. This will cause the algorithm to run slower, so generally, it should only be set to TRUE if GLM does not converge otherwise. Default is false.
+\item \texttt{lambda\_search}: A logical value indicating whether to conduct a search over the space of lambda values, starting from \texttt{lambda\_max}. When this is set to TRUE, lambda will be interpreted as \texttt{lambda\_min}. Default is false.
+\item \texttt{return\_all\_lambda}: A logical value indicating whether to return every model built during the lambda search. Only used if \texttt{lambda\_search = TRUE}. If \texttt{return\_all\_lambda = FALSE}, then only the model corresponding to the optimal lambda will be returned. Default is false.
+\item \texttt{max\_predictors}: When \texttt{lambda\_search = TRUE}, the algorithm will stop training if the number of predictors exceeds this value. Ignored when \texttt{ lambda\_search = FALSE} or \texttt{max\_predictors = -1}. Default is -1.
+\item \texttt{offset}: Column to be used as an offset, if you have one. No default.
+\item \texttt{has\_intercept}: A logical value indicating whether or not to include the intercept term. If there are factor columns in your model, then the intercept must be included. Default is true.
+
+%Additional: 
+%Strong Rules Enables: Uses strong rules to filter out inactive columns. Default is true.
+%Ignored_cols: No default.
+%Non-negative: Restricts coefficients to be non-negative. Default is false.
+%parallelism: @Is this just a python thing?
+
+\end{itemize}
+
+
+
+\newpage
+\section{References}
+
+\end{document}
