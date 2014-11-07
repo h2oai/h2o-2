@@ -120,4 +120,3 @@ def init(*args, **kwargs):
         nodes = h2o_hosts.build_cloud_with_hosts(*args, **kwargs)
     print "kevin:", len(nodes)
 
-
