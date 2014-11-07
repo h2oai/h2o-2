@@ -118,5 +118,4 @@ def init(*args, **kwargs):
         nodes = build_cloud(*args, **kwargs)
     else:
         nodes = h2o_hosts.build_cloud_with_hosts(*args, **kwargs)
-    print "kevin:", len(nodes)
 

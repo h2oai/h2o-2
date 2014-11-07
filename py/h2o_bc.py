@@ -224,7 +224,6 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
             # potentially passed in kwargs
             # hdfs_version='cdh4', hdfs_config=None, hdfs_name_node='172.16.1.176', 
 
-        assert 1==0
         nodeList = build_cloud_with_json(h2o_nodes_json=nodesJsonPathname)
         return nodeList
 
