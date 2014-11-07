@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # 8 random generatators, 1 per column
@@ -24,13 +24,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=14)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1,java_heap_GB=14)
 
     @classmethod
     def tearDownClass(cls):
@@ -39,7 +35,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parse_200k_cols_fvec(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (10, 100000, 'cA', 200, 200),

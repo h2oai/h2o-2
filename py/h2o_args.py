@@ -25,6 +25,11 @@ clone_cloud_json = None
 disable_time_stamp = False
 debug_rest = False
 long_test_case = False
+usecloud = None
+# optionally checks expected size if usecloud is used
+# None means no check
+usecloud_size = None
+
 
 python_cmd_ip = get_ip_address(ipFromCmdLine=ip_from_cmd_line)
 
@@ -34,17 +39,26 @@ python_cmd_args = ""
 python_cmd_line = ""
 python_username = getpass.getuser()
 
-# The stack is deeper with nose, compared to command line with python 
+# The stack is deeper with nose, compared to command line with python
 # Walk thru the stack looking for ^test_", since we know tests always start with "test_"
 # from nose case:
 # inspect.stack()[2] (<frame object at 0x11e7150>, 'test_speedrf_many_cols_enum.py', 5, '<module>', ['import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_gbm\n'], 0)
-python_test_name = "unknown"
-for s in inspect.stack():
-    # print s
-    if s[1].startswith('test_') or '/test_' in s[1]:
-        # jenkins gets this assign, but not the unit_main one?
-        python_test_name = s[1]
-        break
+
+# h2o_sandbox.py has some attempts (commented out) at looking for python test names (logged) in h2o stdout
+# to serve as marker boundaries for log scraping (instead of incremental line counting)
+# so good to get this correct (will be used by the h2o_nodes[0].h2o_log_msg() (2/LogAndEcho)
+
+def find_python_test_name():
+    python_test_name = "unknown"
+    for s in inspect.stack():
+        # print s
+        if s[1].startswith('test_') or '/test_' in s[1]:
+            # jenkins gets this assign, but not the unit_main one?
+            python_test_name = s[1]
+            break
+    return python_test_name
+
+python_test_name = find_python_test_name()
 
 # for debug
 if python_username=='jenkins' or python_username=='kevin':
@@ -100,6 +114,11 @@ def parse_our_args():
     parser.add_argument('-long', '--long_test_case',
         help="some tests will vary behavior to more, longer cases",
         action='store_true')
+    parser.add_argument('-uc', '--usecloud',
+        nargs='?', const='localhost:54321', type=str,
+        help="ip:port of cloud to send tests to instead of starting clouds.")
+    parser.add_argument('-ucs', '--usecloud_size',
+        help="optionally say the size of the usecloud, code will check size is as expected")
 
     parser.add_argument('unittest_args', nargs='*')
     args = parser.parse_args()
@@ -108,9 +127,10 @@ def parse_our_args():
     if args.nocolor:
         h2p.disable_colors()
 
-    global browse_disable, browse_json, verbose, ip_from_cmd_line, config_json, debugger, random_udp_drop
+    global browse_disable, browse_json, verbose, ip_from_cmd_line, config_json, debugger
+    global random_udp_drop
     global random_seed, beta_features, sleep_at_tear_down, abort_after_import
-    global clone_cloud_json, disable_time_stamp, debug_rest, long_test_case
+    global clone_cloud_json, disable_time_stamp, debug_rest, long_test_case, usecloud, usecloud_size
 
     browse_disable = args.browse_disable or getpass.getuser() == 'jenkins'
     browse_json = args.browse_json
@@ -129,6 +149,7 @@ def parse_our_args():
     disable_time_stamp = args.disable_time_stamp
     debug_rest = args.debug_rest
     long_test_case = args.long_test_case
+    usecloud = args.usecloud
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -143,9 +164,10 @@ def unit_main():
     parse_our_args()
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
     # if I remember correctly there was an issue with using sys.argv[0]
-    # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
+    # under nosetests?.
+    # yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     # Use the top of stack!
-    python_test_name = inspect.stack()[-1][1]
+    python_test_name = find_python_test_name()
     python_cmd_args = " ".join(sys.argv[1:])
     python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
     python_username = getpass.getuser()

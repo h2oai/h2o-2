@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_util
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_util
 
 H2O_SUPPORTS_OVER_500K_COLS = False
 
@@ -32,20 +32,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=14)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1,java_heap_GB=14)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_fp_many_cols_fvec(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         if H2O_SUPPORTS_OVER_500K_COLS:
@@ -69,7 +64,7 @@ class Basic(unittest.TestCase):
         for (rowCount, colCount, hex_key, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             NUM_CASES = h2o_util.fp_format()
-            sel = random.randint(0, NUM_CASES)
+            sel = random.randint(0, NUM_CASES-1)
             csvFilename = "syn_%s_%s_%s_%s.csv" % (SEEDPERFILE, sel, rowCount, colCount)
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 

@@ -88,7 +88,7 @@ tweedie: tweedie \cr
   }
   \item{offset}{(Optional) Column to be used as an offset, if you have one. }
   \item{has_intercept}{ A logical value indicating whether or not to include the intercept term. If there are factor columns in your model, then the intercept must be included. }
-  \item{non_negative} { A logical value indicating whether or not coefficients will be restricted to only non-negative values.}
+  \item{non_negative}{ A logical value indicating whether or not coefficients will be restricted to only non-negative values.}
 }
 \value{
 An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, model and xval. The slot model is a list of the following components:

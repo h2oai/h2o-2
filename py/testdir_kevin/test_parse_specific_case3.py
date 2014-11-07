@@ -1,7 +1,7 @@
 import unittest, random, sys, time, os
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_import as h2i
 import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
 print "This is injecting double quote in a col"
@@ -48,13 +48,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=1)
 
     @classmethod
     def tearDownClass(cls):

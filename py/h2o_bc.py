@@ -8,6 +8,7 @@ from h2o_test import \
     verboseprint, OutWrapper, log, flatfile_pathname, dump_json, find_file, check_h2o_version
 
 from h2o_objects import LocalH2O, RemoteH2O, ExternalH2O
+import h2o_fc
 
 print "h2o_bc"
 
@@ -24,7 +25,7 @@ def decide_if_localhost():
         print "* Using config JSON you passed as -cj argument:", h2o_args.config_json
         return False
     if os.path.exists(hostsFile):
-        print "* Using config JSON file discovered in this directory: {0}.".format(hostsFile)
+        print "* Using config JSON file that matches your username, discovered in this directory: {0}.".format(hostsFile)
         return False
     if 'hosts' in os.getcwd():
         print "Since you're in a *hosts* directory, we're using a config json"
@@ -165,8 +166,14 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
 # don't wrap more than once
 stdout_wrapped = False
 def build_cloud(node_count=1, base_port=None, hosts=None,
-                timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
-                conservative=False, create_json=False, clone_cloud=None, init_sandbox=True, **kwargs):
+    timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
+    conservative=False, create_json=False, clone_cloud=None, 
+    init_sandbox=True, usecloud=False, usecloud_size=None, **kwargs):
+
+    # expectedSize is only used if usecloud
+
+    # usecloud can be passed thru build_cloud param, or command line 
+    # not in config json though so no build_cloud_with_hosts path.
 
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
@@ -178,11 +185,50 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
         sys.stdout = OutWrapper(sys.stdout)
         stdout_wrapped = True
 
-    if h2o_args.clone_cloud_json or clone_cloud:
-        nodeList = build_cloud_with_json(
-            h2o_nodes_json=h2o_args.clone_cloud_json if h2o_args.clone_cloud_json else clone_cloud)
+    if h2o_args.usecloud or usecloud:
+        # for now, just have fixed name in local file.  (think of this as a temp or debug file)
+        # eventually we'll pass the json object instead  for speed?
+        nodesJsonPathname = "h2o_fc-nodes.json"
+
+    elif h2o_args.clone_cloud_json:
+        nodesJsonPathname = h2o_args.clone_cloud_json
+
+    elif clone_cloud:
+        nodesJsonPathname = clone_cloud
+
+    else:
+        # normal build_cloud() doesn't use
+        nodesJsonPathname = None
+
+    # usecloud dominates over all
+    if (h2o_args.clone_cloud_json or clone_cloud) or (h2o_args.usecloud or usecloud):
+        # then build_cloud_with_json with json object
+        # we don't need to specify these defaults, but leave here to show that we can pass
+        # I suppose kwargs will have it
+        if h2o_args.usecloud:
+            ip_port = h2o_args.usecloud
+        elif usecloud:
+            ip_port = usecloud
+        else:
+            ip_port = None
+
+        # h2o_args dominates
+        if h2o_args.usecloud_size:
+            # only used for expected size
+            useCloudExpectedSize = h2o_args.usecloud_size
+        else: 
+            useCloudExpectedSize = usecloud_size
+
+        nodesJsonObject = h2o_fc.find_cloud(ip_port=ip_port,
+            expectedSize=useCloudExpectedSize, nodesJsonPathname=nodesJsonPathname, **kwargs)
+            # potentially passed in kwargs
+            # hdfs_version='cdh4', hdfs_config=None, hdfs_name_node='172.16.1.176', 
+
+        assert 1==0
+        nodeList = build_cloud_with_json(h2o_nodes_json=nodesJsonPathname)
         return nodeList
 
+    # else
     # moved to here from unit_main. so will run with nosetests too!
     # Normally do this.
     # Don't if build_cloud_with_hosts() did and put a flatfile in there already!
@@ -197,9 +243,8 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
     # only do this for regression testing
 
     # temporarily disable this, to go a little faster
-    if 1==0:
-        if getpass.getuser() == 'jenkins':
-            check_h2o_version()
+    #    if getpass.getuser() == 'jenkins':
+    #        check_h2o_version()
 
     ports_per_node = 2
     nodeList = []
@@ -247,7 +292,7 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
         start = time.time()
         # UPDATE: best to stabilize on the last node!
         stabilize_cloud(nodeList[0], nodeList,
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorCheck=True)
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noSandboxErrorCheck=True)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time() - start, " secs")
         verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % \
             (len(nodeList), hostCount, (time.time() - start)))
@@ -259,7 +304,7 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
         # UPDATE: do it for all cases now 2/14/13
         if conservative: # still needed?
             for n in nodeList:
-                stabilize_cloud(n, nodeList, timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
+                stabilize_cloud(n, nodeList, timeoutSecs=timeoutSecs, noSandboxErrorCheck=True)
 
         # this does some extra checking now
         # verifies cloud name too if param is not None
@@ -455,12 +500,12 @@ def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False,
     return (sizeStr, consensusStr, expectedSize)
 
 
-def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
+def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noSandboxErrorCheck=False):
     node_count = len(nodeList)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None, timeoutSecs=14.0):
-        c = n.get_cloud(noExtraErrorCheck=True, timeoutSecs=timeoutSecs)
+        c = n.get_cloud(noSandboxErrorCheck=True, timeoutSecs=timeoutSecs)
         # don't want to check everything. But this will check that the keys are returned!
         consensus = c['consensus']
         locked = c['locked']
@@ -507,7 +552,7 @@ def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noExt
 
     # wait to talk to the first one
     node.wait_for_node_to_accept_connections(nodeList,
-        timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+        timeoutSecs=timeoutSecs, noSandboxErrorCheck=noSandboxErrorCheck)
     # then wait till it says the cloud is the right size
     node.stabilize(test, error=('trying to build cloud of size %d' % node_count),
          timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)

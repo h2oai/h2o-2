@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_print as h2p, h2o_glm
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_print as h2p, h2o_glm
 
 # Test of glm comparing result against R-implementation
 # Tested on prostate.csv short (< 1M) and long (multiple chunks)
@@ -12,11 +12,7 @@ class GLMTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=3)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(node_count=3)
 
     @classmethod
     def tearDownClass(cls):
@@ -58,7 +54,6 @@ class GLMTest(unittest.TestCase):
         return errors
     
     def test_prostate_gaussian(self):
-        h2o.beta_features = True
         errors = []
         # First try on small data (1 chunk)
         parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate.csv', schema='put', hex_key='prostate_g')
@@ -78,7 +73,6 @@ class GLMTest(unittest.TestCase):
             self.fail(str(errors))
 
     def test_prostate_binomial(self):
-        h2o.beta_features = True
         errors = []
         # First try on small data (1 chunk)
         parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate.csv', schema='put', hex_key='prostate_b')
@@ -97,7 +91,6 @@ class GLMTest(unittest.TestCase):
             self.fail(str(errors))
 
     def test_prostate_poisson(self):
-        h2o.beta_features = True
         errors = []
         # First try on small data (1 chunk)
         parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate.csv', schema='put', hex_key='poisson_p')

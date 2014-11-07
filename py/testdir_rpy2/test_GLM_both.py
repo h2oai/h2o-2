@@ -1,9 +1,8 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import copy
 
 print "Needs numpy, rpy2, and R installed. Run on 172.16.271-175"
-# FIX! maybe should update to build_cloud_with_hosts to run on 171-175?
 
 import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_import as h2i
 import numpy as np
@@ -114,7 +113,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud()
+        h2o.init()
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -123,7 +122,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_both(self):
-        h2o.beta_features = True
         if (1==1):
             csvFilenameList = [
                 ('logreg', 'benign.csv', 'binomial', 3, 10),

@@ -1,6 +1,6 @@
 import unittest, sys, random, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -16,7 +16,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parse_covtype20x_loop_fvec(self):
-        h2o.beta_features = True
         csvFilename = "covtype20x.data"
         importFolderPath = "standard"
         csvPathname = importFolderPath + "/" + csvFilename
@@ -26,7 +25,7 @@ class Basic(unittest.TestCase):
             for tryHeap in [3]:
                 print "\n", tryHeap,"GB heap,", tryJvms, "jvm per host, import folder,", \
                     "then loop parsing 'covtype20x.data' to unique keys"
-                h2o_hosts.build_cloud_with_hosts(node_count=tryJvms, java_heap_GB=tryHeap)
+                h2o.init(node_count=tryJvms, java_heap_GB=tryHeap)
                 timeoutSecs=300
                 for trial in range(trialMax):
                     # since we delete the key, we have to re-import every iteration, to get it again

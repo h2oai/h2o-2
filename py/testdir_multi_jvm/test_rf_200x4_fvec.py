@@ -1,6 +1,6 @@
 import unittest, time, sys, os
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -8,18 +8,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3, java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_rf_200x4_fvec(self):
-        h2o.beta_features = True
         csvPathname = 'hhp.cut3.214.data.gz'
 
         print "RF start on ", csvPathname

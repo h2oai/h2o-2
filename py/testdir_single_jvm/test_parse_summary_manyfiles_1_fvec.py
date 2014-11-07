@@ -1,6 +1,6 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -9,20 +9,13 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1, java_heap_GB=4)
-        else:
-            # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1, java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_parse_summary_manyfiles_1_fvec(self):
-        h2o.beta_features = True
         # these will be used as directory imports/parse
         csvDirlist = [
             ("manyfiles-nflx-gz",   600),

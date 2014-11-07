@@ -1,11 +1,10 @@
 import unittest
 import sys
 import time
-sys.path.extend(['.', '..', 'py'])
+sys.path.extend(['.','..','../..','py'])
 
 import h2o
 import h2o_cmd
-import h2o_hosts
 import h2o_browse as h2b
 import h2o_import as h2i
 import h2o_glm
@@ -20,20 +19,13 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1, java_heap_GB=14)
-        else:
-            # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1, java_heap_GB=14)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_speedrf_mnist(self):
-        h2o.beta_features = True
         importFolderPath = "mnist"
         csvFilelist = [
             # ("mnist_reals_testing.csv.gz", "mnist_reals_testing.csv.gz",    600), 

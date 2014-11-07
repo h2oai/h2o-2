@@ -1,7 +1,7 @@
 import unittest
 import random, sys, time, re
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -10,13 +10,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=14)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
-        h2o.beta_features = True
+        h2o.init(java_heap_GB=14)
 
     @classmethod
     def tearDownClass(cls):

@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i
 
 class TestExcel(unittest.TestCase):
     def tearDown(self):
@@ -8,11 +8,7 @@ class TestExcel(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3,java_heap_MB=1300)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3,java_heap_MB=1300)
 
     @classmethod
     def tearDownClass(cls):

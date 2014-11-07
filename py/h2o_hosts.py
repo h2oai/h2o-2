@@ -174,4 +174,8 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     paramsToUse.pop('h2o_per_host')
     print "java_heap_GB", paramsToUse['java_heap_GB']
     # don't wipe out or create the sandbox. already did here, and put flatfile there
-    build_cloud(node_count, hosts=hosts, init_sandbox=False, **paramsToUse)
+    nodes = build_cloud(node_count, hosts=hosts, init_sandbox=False, **paramsToUse)
+
+    # we weren't doing this before, but since build_cloud returns nodes
+    # people might expect this works similarly
+    return nodes

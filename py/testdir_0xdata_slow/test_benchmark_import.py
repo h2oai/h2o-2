@@ -1,6 +1,6 @@
 import unittest, time, sys, random, logging
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -158,14 +158,8 @@ class Basic(unittest.TestCase):
 
 
         for i, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
-            localhost = h2o.decide_if_localhost()
-            if (localhost):
-                h2o.build_cloud(2,java_heap_GB=tryHeap, # java_extra_args=jea,
-                    enable_benchmark_log=True)
-
-            else:
-                h2o_hosts.build_cloud_with_hosts( # java_extra_args=jea,
-                    enable_benchmark_log=True)
+            h2o.init(2,java_heap_GB=tryHeap, enable_benchmark_log=True)
+            # java_extra_args=jea, 
 
             # pop open a browser on the cloud
             ### h2b.browseTheCloud()
@@ -294,7 +288,7 @@ class Basic(unittest.TestCase):
 
                 ### time.sleep(3600)
                 h2o.tear_down_cloud()
-                if not localhost:
+                if not h2o.localhost:
                     print "Waiting 30 secs before building cloud again (sticky ports?)"
                     ### time.sleep(30)
 

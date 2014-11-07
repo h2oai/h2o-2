@@ -1,6 +1,6 @@
 import unittest, time, sys, random, string
-sys.path.extend(['.','..','py'])
-import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_browse as h2b, h2o_gbm
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_nn, h2o_cmd, h2o_import as h2i, h2o_jobs, h2o_browse as h2b, h2o_gbm
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -8,14 +8,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost, tryHeap
+        global SEED, tryHeap
         tryHeap = 4
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, enable_benchmark_log=True, java_heap_GB=tryHeap)
-        else:
-            h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
+        h2o.init(3, enable_benchmark_log=True, java_heap_GB=tryHeap)
 
     @classmethod
     def tearDownClass(cls):
@@ -24,7 +20,6 @@ class Basic(unittest.TestCase):
 
     def test_NN2_mnist_multi(self):
         #h2b.browseTheCloud()
-        h2o.beta_features = True
         csvPathname_train = 'mnist/train.csv.gz'
         csvPathname_test  = 'mnist/test.csv.gz'
         hex_key = 'mnist_train.hex'

@@ -1,6 +1,6 @@
 import unittest, sys, random, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -16,7 +16,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parse_1B_loop_fvec(self):
-        h2o.beta_features = True
         csvFilename = "billion_rows.csv.gz"
         importFolderPath = "standard"
         csvPathname = importFolderPath + "/" + csvFilename
@@ -24,7 +23,7 @@ class Basic(unittest.TestCase):
         for tryHeap in [16]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import folder,", \
                 "then loop parsing 'billion_rows.csv' to unique keys"
-            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap)
+            h2o.init(1, java_heap_GB=tryHeap)
             timeoutSecs=800
             for trial in range(trialMax):
                 hex_key = csvFilename + "_" + str(trial) + ".hex"

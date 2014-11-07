@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, getpass
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_browse as h2b, h2o_print as h2p
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_util, h2o_browse as h2b, h2o_print as h2p
 import h2o_summ
 
 DO_TRY_SCIPY = False
@@ -28,13 +28,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud()
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
@@ -42,7 +38,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_summary2_unifiles(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         # new with 1000 bins. copy expected from R

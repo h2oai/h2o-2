@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_jobs, h2o_gbm
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_import as h2i, h2o_exec, h2o_jobs, h2o_gbm
 
 paramDict = {
     'response': 'C55',
@@ -35,19 +35,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1, java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1, java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_speedrf_covtype_fvec(self):
-        h2o.beta_features = True  # fvec
         importFolderPath = "standard"
 
         # Parse Train ******************************************************

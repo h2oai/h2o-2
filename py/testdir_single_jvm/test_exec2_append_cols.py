@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i, h2o_cmd
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_import as h2i, h2o_cmd
 
 
 print "exec: adding col that's not +1 of last col, causes assertion error"
@@ -11,20 +11,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_exec2_append_cols(self):
-        h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         csvPathname = 'standard/covtype.data'
         hexKey = 'r.hex'

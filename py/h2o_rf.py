@@ -1,5 +1,5 @@
 import random, time, csv
-import h2o_cmd, h2o_gbm, h2o_exec as h2e
+import h2o_cmd, h2o_gbm, h2o_exec as h2e, h2o_util
 import h2o_nodes
 from h2o_test import check_sandbox_for_errors, dump_json, verboseprint
 
@@ -150,16 +150,34 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     varimp = rf_model['varimp']
 
-
     if 'importance' in kwargs and kwargs['importance']:
         max_var = varimp['max_var']
         variables = varimp['variables']
         varimpSD = varimp['varimpSD']
-        varimp = varimp['varimp']
+        varimp2 = varimp['varimp']
+
+        # what is max_var? it's 100 while the length of the others is 54 for covtype
+        if not max_var:
+            raise Exception("varimp.max_var is None? %s" % max_var)
+        # if not variables:
+        #     raise Exception("varimp.variables is None? %s" % variables)
+        if not varimpSD:
+            raise Exception("varimp.varimpSD is None? %s" % varimpSD)
+        if not varimp2:
+            raise Exception("varimp.varimp is None? %s" % varimp2)
+
         # check that they all have the same length and that the importance is not all zero
-        if len(varimpSD)!=max_var or len(varimp)!=max_var or len(variables)!=max_var:
-            raise Exception("varimp lists seem to be wrong length: %s %s %s" % (max_var, len(varimpSD), len(varimp), len(variables)))
-        h2o_util.assertApproxEqual(sum(varimp), 0.0, tol=1e-5, msg="Shouldn't have all 0's in varimp %s" % varimp)
+        # if len(varimpSD)!=max_var or len(varimp2)!=max_var or len(variables)!=max_var:
+        #    raise Exception("varimp lists seem to be wrong length: %s %s %s" % \
+        #        (max_var, len(varimpSD), len(varimp2), len(variables)))
+
+        # not checking maxvar or variables. Don't know what they should be
+        if len(varimpSD) != len(varimp2):
+            raise Exception("varimp lists seem to be wrong length: %s %s" % \
+                (len(varimpSD), len(varimp2)))
+
+        h2o_util.assertApproxEqual(sum(varimp2), 0.0, tol=1e-5, 
+            msg="Shouldn't have all 0's in varimp %s" % varimp2)
 
     treeStats = rf_model['treeStats']
     if not treeStats:

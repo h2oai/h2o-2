@@ -1,6 +1,6 @@
 import unittest, random, sys, time, getpass
-sys.path.extend(['.','..','py'])
-import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i, h2o_cmd
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_import as h2i, h2o_cmd
 
 # new ...ability to reference cols
 # src[ src$age<17 && src$zip=95120 && ... , ]
@@ -43,20 +43,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1, java_heap_GB=28)
-        else:
-            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=40)
+        h2o.init(1, java_heap_GB=28)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_exec2_sum(self):
-        h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         # csvPathname = 'airlines/year2013.csv'
         if getpass.getuser()=='jenkins':

@@ -44,9 +44,11 @@ def sleep(secs):
     time.sleep(period)
 
 def find_file(base):
-    f = base
+    # epand ~ or ~user with home dir
+    f = os.path.expanduser(base)
     if not os.path.exists(f): f = '../' + base
     if not os.path.exists(f): f = '../../' + base
+    if not os.path.exists(f): f = '../../../' + base
     if not os.path.exists(f): f = 'py/' + base
     # these 2 are for finding from h2o-perf
     if not os.path.exists(f): f = '../h2o/' + base

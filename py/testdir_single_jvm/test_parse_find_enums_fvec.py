@@ -1,7 +1,7 @@
 import unittest, random, sys, time, re
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 RANDOM_LENGTH = False
 ENUM_SIZE = random.randint(2,7)
 ### ENUM_SIZE = 4
@@ -73,14 +73,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
-        h2o.beta_features = True
+        h2o.init(1,java_heap_GB=1)
 
     @classmethod
     def tearDownClass(cls):

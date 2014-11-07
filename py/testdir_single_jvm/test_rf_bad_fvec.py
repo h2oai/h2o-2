@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i
 
 datalines = """
 # 'comment, is okay
@@ -60,19 +60,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_badrf(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvPathname = SYNDATASETS_DIR + '/badrf.data'
         dsf = open(csvPathname, "w+")

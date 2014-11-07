@@ -297,9 +297,9 @@ dw_3:
 	    echo cp -p R/h2o_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2o_package.pdf; \
 	    cp -p R/h2o_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2o_package.pdf || exit 1; \
 	fi
-	sed -i -e "s/SUBST_RELEASE_NAME/$(RELEASE_NAME)/g" $(BUILD_WEBSITE_DIR)/deployment/hadoop_tutorial.html
-	sed -i -e "s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g" $(BUILD_WEBSITE_DIR)/deployment/hadoop_tutorial.html
-	sed -i -e "s/SUBST_BUILD_NUMBER/$(BUILD_NUMBER)/g" $(BUILD_WEBSITE_DIR)/deployment/hadoop_tutorial.html
+	sed -i -e "s/SUBST_RELEASE_NAME/$(RELEASE_NAME)/g; s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g; s/SUBST_BUILD_NUMBER/$(BUILD_NUMBER)/g" $(BUILD_WEBSITE_DIR)/deployment/hadoop_tutorial.html
+	sed -i -e "s/SUBST_RELEASE_NAME/$(RELEASE_NAME)/g; s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g; s/SUBST_BUILD_NUMBER/$(BUILD_NUMBER)/g" $(BUILD_WEBSITE_DIR)/Ruser/Rinstall.html
+	sed -i -e "s/SUBST_RELEASE_NAME/$(RELEASE_NAME)/g; s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g; s/SUBST_BUILD_NUMBER/$(BUILD_NUMBER)/g" $(BUILD_WEBSITE_DIR)/deployment/ec2_build_ami.html
 
 #
 # Set appropriately for your data size to quickly try out H2O.

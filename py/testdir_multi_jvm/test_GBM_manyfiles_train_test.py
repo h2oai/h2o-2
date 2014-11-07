@@ -1,33 +1,27 @@
 import unittest
 import random, sys, time, re
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import h2o_browse as h2b, h2o_gbm
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3, java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GBM_manyfiles_train_test(self):
-        h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
-        if localhost:
+        if h2o.localhost:
             files = [
                 # None forces numCols to be used. assumes you set it from Inspect
                 # problems with categoricals not in the train data set? (warnings in h2o stdout)

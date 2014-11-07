@@ -11,8 +11,8 @@
 import h2o_args
 import h2o_nodes
 
-# tests reference the first line of stuff, through h2o.* 
-from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size, \
+# tests reference the first line of stuff, through h2o.*
+from h2o_bc import decide_if_localhost, touch_cloud, verify_cloud_size, stabilize_cloud, \
     build_cloud as build_cloud2, \
     build_cloud_with_json as build_cloud_with_json2, \
     tear_down_cloud as tear_down_cloud2
@@ -37,10 +37,11 @@ def setup_benchmark_log():
     cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
 def copy_h2o_args_to_here():
-    # if we only copy after the build cloud, the unit_main will have run (if not jenkins) 
+    # if we only copy after the build cloud, the unit_main will have run (if not jenkins)
     # and no one should be looking here during import (because these won't exist yet)
     # hack to support legacy tests that look at h2o.* for these
-    global beta_features, long_test_case, browse_disable, verbose, abort_after_import, clone_cloud_json
+    global beta_features, long_test_case, browse_disable, verbose, abort_after_import
+    global clone_cloud_json, config_json
     global python_username, python_test_name, python_cmd_line
     # Warning: only legacy tests should use these.
     # all others should use h2o_args (and not as module globals that execute during module import)
@@ -51,6 +52,7 @@ def copy_h2o_args_to_here():
     verbose = h2o_args.verbose
     abort_after_import = h2o_args.abort_after_import
     clone_cloud_json = h2o_args.clone_cloud_json
+    config_json = h2o_args.config_json
     python_username = h2o_args.python_username
     python_test_name = h2o_args.python_test_name
     python_cmd_line = h2o_args.python_cmd_line
@@ -82,7 +84,7 @@ def build_cloud_with_json(*args, **kwargs):
     copy_h2o_args_to_here()
     global nodes
     nodes = build_cloud_with_json2(*args, **kwargs)
-    
+
     # done already
     # h2o_nodes.nodes[:] = nodes
     return nodes
@@ -100,4 +102,21 @@ def cloud_name():
 
 # doesn't depend on h2o_args
 LOG_DIR = get_sandbox_name()
-                                                         
+
+# have to wait until def build_cloud() above, because h2o_hosts will import it
+# so keep the import down here
+import h2o_hosts
+
+def init(*args, **kwargs):
+    global localhost
+    localhost = decide_if_localhost()
+    global nodes
+    # we go thru the defs above, to do the other stuff like grab h2o_args
+    # don't really need to assign nodes here since it's done above, and
+    # build_cloud_with_hosts goes thru build_cloud. But this makes it obvious.
+    if (localhost):
+        nodes = build_cloud(*args, **kwargs)
+    else:
+        nodes = h2o_hosts.build_cloud_with_hosts(*args, **kwargs)
+    print "kevin:", len(nodes)
+

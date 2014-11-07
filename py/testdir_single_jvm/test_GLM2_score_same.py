@@ -11,8 +11,8 @@
 # np.savetxt('./1mx' + str(f) + '_hastie_10_2.data', Y, delimiter=',', fmt='%.2f');
 
 import unittest, time, sys, copy
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_import as h2i
 
 def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs, pollTimeoutSecs, **kwargs):
     print "\nStarting GLM of", csvFilename
@@ -67,12 +67,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(1)
+        h2o.init(1)
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -84,7 +79,6 @@ class Basic(unittest.TestCase):
     glmScore1 = {}
 
     def test_GLM2_score_same(self):
-        h2o.beta_features = True
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         bucket = 'home-0xdiag-datasets'
         csvFilename = "1mx10_hastie_10_2.data.gz"

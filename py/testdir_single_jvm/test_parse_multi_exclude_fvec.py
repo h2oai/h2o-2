@@ -1,6 +1,6 @@
 import unittest, random, sys, time, os, stat, pwd, grp
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 FILENUM=2
 
@@ -43,19 +43,14 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
         print "WARNING: won't work for remote h2o, because syn_datasets is created locally only, for import"
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=14)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=14)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_parse_multi_exclude_fvec(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
         tryList = [

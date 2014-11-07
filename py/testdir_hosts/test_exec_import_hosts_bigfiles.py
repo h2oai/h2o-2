@@ -1,7 +1,7 @@
 import unittest
 import random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 zeroList = [
         'Result.hex = c(0)',
@@ -53,12 +53,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         global SEED
         SEED = h2o.setup_random_seed()
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud()
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):

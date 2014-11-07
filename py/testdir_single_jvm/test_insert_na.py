@@ -1,6 +1,6 @@
 import unittest, time, sys, random 
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_exec as h2e, h2o_util
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_import as h2i, h2o_jobs, h2o_exec as h2e, h2o_util
 
 DO_POLL = False
 class Basic(unittest.TestCase):
@@ -9,14 +9,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
         global SEED
         SEED = h2o.setup_random_seed()
 
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):

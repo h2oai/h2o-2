@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_browse as h2b
 
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rowData):
@@ -22,11 +22,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # fails with 3
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, java_heap_GB=4, use_flatfile=True)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3, java_heap_GB=4, use_flatfile=True)
 
         h2b.browseTheCloud()
 
@@ -35,7 +31,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_parse_fs_schmoo_fvec(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_prostate.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
