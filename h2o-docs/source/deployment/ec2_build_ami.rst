@@ -77,9 +77,9 @@ Download Java and H\ :sub:`2`\ O
 
     ::
 
-      wget http://s3.amazonaws.com/h2o-release/h2o/master/1485/h2o-2.7.0.1485.zip
-      unzip h2o-2.7.0.1485.zip
-      cd h2o-2.7.0.1485
+      wget http://h2o-release.s3.amazonaws.com/h2o/SUBST_RELEASE_NAME/SUBST_BUILD_NUMBER/h2o-SUBST_PROJECT_VERSION.zip
+      unzip h2o-SUBST_PROJECT_VERSION.zip
+      cd h2o-SUBST_PROJECT_VERSION
       java -Xmx1g -jar h2o.jar
 
 

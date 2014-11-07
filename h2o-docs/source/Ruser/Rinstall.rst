@@ -3,11 +3,14 @@
 Install H\ :sub:`2`\ O package in R
 ===================================
 
-Currently, there are two different ways to install the H\ :sub:`2`\ O package in R. If you are using R 2.13.0 or later, the following instructions describe how to download from CRAN, how to download the build from the 0xdata website, and how to install from the most recent source code.
+Currently, there are a few different ways to install the H\ :sub:`2`\ O package in R. Make sure you are using R version 2.13.0 or later.
+The following instructions describe how to download from CRAN, how to download the build from the 0xdata website, and how to install from the most recent source code.
 
-- The 0xdata `website <http://0xdata.com/download/>`_ has the most recent stable releases of H\ :sub:`2`\ O as well as the bleeding edge nightly build.
-- CRAN has a policy of updating packages every few weeks to months so the most recent or the last stable release would be available
-- `GitHub <http://github.com/0xdata>`_ has most recent changes committed and a build will be made nightly from the source code; however, stability is not guaranteed.
+- `Download R Package directly from 0xdata.com`_
+- `Download from CRAN`_
+- `Download zip file from 0xdata.com`_
+- `Make a build from Source Code`_
+- `Upgrading Packages`_
 
 Quick Start Video
 """""""""""""""""
@@ -43,52 +46,6 @@ If your machine does not have curl-config, you must install the dependencies out
    
 To install the packages, use **install.packages()** (for example, **install.packages(RCurl)**. 
 
-Download zip file from 0xdata.com
-"""""""""""""""""""""""""""""""""
-
-**Step 1**
-
-Download a release from our `website <http://0xdata.com/download/>`_. The downloaded package will contain both the
-H\ :sub:`2`\ O jar file as well as the R tar package file for R installation. After download completes, unzip the file and navigate to the
-R subdirectory with the tar package.
-
-::
-
-  $ unzip h2o-2.7.0.1497.zip
-  $ cd h2o-2.7.0.1497/R
-  $ pwd
-    /c/Users/Amy/Downloads/h2o-2.7.0.1497/R
-
-
-**Step 2**
-
-Start R or Rstudio and install the R client package by running **install.packages** and entering the location of the tar file. To verify the installation, load the library
-and check that a simple demo script runs.
-
-::
-
-  > install.packages("C:/Users/Amy/Downloads/h2o-2.7.0.1497/R/h2o_2.7.0.1497.tar.gz",
-    repos = NULL, type = "source")
-  > library(h2o)
-  > demo(h2o.glm)
-
-Download from CRAN
-""""""""""""""""""
-
-When downloading from CRAN keep in mind that the initial download from CRAN contain only the R package but when running h2o.init()for the first time R will automatically download the corresponding H\ :sub:`2`\ O jar file, before launching H\ :sub:`2`\ O.
-
-::
-
-  > install.packages("h2o")
-  > library(h2o)
-  > localH2O = h2o.init()
-
-  H2O is not running yet, starting it now...
-  Performing one-time download of h2o.jar from
-        http://s3.amazonaws.com/h2o-release/h2o/rel-knuth/11/Rjar/h2o.jar
-  (This could take a few minutes, please be patient...)
-  
-
 Download R Package directly from 0xdata.com
 """""""""""""""""""""""""""""""""""""""""""
 
@@ -100,16 +57,63 @@ Download one of releases available on our `website <http://0xdata.com/download/>
   if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 
   # Next, we download, install and initialize the H2O package for R.
-  install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/1497/R", getOption("repos"))))
+  install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/SUBST_RELEASE_NAME/SUBST_BUILD_NUMBER/R", getOption("repos"))))
   library(h2o)
   localH2O = h2o.init()
 
   # Finally, let's run a demo to see H2O at work.
   demo(h2o.glm)
-  
 
-Make a build from Git
-"""""""""""""""""""""
+Download from CRAN
+""""""""""""""""""
+
+CRAN has a policy of updating packages every few weeks to months package might not be the most recent stable release.
+When downloading from CRAN keep in mind that the initial download from CRAN contain only the R package but when running h2o.init()for the
+first time R will automatically download the corresponding H\ :sub:`2`\ O jar file, before launching H\ :sub:`2`\ O.
+
+::
+
+  > install.packages("h2o")
+  > library(h2o)
+  > localH2O = h2o.init(nthreads = -1)
+
+  H2O is not running yet, starting it now...
+  Performing one-time download of h2o.jar from
+        http://s3.amazonaws.com/h2o-release/h2o/rel-knuth/11/Rjar/h2o.jar
+  (This could take a few minutes, please be patient...)
+
+Download zip file from 0xdata.com
+"""""""""""""""""""""""""""""""""
+
+**Step 1**
+
+Download a release from our `website <http://0xdata.com/download/>`_. The downloaded package will contain both the
+H\ :sub:`2`\ O jar file as well as the R tar package file for R installation. After download completes, unzip the file and navigate to the
+R subdirectory with the tar package.
+
+::
+
+  $ unzip h2o-SUBST_PROJECT_VERSION.zip
+  $ cd h2o-SUBST_PROJECT_VERSION/R
+  $ pwd
+    /c/Users/Amy/Downloads/h2o-SUBST_PROJECT_VERSION/R
+
+
+**Step 2**
+
+Start R or Rstudio and install the R client package by running **install.packages** and entering the location of the tar file. To verify the installation, load the library
+and check that a simple demo script runs.
+
+::
+
+  > install.packages("C:/Users/Amy/Downloads/h2o-SUBST_PROJECT_VERSION/R/h2o_SUBST_PROJECT_VERSION.tar.gz",
+    repos = NULL, type = "source")
+  > library(h2o)
+  > demo(h2o.glm)
+
+
+Make a build from Source Code
+"""""""""""""""""""""""""""""
 
 **Step 1**
 
