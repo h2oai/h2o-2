@@ -26,7 +26,7 @@ check.deeplearning_anomaly <- function(conn) {
   train_hex <- train_hex[,-resp]
   test_hex <- test_hex[,-resp]
   
-  # helper function for display of handwritten digits
+  # helper functions for display of handwritten digits
   # adapted from http://www.r-bloggers.com/the-essence-of-a-handwritten-digit/
   plotDigit <- function(mydata, rec_error) {
     len <- nrow(mydata)
@@ -39,6 +39,12 @@ check.deeplearning_anomaly <- function(conn) {
       z<-z[,28:1]
       image(1:28,1:28,z,main=paste0("rec_error: ", round(rec_error[i],4)),col=cus_col(256))
     }
+  }
+  plotDigits <- function(data, rec_error, rows) {
+    row_idx <- order(rec_error[,1],decreasing=F)[rows]
+    my_rec_error <- rec_error[row_idx,]
+    my_data <- as.matrix(as.data.frame(data[row_idx,]))
+    plotDigit(my_data, my_rec_error)
   }
   
   
@@ -60,41 +66,32 @@ check.deeplearning_anomaly <- function(conn) {
   # 2) DETECT OUTLIERS
   # anomaly app computes the per-row reconstruction error for the test data set
   # (passing it through the autoencoder model and computing mean square error (MSE) for each row)
-  rec_error <- as.data.frame(h2o.anomaly(test_hex, ae_model))
+  test_rec_error <- as.data.frame(h2o.anomaly(test_hex, ae_model))
   
   
   # 3) VISUALIZE OUTLIERS
-  # Show the data points with low/medium/high reconstruction error
+  # Let's look at the test set points with low/median/high reconstruction errors.
+  # We will now visualize the original test set points and their reconstructions obtained 
+  # by propagating them through the narrow neural net.
   
   # Convert the test data into its autoencoded representation (pass through narrow neural net)
   test_recon <- h2o.predict(ae_model, test_hex)
+
+  # The good
+  # Let's plot the 25 digits with lowest reconstruction error.
+  # First we plot the reconstruction, then the original scanned images.  
+  plotDigits(test_recon, test_rec_error, c(1:25))
+  plotDigits(test_hex,   test_rec_error, c(1:25))
   
-  #LOWEST RECONSTRUCTION ERROR - LEAST OUTLIER-like
-  #row indices and reconstruction errors for easiest to reconstruct data points
-  easy_row_idx <- order(rec_error[,1],decreasing=F)[1:25]
-  easy_rec_error <- rec_error[easy_row_idx,]
-  test_rec_easy <- as.matrix(as.data.frame(test_recon[easy_row_idx,]))
-  test_orig_easy <- as.matrix(as.data.frame(test_hex[easy_row_idx,]))
-  plotDigit(test_rec_easy,  easy_rec_error) #Reconstructed data points - LEAST OUTLIER-like
-  plotDigit(test_orig_easy, easy_rec_error) #Original data points - LEAST OUTLIER-like
+  # The bad
+  # Now the same for the 25 digits with median reconstruction error.
+  plotDigits(test_recon, test_rec_error, c(4988:5012))
+  plotDigits(test_hex,   test_rec_error, c(4988:5012))
   
-  #MEDIAN RECONSTRUCTION ERROR
-  #row indices and reconstruction errors for averge to reconstruct data points
-  median_row_idx <- tail(head(order(rec_error[,1],decreasing=T),5013),25)[1:25]
-  median_rec_error <- rec_error[median_row_idx,]
-  test_rec_median <- as.matrix(as.data.frame(test_recon[median_row_idx,]))
-  test_orig_median <- as.matrix(as.data.frame(test_hex[median_row_idx,]))
-  plotDigit(test_rec_median,  median_rec_error) #Reconstructed data points) - MEDIAN
-  plotDigit(test_orig_median, median_rec_error) #Original data points - MEDIAN
-  
-  #LARGEST RECONSTRUCTION ERROR - OUTLIERS
-  #row indices and reconstruction errors for hardest to reconstruct data points
-  hardest_row_idx <- order(rec_error[,1],decreasing=T)[1:25]
-  hardest_rec_error <- rec_error[hardest_row_idx,]
-  test_rec_worst <- as.matrix(as.data.frame(test_recon[hardest_row_idx,]))
-  test_orig_worst <- as.matrix(as.data.frame(test_hex[hardest_row_idx,]))
-  plotDigit(test_rec_worst,  hardest_rec_error) #Reconstructed data points - OUTLIERS
-  plotDigit(test_orig_worst, hardest_rec_error) #Original data points - OUTLIERS
+  # The ugly
+  # And here are the biggest outliers - The 25 digits with highest reconstruction error!
+  plotDigits(test_recon, test_rec_error, c(9976:10000))
+  plotDigits(test_hex,   test_rec_error, c(9976:10000))
   
   testEnd()
 }
