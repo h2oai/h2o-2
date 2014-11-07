@@ -111,9 +111,13 @@ def init(*args, **kwargs):
     global localhost
     localhost = decide_if_localhost()
     global nodes
+    # we go thru the defs above, to do the other stuff like grab h2o_args
+    # don't really need to assign nodes here since it's done above, and
+    # build_cloud_with_hosts goes thru build_cloud. But this makes it obvious.
     if (localhost):
         nodes = build_cloud(*args, **kwargs)
     else:
         nodes = h2o_hosts.build_cloud_with_hosts(*args, **kwargs)
+    print "kevin:", len(nodes)
 
 
