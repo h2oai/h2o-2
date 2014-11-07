@@ -1,12 +1,14 @@
 package water.parser;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
-
-
 import water.*;
 import water.fvec.ParseDataset2.ParseProgressMonitor;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 
 public abstract class CustomParser extends Iced {
@@ -60,7 +62,7 @@ public abstract class CustomParser extends Iced {
     }
   }
   public enum ParserType {
-    AUTO(false),XLS(false),XLSX(false),CSV(true), SVMLight(true);
+    AUTO(false),XLS(false),XLSX(false),CSV(true), SVMLight(true), TEXT(true);
     public final boolean parallelParseSupported;
     ParserType(boolean par){parallelParseSupported = par;}
   }

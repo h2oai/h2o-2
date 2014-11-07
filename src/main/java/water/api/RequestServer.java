@@ -2,7 +2,6 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-
 import hex.*;
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2.KMeans2ModelView;
@@ -13,11 +12,11 @@ import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gapstat.GapStatistic;
 import hex.gapstat.GapStatisticModelView;
+import hex.gapstat.GapStatisticProgressPage;
 import hex.gbm.GBM;
 import hex.glm.*;
 import hex.nb.NBModelView;
 import hex.nb.NBProgressPage;
-import hex.gapstat.GapStatisticProgressPage;
 import hex.nb.NaiveBayes;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
@@ -92,6 +91,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");
     Request.addToNavbar(registerRequest(new Upload2()),       "Upload",                 "Data");
     Request.addToNavbar(registerRequest(new Parse2()),        "Parse",                  "Data");
+    Request.addToNavbar(registerRequest(new water.api.TParse()),       "TParse",                 "Data");
     Request.addToNavbar(registerRequest(new Inspector()),     "Inspect",                "Data");
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
