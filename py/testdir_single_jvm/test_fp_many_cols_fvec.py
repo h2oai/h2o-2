@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
         for (rowCount, colCount, hex_key, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             NUM_CASES = h2o_util.fp_format()
-            sel = random.randint(0, NUM_CASES)
+            sel = random.randint(0, NUM_CASES-1)
             csvFilename = "syn_%s_%s_%s_%s.csv" % (SEEDPERFILE, sel, rowCount, colCount)
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 

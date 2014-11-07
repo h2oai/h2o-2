@@ -2,7 +2,6 @@ import sys
 sys.path.extend(['.','..','../..','py'])
 
 import unittest, h2o, h2o_cmd, h2o_import as h2i
-import 
 
 class Basic(unittest.TestCase):
     def tearDown(self):

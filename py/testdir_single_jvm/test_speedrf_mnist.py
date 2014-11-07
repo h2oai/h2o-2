@@ -5,7 +5,6 @@ sys.path.extend(['.','..','../..','py'])
 
 import h2o
 import h2o_cmd
-import 
 import h2o_browse as h2b
 import h2o_import as h2i
 import h2o_glm
