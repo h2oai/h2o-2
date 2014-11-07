@@ -3,9 +3,10 @@
 Install H\ :sub:`2`\ O package in R
 ===================================
 
-Currently, there are two different ways to install the H\ :sub:`2`\ O package in R. If you are using R 2.13.0 or later, the following instructions describe how to download the build from the 0xdata website and how to install from the most recent source code.
+Currently, there are two different ways to install the H\ :sub:`2`\ O package in R. If you are using R 2.13.0 or later, the following instructions describe how to download from CRAN, how to download the build from the 0xdata website, and how to install from the most recent source code.
 
 - The 0xdata `website <http://0xdata.com/download/>`_ has the most recent stable releases of H\ :sub:`2`\ O as well as the bleeding edge nightly build.
+- CRAN has a policy of updating packages every few weeks to months so the most recent or the last stable release would be available
 - `GitHub <http://github.com/0xdata>`_ has most recent changes committed and a build will be made nightly from the source code; however, stability is not guaranteed.
 
 Quick Start Video
@@ -71,16 +72,27 @@ and check that a simple demo script runs.
   > library(h2o)
   > demo(h2o.glm)
 
+Download from CRAN
+""""""""""""""""""
+
+When downloading from CRAN keep in mind that the initial download from CRAN contain only the R package but when running h2o.init()for the first time R will automatically download the corresponding H\ :sub:`2`\ O jar file, before launching H\ :sub:`2`\ O.
+
+::
+
+  > install.packages("h2o")
+  > library(h2o)
+  > localH2O = h2o.init()
+
+  H2O is not running yet, starting it now...
+  Performing one-time download of h2o.jar from
+        http://s3.amazonaws.com/h2o-release/h2o/rel-knuth/11/Rjar/h2o.jar
+  (This could take a few minutes, please be patient...)
+  
 
 Download R Package directly from 0xdata.com
 """""""""""""""""""""""""""""""""""""""""""
 
-Download one of releases available on our `website <http://0xdata.com/download/>`_. Select the **INSTALL IN R** tab, then copy and paste the following code into R to install.
-
-.. image:: buildindex.png
-   :width: 100 %
-
-
+Download one of releases available on our `website <http://0xdata.com/download/>`_. Select the **INSTALL IN R** tab, then copy and paste the following code into R to install
 ::
 
   # The following two commands remove any previously installed H2O packages for R.
