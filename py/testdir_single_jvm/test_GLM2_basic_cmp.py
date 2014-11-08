@@ -114,7 +114,6 @@ def do_scipy_glm(self, bucket, csvPathname, L, family='binomial'):
 def do_h2o_glm(self, bucket, csvPathname, L, family='binomial'):
 
     h2p.red_print("\nNow doing h2o")
-    h2o.beta_features=True
     parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='local', timeoutSecs=180)
     # save the resolved pathname for use in the sklearn csv read below
 

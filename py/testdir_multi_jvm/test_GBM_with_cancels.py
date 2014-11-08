@@ -20,7 +20,6 @@ class Basic(unittest.TestCase):
 
     def test_GBM_with_cancels(self):
         print "do import/parse with VA"
-        h2o.beta_features = False
 
         importFolderPath = 'standard'
         timeoutSecs = 500
@@ -42,23 +41,12 @@ class Basic(unittest.TestCase):
             # creates csvFilename.hex from file in importFolder dir 
             csvPathname = importFolderPath + "/" + csvFilename 
             
-            ### h2o.beta_features = False
 
             (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=50)
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key='c.hex', 
-                timeoutSecs=500, noPoll=False, doSummary=False) # can't do summary until parse result is correct json
+                timeoutSecs=500, doSummary=False)
 
             h2o.check_sandbox_for_errors()
-
-            # wait for it to show up in jobs?
-            ## time.sleep(2)
-            # no pattern waits for all
-            ## h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
-
-            # hack it because no response from Parse2
-            if h2o.beta_features:
-                parseResult = {'destination_key': 'c.hex'}
-
             print "\nparseResult", h2o.dump_json(parseResult)
 
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -106,7 +94,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             timeoutSecs = 1800
             start = time.time()
-            GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+            GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
             print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
             # no pattern waits for all
 
@@ -116,7 +104,7 @@ class Basic(unittest.TestCase):
                 for j in range(5):
                     # FIX! apparently we can't reuse a model key after a cancel
                     kwargs['destination_key'] = 'GBMBad' + str(i) + str(j)
-                    GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+                    GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
                     jobids.append(GBMFirstResult['job_key'])
 
                 # have to pass the job id

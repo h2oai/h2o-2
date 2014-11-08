@@ -90,7 +90,6 @@ def do_statsmodels_glm(self, bucket, csvPathname, L, family='gaussian'):
 def do_h2o_glm(self, bucket, csvPathname, L, family='gaussian'):
 
     h2p.red_print("\nNow doing h2o")
-    h2o.beta_features=True
     parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', timeoutSecs=180)
     # save the resolved pathname for use in the sklearn csv read below
 
