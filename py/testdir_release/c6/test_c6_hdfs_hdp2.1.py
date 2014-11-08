@@ -1,6 +1,6 @@
 import unittest, time, sys, time, random, json
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_common, h2o_jobs as h2j
 
 DO_RANDOM_SAMPLE = True
 DO_RF = False
@@ -10,7 +10,6 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c6_hdfs(self):
-        h2o.beta_features = False
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
@@ -86,9 +85,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "Loading", csvFilename, 'from hdfs'
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs,
-                doSummary=True, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
-            if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+                doSummary=True, benchmarkLogging=benchmarkLogging)
             print "parse result:", parseResult['destination_key']
 
             elapsed = time.time() - start
@@ -105,9 +102,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     }
                 paramsString = json.dumps(kwargs)
                 RFview = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=2000,
-                    benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features, **kwargs)
-                if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+                    benchmarkLogging=benchmarkLogging, **kwargs)
                 elapsed = time.time() - start
                 print "rf end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 

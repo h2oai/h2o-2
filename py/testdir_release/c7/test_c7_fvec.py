@@ -14,10 +14,7 @@ print "via the cloned cloud mechanism (h2o-nodes.json)"
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_c7_rel(self):
-        print "Running with h2o.beta_features=True for all"
-        h2o.beta_features = True
-
+    def test_c7_fvec(self):
         print "Since the python is not necessarily run as user=0xcust.."
         print "r can't use schema='put' here"
         print "Want to be able to run python as jenkins"
@@ -33,8 +30,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # looks like it takes the hex string (two chars)
         start = time.time()
         # hardwire TAB as a separator, as opposed to white space (9)
-        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, 
-            separator=9, doSummary=False)
+        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=False)
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
         print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -48,8 +44,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         #summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2)
         # summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], max_ncols=2500)
         # can't do more than 1000
-        summaryResult = h2o_cmd.runSummary(key=hex_key, numCols=numCols, numRows=numRows, 
-            timeoutSecs=500)
+        summaryResult = h2o_cmd.runSummary(key=hex_key, numCols=numCols, numRows=numRows, timeoutSecs=500)
 
         # there may be a lot NAs. 
         # we don't want to ignore any cols, and we don't want to ignore row
@@ -100,7 +95,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # GLMModel = glm['GLMModel']
         # modelKey = GLMModel['model_key']
         # glmView = h2o.nodes[0].glm_view(modelKey=modelKey)
-
 
         elapsed = time.time() - start
         print "glm completed in", elapsed, "seconds.", \
