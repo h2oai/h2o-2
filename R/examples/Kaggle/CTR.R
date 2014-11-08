@@ -14,7 +14,7 @@ sink("CTR.log", split = T)
 library(h2o)
 library(stringr)
 
-## Connect to H2O server (On server(s), run 'java -jar h2o.jar -Xmx32G -port 53322 -name CTR -data_max_factor_levels 100000000' first)
+## Connect to H2O server (On server(s), run 'java -Xmx32g -ea -jar h2o.jar -port 53322 -name CTR -data_max_factor_levels 100000000' first)
 ## Go to http://server:53322/ to check Jobs/Data/Models etc.
 h2oServer <- h2o.init(ip="mr-0xd2", port = 53322)
 

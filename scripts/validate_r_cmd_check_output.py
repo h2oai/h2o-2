@@ -61,6 +61,8 @@ class Check:
             r"^  sub-directories of 1Mb or more:",
             r"^    java  .*Mb",
             r"^NOTE: There were 2 notes.",
+
+            r"Package has FOSS license, installs .class/.jar but has no 'java' directory.",
         ]
 
         s = f.readline()
