@@ -26,7 +26,6 @@ class Basic(unittest.TestCase):
     def test_GBM_poker_1m(self):
         for trial in range(2):
             # PARSE train****************************************
-            h2o.beta_features = False #turn off beta_features
             start = time.time()
             xList = []
             eList = []
@@ -35,20 +34,10 @@ class Basic(unittest.TestCase):
             modelKey = 'GBMModelKey'
             timeoutSecs = 900
             # Parse (train)****************************************
-            if h2o.beta_features:
-                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
-
             csvPathname = 'poker/poker-hand-testing.data'
             hex_key = 'poker-hand-testing.data.hex'
             parseTrainResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
-                hex_key=hex_key, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
-
-            # hack
-            if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
-                print "Filling in the parseTrainResult['destination_key'] for h2o"
-                parseTrainResult['destination_key'] = trainKey
-
+                hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
             elapsed = time.time() - start
             print "train parse end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -61,8 +50,6 @@ class Basic(unittest.TestCase):
             print l
             h2o.cloudPerfH2O.message(l)
 
-            # if you set beta_features here, the fvec translate will happen with the Inspect not the GBM
-            # h2o.beta_features = True
             inspect = h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
             print "\n" + csvPathname, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
@@ -88,10 +75,7 @@ class Basic(unittest.TestCase):
 
                 trainStart = time.time()
                 gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
-                    noPoll=h2o.beta_features, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
-                # hack
-                if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+                    timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
                 trainElapsed = time.time() - trainStart
                 print "GBM training completed in", trainElapsed, "seconds. On dataset: ", csvPathname
 
@@ -118,7 +102,6 @@ class Basic(unittest.TestCase):
                 eList.append(pctWrongTrain)
                 fList.append(trainElapsed)
 
-        h2o.beta_features = False
         # just plot the last one
         if DO_PLOT_IF_KEVIN:
             xLabel = 'max_depth'

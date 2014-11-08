@@ -102,7 +102,6 @@ class Basic(unittest.TestCase):
 
         print "actual   classification error:" + format(actualErr)
 
-        h2o.beta_features = False
 
 if __name__ == '__main__':
     h2o.unit_main()

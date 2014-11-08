@@ -3,13 +3,13 @@ import h2o_print as h2p
 
 from h2o_test import get_sandbox_name, check_sandbox_for_errors, dump_json, verboseprint
 
-#*********************************************************************************************
+#*******************************************************************************
 # duplicate do_json_request here, because the normal one is a method on a h2o node object which 
 # doesn't exist yet. copied this from find_cloud.py
 def create_url(addr, port, loc):
     return 'http://%s:%s/%s' % (addr, port, loc)
 
-#*********************************************************************************************
+#*******************************************************************************
 def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeout=7, **kwargs):
     if params is not None:
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
@@ -35,8 +35,8 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
         rjson = None
         emsg = "ERROR: json got ConnectionError or other exception"
         # Rethrow the exception after we've checked for stack trace from h2o.
-        # Out of memory errors maybe don't show up right away? so we should wait for h2o
-        # to get it out to h2o stdout. 
+        # Out of memory errors maybe don't show up right away? 
+        # so we should wait for h2o to get it out to h2o stdout. 
         # Don't want to rely on cloud teardown to check because there's no delay, 
         # and we don't want to delay all cloud teardowns by waiting.
         exc_info = sys.exc_info()
@@ -51,7 +51,10 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
     return rjson
 
 #*********************************************************************************************
-def probe_node(line, h2oNodes, expectedSize):
+def probe_node(line, h2oNodes, expectedSize, hdfsSetup):
+
+    (hdfs_version, hdfs_config, hdfs_name_node) = hdfsSetup
+
     http_addr, sep, port = line.rstrip('\n').partition(":")
     http_addr = http_addr.lstrip('/') # just in case it's an old-school flatfile format with leading /
     if port == '':
@@ -89,8 +92,9 @@ def probe_node(line, h2oNodes, expectedSize):
         print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
         java_heap_GB = (n['tot_mem_bytes']+0.0)/(1024*1024*1024)
         java_heap_GB = int(round(java_heap_GB,0))
+        num_cpus = n['num_cpus']
         print "java_heap_GB:", java_heap_GB
-        print 'num_cpus:', n['num_cpus']
+        print 'num_cpus:', num_cpus
 
         java_heap_GB_list.append(java_heap_GB)
         num_cpus_list.append(num_cpus)
@@ -177,16 +181,17 @@ def find_cloud(ip_port=None,
     tries = 0
     # we could just take a single node's word on the complete cloud, but this 
     # two layer try is no big deal and gives some checking robustness when a bad cloud exists
+    hdfsSetup = (hdfs_version, hdfs_config, hdfs_name_node)
     for n1, possMember in enumerate(possMembers):
         tries += 1
         if possMember not in probes:
             probes.add(possMember)
-            members2 = probe_node(possMember, h2oNodes, expectedSize)
+            members2 = probe_node(possMember, h2oNodes, expectedSize, hdfsSetup)
             for n2, member2 in enumerate(members2):
                 tries += 1
                 if member2 not in probes:
                     probes.add(member2)
-                    probe_node(member2, h2oNodes)
+                    probe_node(member2, h2oNodes, expectedSize, hdfsSetup)
 
     print "\nDid %s tries" % tries
     print "len(probe):", len(probes)

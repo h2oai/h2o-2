@@ -16,7 +16,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM2_basic(self):
-        h2o.beta_features=True
         importFolderPath = "logreg"
         csvFilename = 'prostate.csv'
         csvPathname = importFolderPath + "/" + csvFilename

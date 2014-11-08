@@ -7,6 +7,5 @@ print "h2o_nodes"
 nodes = []
 
 # used to get a browser pointing to the last RFview
-global json_url_history
 json_url_history = []
 

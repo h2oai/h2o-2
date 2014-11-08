@@ -18,7 +18,6 @@ class Basic(unittest.TestCase):
     def test_GLM2_basic_browser(self):
         h2b.browseTheCloud()
 
-        h2o.beta_features=True
         importFolderPath = "logreg"
         csvFilename = 'prostate.csv'
         csvPathname = importFolderPath + "/" + csvFilename

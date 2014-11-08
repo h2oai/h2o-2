@@ -394,7 +394,6 @@ def simpleCheckGBMView(node=None, gbmv=None, noPrint=False, **kwargs):
 
     sample_rate = kwargs.get('sample_rate', None)
     validation = kwargs.get('validation', None)
-    print "kevin:", sample_rate, validation
     if (sample_rate==1 and not validation): 
         pass
     elif (totalScores<=0 or totalScores>5e9):
