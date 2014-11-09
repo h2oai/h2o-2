@@ -34,7 +34,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM1_GLM2_train_pred_fvec(self):
-        h2o.beta_features = False
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         trees = 15
@@ -90,7 +89,6 @@ class Basic(unittest.TestCase):
 
         #**************************************************************************
         # first glm1
-        h2o.beta_features = False
         CLASS = 1
         # try ignoring the constant col to see if it makes a diff
         kwargs = {

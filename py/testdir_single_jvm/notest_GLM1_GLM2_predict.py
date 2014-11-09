@@ -37,7 +37,6 @@ class Basic(unittest.TestCase):
 
     def test_GLM1_GLM2_predict(self):
         # h2b.browseTheCloud()
-        h2o.beta_features = False
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         trees = 15
@@ -91,7 +90,6 @@ class Basic(unittest.TestCase):
 
         #**************************************************************************
         # first glm1
-        h2o.beta_features = False
         CLASS = 1
         # try ignoring the constant col to see if it makes a diff
         kwargs = {

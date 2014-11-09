@@ -110,7 +110,6 @@ class Basic(unittest.TestCase):
             print "\nGBMResult:", GBMResult
             # print "\nGBMResult:", h2o.dump_json(GBMResult)
 
-            h2o.beta_features = False
             h2o.check_sandbox_for_errors()
 
             if DELETE_KEYS:

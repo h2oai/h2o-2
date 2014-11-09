@@ -33,9 +33,6 @@ print "-------------------------------------------------------------------------
 
 #
 # For valid kwargs, look at h2o.py random_forest() params_dict variable.
-# beta_features==False means Value Array (e.g. RF1).
-# beta_features==True means Fluid Vec (e.g. DRF2).
-#
 timeoutSecs = 20
 if (h2o.beta_features):
     kwargs = {"ntrees": 6}
