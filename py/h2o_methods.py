@@ -28,8 +28,9 @@ def get_cloud(self, noSandboxErrorCheck=False, timeoutSecs=10):
     # hardwire it to allow a 60 second timeout
     a = self.do_json_request('Cloud.json', noSandboxErrorCheck=noSandboxErrorCheck, timeout=timeoutSecs)
     version    = a['version']
-    if not version.startswith('2'):
-        raise Exception("h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % version)
+    if version and version!='unknown' and version!='null' and version!='none':
+        if not version.startswith('2'):
+            raise Exception("h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % version)
 
     consensus = a['consensus']
     locked = a['locked']
