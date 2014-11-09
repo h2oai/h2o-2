@@ -27,6 +27,9 @@ def check_params_update_kwargs(params_dict, kw, function, print_params):
 def get_cloud(self, noSandboxErrorCheck=False, timeoutSecs=10):
     # hardwire it to allow a 60 second timeout
     a = self.do_json_request('Cloud.json', noSandboxErrorCheck=noSandboxErrorCheck, timeout=timeoutSecs)
+    version    = a['version']
+    if not version.startswith('2'):
+        raise Exception("h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % version)
 
     consensus = a['consensus']
     locked = a['locked']
@@ -34,11 +37,12 @@ def get_cloud(self, noSandboxErrorCheck=False, timeoutSecs=10):
     cloud_name = a['cloud_name']
     node_name = a['node_name']
     node_id = self.node_id
-    verboseprint('%s%s %s%s %s%s %s%s' % (
+    verboseprint('%s%s %s%s %s%s %s%s %s%s' % (
         "\tnode_id: ", node_id,
         "\tcloud_size: ", cloud_size,
         "\tconsensus: ", consensus,
         "\tlocked: ", locked,
+        "\tversion: ", version,
     ))
     return a
 
@@ -568,7 +572,7 @@ def jobs_admin(self, timeoutSecs=120, **kwargs):
     }
     browseAlso = kwargs.pop('browseAlso', False)
     params_dict.update(kwargs)
-    verboseprint("\nexec_query:", params_dict)
+    verboseprint("\njobs_admin:", params_dict)
     a = self.do_json_request('Jobs.json', timeout=timeoutSecs, params=params_dict)
     verboseprint("\njobs_admin result:", dump_json(a))
     return a
