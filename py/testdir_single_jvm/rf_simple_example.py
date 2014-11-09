@@ -1,8 +1,7 @@
 import sys
 import json
-
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_import as h2i
+import h2o, h2o_cmd, h2o_import as h2i, h2o_args
 
 
 #
@@ -15,13 +14,8 @@ print "-------------------------------------------------------------------------
 print "BUILDING CLOUD"
 print "--------------------------------------------------------------------------------"
 
-h2o.parse_our_args()
-h2o.build_cloud(node_count=2, java_heap_GB=2)
-
-# False == Use VA form of algorithms (when available) (e.g. RF1).
-# True == Use FVec form of algorithm (e.g. DRF2).
-h2o.beta_features = True
-
+h2o_args.parse_our_args()
+h2o.init(node_count=2, java_heap_GB=2)
 
 print "--------------------------------------------------------------------------------"
 print "PARSING DATASET"

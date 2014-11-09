@@ -2,7 +2,7 @@
 import getpass, inspect, sys, argparse, unittest
 from h2o_get_ip import get_ip_address
 
-print "h2o_args"
+# print "h2o_args"
 # Global disable. used to prevent browsing when running nosetests, or when given -bd arg
 # Defaults to true, if user=jenkins, h2o.unit_main isn't executed, so parse_our_args isn't executed.
 # Since nosetests doesn't execute h2o.unit_main, it should have the browser disabled.
@@ -59,10 +59,7 @@ def find_python_test_name():
     return python_test_name
 
 python_test_name = find_python_test_name()
-
-# for debug
-if python_username=='jenkins' or python_username=='kevin':
-    print "    Test: %s" % python_test_name
+# print "    Test: %s" % python_test_name
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
@@ -159,7 +156,7 @@ def parse_our_args():
     # sys.argv[1:] = args.unittest_args
 
 def unit_main():
-    print "unit_main"
+    # print "unit_main"
 
     parse_our_args()
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username

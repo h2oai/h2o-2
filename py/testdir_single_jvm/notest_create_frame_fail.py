@@ -1,6 +1,6 @@
 import unittest, random, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_util, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_util, h2o_import as h2i
 
 DO_DOWNLOAD = False
 DO_INSPECT = False
@@ -13,13 +13,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud()
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -28,7 +24,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_NOPASS_create_frame_fail(self):
-        h2o.beta_features = True
 
         for trial in range(20):
             kwargs = {'integer_range': None, 'missing_fraction': 0.1, 'cols': 10, 'response_factors': 1, 'seed': 1234, 'randomize': 1, 'categorical_fraction': 0, 'rows': 1, 'factors': 0, 'real_range': 0, 'value': None, 'integer_fraction': 0}

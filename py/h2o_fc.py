@@ -51,11 +51,11 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
     return rjson
 
 #*********************************************************************************************
-def probe_node(line, h2oNodes, expectedSize, hdfsSetup):
+def create_node(possMember, h2oNodes, expectedSize, hdfsSetup):
 
     (hdfs_version, hdfs_config, hdfs_name_node) = hdfsSetup
 
-    http_addr, sep, port = line.rstrip('\n').partition(":")
+    http_addr, sep, port = possMember.rstrip('\n').partition(":")
     http_addr = http_addr.lstrip('/') # just in case it's an old-school flatfile format with leading /
     if port == '':
         port = '54321'
@@ -63,10 +63,10 @@ def probe_node(line, h2oNodes, expectedSize, hdfsSetup):
         http_addr = '127.0.0.1'
     # print "http_addr:", http_addr, "port:", port
 
-    probes = []
+    possMemberList = []
     gc = do_json_request(http_addr, port, 'Cloud.json', timeout=10)
     if gc is None:
-        return probes
+        return possMemberList
         
     # we'll just exception out, if we don't get a json response with the stuff that makes up what we think is "legal"
     consensus  = gc['consensus']
@@ -103,7 +103,7 @@ def probe_node(line, h2oNodes, expectedSize, hdfsSetup):
         # print 'name:', name
         ### print dump_json(n)
         name_list.append(name)
-        probes.append(name)
+        possMemberList.append(name)
 
         ip, sep, port = name.partition(':')
 
@@ -154,10 +154,10 @@ def probe_node(line, h2oNodes, expectedSize, hdfsSetup):
         # this is the total list so far
         if name not in h2oNodes:
             h2oNodes[name] = node
-            print "Added node %s to probes" % name
+            print "Added node %s to possMemberList" % name
 
     # we use this for our one level of recursion
-    return probes # might be empty!
+    return possMemberList # might be empty!
 
 #*********************************************************************************************
 # returns a json expandedCloud object that should be the same as what -ccj gets after json loads?
@@ -172,29 +172,29 @@ def find_cloud(ip_port=None,
     # hdfs_name_node an be ip, ip:port, hostname, hostname:port", 
     # None on expected size means don't check
 
+    hdfsSetup = (hdfs_version, hdfs_config, hdfs_name_node)
     # partition returns a 3-tuple as (LHS, separator, RHS) if the separator is found, 
     # (original_string, '', '') if the separator isn't found
-    possMembers = [ip_port]
+    possMembersList = [ip_port]
 
     h2oNodes = {}
-    probes = set()
+    alreadyAdded = set()
     tries = 0
     # we could just take a single node's word on the complete cloud, but this 
     # two layer try is no big deal and gives some checking robustness when a bad cloud exists
-    hdfsSetup = (hdfs_version, hdfs_config, hdfs_name_node)
-    for n1, possMember in enumerate(possMembers):
+    for n1, possMember in enumerate(possMembersList):
         tries += 1
-        if possMember not in probes:
-            probes.add(possMember)
-            members2 = probe_node(possMember, h2oNodes, expectedSize, hdfsSetup)
-            for n2, member2 in enumerate(members2):
+        if possMember not in alreadyAdded:
+            possMembersList2 = create_node(possMember, h2oNodes, expectedSize, hdfsSetup)
+            alreadyAdded.add(possMember)
+            for n2, possMember2 in enumerate(possMembersList2):
                 tries += 1
-                if member2 not in probes:
-                    probes.add(member2)
-                    probe_node(member2, h2oNodes, expectedSize, hdfsSetup)
+                if possMember2 not in alreadyAdded:
+                    create_node(possMember2, h2oNodes, expectedSize, hdfsSetup)
+                    alreadyAdded.add(possMember2)
 
     print "\nDid %s tries" % tries
-    print "len(probe):", len(probes)
+    print "len(alreadyAdded):", len(alreadyAdded)
 
     # get rid of the name key we used to hash to it
     h2oNodesList = [v for k, v in h2oNodes.iteritems()]

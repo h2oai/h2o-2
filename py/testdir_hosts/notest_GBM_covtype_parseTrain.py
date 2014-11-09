@@ -1,29 +1,27 @@
 import unittest
 import random, sys, time, re
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
-        h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GBM_parseTrain(self):
-        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
        
         files = [('standard', 'covtype.data', 'covtype.hex', 1800, 54)
                 ]
                   
         for importFolderPath,csvFilename,trainKey,timeoutSecs,response in files:
-            h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             start = time.time()
             parseResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + csvFilename,
@@ -44,7 +42,6 @@ class Basic(unittest.TestCase):
             }   
             print "Using these parameters for GBM: ", params
             kwargs = params.copy()
-            h2o.beta_features = True
             #noPoll -> False when GBM finished
             GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,timeoutSecs=timeoutSecs,**kwargs)
             h2j.pollWaitJobs(pattern="GBMKEY",timeoutSecs=1800,pollTimeoutSecs=1800)

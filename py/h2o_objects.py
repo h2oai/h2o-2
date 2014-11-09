@@ -6,7 +6,8 @@ from h2o_test import \
     tmp_dir, tmp_file, flatfile_pathname, spawn_cmd, find_file, verboseprint, \
     dump_json, log, log_rest, check_sandbox_for_errors
 
-print "h2o_objects"
+# print "h2o_objects"
+
 # used to drain stdout on the h2o objects below (before terminating a node)
 def __drain(src, dst):
     for l in src:

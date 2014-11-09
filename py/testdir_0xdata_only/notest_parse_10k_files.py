@@ -1,6 +1,6 @@
 import unittest, time, sys, time, random, gzip, os
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 def write_syn_dataset_gz(csvPathname, rowCount, headerData, rowData):
     f = gzip.open(csvPathname, 'wb')
@@ -66,11 +66,7 @@ class Basic(unittest.TestCase):
         retryDelaySecs = 10
 
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
-            localhost = h2o.decide_if_localhost()
-            if (localhost):
-                h2o.build_cloud(3,java_heap_GB=tryHeap, enable_benchmark_log=True)
-            else:
-                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, enable_benchmark_log=True)
+            h2o.init(3,java_heap_GB=tryHeap, enable_benchmark_log=True)
             ### h2b.browseTheCloud()
 
             # don't let the config json redirect import folder to s3 or s3n, because
@@ -155,7 +151,7 @@ class Basic(unittest.TestCase):
                 h2i.delete_keys_from_import_result(pattern=csvFilename, importResult=importResult)
 
                 h2o.tear_down_cloud()
-                if not localhost:
+                if not h2o.localhost:
                     print "Waiting 30 secs before building cloud again (sticky ports?)"
                     time.sleep(30)
 

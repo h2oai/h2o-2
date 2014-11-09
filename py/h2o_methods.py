@@ -8,7 +8,7 @@ import h2o_browse as h2b
 from h2o_objects import H2O
 from h2o_test import verboseprint, dump_json, check_sandbox_for_errors, get_sandbox_name, log
 
-print "h2o_methods"
+# print "h2o_methods"
 
 def check_params_update_kwargs(params_dict, kw, function, print_params):
     # only update params_dict..don't add

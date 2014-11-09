@@ -1,6 +1,6 @@
 import unittest, sys, random, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs, h2o_exec as h2e
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_jobs, h2o_exec as h2e
 import h2o_util
 
 import multiprocessing, os, signal, time
@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print "Will build_cloud() with random heap size and do overlapped import folder/parse (groups)"
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
         if RANDOM_HEAP:
             tryHeap = random.randint(4,28)
@@ -78,13 +78,7 @@ class Basic(unittest.TestCase):
 
         # print "\n", tryHeap,"GB heap, 1 jvm per host, import 172.16.2.176 hdfs, then parse"
         print "\n", tryHeap,"GB heap, 1 jvm per host, import,  then parse"
-        localhost = h2o.decide_if_localhost()
-        h2o.beta_features = True # for the beta tab in the browser
-        if (localhost):
-            h2o.build_cloud(node_count=3, java_heap_GB=4)
-                # use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4'
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap)
+        h2o.init(node_count=3, java_heap_GB=4)
                 # use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4'
 
     @classmethod
@@ -94,7 +88,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parse_multiprocess_fvec(self):
-        h2o.beta_features = True
         # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
         # don't raise exception if we find something bad in h2o stdout/stderr?
         # h2o.nodes[0].sandboxIgnoreErrors = True
@@ -107,10 +100,8 @@ class Basic(unittest.TestCase):
             importFolderPath = "iris"
             csvFilename = "iris2.csv"
             csvFilePattern = "iris2.csv"
-            if localhost:
-                trialMax = 20
-            else:
-                trialMax = 100
+            trialMax = 20
+
         elif DO_BIGFILE:
             bucket = 'home-0xdiag-datasets'
             importFolderPath = "standard"

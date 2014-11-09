@@ -10,7 +10,7 @@ from h2o_test import \
 from h2o_objects import LocalH2O, RemoteH2O, ExternalH2O
 import h2o_fc
 
-print "h2o_bc"
+# print "h2o_bc"
 
 def default_hosts_file():
     if os.environ.has_key("H2O_HOSTS_FILE"):
@@ -18,20 +18,33 @@ def default_hosts_file():
     return 'pytest_config-{0}.json'.format(getpass.getuser())
 
 # node_count is number of H2O instances per host if hosts is specified.
+# hack: this returns true for the --usecloud/-uc cases, to force it thru build_cloud/build_cloud_with_json/find_cloud
+# also for the -ccj cases
 def decide_if_localhost():
-    # First, look for local hosts file
-    hostsFile = default_hosts_file()
+    if h2o_args.usecloud:
+        print "* Will ask h2o node about cloud using -uc argument:", h2o_args.usecloud
+        return True
+
+    if h2o_args.clone_cloud_json:
+        print "* Using description of already built cloud, in JSON you passed as -ccj argument:", h2o_args.clone_json
+        return True
+
     if h2o_args.config_json:
-        print "* Using config JSON you passed as -cj argument:", h2o_args.config_json
+        print "* Will build cloud using config JSON you passed as -cj argument:", h2o_args.config_json
         return False
+
+    # look for local hosts file
+    hostsFile = default_hosts_file()
     if os.path.exists(hostsFile):
-        print "* Using config JSON file that matches your username, discovered in this directory: {0}.".format(hostsFile)
+        print "* Will build cloud using config JSON file that matches your username, discovered in this directory: {0}.".format(hostsFile)
         return False
+
     if 'hosts' in os.getcwd():
         print "Since you're in a *hosts* directory, we're using a config json"
         print "* Expecting default username's config json here. Better exist!"
         return False
-    print "No config json used. Launching local cloud..."
+
+    print "No special config control. Building local cloud per test..."
     return True
 
 # used to shift ports when running multiple tests on same machine in parallel (in different shells)
