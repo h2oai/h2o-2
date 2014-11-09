@@ -46,7 +46,6 @@ class Basic(unittest.TestCase):
         # java.lang.AssertionError: -2.9975397E38<NaN n=98
         # at hex.gbm.DTree$Split.split(DTree.java:224)
         h2o.init(2,java_heap_MB=1300,use_flatfile=True)
-            import 
         ### h2b.browseTheCloud()
 
     @classmethod
