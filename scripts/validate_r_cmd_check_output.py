@@ -62,7 +62,8 @@ class Check:
             r"^    java  .*Mb",
             r"^NOTE: There were 2 notes.",
 
-            r"Package has FOSS license, installs .class/.jar but has no 'java' directory.",
+            r"^Package has FOSS license, installs .class/.jar but has no 'java' directory.",
+            r"^\* DONE",
         ]
 
         s = f.readline()
