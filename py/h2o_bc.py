@@ -11,6 +11,7 @@ from h2o_objects import LocalH2O, RemoteH2O, ExternalH2O
 import h2o_fc
 
 # print "h2o_bc"
+LOG_DIR = get_sandbox_name()
 
 def default_hosts_file():
     if os.environ.has_key("H2O_HOSTS_FILE"):
@@ -164,7 +165,9 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
             nodeList.append(newNode)
 
         # If it's an existing cloud, it may already be locked. so never check.
-        verify_cloud_size(nodeList, expectedCloudName=nodeList[0].cloud_name, expectedLocked=None)
+        # we don't have the cloud name in the -ccj since it may change (and the file be static?)
+        # so don't check expectedCloudName
+        verify_cloud_size(nodeList, expectedCloudName=None, expectedLocked=None)
 
         # best to check for any errors right away?
         # (we won't report errors from prior tests due to marker stuff?
@@ -357,7 +360,6 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
     nodeList[0].h2o_log_msg()
 
     if h2o_args.config_json:
-        LOG_DIR = get_sandbox_name()
         # like cp -p. Save the config file, to sandbox
         print "Saving the ", h2o_args.config_json, "we used to", LOG_DIR
         shutil.copy(h2o_args.config_json, LOG_DIR + "/" + os.path.basename(h2o_args.config_json))
@@ -510,15 +512,15 @@ def verify_cloud_size(nodeList=None, expectedCloudName=None, expectedLocked=None
     # all match 0?
     version = cloudVersion[0]
     # check to see if it's a h2o version? (common problem when mixing h2o1/h2o-dev testing with --usecloud
-    if version and version!='unknown' and version!='null' and version!='none':
+    if version and version!='(unknown)' and version!='null' and version!='none':
         if not version.startswith('2'):
             print "h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % version
 
-    expectedVersion = version
-    for i, v in enumerate(cloudVersion):
-        if v != expectedVersion:
-            versionStr = (",".join(map(str, cloudVersion)))
-            print "node %s. Inconsistent cloud version. nodeList report version: %s" % (i, versionStr)
+        expectedVersion = version
+        for i, v in enumerate(cloudVersion):
+            if v != expectedVersion:
+                versionStr = (",".join(map(str, cloudVersion)))
+                print "node %s. Inconsistent cloud version. nodeList report version: %s" % (i, versionStr)
 
     if not ignoreHealth:
         for c in cloudStatus:

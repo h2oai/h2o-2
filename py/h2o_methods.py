@@ -28,7 +28,7 @@ def get_cloud(self, noSandboxErrorCheck=False, timeoutSecs=10):
     # hardwire it to allow a 60 second timeout
     a = self.do_json_request('Cloud.json', noSandboxErrorCheck=noSandboxErrorCheck, timeout=timeoutSecs)
     version    = a['version']
-    if version and version!='unknown' and version!='null' and version!='none':
+    if version and version!='(unknown)' and version!='null' and version!='none':
         if not version.startswith('2'):
             print "h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % dump_json(a)
 
