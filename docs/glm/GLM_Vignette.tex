@@ -32,10 +32,37 @@
 
 \section{Introduction} \label{1}
 
-This vignette presents the generalized linear modeling (GLM) framework in the \href{http://cran.r-project.org/web/packages/h2o/index.html}{H2O} package. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} and the R package \href{http://cran.r-project.org/web/packages/h2o/h2o.pdf}{manual}. The full datasets and code of this vignette can be found at the \href{https://github.com/0xdata/h2o}{H2O Github}. This introductory section provides instructions on getting H2O started, followed by a brief overview of generalized linear models.
+H2O's GLM algorithm fits generalized linear model with elastic net penalties. The model fitting computation is distributed and is extremely fast (and scales extremely well) for models with limited number of predictors with non-zero coefficients (~ low thousands). The algorithm can compute model for single value of penlaty argument or full regularization path similar to glmnet. It can compute gaussian (linear), logistic, poisson and gamma regresion models. This document describes usage of H2O's glm in R.
+
+H2O's glm fits the model by solving following problem:
+
+\[ \min\limits_{\beta}\ {{1\over{N}} loglikelihood(family,\beta)  + \lambda (\alpha \| \beta \|_1}  + {1- \alpha \over 2} \| \beta \|_2) \]
+
+The elastic net parameter $\alpha$ controls the penalty distribution between l1 and l2 penalty. It can have any value between 0 and 1. When $\alpha$ = 0, we have no l1 penalty and the problem becomes ridge regression. If $\alpha$ = 1 there is no l2 penalty and we have lasso.
+
+The main advantage of l1 penalty is that it (with sufficiently high $\lambda$) produces sparse solution (l2-only penalty does not reduce coefficients to exactly 0). The two penalties also differ in case of correlated predictors. l2 penalty shrinks ceofficients for correlated columns towards each other, while l1 penalty will pick one and drive the others to zero. Using elastic net argument $\alpha$, you can combine these two behaviors. It is also usefull to always add little l2 penalty to increase numerical stability.
+
+As was mentioned before, model-fitting works and scales well if numcols $<<$ numrows. However, in many cases we want to fit glm model over many predictors (10s of thousands or more) with l1 penalty, selecting only few of them in the end (the rest will have zero coefficient and will not be part of the model). To keep our excellent performance and scaling properties in such cases, we employ strong rules (http://statweb.stanford.edu/~tibs/ftp/strong.pdf) to limit the set of active coefficients. The performance of the algorithm is then limited by the number of coefficients in the model rather than number of coefficients present in the training data set. 
+
+The algorithm can handle categorical variables, which are treated as special kind of sparse vectors - each categorical column is expanded on the fly into multiple binary vectors. Each value in the original vector is mapped into n values, with exactly one being set 1, others are 0. Because the some of the columns catetogiral maps to is always 1, it will be correlated with intercept. To prevent such correlation, we usually skip one of the levels (the first one). This is not necessary with non-zero penalty and h2o has an option to include or factor levels in the model (all levels are always included when computing the whole regularization path). This is usefull e.g. when interpreting the variable importance of the model. 
 
 
-\subsection{Installation} \label{1.1}
+\subsection{Summary of features} 
+In summary, H2O's GLM functionalities include:
+
+\begin{itemize} % @TODO TBD. CURRENTLY SAME AS GBM 
+\item fits generalized linear model with elastic net penalty
+\item can efficiently compute full regularization path, applies strong rules to limit number of activec predictors and speed up computation
+\item efficient handling of categorical variables
+\item supports efficient distributed n-fold cross validation
+\item supports distributed grid search over elastic-net parameter $\alpha$
+\item upper and lower boudns for coefficients
+\item proximal operator interface
+\end{itemize}
+
+
+
+\section{Installation} 
 
 You can load the latest CRAN H2O package by running
 
@@ -80,34 +107,121 @@ An automatic demo is available to see h2o.gbm at work. Run the following command
 demo(h2o.glm)
 \end{spverbatim}
 
-\subsection{Support} \label{1.2}
+\subsection{Support} 
 
 Users of the H2O package may submit general enquiries and bug reports to the 0xdata \href{h2ostream@googlegroups.com}{support address}. Alternatively, specific bugs or issues may be filed to the 0xdata \href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{JIRA}.
 
-\subsection{Generalized Linear Modeling overview} \label{1.3}
+\section{Generalized Linear Modeling} 
+This section contains brief overview of generalized linear models and follows up with few details for each model-family.
 
-\subsubsection{Summary of features} \label{2.1}
-H2O's GLM functionalities include:
+Generalized linear model is generalization of linear regression. Linear regression models dependency of response y on vector of predictors x ($y \sim x^T \beta + \beta_0$) with assumption that y has gaussian distribution with mean being linear function of x (+ offset) and deviance $\sigma$ (independent on x), i.e. $ y = \mathcal{N}(x^T \beta + \beta_0 , \sigma^2) $. In many situations, these assumptions are overly restrictive while we would still want to take advantage of linear models. GLM generalizes linear regression in following ways: 
+\begin{itemize} 
+\item adds non-linear link function, so that $link(y) \sim x^T \beta + \beta_0$.
+\item allows variance to depend on predicted value (family argument).
+\end{itemize}
+This generalization allows us to apply GLM to problems such as binary classificaton (Logistic regression) 
+GLM models are fitted by maximizing the likelihood.
 
-\begin{itemize} % @TODO TBD. CURRENTLY SAME AS GBM 
+\subsection{Model Fitting}
+\subsection{Validation}
+Evaluating quality of the model is critical part of any data-modelling/prediction task. There are several standard ways how to evalute quality of fitted GLM model. The most common is to judge by deviance statistic. Deviance is based on comparing log likelihood of the fitted model with log likelihood of teh saturated model (theoretical perfect model).
 
-\item supervised learning for regression and classification tasks
+\[ deviance = 2({loglikelihood_{s}} - {loglikelihood_{m}}) \]
 
-\item distributed and parallelized computation to be run on either a single node or a multi-node cluster
+H2O's glm computes following validation statistics:
+\begin{itemize} 
+\item \textbf{null degrees of freedom} number of observations - 1 (the $\beta_0=mean$ is one coefficient)
+\item \textbf{degrees of freedom} number of observations - 1 - number of non-zero predictors
 
-\item fast and memory-efficient Java implementations of the underlying algorithms
+\item \textbf{null deviance} residual deviance of null model(predict all to mean). Typically, when evaluating the model, we look at the deviance explained ration, i.e. $ 1 -{ resdev \over nulldev}$.
+\item \textbf{residual deviance} deviance of the fitted model
+\item \textbf{AIC} The Akaike information criterion (AIC) is a measure of the relative quality of a statistical model for a given set of data. It is usefull for model comparison. Unlike deviance (which would have perfect value for saturated model), it takes into account the complexity of the given model. It is based on meassuring information loss when replacing original data with the model itself. Unlike deviance, it does not meassure absolute quality of the fit (comparison against null-hypothesis).
 
-\item elegant web interface to mirror the model building and scoring process running in R
-
-\item grid search for hyperparameter optimization and model selection
-
-\item model export in plain java code for deployment in production environments
-
-\item additional parameters for model tuning
-
+\item \textbf{AUC} Area under ROC curve
 \end{itemize}
 
-\subsubsection{Theory and framework} 
+\subsubsection{Cross-Validation}
+All validation values can be computed either on training data set (the default) or using nfold crossvalidation ($nfolds > 1$). When using nfold cross-validation, we randomly split data into n equally sized parts and train each of the n models on n-1 parts and compute validation on the part which was not used for training.The reported validation parameters are then obtained as follows:
+\begin{itemize} 
+\item null deviance is sum of null deviances of n-models (each uses null model based on the subset of the data)
+\item residual deviance is sum of residual deviances of all n-models.
+\item AIC
+\item AUC is based on ROC curve build  by summing up confusion matrices built for all n-models.
+This means for each threshold, we get confusion matrix which includes all the rows from
+the training set, however, each row is classified exclusively by the model
+which did not have it in its training set. Computation of AUC itself is then the same as in non-crossvalidatied case. 
+\end{itemize}
+
+
+\subsection{GLM Models} 
+Following subsection describe GLM families supported in h2o. 
+
+\subsubsection{Linear Regression (Gaussian family) }
+Linear regression refers to gaussian family model. It is the simplest example of GLM, however it has many uses and several advantages over the other families such as faster and more stable computation. 
+
+It models the dependency as purely linear function (with link = identity):
+\[ \hat{y} = x^T\beta + \beta_0\]
+
+Model is fitted by solving least squares problem (maximum likelihoood for gaussian family):
+
+\[ \min\limits_{\beta,\beta_0} { {1 \over 2N}\sum\limits_{i=1}\limits^{N}(x_i^{T}\beta  + \beta_0- y_i)^T (x_i^{T}\beta + \beta_0 - y_i))  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2} \]
+
+
+Deviance is simply sum of squared errors:
+\[ D = \sum\limits_{i=1}\limits^{N}{(y_i - \hat{y}_i)^2} \]
+
+
+\textbf{Example}
+
+
+
+\subsubsection{Logistic Regression (Binomial Family)}
+Logistic regression can be used in case of binary classification problem (response is categorical with two levels). It models dependency as $Pr(y = 1|x)$. Canonical link for binomial family is logit (log of the odds), it's inverse is logistic function which which takes any real number on the input and projects it onto 0,1 range (s-curve). 
+
+\[ \hat{y} = Pr(y = 1|x) = {e^{x^T\beta + \beta_0} \over 1 + e^{x^T \beta + \beta_0} } \]
+
+or alternatively:
+
+
+\[log {\hat{y} \over 1- \hat{y}} = log{Pr(y=1|x) \over Pr(y=0|x)} = x^T \beta + \beta_0\]
+
+Model is fitted by solving:
+\[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - log (1 + e^{x_i^{T}\beta  + \beta_0} )  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2} \]
+
+Deviance is -2 loglikelihood:
+\[D = -2\sum\limits_{i=1}\limits^{N}{(y log(\hat{y}) + (1 - y)log(1-\hat{y})  )}\]
+
+\textbf{Decision threshold}
+
+\textbf{Example}
+
+\subsubsection{Poisson Models}
+Poisson regression is generally used in cases when response represents counts and we assume errors have Poisson distribution. In general, it can be applied to any data where response is non-negative. 
+
+When building Poisson model, we usually model dependency of the mean on the log scale, i.e. canonical link is log and prediction is:
+
+\[\hat{y} = e^{x^T\beta + \beta_0}\]
+
+Model is fitted by solving:
+
+\[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - e^{x_i^{T}\beta  + \beta_0})  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2} \]
+
+Deviance is 
+
+\[D = -2\sum\limits_{i=1}\limits^{N}{(y log(\hat{y}) - y - \hat{y}}\]
+
+
+\textbf{Example}
+
+\subsubsection{Gamma Models}
+The gamma distribution is useful for modeling a positive continuous response variable, where the conditional variance of the response grows with its mean but where the coefficient of variation of the response $\sigma^2(x)/μ(x)$ is constant for all x - i.e. it has a constant coefficient of variation.
+
+It is usally used with inverse or log link, inverse is the canonical link.
+
+
+\textbf{Validation}
+\textbf{Example}
+
 % Strong Rules paper
 
 \subsubsection{Key parameters}
@@ -119,6 +233,28 @@ H2O's GLM functionalities include:
 %—Alpha Penalties
 %—Strong Rules
 %—etc.
+
+\section{Elastic Net Penalty} 
+We introduce penalty to model-fitting to avoid over-fitting and to reduce variance of the prediction error. There are two common penalized linear models, Ridge Regression and Lasso. 
+
+Ridge Regression penalizes l2 norm of the vector of coefficients. 
+
+Lasso penalizes l1 norm of the parameter vector.
+
+Elastic net combines the two and adds additional argument $\alpha$ which drives the distribution of the penalty between l1 and l2.
+
+\subsection{Selecting Penalty Parameters}
+
+Since l1 penalty produces sparse solution, penalized glm with $\alpha > 0$ with sufficiently high value of $\lambda$ will produce null model, i.e. model with no non-zero coefficients except the intercept. It can thus be seen that it only makes sense to compute the models for $\lambda < \lambda_{max}$, where $lambda_{max}$ is the smallest $\lambda$ leading to null solution.
+
+\subsubsection{Grid Search}
+\subsubsection{Lambda Search}
+Lambda search is essentially an automatic efficient grid search over $\lambda$ parameter. It computes glm models for the full regularization path, which is an exponentially dercresing sequence of values, staring at $\lambda_{max}$ and finishing at $\lambda_{min} = \gamma\lambda_{max}, \gamma \in (0,1)$ . $\lambda_{max}$ is defined as the smallest $\lambda$ s.t. the resulting model has no non-zero coefficients other than intercept. Since 
+
+
+
+\subsection{Strong Rules}
+
 
 \section{Use case: Classification with Airline data} \label{3}
 
@@ -202,12 +338,12 @@ H2O R users have access to a slick web interface to mirror the model building pr
 \subsubsection{Variable importances} \label{3.3.1}
 One useful feature is the variable importances option, which can be enabled with the additional argument \texttt{importance=TRUE}. This features allows us to view the absolute and relative predictive strength of each feature in the prediction task. From R, you can access these strengths with the command \texttt{air.model@model\$varimp}. You can also view a visualization of the variable
 importances on the web interface.
-\subsubsection{Java model} \label{3.3.2}
-Another important feature of the web interface is the Java (POJO) model, accessible from the \textsc{Java model} button in the top right of a model summary page. This button allows access to Java code which, when called from a main method in a Java program, builds the model at hand. When the model is small enough, the java code for the model will be made available to inspect from within the GUI, larger models can be inspected after users have downloaded the model.
+\subsubsection{Java model} 
+Java model is currently not available for GLM.
 \\
 \\
 To download the model open the terminal window, create a directory where the model will be saved, set the new directory as the working directory and follow the curl and java compile commands displayed in the instructions at the top of the java model.
-\section{Conclusion}
+
 \newpage
 \section{Appendix A: Complete parameter list}
 \begin{itemize}

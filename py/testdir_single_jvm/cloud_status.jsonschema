@@ -1,6 +1,5 @@
 {
-    "type": "object",
-    "properties":{
+    "type": "object", "properties":{
         "cloud_name": { "type": "string" },
         "cloud_size": { "type": "number" },
         "consensus": { "type": "boolean" },
@@ -8,14 +7,9 @@
         "node_name": { "type": "string" },
         "nodes": { "type": "array", "items": {
             "type": "object", "properties": { 
-                "fj_queue_hi": {
-                    "type": "array", "items": 
-                        { "type": "number" }
-                },
+                "fj_queue_hi": { "type": "array", "items": { "type": "number" } },
                 "fj_queue_lo": { "type": "number" },
-                "fj_threads_hi": { "type": "array", "items":
-                        { "type": "number" }
-                },
+                "fj_threads_hi": { "type": "array", "items": { "type": "number" } },
                 "fj_threads_lo": { "type": "number" },
                 "free_disk_bytes": { "type": "number" },
                 "free_mem_bytes": { "type": "number" },

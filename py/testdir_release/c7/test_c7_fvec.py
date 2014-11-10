@@ -22,7 +22,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         print "For files that we want to put (for testing put), we can get non-private files"
 
         csvFilename = 'part-00000b'
-        hex_key = csvFilename = ".hex"
+        hex_key = csvFilename + ".hex"
         importFolderPath = '/mnt/0xcustomer-datasets/c2'
         csvPathname = importFolderPath + "/" + csvFilename
 
