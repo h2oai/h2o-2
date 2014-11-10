@@ -16,7 +16,6 @@ DO_PREDICT_CM = False
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c10_rel_gbm(self):
-        h2o.beta_features = True
         print "not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"

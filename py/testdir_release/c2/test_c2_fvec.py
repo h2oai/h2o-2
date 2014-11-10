@@ -115,7 +115,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
 
     def test_B_c2_fvec_long(self):
-        h2o.beta_features = True
         self.sub_c2_fvec_long()
 
 

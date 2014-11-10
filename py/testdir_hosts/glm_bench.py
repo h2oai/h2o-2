@@ -4,7 +4,7 @@ import unittest
 import time,sys
 sys.path.extend(['.','..','py'])
 
-import h2o_cmd, h2o, h2o_hosts, h2o_glm
+import h2o_cmd, h2o, h2o_glm, h2o_args
 import h2o_browse as h2b
 import os, csv, time, socket
 
@@ -69,14 +69,14 @@ def parse_file(f):
     return h2o.nodes[0].parse(v['key'],timeoutSecs=3600)['destination_key']
 
 if __name__ == '__main__':
-    h2o.parse_our_args()
+    h2o_args.parse_our_args()
     files = None
     if is_ec2():
         files = ec2_files
-        h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
     else:
         files = local_files
-        h2o_hosts.build_cloud_with_hosts(use_hdfs=True)
+        h2o.init(use_hdfs=True)
 
     # want to ignore columns with missing values, since GLM throws away those rows, (won't analyze as many rows)
     # Distance, CRSEElapsedTime has some...I guess ignore

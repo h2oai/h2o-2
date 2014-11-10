@@ -1,6 +1,6 @@
 import unittest,time,sys,os,csv,socket
 sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf
+import h2o_cmd, h2o, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_args
 from pprint import pprint
 
 csv_header = ('java_heap_GB','dataset','nTrainRows','nTestRows','nCols',
@@ -87,7 +87,7 @@ def run_rf(files,configs):
         output.close()
 
 if __name__ == '__main__':
-    h2o_hosts.build_cloud_with_hosts()
+    h2o.init()
     params = { 
                 'response_variable': 0,
                 'ntree': 10,

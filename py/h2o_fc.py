@@ -1,6 +1,7 @@
-import time, sys, json, re, getpass, os, shutil, requests
-import h2o_print as h2p
+import time, sys, json, re, getpass, os, shutil, requests, datetime
 
+import h2o_args
+import h2o_print as h2p
 from h2o_test import get_sandbox_name, check_sandbox_for_errors, dump_json, verboseprint
 
 #*******************************************************************************
@@ -51,11 +52,11 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
     return rjson
 
 #*********************************************************************************************
-def probe_node(line, h2oNodes, expectedSize, hdfsSetup):
+def create_node(possMember, h2oNodes, expectedSize, hdfsSetup):
 
     (hdfs_version, hdfs_config, hdfs_name_node) = hdfsSetup
 
-    http_addr, sep, port = line.rstrip('\n').partition(":")
+    http_addr, sep, port = possMember.rstrip('\n').partition(":")
     http_addr = http_addr.lstrip('/') # just in case it's an old-school flatfile format with leading /
     if port == '':
         port = '54321'
@@ -63,11 +64,17 @@ def probe_node(line, h2oNodes, expectedSize, hdfsSetup):
         http_addr = '127.0.0.1'
     # print "http_addr:", http_addr, "port:", port
 
-    probes = []
+    possMemberList = []
     gc = do_json_request(http_addr, port, 'Cloud.json', timeout=10)
     if gc is None:
-        return probes
+        return possMemberList
         
+    version    = gc['version']
+    # check to see if it's a h2o version? (common problem when mixing h2o1/h2o-dev testing with --usecloud
+    if version and version!='unknown' and version!='null' and version!='none':
+        if not version.startswith('2'):
+            print "h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % version
+
     # we'll just exception out, if we don't get a json response with the stuff that makes up what we think is "legal"
     consensus  = gc['consensus']
     locked     = gc['locked']
@@ -103,7 +110,7 @@ def probe_node(line, h2oNodes, expectedSize, hdfsSetup):
         # print 'name:', name
         ### print dump_json(n)
         name_list.append(name)
-        probes.append(name)
+        possMemberList.append(name)
 
         ip, sep, port = name.partition(':')
 
@@ -154,10 +161,10 @@ def probe_node(line, h2oNodes, expectedSize, hdfsSetup):
         # this is the total list so far
         if name not in h2oNodes:
             h2oNodes[name] = node
-            print "Added node %s to probes" % name
+            print "Added node %s to possMemberList" % name
 
     # we use this for our one level of recursion
-    return probes # might be empty!
+    return possMemberList # might be empty!
 
 #*********************************************************************************************
 # returns a json expandedCloud object that should be the same as what -ccj gets after json loads?
@@ -172,29 +179,30 @@ def find_cloud(ip_port=None,
     # hdfs_name_node an be ip, ip:port, hostname, hostname:port", 
     # None on expected size means don't check
 
+    hdfsSetup = (hdfs_version, hdfs_config, hdfs_name_node)
     # partition returns a 3-tuple as (LHS, separator, RHS) if the separator is found, 
     # (original_string, '', '') if the separator isn't found
-    possMembers = [ip_port]
+    possMembersList = [ip_port]
 
     h2oNodes = {}
-    probes = set()
+    alreadyAdded = set()
     tries = 0
     # we could just take a single node's word on the complete cloud, but this 
     # two layer try is no big deal and gives some checking robustness when a bad cloud exists
-    hdfsSetup = (hdfs_version, hdfs_config, hdfs_name_node)
-    for n1, possMember in enumerate(possMembers):
+    for n1, possMember in enumerate(possMembersList):
         tries += 1
-        if possMember not in probes:
-            probes.add(possMember)
-            members2 = probe_node(possMember, h2oNodes, expectedSize, hdfsSetup)
-            for n2, member2 in enumerate(members2):
+        if possMember not in alreadyAdded:
+            possMembersList2 = create_node(possMember, h2oNodes, expectedSize, hdfsSetup)
+            alreadyAdded.add(possMember)
+            for n2, possMember2 in enumerate(possMembersList2):
                 tries += 1
-                if member2 not in probes:
-                    probes.add(member2)
-                    probe_node(member2, h2oNodes, expectedSize, hdfsSetup)
+                if possMember2 not in alreadyAdded:
+                    create_node(possMember2, h2oNodes, expectedSize, hdfsSetup)
+                    alreadyAdded.add(possMember2)
 
     print "\nDid %s tries" % tries
-    print "len(probe):", len(probes)
+    print "len(alreadyAdded):", len(alreadyAdded), alreadyAdded
+        
 
     # get rid of the name key we used to hash to it
     h2oNodesList = [v for k, v in h2oNodes.iteritems()]
@@ -218,16 +226,27 @@ def find_cloud(ip_port=None,
             count[ip] = 1
 
     print "Writing", nodesJsonPathname
+    # Figure out some stuff about how this test was run
+    cs_time = str(datetime.datetime.now())
+    cs_cwd = os.getcwd()
+    cs_python_cmd_line = "python %s %s" % (h2o_args.python_test_name, h2o_args.python_cmd_args)
+    cs_python_test_name = h2o_args.python_test_name
+    cs_config_json = nodesJsonPathname
+    cs_username = h2o_args.python_username
+    cs_ip = h2o_args.python_cmd_ip
+
+    # dump the nodes state to a json file # include enough extra info to have someone
+    # rebuild the cloud if a test fails that was using that cloud.
     expandedCloud = {
         'cloud_start':
             {
-            'time': 'null',
-            'cwd': 'null',
-            'python_test_name': 'null',
-            'python_cmd_line': 'null',
-            'config_json': 'null',
-            'username': 'null',
-            'ip': 'null',
+                'time': cs_time,
+                'cwd': cs_cwd,
+                'python_test_name': cs_python_test_name,
+                'python_cmd_line': cs_python_cmd_line,
+                'config_json': cs_config_json,
+                'username': cs_username,
+                'ip': cs_ip,
             },
         'h2o_nodes': h2oNodesList
         }

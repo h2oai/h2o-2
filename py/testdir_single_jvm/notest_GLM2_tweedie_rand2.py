@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_import as h2i
 
 
 DO_WEIGHT_FAIL = False
@@ -25,20 +25,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_NOPASS_GLM2_tweedie_rand2(self):
-        h2o.beta_features = True
         if 1==1:
             csvPathname = 'standard/covtype.data'
             hex_key = 'covtype.hex'

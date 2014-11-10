@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e, h2o_jobs
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_exec as h2e, h2o_jobs
 
 print "overlap the parse (not the putfile) of the next one, with the exec of the last one"
 print ""
@@ -18,11 +18,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud()
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):

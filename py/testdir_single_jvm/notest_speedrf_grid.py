@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_jobs
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_jobs
 
 
 class Basic(unittest.TestCase):
@@ -9,19 +9,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=3)
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def notest_RF_iris2(self):
-        h2o.beta_features = True
         trees = ",".join(map(str,range(1,4)))
         timeoutSecs = 20
         csvPathname = 'iris/iris2.csv'
@@ -55,7 +49,6 @@ class Basic(unittest.TestCase):
 
 
     def notest_GenParity1(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         parityPl = h2o.find_file('syn_scripts/parity.pl')
 

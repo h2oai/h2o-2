@@ -8,7 +8,7 @@ import h2o_browse as h2b
 from h2o_objects import H2O
 from h2o_test import verboseprint, dump_json, check_sandbox_for_errors, get_sandbox_name, log
 
-print "h2o_methods"
+# print "h2o_methods"
 
 def check_params_update_kwargs(params_dict, kw, function, print_params):
     # only update params_dict..don't add
@@ -27,6 +27,10 @@ def check_params_update_kwargs(params_dict, kw, function, print_params):
 def get_cloud(self, noSandboxErrorCheck=False, timeoutSecs=10):
     # hardwire it to allow a 60 second timeout
     a = self.do_json_request('Cloud.json', noSandboxErrorCheck=noSandboxErrorCheck, timeout=timeoutSecs)
+    version    = a['version']
+    if version and version!='(unknown)' and version!='null' and version!='none':
+        if not version.startswith('2'):
+            print "h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % dump_json(a)
 
     consensus = a['consensus']
     locked = a['locked']
@@ -34,11 +38,12 @@ def get_cloud(self, noSandboxErrorCheck=False, timeoutSecs=10):
     cloud_name = a['cloud_name']
     node_name = a['node_name']
     node_id = self.node_id
-    verboseprint('%s%s %s%s %s%s %s%s' % (
+    verboseprint('%s%s %s%s %s%s %s%s %s%s' % (
         "\tnode_id: ", node_id,
         "\tcloud_size: ", cloud_size,
         "\tconsensus: ", consensus,
         "\tlocked: ", locked,
+        "\tversion: ", version,
     ))
     return a
 
@@ -568,7 +573,7 @@ def jobs_admin(self, timeoutSecs=120, **kwargs):
     }
     browseAlso = kwargs.pop('browseAlso', False)
     params_dict.update(kwargs)
-    verboseprint("\nexec_query:", params_dict)
+    verboseprint("\njobs_admin:", params_dict)
     a = self.do_json_request('Jobs.json', timeout=timeoutSecs, params=params_dict)
     verboseprint("\njobs_admin result:", dump_json(a))
     return a

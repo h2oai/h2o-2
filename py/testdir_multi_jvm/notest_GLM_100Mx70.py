@@ -1,7 +1,7 @@
 import unittest
 import random, sys, time, os
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
@@ -27,13 +27,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1,java_heap_GB=10)
 
     @classmethod
     def tearDownClass(cls):
@@ -56,19 +52,12 @@ class Basic(unittest.TestCase):
             # Have to copy it to /home/0xdiag/datasets!
 
 
-        if localhost:
-            csvFilenameList = [
-                # ('rand_logreg_500Kx70.csv.gz', 500, 'rand_500Kx70'),
-                # ('rand_logreg_1Mx70.csv.gz', 500, 'rand_1Mx70'),
-                ('rand_logreg_100000000x70.csv', 500, 'rand_100Mx70.hex'),
-                ]
-        else:
-            # None is okay for hex_key
-            csvFilenameList = [
-                # ('rand_logreg_500Kx70.csv.gz', 500, 'rand_500Kx70'),
-                # ('rand_logreg_1Mx70.csv.gz', 500, 'rand_1Mx70'),
-                ('rand_logreg_100000000x70.csv', 500, 'rand_100Mx70.hex'),
-                ]
+        # None is okay for hex_key
+        csvFilenameList = [
+            # ('rand_logreg_500Kx70.csv.gz', 500, 'rand_500Kx70'),
+            # ('rand_logreg_1Mx70.csv.gz', 500, 'rand_1Mx70'),
+            ('rand_logreg_100000000x70.csv', 500, 'rand_100Mx70.hex'),
+            ]
 
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)

@@ -1,6 +1,6 @@
 import unittest, sys, time
-sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o_cmd, h2o, h2o_browse as h2b, h2o_import as h2i
 
 # Uses your username specific json: pytest_config-<username>.json
 # copy pytest_config-simple.json and modify to your needs.
@@ -10,14 +10,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_rf_311M_rows_fvec(self):
-        h2o.beta_features = True
         # since we'll be waiting, pop a browser
         # h2b.browseTheCloud()
         importFolderPath = 'standard'

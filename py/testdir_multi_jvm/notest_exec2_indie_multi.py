@@ -1,6 +1,6 @@
 import unittest, sys, random, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs, h2o_exec as h2e
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_jobs, h2o_exec as h2e
 import h2o_util
 
 import multiprocessing, os, signal, time
@@ -41,16 +41,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
 
-        localhost = h2o.decide_if_localhost()
-        h2o.beta_features = True # for the beta tab in the browser
-        if (localhost):
-            h2o.build_cloud(node_count=NODES, java_heap_GB)
-                # use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4'
-        else:
-            h2o_hosts.build_cloud_with_hosts(java_heap_GB=4)
+        h2o.init(node_count=NODES, java_heap_GB)
                 # use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4'
 
     @classmethod
@@ -58,7 +52,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec2_multi_node(self):
-        h2o.beta_features = True
         for n, node in enumerate(h2o.nodes):
             print "n:", n
             np1 = (n+1) % len(h2o.nodes)
