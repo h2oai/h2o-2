@@ -508,15 +508,17 @@ def verify_cloud_size(nodeList=None, expectedCloudName=None, expectedLocked=None
     cloudVersion = [c['version'] for c in cloudStatus]
 
     # all match 0?
-    expectedVersion = cloudVersion[0]
+    version = cloudVersion[0]
     # check to see if it's a h2o version? (common problem when mixing h2o1/h2o-dev testing with --usecloud
-    if not expectedVersion.startswith('2'):
-        raise Exception("h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % expectedVersion)
+    if version and version!='unknown' and version!='null' and version!='none':
+        if not version.startswith('2'):
+            print "h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % version
 
+    expectedVersion = version
     for i, v in enumerate(cloudVersion):
         if v != expectedVersion:
             versionStr = (",".join(map(str, cloudVersion)))
-            raise Exception("node %s. Inconsistent cloud version. nodeList report version: %s" % (i, versionStr))
+            print "node %s. Inconsistent cloud version. nodeList report version: %s" % (i, versionStr)
 
     if not ignoreHealth:
         for c in cloudStatus:
