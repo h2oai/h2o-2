@@ -4,6 +4,7 @@ if (!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils")
 if (!"plyr" %in% rownames(installed.packages())) install.packages("plyr")
 #if (!"rgl" %in% rownames(installed.packages())) install.packages("rgl")
 if (!"randomForest" %in% rownames(installed.packages())) install.packages("randomForest")
+if (!"gains" %in% rownames(installed.packages())) install.packages("gains")
 library(R.utils)
 
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))

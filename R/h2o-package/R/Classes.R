@@ -1448,14 +1448,15 @@ h2o.gains <- function(actual, predicted, groups=10, percents = FALSE) {
   lifts <- resp_rates / avg
 
   # need to build a data frame with 4 columns: Quantile, Response Rate, Lift, Cum. Lift
-  col_names <- c("Quantile", "Response.Rate", "Lift", "Cumulative.Lift")
+  col_names <- c("Quantile", "Mean.Response", "Lift", "Cume.Pct.Total.Lift")
 
   gains_table <- data.frame(
     Quantile        = qtiles <- seq(0,1,1/groups)[-1] * percents,
-    Response.Rate   = resp_rates * percents,
+    Response.Rate   = resp_rates, # * percents,
     Lift            = (resp_rates / avg),
     Cumulative.Lift = cumsum(lifts/groups) * percents
   )
+  colnames(gains_table) <- col_names
   gains_table
 }
 
