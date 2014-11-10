@@ -7,7 +7,7 @@ from h2o_test import verboseprint, clean_sandbox
 # build cloud in h2o updates the local h2o.nodes there
 from h2o import build_cloud
 
-print "h2o_hosts"
+# print "h2o_hosts"
 
 # UPDATE: all multi-machine testing will pass list of IP and base port addresses to H2O
 # means we won't realy on h2o self-discovery of cluster

@@ -1,7 +1,6 @@
 import unittest, time, sys, random, math, json
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_common
-import socket
+import h2o, h2o_cmd, h2o_kmeans, h2o_import as h2i, h2o_common
 
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
@@ -16,7 +15,6 @@ FROM_HDFS = 'CDH3' # not really used
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c5_KMeans_sphere_26GB_fvec(self):
-        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 

@@ -25,11 +25,7 @@ class Basic(unittest.TestCase):
         global SEED, localhost
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
-        if (localhost):
-            # h2o.build_cloud(3,java_heap_GB=4)
-            h2o.build_cloud(3,java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3,java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):
@@ -40,7 +36,6 @@ class Basic(unittest.TestCase):
     def test_exec2_constants(self):
         print "Create some vectors from a constant"
         print "Don't really need a dataset, but .."
-        h2o.beta_features = True
         for i in range(10):
             h2e.exec_zero_list(zeroList)
             inspect = h2o_cmd.runInspect(key='Result9')

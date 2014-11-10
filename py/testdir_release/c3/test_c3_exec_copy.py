@@ -14,7 +14,6 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def sub_c3_nongz_fvec_long(self, csvFilenameList):
-        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
@@ -84,7 +83,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
     def test_c3_exec_copy(self):
-        h2o.beta_features = True
         avgMichalSize = 237270000
         csvFilenameList= [
             ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),

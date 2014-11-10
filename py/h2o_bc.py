@@ -1,7 +1,7 @@
 import os, getpass, sys, random, time, datetime, shutil, json, inspect
 import h2o_args
 import h2o_nodes
-import h2o_print as h2p, h2o_util
+import h2o_print as h2p, h2o_util, h2o_import as h2i
 
 from h2o_test import \
     get_sandbox_name, clean_sandbox, check_sandbox_for_errors, clean_sandbox_doneToLine,\
@@ -10,7 +10,8 @@ from h2o_test import \
 from h2o_objects import LocalH2O, RemoteH2O, ExternalH2O
 import h2o_fc
 
-print "h2o_bc"
+# print "h2o_bc"
+LOG_DIR = get_sandbox_name()
 
 def default_hosts_file():
     if os.environ.has_key("H2O_HOSTS_FILE"):
@@ -18,20 +19,33 @@ def default_hosts_file():
     return 'pytest_config-{0}.json'.format(getpass.getuser())
 
 # node_count is number of H2O instances per host if hosts is specified.
+# hack: this returns true for the --usecloud/-uc cases, to force it thru build_cloud/build_cloud_with_json/find_cloud
+# also for the -ccj cases
 def decide_if_localhost():
-    # First, look for local hosts file
-    hostsFile = default_hosts_file()
+    if h2o_args.usecloud:
+        print "* Will ask h2o node about cloud using -uc argument:", h2o_args.usecloud
+        return True
+
+    if h2o_args.clone_cloud_json:
+        print "* Using description of already built cloud, in JSON you passed as -ccj argument:", h2o_args.clone_json
+        return True
+
     if h2o_args.config_json:
-        print "* Using config JSON you passed as -cj argument:", h2o_args.config_json
+        print "* Will build cloud using config JSON you passed as -cj argument:", h2o_args.config_json
         return False
+
+    # look for local hosts file
+    hostsFile = default_hosts_file()
     if os.path.exists(hostsFile):
-        print "* Using config JSON file that matches your username, discovered in this directory: {0}.".format(hostsFile)
+        print "* Will build cloud using config JSON file that matches your username, discovered in this directory: {0}.".format(hostsFile)
         return False
+
     if 'hosts' in os.getcwd():
         print "Since you're in a *hosts* directory, we're using a config json"
         print "* Expecting default username's config json here. Better exist!"
         return False
-    print "No config json used. Launching local cloud..."
+
+    print "No special config control. Building local cloud per test..."
     return True
 
 # used to shift ports when running multiple tests on same machine in parallel (in different shells)
@@ -59,7 +73,9 @@ def get_base_port(base_port):
             raise Exception("H2O_PORT %s os env variable should be either not set, \
                 or between 54321 and 54999." % b)
 
-    if b:
+    if h2o_args.port_from_cmd_line:
+        base_port = h2o_args.port_from_cmd_line
+    elif b:
         base_port = b
     else:
         if getpass.getuser()=='jenkins':
@@ -103,11 +119,8 @@ def write_flatfile(node_count=2, base_port=None, hosts=None, rand_shuffle=True):
         pff.write(hp + "\n")
     pff.close()
 
-
-
 # assume h2o_nodes_json file in the current directory
 def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
-
     log("#*********************************************************************")
     log("Starting new test: " + h2o_args.python_test_name + " at build_cloud_with_json()")
     log("#*********************************************************************")
@@ -145,18 +158,43 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     nodeList = []
     if not nodeStateList:
         raise Exception("nodeStateList is empty. %s file must be empty/corrupt" % h2o_nodes_json)
-    for nodeState in nodeStateList:
-        print "Cloning state for node", nodeState['node_id'], 'from', h2o_nodes_json
 
-        newNode = ExternalH2O(nodeState)
-        nodeList.append(newNode)
+    try:
+        for nodeState in nodeStateList:
+            print "Cloning state for node", nodeState['node_id'], 'from', h2o_nodes_json
+
+            newNode = ExternalH2O(nodeState)
+            nodeList.append(newNode)
+
+        # If it's an existing cloud, it may already be locked. so never check.
+        # we don't have the cloud name in the -ccj since it may change (and the file be static?)
+        # so don't check expectedCloudName
+        verify_cloud_size(nodeList, expectedCloudName=None, expectedLocked=None)
+
+        # best to check for any errors right away?
+        # (we won't report errors from prior tests due to marker stuff?
+        ## check_sandbox_for_errors(python_test_name=h2o_args.python_test_name)
+
+        # put the test start message in the h2o log, to create a marker
+        nodeList[0].h2o_log_msg()
+
+    except:
+        # nodeList might be empty in some exception cases?
+        # no shutdown issued first, though
+
+        ## if cleanup and nodeList:
+        ##     for n in nodeList: n.terminate()
+        check_sandbox_for_errors(python_test_name=h2o_args.python_test_name)
+        raise
+
+    # like cp -p. Save the config file, to sandbox
+    print "Saving the ", h2o_nodes_json, "we used to", LOG_DIR
+    shutil.copy(h2o_nodes_json, LOG_DIR + "/" + os.path.basename(h2o_nodes_json))
 
     print ""
     h2p.red_print("Ingested from json:", nodeList[0].java_heap_GB, "GB java heap(s) with",
         len(nodeList), "total nodes")
     print ""
-    # put the test start message in the h2o log, to create a marker
-    nodeList[0].h2o_log_msg()
 
     # save it to a global copy, in case it's needed for tearDown
     h2o_nodes.nodes[:] = nodeList
@@ -307,10 +345,13 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
 
         # this does some extra checking now
         # verifies cloud name too if param is not None
-        verify_cloud_size(nodeList, expectedCloudName=nodeList[0].cloud_name)
+        verify_cloud_size(nodeList, expectedCloudName=nodeList[0].cloud_name, expectedLocked=0)
 
         # best to check for any errors due to cloud building right away?
         check_sandbox_for_errors(python_test_name=h2o_args.python_test_name)
+
+        # put the test start message in the h2o log, to create a marker
+        nodeList[0].h2o_log_msg()
 
     except:
         # nodeList might be empty in some exception cases?
@@ -321,30 +362,27 @@ def build_cloud(node_count=1, base_port=None, hosts=None,
         raise
 
     print len(nodeList), "total jvms in H2O cloud"
-    # put the test start message in the h2o log, to create a marker
-    nodeList[0].h2o_log_msg()
 
     if h2o_args.config_json:
-        LOG_DIR = get_sandbox_name()
         # like cp -p. Save the config file, to sandbox
         print "Saving the ", h2o_args.config_json, "we used to", LOG_DIR
         shutil.copy(h2o_args.config_json, LOG_DIR + "/" + os.path.basename(h2o_args.config_json))
 
-    # Figure out some stuff about how this test was run
-    cs_time = str(datetime.datetime.now())
-    cs_cwd = os.getcwd()
-    cs_python_cmd_line = "python %s %s" % (h2o_args.python_test_name, h2o_args.python_cmd_args)
-    cs_python_test_name = h2o_args.python_test_name
-    if h2o_args.config_json:
-        cs_config_json = os.path.abspath(h2o_args.config_json)
-    else:
-        cs_config_json = None
-    cs_username = h2o_args.python_username
-    cs_ip = h2o_args.python_cmd_ip
-
     # dump the nodes state to a json file # include enough extra info to have someone
     # rebuild the cloud if a test fails that was using that cloud.
     if create_json:
+        # Figure out some stuff about how this test was run
+        cs_time = str(datetime.datetime.now())
+        cs_cwd = os.getcwd()
+        cs_python_cmd_line = "python %s %s" % (h2o_args.python_test_name, h2o_args.python_cmd_args)
+        cs_python_test_name = h2o_args.python_test_name
+        if h2o_args.config_json:
+            cs_config_json = os.path.abspath(h2o_args.config_json)
+        else:
+            cs_config_json = None
+        cs_username = h2o_args.python_username
+        cs_ip = h2o_args.python_cmd_ip
+
         q = {
             'cloud_start':
                 {
@@ -392,36 +430,53 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
 
-def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
+# final overrides the disable --usecloud causues
+def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False, force=False):
     if h2o_args.sleep_at_tear_down:
         print "Opening browser to cloud, and sleeping for 3600 secs, before cloud teardown (for debug)"
         import h2o_browse as h2b
         h2b.browseTheCloud()
         sleep(3600)
 
+    if not nodeList: nodeList = h2o_nodes.nodes
+
+    # this could fail too. Should this be set by -uc/--usecloud? or command line argument
+    # nodeList is a dict only if we didn't create the cloud
+    # if we created the cloud, we don't need to delete keys because we're going to shutdown the cloud
+    if nodeList and nodeList[0].delete_keys_at_teardown:
+        start = time.time()
+        h2i.delete_keys_at_all_nodes(timeoutSecs=300)
+        elapsed = time.time() - start
+        print "delete_keys_at_all_nodes(): took", elapsed, "secs"
+
     # we keep a copy of whatever was built here too, just in case!
     # we can't refer to h2o.nodes[] because of circular import?
-    if not nodeList: nodeList = h2o_nodes.nodes
     # could the nodeList still be empty in some exception cases? Assume not for now
-    try:
-        # update: send a shutdown to all nodes. h2o maybe doesn't progagate well if sent to one node
-        # the api watchdog shouldn't complain about this?
-        for n in nodeList:
-            n.shutdown_all()
-    except:
-        pass
-    # ah subtle. we might get excepts in issuing the shutdown, don't abort out
-    # of trying the process kills if we get any shutdown exception (remember we go to all nodes)
-    # so we might? nodes are shutting down?
-    # FIX! should we wait a bit for a clean shutdown, before we process kill?
-    # It can take more than 1 sec though.
-    try:
-        time.sleep(2)
-        for n in nodeList:
-            n.terminate()
-            verboseprint("tear_down_cloud n:", n)
-    except:
-        pass
+
+    # FIX! don't send shutdown if we're using an existing cloud
+    # also, copy the "delete keys at teardown from testdir_release
+    # Assume there's a last "test" that's run to shutdown the cloud 
+    if not h2o_args.usecloud or force:
+        try:
+            # update: send a shutdown to all nodes. h2o maybe doesn't progagate well if sent to one node
+            # the api watchdog shouldn't complain about this?
+            for n in nodeList:
+                n.shutdown_all()
+        except:
+            pass
+
+        # ah subtle. we might get excepts in issuing the shutdown, don't abort out
+        # of trying the process kills if we get any shutdown exception (remember we go to all nodes)
+        # so we might? nodes are shutting down?
+        # FIX! should we wait a bit for a clean shutdown, before we process kill?
+        # It can take more than 1 sec though.
+        try:
+            time.sleep(2)
+            for n in nodeList:
+                n.terminate()
+                verboseprint("tear_down_cloud n:", n)
+        except:
+            pass
 
     check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=h2o_args.python_test_name)
     # get rid of all those pesky line marker files. Unneeded now
@@ -441,7 +496,7 @@ def touch_cloud(nodeList=None):
 
 # timeoutSecs is per individual node get_cloud()
 # verify cloud name if cloudName provided
-def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False,
+def verify_cloud_size(nodeList=None, expectedCloudName=None, expectedLocked=None, verbose=False, 
     timeoutSecs=10, ignoreHealth=False):
 
     if not nodeList: nodeList = h2o_nodes.nodes
@@ -455,10 +510,30 @@ def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False,
     cloudConsensus = [c['consensus'] for c in cloudStatus]
     cloudHealthy = [c['cloud_healthy'] for c in cloudStatus]
     cloudName = [c['cloud_name'] for c in cloudStatus]
+    cloudLocked = [c['locked'] for c in cloudStatus]
+    cloudVersion = [c['version'] for c in cloudStatus]
 
-    if not all(cloudHealthy):
-        msg = "Some node reported cloud_healthy not true: %s" % cloudHealthy
-        if not ignoreHealth:
+    # all match 0?
+    version = cloudVersion[0]
+    # check to see if it's a h2o version? (common problem when mixing h2o1/h2o-dev testing with --usecloud
+    if version and version!='(unknown)' and version!='null' and version!='none':
+        if not version.startswith('2'):
+            print "h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % version
+
+        expectedVersion = version
+        for i, v in enumerate(cloudVersion):
+            if v != expectedVersion:
+                versionStr = (",".join(map(str, cloudVersion)))
+                print "node %s. Inconsistent cloud version. nodeList report version: %s" % (i, versionStr)
+
+    if not ignoreHealth:
+        for c in cloudStatus:
+            if 'cloud_healthy' not in c:
+                raise Exception("cloud_healthy missing: %s" % dump_json(c))
+
+        cloudHealthy = [c['cloud_healthy'] for c in cloudStatus]
+        if not all(cloudHealthy):
+            msg = "Some node reported cloud_healthy not true: %s" % cloudHealthy
             raise Exception(msg)
 
     # gather up all the node_healthy status too
@@ -476,13 +551,14 @@ def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False,
         print "cloudConsensus:", cloudConsensus
         raise Exception("Nothing in cloud. Can't verify size")
 
-    for s in cloudSizes:
-        consensusStr = (",".join(map(str, cloudConsensus)))
-        sizeStr = (",".join(map(str, cloudSizes)))
-        if (s != expectedSize):
-            raise Exception("Inconsistent cloud size." +
-               "nodeList report size: %s consensus: %s instead of %d." % \
-               (sizeStr, consensusStr, expectedSize))
+    consensusStr = (",".join(map(str, cloudConsensus)))
+    sizeStr = (",".join(map(str, cloudSizes)))
+
+    for i, s in enumerate(cloudSizes):
+        if s != expectedSize:
+            raise Exception("node %s. Inconsistent cloud size. nodeList report size: %s consensus: %s instead of %d." % \
+               (i, sizeStr, consensusStr, expectedSize))
+
 
     # check that all cloud_names are right
     if expectedCloudName:
@@ -495,6 +571,17 @@ def verify_cloud_size(nodeList=None, expectedCloudName=None, verbose=False,
                 tear_down_cloud(nodeList=nodeList, sandboxIgnoreErrors=False)
                 raise Exception("node %s has the wrong cloud name: %s expectedCloudName: %s" % \
                     (i, cn, expectedCloudName))
+
+    # check that all locked are right
+    if expectedLocked:
+        for i, cl in enumerate(cloudLocked):
+            if cl != expectedLocked:
+                print "node %s has the wrong locked: %s expectedLocked: %s." % (i, cl, expectedLocked)
+                # print "node %s cloud status: %s" % (i, dump_json(cloudStatus[i]))
+                # tear everyone down, in case of zombies. so we don't have to kill -9 manually
+                print "tearing cloud down"
+                tear_down_cloud(nodeList=nodeList, sandboxIgnoreErrors=False)
+                raise Exception("node %s has the wrong locked: %s expectedLocked: %s" % (i, cn, expectedLocked))
 
     return (sizeStr, consensusStr, expectedSize)
 
@@ -522,7 +609,7 @@ def stabilize_cloud(node, nodeList, timeoutSecs=14.0, retryDelaySecs=0.25, noSan
             for ci in c['nodes']:
                 verboseprint(ci['name'])
 
-        if (cloud_size > node_count):
+        if cloud_size > node_count:
             emsg = (
                 "\n\nERROR: cloud_size: %d reported via json is bigger than we expect: %d" % \
                     (cloud_size, node_count) +

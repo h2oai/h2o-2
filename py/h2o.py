@@ -26,7 +26,7 @@ from h2o_test import \
 from h2o_args import unit_main
 from h2o_get_ip import get_ip_address
 
-print "h2o"
+# print "h2o"
 
 def setup_benchmark_log():
     # h2o.cloudPerfH2O is used in tests. Simplest to have the instance here.

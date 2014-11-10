@@ -1,7 +1,6 @@
 package water.api;
 
 import water.Func;
-import water.Key;
 import water.MRTask2;
 import water.UKV;
 import water.fvec.Chunk;
@@ -41,6 +40,8 @@ public class GainsLiftTable extends Func {
   public float[] response_rates;
   @API(help="Average response rate", json=true)
   public float avg_response_rate;
+  @API(help="Positive Responses Per Group", json=true)
+  public long[] positive_responses;
 
   @Override protected void init() throws IllegalArgumentException {
     // Input handling
@@ -93,6 +94,7 @@ public class GainsLiftTable extends Func {
         gt.doAll(va, vp);
         response_rates = gt.response_rates();
         avg_response_rate = gt.avg_response_rate();
+        positive_responses = gt.responses();
       }
     } catch (Throwable t) {
       // do nothing
@@ -160,6 +162,7 @@ public class GainsLiftTable extends Func {
     /* @OUT response_rates */
     public final float[] response_rates() { return _response_rates; }
     public final float avg_response_rate() { return _avg_response_rate; }
+    public final long[] responses(){ return _responses; }
 
     /* @IN total count of events */ final private double[] _thresh;
     final private long _count;

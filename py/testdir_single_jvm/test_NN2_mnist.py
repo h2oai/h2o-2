@@ -102,7 +102,6 @@ class Basic(unittest.TestCase):
             raise Exception("Scored classification error of %s is not within %s %% relative error of %s" %
                             (actualErr, float(relTol)*100, expectedErr))
 
-        h2o.beta_features = False
 
 if __name__ == '__main__':
     h2o.unit_main()

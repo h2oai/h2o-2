@@ -27,11 +27,11 @@ def ping_host_if_verbose(host):
             ping.communicate()
 
 def check_port_group(base_port):
-    # disabled
+    # Only enable if useful for debug
     if 1==1:
         username = getpass.getuser()
         # if username=='jenkins' or username=='kevin' or username=='michal':
-        if username=='jenkins' or username=='kevin':
+        if username=='jenkins':
             # assumes you want to know about 3 ports starting at base_port
             # can't use p, not root
             command1Split = ['netstat', '-an']
@@ -52,7 +52,8 @@ def check_port_group(base_port):
 # I suppose we should use psutil here. since everyone has it installed?
 # and it should work on windows?
 def show_h2o_processes():
-    if 1==1:
+    # Only enable if useful for debug
+    if 1==0:
         username = getpass.getuser()
         h2oFound = False
         users = set()

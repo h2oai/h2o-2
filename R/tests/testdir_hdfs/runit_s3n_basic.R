@@ -19,11 +19,11 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 # Single file cases.
 #----------------------------------------------------------------------
 
-heading("Testing single file importHDFS S3N")
+heading("Testing single file importFile S3N")
 s3n_iris_file <- "0xdata-public/examples/h2o/R/datasets/iris_wheader.csv"
 url <- sprintf("s3n://%s", s3n_iris_file)
 
-iris.hex <- h2o.importHDFS(conn, url)
+iris.hex <- h2o.importFile(conn, url)
 head(iris.hex)
 tail(iris.hex)
 n <- nrow(iris.hex)
@@ -40,11 +40,11 @@ if (class(iris.hex) != "H2OParsedData") {
 # Directory cases.
 #----------------------------------------------------------------------
 
-heading("Testing directory importHDFS S3N")
+heading("Testing directory importFolder S3N")
 s3n_iris_dir <- "0xdata-public/examples/h2o/R/datasets"
 url2 <- sprintf("s3n://%s", s3n_iris_dir)
 
-irisdir.hex <- h2o.importHDFS(conn, url2)
+irisdir.hex <- h2o.importFolder(conn, url2)
 head(irisdir.hex)
 tail(irisdir.hex)
 n <- nrow(irisdir.hex)

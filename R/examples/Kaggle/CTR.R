@@ -14,7 +14,7 @@ sink("CTR.log", split = T)
 library(h2o)
 library(stringr)
 
-## Connect to H2O server (On server(s), run 'java -jar h2o.jar -Xmx32G -port 53322 -name CTR -data_max_factor_levels 100000000' first)
+## Connect to H2O server (On server(s), run 'java -Xmx32g -ea -jar h2o.jar -port 53322 -name CTR -data_max_factor_levels 100000000' first)
 ## Go to http://server:53322/ to check Jobs/Data/Models etc.
 h2oServer <- h2o.init(ip="mr-0xd2", port = 53322)
 
@@ -94,7 +94,7 @@ valid <- h2o.assign(train_hex[train_hex$day==10,], 'valid')
 h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
 
 cat("\nTraining H2O model on training/validation splits days 1-9/10")
-## Note: This could be grid search models, after which you would obtain the best model parameters via cvmodel@sumtable[[1]]@model$params
+## Note: This could be grid search models, after which you would obtain the best model parameters via cvmodel@model[[1]]@model$params
 cvmodel <- h2o.randomForest(type="BigData", data=train, validation=valid, x=c(3:ncol(train)), y=2, ntree=10, depth=10, seed=myseed)
 #cvmodel <- h2o.deeplearning(data=train, validation=valid, x=c(3:ncol(train)), y=2,
 #                            hidden=c(50,50), max_categorical_features=100000, train_samples_per_iteration=10000, score_validation_samples=10000)

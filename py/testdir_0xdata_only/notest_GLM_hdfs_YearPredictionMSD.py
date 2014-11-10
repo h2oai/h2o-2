@@ -1,6 +1,6 @@
 import unittest, time, sys, time, random, copy
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 RANDOM_UDP_DROP = False
 class Basic(unittest.TestCase):
@@ -9,29 +9,18 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=4, random_udp_drop=RANDOM_UDP_DROP,
-                use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='mr-0x6')
-        else:
-            h2o_hosts.build_cloud_with_hosts(random_udp_drop=RANDOM_UDP_DROP)
+        h2o.init(java_heap_GB=4, random_udp_drop=RANDOM_UDP_DROP, 
+            use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='mr-0x6')
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GLM_hdfs_YearPredictionMSD(self):
-        if localhost:
-            csvFilenameList = [
-                'YearPredictionMSD.txt',
-                'YearPredictionMSD.txt'
-                ]
-        else:
-            csvFilenameList = [
-                'YearPredictionMSD.txt',
-                'YearPredictionMSD.txt'
-                ]
+        csvFilenameList = [
+            'YearPredictionMSD.txt',
+            'YearPredictionMSD.txt'
+            ]
 
         # a browser window too, just because we can
         ## h2b.browseTheCloud()

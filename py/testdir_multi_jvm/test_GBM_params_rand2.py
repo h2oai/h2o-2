@@ -113,9 +113,6 @@ class Basic(unittest.TestCase):
                     model_key=modelKey,
                     destination_key=predictKey,
                     timeoutSecs=timeoutSecs)
-                # hack
-                if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 elapsed = time.time() - start
                 print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
@@ -143,7 +140,6 @@ class Basic(unittest.TestCase):
                     eList.append(pctWrongTrain)
                     fList.append(trainElapsed)
 
-            h2o.beta_features = False
             xLabel = 'max_depth'
             eLabel = 'pctWrongTrain'
             fLabel = 'trainElapsed'
