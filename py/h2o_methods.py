@@ -4,6 +4,7 @@ import h2o_args
 # from h2o_cmd import runInspect, infoFromSummary
 import h2o_cmd, h2o_util
 import h2o_browse as h2b
+import h2o_print as h2p
 
 from h2o_objects import H2O
 from h2o_test import verboseprint, dump_json, check_sandbox_for_errors, get_sandbox_name, log
@@ -24,13 +25,13 @@ def check_params_update_kwargs(params_dict, kw, function, print_params):
         sys.stdout.flush()
 
 
-def get_cloud(self, noSandboxErrorCheck=False, timeoutSecs=10):
+def get_cloud(self, noExtraErrorCheck=False, timeoutSecs=10):
     # hardwire it to allow a 60 second timeout
-    a = self.do_json_request('Cloud.json', noSandboxErrorCheck=noSandboxErrorCheck, timeout=timeoutSecs)
+    a = self.do_json_request('Cloud.json', noExtraErrorCheck=noExtraErrorCheck, timeout=timeoutSecs)
     version    = a['version']
     if version and version!='(unknown)' and version!='null' and version!='none':
         if not version.startswith('2'):
-            print "h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % dump_json(a)
+            h2p.red_print("h2o version at node[0] doesn't look like h2o version. (start with 2) %s" % version)
 
     consensus = a['consensus']
     locked = a['locked']
@@ -66,7 +67,7 @@ def get_timeline(self):
 # so request library might retry and get exception. allow that.
 def shutdown_all(self):
     try:
-        self.do_json_request('Shutdown.json', noSandboxErrorCheck=True)
+        self.do_json_request('Shutdown.json', noExtraErrorCheck=True)
     except:
         pass
     # don't want delayes between sending these to each node
