@@ -32,46 +32,51 @@
 
 \section{Introduction} \label{1}
 
-H2O's GLM algorithm fits generalized linear model with elastic net penalties. The model fitting computation is distributed and is extremely fast (and scales extremely well) for models with limited number of predictors with non-zero coefficients (~ low thousands). The algorithm can compute model for single value of penlaty argument or full regularization path similar to glmnet. It can compute gaussian (linear), logistic, poisson and gamma regresion models. This document describes usage of H2O's glm in R.
+Generalized linear models (GLM) are some of the most commonly-used models for many types of data analysis use cases. While some data analysis can be done using general linear models, if the variables are more complex, general linear models may not be as accurate. For example, if the dependent variable has a non-continuous distribution or if the effect of the predictors is not linear, generalized linear models will produce more accurate results than general linear models.  
 
-H2O's glm fits the model by solving following problem:
+H2O's GLM algorithm fits the generalized linear model with elastic net penalties. The model fitting computation is distributed, extremely fast,and scales extremely well for models with a limited number (~ low thousands) of predictors with non-zero coefficients . The algorithm can compute models for a single value of a penalty argument or the full regularization path, similar to glmnet. It can compute gaussian (linear), logistic, poisson, and gamma regression models. This document describes the usage of H2O's implementation of GLM in R.
 
-\[ \min\limits_{\beta}\ {{1\over{N}} loglikelihood(family,\beta)  + \lambda (\alpha \| \beta \|_1}  + {1- \alpha \over 2} \| \beta \|_2) \]
+H2O's GLM fits the model by solving following problem:
 
-The elastic net parameter $\alpha$ controls the penalty distribution between l1 and l2 penalty. It can have any value between 0 and 1. When $\alpha$ = 0, we have no l1 penalty and the problem becomes ridge regression. If $\alpha$ = 1 there is no l2 penalty and we have lasso.
+\[ \min\limits_{\beta}\ {{1\over{N}} log-likelihood(family,\beta)  + \lambda (\alpha \| \beta \|_1}  + {1- \alpha \over 2} \| \beta \|_2) \]
 
-The main advantage of l1 penalty is that it (with sufficiently high $\lambda$) produces sparse solution (l2-only penalty does not reduce coefficients to exactly 0). The two penalties also differ in case of correlated predictors. l2 penalty shrinks ceofficients for correlated columns towards each other, while l1 penalty will pick one and drive the others to zero. Using elastic net argument $\alpha$, you can combine these two behaviors. It is also usefull to always add little l2 penalty to increase numerical stability.
+The elastic net parameter $\alpha$ controls the penalty distribution between L1 and L2 penalty. It can have any value between 0 and 1. When $\alpha$ = 0, we have no L1 penalty and the problem becomes ridge regression. If $\alpha$ = 1, there is no L2 penalty and we have lasso.
 
-As was mentioned before, model-fitting works and scales well if numcols $<<$ numrows. However, in many cases we want to fit glm model over many predictors (10s of thousands or more) with l1 penalty, selecting only few of them in the end (the rest will have zero coefficient and will not be part of the model). To keep our excellent performance and scaling properties in such cases, we employ strong rules (http://statweb.stanford.edu/~tibs/ftp/strong.pdf) to limit the set of active coefficients. The performance of the algorithm is then limited by the number of coefficients in the model rather than number of coefficients present in the training data set. 
+The main advantage of an L1 penalty is that with sufficiently high $\lambda$, it produces a sparse solution; the L2-only penalty does not reduce coefficients to exactly 0. The two penalties also differ in the case of correlated predictors. The L2 penalty shrinks coefficients for correlated columns towards each other, while the L1 penalty will pick one and drive the others to zero. Using the elastic net argument $\alpha$, you can combine these two behaviors. It is also useful to always add a small L2 penalty to increase numerical stability.
 
-The algorithm can handle categorical variables, which are treated as special kind of sparse vectors - each categorical column is expanded on the fly into multiple binary vectors. Each value in the original vector is mapped into n values, with exactly one being set 1, others are 0. Because the some of the columns catetogiral maps to is always 1, it will be correlated with intercept. To prevent such correlation, we usually skip one of the levels (the first one). This is not necessary with non-zero penalty and h2o has an option to include or factor levels in the model (all levels are always included when computing the whole regularization path). This is usefull e.g. when interpreting the variable importance of the model. 
+As mentioned before, model-fitting works and scales well if numcols $<<$ numrows. However, in many cases we want to fit a GLM model over many predictors (10,000 or more) with an L1 penalty, selecting only a few of them for the model. The rest will have a zero coefficient and will not be part of the model. To maintain excellent performance and scaling properties in such cases, we employ strong rules  (as described in "Strong Rules for Discarding Predictors in Lasso-type Problems") to limit the set of active coefficients. The performance of the algorithm is then limited by the number of coefficients in the model, rather than the number of coefficients present in the training data set. 
+
+The algorithm can handle categorical variables, which are treated as a special kind of sparse vectors: each categorical column is expanded on the fly into multiple binary vectors. %Each value in the original vector is mapped into n values, with exactly one value being set to 1 and the others are 0. Because the some of the columns categorical maps to is always 1, it will be correlated with intercept.%- Jessica: This section is a bit unclear 
+
+To prevent such a correlation, we usually skip one of the levels (the first one). This is not necessary with a non-zero penalty and H2O has an option to include or factor levels in the model. All levels are always included when computing the whole regularization path. This is useful when interpreting the variable importance of the model. 
 
 
 \subsection{Summary of features} 
-In summary, H2O's GLM functionalities include:
+In summary, the benefits of H2O's GLM are:
 
 \begin{itemize} % @TODO TBD. CURRENTLY SAME AS GBM 
 \item fits generalized linear model with elastic net penalty
-\item can efficiently compute full regularization path, applies strong rules to limit number of activec predictors and speed up computation
-\item efficient handling of categorical variables
+\item efficiently computes the full regularization path
+\item applies strong rules to limit the number of active predictors and speed up computation
+\item handles categorical variables efficiently
 \item supports efficient distributed n-fold cross validation
 \item supports distributed grid search over elastic-net parameter $\alpha$
-\item upper and lower boudns for coefficients
-\item proximal operator interface
+\item provides upper and lower bounds for coefficients
+\item provides a proximal operator interface
 \end{itemize}
 
 
 
 \section{Installation} 
 
-You can load the latest CRAN H2O package by running
+You can load the latest CRAN H2O package by running:
 
 \begin{spverbatim}
 install.packages("h2o")
 \end{spverbatim}
 \bigskip
 \noindent
-Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O \href{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}{download table}. Open your R Console and run the following to install the latest H2O build in R:
+Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O download table:\underbar{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}. Open your R Console and run the following to install the latest H2O build in R:
 
 \begin{spverbatim}
 # The following two commands remove any previously installed H2O packages for R.
@@ -94,14 +99,14 @@ h2o_server = h2o.init()
 
 \end{spverbatim}
 \noindent
-With this command, the H2O R module will start an instance of H2O automatically at localhost:54321. Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but do not directly paste; you should specify the IP and port number appropriate to your specific environment.
+With this command, the H2O R module will start an instance of H2O automatically at localhost:54321. Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but you should specify the IP and port number appropriate to your specific environment.
 
 \begin{spverbatim}
 h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE)
 
 \end{spverbatim}
 \noindent
-An automatic demo is available to see h2o.gbm at work. Run the following command to observe an example classification model built through H2O's GLM.
+An automatic demo is available to see \texttt{h2o.glm} at work. Run the following command to observe an example classification model built through H2O's GLM:
 
 \begin{spverbatim}
 demo(h2o.glm)
@@ -109,65 +114,65 @@ demo(h2o.glm)
 
 \subsection{Support} 
 
-Users of the H2O package may submit general enquiries and bug reports to the 0xdata \href{h2ostream@googlegroups.com}{support address}. Alternatively, specific bugs or issues may be filed to the 0xdata \href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{JIRA}.
+Users of the H2O package may submit general enquiries and bug reports to the 0xdata support address:\underbar {h2ostream@googlegroups.com}. Alternatively, specific bugs or issues may be filed to the 0xdata JIRA: \underbar{https://0xdata.atlassian.net/secure/Dashboard.jspa}.
 
 \section{Generalized Linear Modeling} 
-This section contains brief overview of generalized linear models and follows up with few details for each model-family.
+This section contains a brief overview of generalized linear models and follows up with a few details for each model family.
 
-Generalized linear model is generalization of linear regression. Linear regression models dependency of response y on vector of predictors x ($y \sim x^T \beta + \beta_0$) with assumption that y has gaussian distribution with mean being linear function of x (+ offset) and deviance $\sigma$ (independent on x), i.e. $ y = \mathcal{N}(x^T \beta + \beta_0 , \sigma^2) $. In many situations, these assumptions are overly restrictive while we would still want to take advantage of linear models. GLM generalizes linear regression in following ways: 
+The generalized linear model is a generalization of linear regression. Linear regression models the dependency of response y on a vector of predictors x ($y \sim x^T \beta + \beta_0$), with the assumption that y has a gaussian distribution, with the mean being a linear function of x (+ the offset) and a deviance of $\sigma$ (independent of x), i.e. $ y = \mathcal{N}(x^T \beta + \beta_0 , \sigma^2) $. In many situations, these assumptions are overly restrictive but we would still want to take advantage of linear models. GLM generalizes linear regression in following ways: 
 \begin{itemize} 
-\item adds non-linear link function, so that $link(y) \sim x^T \beta + \beta_0$.
-\item allows variance to depend on predicted value (family argument).
+\item adds a non-linear link function, so that $link(y) \sim x^T \beta + \beta_0$.
+\item allows variance to depend on the predicted value (family argument).
 \end{itemize}
-This generalization allows us to apply GLM to problems such as binary classificaton (Logistic regression) 
+This generalization allows us to apply GLM to problems such as binary classification (Logistic regression).
 GLM models are fitted by maximizing the likelihood.
 
 \subsection{Model Fitting}
 \subsection{Validation}
-Evaluating quality of the model is critical part of any data-modelling/prediction task. There are several standard ways how to evalute quality of fitted GLM model. The most common is to judge by deviance statistic. Deviance is based on comparing log likelihood of the fitted model with log likelihood of teh saturated model (theoretical perfect model).
+Evaluating the quality of the model is a critical part of any data-modeling or prediction task. There are several standard ways how to evaluate the quality of a fitted GLM model. The most common is to judge by the deviance statistic. Deviance is based on comparing the log likelihood of the fitted model with the log likelihood of the saturated model (theoretical perfect model).
 
 \[ deviance = 2({loglikelihood_{s}} - {loglikelihood_{m}}) \]
 
-H2O's glm computes following validation statistics:
+H2O's GLM computes following validation statistics:
 \begin{itemize} 
-\item \textbf{null degrees of freedom} number of observations - 1 (the $\beta_0=mean$ is one coefficient)
-\item \textbf{degrees of freedom} number of observations - 1 - number of non-zero predictors
+\item \textbf{null degrees of freedom}: number of observations - 1 (the $\beta_0=mean$ is one coefficient)
+\item \textbf{degrees of freedom}: number of observations - 1 - number of non-zero predictors
 
-\item \textbf{null deviance} residual deviance of null model(predict all to mean). Typically, when evaluating the model, we look at the deviance explained ration, i.e. $ 1 -{ resdev \over nulldev}$.
-\item \textbf{residual deviance} deviance of the fitted model
-\item \textbf{AIC} The Akaike information criterion (AIC) is a measure of the relative quality of a statistical model for a given set of data. It is usefull for model comparison. Unlike deviance (which would have perfect value for saturated model), it takes into account the complexity of the given model. It is based on meassuring information loss when replacing original data with the model itself. Unlike deviance, it does not meassure absolute quality of the fit (comparison against null-hypothesis).
+\item \textbf{null deviance}: residual deviance of the null model(predict all to mean). Typically, when evaluating the model, we look at the deviance explained ration, i.e. $ 1 -{ resdev \over nulldev}$.
+\item \textbf{residual deviance}: deviance of the fitted model
+\item \textbf{AIC}: The Akaike information criterion (AIC) is a measure of the relative quality of a statistical model for a given set of data. It is useful for model comparison. Unlike deviance (which would have perfect value for saturated model), it takes into account the complexity of the given model. It is based on measuring information loss when replacing original data with the model itself. Unlike deviance, it does not measure absolute quality of the fit (in comparison against null-hypothesis).
 
 \item \textbf{AUC} Area under ROC curve
 \end{itemize}
 
 \subsubsection{Cross-Validation}
-All validation values can be computed either on training data set (the default) or using nfold crossvalidation ($nfolds > 1$). When using nfold cross-validation, we randomly split data into n equally sized parts and train each of the n models on n-1 parts and compute validation on the part which was not used for training.The reported validation parameters are then obtained as follows:
+All validation values can be computed either on the training data set (the default) or using nfold cross-validation ($nfolds > 1$). When using nfold cross-validation, we randomly split data into $n$ equally-sized parts and train each of the $n$ models on $n$-1 parts and compute validation on the part that was not used for training. The reported validation parameters are then obtained as follows:
 \begin{itemize} 
-\item null deviance is sum of null deviances of n-models (each uses null model based on the subset of the data)
-\item residual deviance is sum of residual deviances of all n-models.
+\item Null deviance is the sum of null deviances of $n$-models (each uses a null model based on the subset of the data)
+\item Residual deviance is sum of residual deviances of all n-models.
 \item AIC
-\item AUC is based on ROC curve build  by summing up confusion matrices built for all n-models.
-This means for each threshold, we get confusion matrix which includes all the rows from
-the training set, however, each row is classified exclusively by the model
-which did not have it in its training set. Computation of AUC itself is then the same as in non-crossvalidatied case. 
+\item AUC is based on the ROC curve build  by summing up confusion matrices built for all $n$-models.
+This means for each threshold, we get a confusion matrix that includes all the rows from
+the training set. However, each row is classified exclusively by the model
+that did not have it in its training set. The computation of AUC itself is then the same as in non-cross-validated case. 
 \end{itemize}
 
 
 \subsection{GLM Models} 
-Following subsection describe GLM families supported in h2o. 
+The following subsection describes GLM families supported in h2o. 
 
 \subsubsection{Linear Regression (Gaussian family) }
-Linear regression refers to gaussian family model. It is the simplest example of GLM, however it has many uses and several advantages over the other families such as faster and more stable computation. 
+Linear regression refers to the gaussian family model. It is the simplest example of GLM, but it has many uses and several advantages over the other families, such as faster and more stable computation. 
 
-It models the dependency as purely linear function (with link = identity):
+It models the dependency as a purely linear function (with link = identity):
 \[ \hat{y} = x^T\beta + \beta_0\]
 
-Model is fitted by solving least squares problem (maximum likelihoood for gaussian family):
+The model is fitted by solving the least squares problem (maximum likelihood for gaussian family):
 
 \[ \min\limits_{\beta,\beta_0} { {1 \over 2N}\sum\limits_{i=1}\limits^{N}(x_i^{T}\beta  + \beta_0- y_i)^T (x_i^{T}\beta + \beta_0 - y_i))  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2} \]
 
 
-Deviance is simply sum of squared errors:
+Deviance is simply the sum of squared errors:
 \[ D = \sum\limits_{i=1}\limits^{N}{(y_i - \hat{y}_i)^2} \]
 
 
@@ -176,7 +181,7 @@ Deviance is simply sum of squared errors:
 
 
 \subsubsection{Logistic Regression (Binomial Family)}
-Logistic regression can be used in case of binary classification problem (response is categorical with two levels). It models dependency as $Pr(y = 1|x)$. Canonical link for binomial family is logit (log of the odds), it's inverse is logistic function which which takes any real number on the input and projects it onto 0,1 range (s-curve). 
+Logistic regression can be used in case of a binary classification problem, where the response is categorical with two levels. It models dependency as $Pr(y = 1|x)$. The canonical link for binomial family is logit (log of the odds), its inverse is a logistic function that takes any real number on the input and projects it onto the 0,1 range (s-curve). 
 
 \[ \hat{y} = Pr(y = 1|x) = {e^{x^T\beta + \beta_0} \over 1 + e^{x^T \beta + \beta_0} } \]
 
@@ -185,10 +190,10 @@ or alternatively:
 
 \[log {\hat{y} \over 1- \hat{y}} = log{Pr(y=1|x) \over Pr(y=0|x)} = x^T \beta + \beta_0\]
 
-Model is fitted by solving:
+The model is fitted by solving:
 \[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - log (1 + e^{x_i^{T}\beta  + \beta_0} )  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2} \]
 
-Deviance is -2 loglikelihood:
+Deviance is -2 log likelihood:
 \[D = -2\sum\limits_{i=1}\limits^{N}{(y log(\hat{y}) + (1 - y)log(1-\hat{y})  )}\]
 
 \textbf{Decision threshold}
@@ -196,13 +201,13 @@ Deviance is -2 loglikelihood:
 \textbf{Example}
 
 \subsubsection{Poisson Models}
-Poisson regression is generally used in cases when response represents counts and we assume errors have Poisson distribution. In general, it can be applied to any data where response is non-negative. 
+Poisson regression is generally used in cases where the response represents counts and we assume errors have a Poisson distribution. In general, it can be applied to any data where the response is non-negative. 
 
-When building Poisson model, we usually model dependency of the mean on the log scale, i.e. canonical link is log and prediction is:
+When building a Poisson model, we usually model dependency of the mean on the log scale, i.e. canonical link is log and prediction is:
 
 \[\hat{y} = e^{x^T\beta + \beta_0}\]
 
-Model is fitted by solving:
+The model is fitted by solving:
 
 \[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - e^{x_i^{T}\beta  + \beta_0})  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2} \]
 
@@ -214,9 +219,10 @@ Deviance is
 \textbf{Example}
 
 \subsubsection{Gamma Models}
-The gamma distribution is useful for modeling a positive continuous response variable, where the conditional variance of the response grows with its mean but where the coefficient of variation of the response $\sigma^2(x)/μ(x)$ is constant for all x - i.e. it has a constant coefficient of variation.
+The gamma distribution is useful for modeling a positive continuous response variable, where the conditional variance of the response grows with its mean but  the coefficient of variation of the response $\sigma^2(x)/μ(x)$ is constant for all x,  i.e., it has a constant coefficient of variation.
 
-It is usally used with inverse or log link, inverse is the canonical link.
+It is usually used with inverse or log link, inverse is the canonical link.
+
 
 
 \textbf{Validation}
@@ -235,21 +241,21 @@ It is usally used with inverse or log link, inverse is the canonical link.
 %—etc.
 
 \section{Elastic Net Penalty} 
-We introduce penalty to model-fitting to avoid over-fitting and to reduce variance of the prediction error. There are two common penalized linear models, Ridge Regression and Lasso. 
+To avoid over-fitting and to reduce variance of the prediction error, we introduce a penalty to model-fitting. There are two common penalized linear models: Ridge Regression and Lasso. 
 
-Ridge Regression penalizes l2 norm of the vector of coefficients. 
+Ridge Regression penalizes the L2 norm of the vector of coefficients. 
 
-Lasso penalizes l1 norm of the parameter vector.
+Lasso penalizes the L1 norm of the parameter vector.
 
-Elastic net combines the two and adds additional argument $\alpha$ which drives the distribution of the penalty between l1 and l2.
+Elastic net combines the two and adds an additional argument $\alpha$ that drives the distribution of the penalty between L1 and L2.
 
 \subsection{Selecting Penalty Parameters}
 
-Since l1 penalty produces sparse solution, penalized glm with $\alpha > 0$ with sufficiently high value of $\lambda$ will produce null model, i.e. model with no non-zero coefficients except the intercept. It can thus be seen that it only makes sense to compute the models for $\lambda < \lambda_{max}$, where $lambda_{max}$ is the smallest $\lambda$ leading to null solution.
+Since the L1 penalty produces a sparse solution, penalized GLM with  $\alpha > 0$ where a sufficiently high value of $\lambda$ will produce a null model (i.e., a model with no non-zero coefficients except the intercept). As a result, it only makes sense to compute the models for $\lambda < \lambda_{max}$, where $lambda_{max}$ is the smallest $\lambda$ leading to a null solution.
 
 \subsubsection{Grid Search}
 \subsubsection{Lambda Search}
-Lambda search is essentially an automatic efficient grid search over $\lambda$ parameter. It computes glm models for the full regularization path, which is an exponentially dercresing sequence of values, staring at $\lambda_{max}$ and finishing at $\lambda_{min} = \gamma\lambda_{max}, \gamma \in (0,1)$ . $\lambda_{max}$ is defined as the smallest $\lambda$ s.t. the resulting model has no non-zero coefficients other than intercept. Since 
+Lambda search is essentially an automatic efficient grid search over the $\lambda$ parameter. It computes GLM models for the full regularization path, which is an exponentially decreasing sequence of values, starting at $\lambda_{max}$ and finishing with $\lambda_{min} = \gamma\lambda_{max}, \gamma \in (0,1)$ . $\lambda_{max}$ is defined as the smallest $\lambda$ s.t. the resulting model has no non-zero coefficients other than intercept. Since 
 
 
 
@@ -261,24 +267,24 @@ Lambda search is essentially an automatic efficient grid search over $\lambda$ p
 
 \subsection{Airline dataset overview} \label{3.1}
 
-The Airline dataset can be downloaded \href{https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip}{here}. Remember to save the .csv file to your working directory. Before running the Airline demo we first review how to load data with H2O. 
+The Airline dataset can be downloaded here: \underbar {https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip}. Remember to save the .csv file to your working directory by clicking  "View Raw."  Before running the Airline demo, we'll first review how to load data with H2O. 
 
 \subsubsection{Loading data} \label{2.5}
 
-Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For an example, we use a toy weather dataset which can be downloaded \href{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/weather.csv}{here}. First load the data to your current working directory in your R Console (do this henceforth for dataset downloads), and then run the following command.
+Loading a dataset in R for use with H2O is slightly different from the usual methodology, because we must convert our datasets into \texttt{H2OParsedData} objects. In this example, we will use a toy weather dataset that can be downloaded here: \underbar{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/weather.csv}. First, load the data to your current working directory in your R Console (do this for any future dataset downloads), and then run the following command:
 \begin{spverbatim}
 weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", header = TRUE, sep = ",", key = "weather.hex")
 \end{spverbatim}
 \bigskip
 \noindent
-To see a quick summary of the data, run the following command.
+To see a quick summary of the data, run the following command:
 \begin{spverbatim}
 summary(weather.hex)
 \end{spverbatim}
 
 
 \subsection{Performing a trial run} \label{3.2}
-Returning to the Airline dataset demo, we first load the dataset with H2O and select which variables we wish to use to predict a chosen response. For example, we may want to model whether flights are delayed based on the departure's scheduled day of the week and day of the month.
+Returning to the Airline dataset demo, we first load the dataset with H2O and select the variables we want to use to predict a chosen response. For example, we can model if flights are delayed based on the departure's scheduled day of the week and day of the month.
 \begin{spverbatim}
 
 #Load the data and prepare for modeling
@@ -292,7 +298,7 @@ y = "IsArrDelayed"
 
 \end{spverbatim}
 
-Now we train the GLM model
+Now we train the GLM model:
 
 \begin{spverbatim}
 airline.glm <- h2o.glm(x=x, 
@@ -325,7 +331,7 @@ top.air
 \noindent
 \\
 \\
-Once we have a satisfactory model, the \texttt{h2o.predict()} command can be used to compute and store predictions on new data, which can then be used for further tasks in the interactive modeling process.
+Once we have a satisfactory model, the \texttt{h2o.predict()} command can be used to compute and store predictions on the new data, which can then be used for further tasks in the interactive modeling process.
 \begin{spverbatim}
 #Perform classification on the held out data
 prediction = h2o.predict(airline.glm, newdata=air_test.hex)
@@ -334,15 +340,15 @@ pred = as.data.frame(prediction)
 head(pred)
 \end{spverbatim}
 \subsection{Web interface} \label{3.3}
-H2O R users have access to a slick web interface to mirror the model building process in R. After loading data or training a model in R, point your browser to your IP address+port number (e.g., localhost:12345) to launch the web interface. From here you can click on \textsc{Admin} $>$ \textsc{Jobs} to view your specific model details. You can also click on \textsc{Data} $>$ \textsc{View All} to view and keep track of your datasets in current use. 
+H2O R users have access to an intuitive web interface to mirror the model building process in R. After loading data or training a model in R, point your browser to your IP address and port number (e.g., localhost:54321) to launch the web interface. From here, you can click on \textsc{Admin} $>$ \textsc{Jobs} to view your specific model details. You can also click on \textsc{Data} $>$ \textsc{View All} to track datasets currently in use. 
 \subsubsection{Variable importances} \label{3.3.1}
-One useful feature is the variable importances option, which can be enabled with the additional argument \texttt{importance=TRUE}. This features allows us to view the absolute and relative predictive strength of each feature in the prediction task. From R, you can access these strengths with the command \texttt{air.model@model\$varimp}. You can also view a visualization of the variable
+One useful feature is the variable importances option, which can be enabled with the additional argument \texttt{importance=TRUE}. This feature allows us to view the absolute and relative predictive strength of each feature in the prediction task. From R, you can access these strengths with the command \texttt{air.model@model\$varimp}. You can also view a visualization of the variable
 importances on the web interface.
 \subsubsection{Java model} 
-Java model is currently not available for GLM.
+Java models are currently not available for GLM.
 \\
 \\
-To download the model open the terminal window, create a directory where the model will be saved, set the new directory as the working directory and follow the curl and java compile commands displayed in the instructions at the top of the java model.
+To download the model, open the terminal window, create a directory where the model will be saved, set the new directory as the working directory, and follow the curl and java compile commands displayed in the instructions at the top of the Java model.
 
 \newpage
 \section{Appendix A: Complete parameter list}
@@ -360,7 +366,7 @@ To download the model open the terminal window, create a directory where the mod
 	tweedie: tweedie 
 \item \texttt{nfolds}: A logical value indicating whether the algorithm should conduct classification. Otherwise, regression is performed on a numeric response variable.
 \item \texttt{nfolds}: Number of folds for cross-validation. Default is 0.
-\item \texttt{validation}: An \texttt{H2OParsedData} object indicating the validation dataset used to construct confusion matrix. If left blank, default is the training data.
+\item \texttt{validation}: An \texttt{H2OParsedData} object indicating the validation dataset used to construct confusion matrix. If  blank, the default is the training data.
 \item \texttt{alpha}: The elastic-net mixing parameter, which must be in $[0,1]$. The penalty is defined to be $P(\alpha,\beta) = (1-\alpha)/2||\beta||_2^2 + \alpha||\beta||_1 = \sum_j [(1-\alpha)/2 \beta_j^2 + \alpha|\beta_j|] $ so \texttt{alpha=1} is the lasso penalty, while \texttt{alpha=0} is the ridge penalty. Default is 0.5.
 \item \texttt{nlambda}: The number of lambda values when performing a search. Default is -1.
 \item \texttt{lambda.min.ratio}: Smallest value for lambda as a fraction of lambda.max, the entry value, which is the smallest value for which all coefficients in the model are zero. Default is -1.
@@ -368,9 +374,9 @@ To download the model open the terminal window, create a directory where the mod
 \item \texttt{epsilon}: Number indicating the cutoff for determining if a coefficient is zero. Default is 1e-4.
 \item \texttt{standardize}: Logical value indicating whether the data should be standardized (set to mean = 0, variance = 1) before running GLM. Default is true.
 \item \texttt{prior}: Prior probability of class 1. Only used if \texttt{family = "binomial"}. Default is the frequency of class 1 in the response column. 
-\item \texttt{variable\_importances}: A logical value either TRUE or FALSE to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If \texttt{use\_all\_factor\_levels} is off the importance of the base level will NOT be shown. Default is false.
-\item \texttt{use\_all\_factor\_levels}: A logical value either TRUE or FALSE to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Note: Needs sufficient regularization to solve! Default is false.
-\item \texttt{tweedie.p}: The index of the power variance function for the tweedie distribution. Only used if \texttt{family = “tweedie"}. Default is 1.5.
+\item \texttt{variable\_importances}: A logical value (either TRUE or FALSE) to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If \texttt{use\_all\_factor\_levels} is disabled,  the importance of the base level will NOT be shown. Default is false.
+\item \texttt{use\_all\_factor\_levels}: A logical value (either TRUE or FALSE) to indicate whether all factor levels should be used. By default, the first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Note: Needs sufficient regularization to solve! Default is false.
+\item \texttt{tweedie.p}: The index of the power variance function for the tweedie distribution. Only used if \texttt{family = “"tweedie"}. Default is 1.5.
 \item \texttt{iter.max}: Maximum number of iterations allowed. Default is 100.
 \item \texttt{higher\_accuracy}: A logical value indicating whether to use line search. This will cause the algorithm to run slower, so generally, it should only be set to TRUE if GLM does not converge otherwise. Default is false.
 \item \texttt{lambda\_search}: A logical value indicating whether to conduct a search over the space of lambda values, starting from \texttt{lambda\_max}. When this is set to TRUE, lambda will be interpreted as \texttt{lambda\_min}. Default is false.
@@ -391,5 +397,7 @@ To download the model open the terminal window, create a directory where the mod
 
 \newpage
 \section{References}
+
+"Strong Rules for Discarding Predictors in Lasso-type Problems" (http://statweb.stanford.edu/~tibs/ftp/strong.pdf)
 
 \end{document}
