@@ -5,6 +5,7 @@
 \usepackage{array}
 \usepackage{datetime}
 \usepackage{lipsum}
+\usepackage{url}
 \usepackage{spverbatim}
 \usepackage{hyperref}
 \hypersetup{colorlinks, urlcolor={blue}}
@@ -49,23 +50,6 @@ As mentioned before, model-fitting works and scales well if numcols $<<$ numrows
 The algorithm can handle categorical variables, which are treated as a special kind of sparse vectors: each categorical column is expanded on the fly into multiple binary vectors. %Each value in the original vector is mapped into n values, with exactly one value being set to 1 and the others are 0. Because the some of the columns categorical maps to is always 1, it will be correlated with intercept.%- Jessica: This section is a bit unclear 
 
 To prevent such a correlation, we usually skip one of the levels (the first one). This is not necessary with a non-zero penalty and H2O has an option to include or factor levels in the model. All levels are always included when computing the whole regularization path. This is useful when interpreting the variable importance of the model. 
-
-
-\subsection{Summary of features} 
-In summary, the benefits of H2O's GLM are:
-
-\begin{itemize} % @TODO TBD. CURRENTLY SAME AS GBM 
-\item fits generalized linear model with elastic net penalty
-\item efficiently computes the full regularization path
-\item applies strong rules to limit the number of active predictors and speed up computation
-\item handles categorical variables efficiently
-\item supports efficient distributed n-fold cross validation
-\item supports distributed grid search over elastic-net parameter $\alpha$
-\item provides upper and lower bounds for coefficients
-\item provides a proximal operator interface
-\end{itemize}
-
-
 
 \section{Installation} 
 
@@ -123,39 +107,31 @@ The generalized linear model is a generalization of linear regression. Linear re
 \begin{itemize} 
 \item adds a non-linear link function, so that $link(y) \sim x^T \beta + \beta_0$.
 \item allows variance to depend on the predicted value (family argument).
+
 \end{itemize}
 This generalization allows us to apply GLM to problems such as binary classification (Logistic regression).
 GLM models are fitted by maximizing the likelihood.
 
-\subsection{Model Fitting}
-\subsection{Validation}
-Evaluating the quality of the model is a critical part of any data-modeling or prediction task. There are several standard ways how to evaluate the quality of a fitted GLM model. The most common is to judge by the deviance statistic. Deviance is based on comparing the log likelihood of the fitted model with the log likelihood of the saturated model (theoretical perfect model).
+\subsubsection{Model Fitting}
+GLM models are fitted by maximizing the likelihood. For gaussian family, maximum likelihood is simply minimal mean squared error which has an analytical solution and it can be solved with ordinary least squares. For all other families, the maximum likelihood problem has no analytical solution and we have to use an iterative method (typical examples are IRLSM, Newton method, gradient descent, L-BFGS). 
+\subsubsection{Model Validation}
+Evaluating quality of the model is critical part of any data-modelling/prediction task. There are several standard ways how to evalute quality of fitted GLM model. The most common is to judge by deviance statistic. Deviance is based on comparing log likelihood of the fitted model with log likelihood of the saturated model (theoretical perfect model).
 
-\[ deviance = 2({loglikelihood_{s}} - {loglikelihood_{m}}) \]
+\[ deviance = 2({ln(L_{s})} - {ln(L_{m})}) \]
 
-H2O's GLM computes following validation statistics:
-\begin{itemize} 
-\item \textbf{null degrees of freedom}: number of observations - 1 (the $\beta_0=mean$ is one coefficient)
-\item \textbf{degrees of freedom}: number of observations - 1 - number of non-zero predictors
+Another metric frequently used for model selection is The Akaike information criterion (AIC). AIC is a measure of the relative quality of a statistical model for a given set of data. It is usefull for model comparison. Unlike deviance (which would have perfect value for saturated model), it takes into account the complexity of the given model. It is based on meassuring information loss when replacing original data with the model itself. Unlike deviance, it does not meassure absolute quality of the fit (comparison against null-hypothesis). AIC is defined as follows:
 
-\item \textbf{null deviance}: residual deviance of the null model(predict all to mean). Typically, when evaluating the model, we look at the deviance explained ration, i.e. $ 1 -{ resdev \over nulldev}$.
-\item \textbf{residual deviance}: deviance of the fitted model
-\item \textbf{AIC}: The Akaike information criterion (AIC) is a measure of the relative quality of a statistical model for a given set of data. It is useful for model comparison. Unlike deviance (which would have perfect value for saturated model), it takes into account the complexity of the given model. It is based on measuring information loss when replacing original data with the model itself. Unlike deviance, it does not measure absolute quality of the fit (in comparison against null-hypothesis).
+\[ aic = 2k - 2ln(L_{m})\]
+, where k is number of model parameters and L is likelihood of the model over the dataset.
 
-\item \textbf{AUC} Area under ROC curve
-\end{itemize}
+\subsection{Regularization with Elastic Net Penalty} 
+We introduce penalty to model-fitting to avoid over-fitting, reduce variance of the prediction error and to deal with correlated predictors. There are two common penalized linear models, Ridge Regression and Lasso. Ridge regression provides greater numerical stability and is easier (faster) to compute. On the other hand, Lasso leads to a sparse solution which is big advantage in many situations as it can be used for feature selection and produce models with fewer parameters. When ecnoutering highly correlated columns, l2 penalty tends to push all of the coefficients towards each other, while l1 penalty will pick one and remove the others (0 coefficients).
 
-\subsubsection{Cross-Validation}
-All validation values can be computed either on the training data set (the default) or using nfold cross-validation ($nfolds > 1$). When using nfold cross-validation, we randomly split data into $n$ equally-sized parts and train each of the $n$ models on $n$-1 parts and compute validation on the part that was not used for training. The reported validation parameters are then obtained as follows:
-\begin{itemize} 
-\item Null deviance is the sum of null deviances of $n$-models (each uses a null model based on the subset of the data)
-\item Residual deviance is sum of residual deviances of all n-models.
-\item AIC
-\item AUC is based on the ROC curve build  by summing up confusion matrices built for all $n$-models.
-This means for each threshold, we get a confusion matrix that includes all the rows from
-the training set. However, each row is classified exclusively by the model
-that did not have it in its training set. The computation of AUC itself is then the same as in non-cross-validated case. 
-\end{itemize}
+Elastic net combines the two and adds another parameter $\alpha$ which controls distribution of the pnelaty between l1 and l2. The combination of the two penalties is benefitial since l1 gives sparsity while l2 gives stability and encourages grouping effect (group of correlated variables tends to be dropped or aded into the model all at once).One possible use of the $\alpha$ argument is to do lasso with very little l2 penalty ($\alpha$ almost 1) to stabilize the computation (improve convergence speed)
+
+Model fitting problem with elastic net penalty becomes:
+
+\[ \min\limits_{\beta,\beta_0}\ {{1\over{N}} ln(L(family,\beta,\beta_0))  + \lambda (\alpha \| \beta \|_1}  + {1- \alpha \over 2} \| \beta \|_2^2) \]
 
 
 \subsection{GLM Models} 
@@ -169,7 +145,7 @@ It models the dependency as a purely linear function (with link = identity):
 
 The model is fitted by solving the least squares problem (maximum likelihood for gaussian family):
 
-\[ \min\limits_{\beta,\beta_0} { {1 \over 2N}\sum\limits_{i=1}\limits^{N}(x_i^{T}\beta  + \beta_0- y_i)^T (x_i^{T}\beta + \beta_0 - y_i))  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2} \]
+\[ \min\limits_{\beta,\beta_0} { {1 \over 2N}\sum\limits_{i=1}\limits^{N}(x_i^{T}\beta  + \beta_0- y_i)^T (x_i^{T}\beta + \beta_0 - y_i))  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \| \beta \|_2^2} \]
 
 
 Deviance is simply the sum of squared errors:
@@ -191,7 +167,7 @@ or alternatively:
 \[log {\hat{y} \over 1- \hat{y}} = log{Pr(y=1|x) \over Pr(y=0|x)} = x^T \beta + \beta_0\]
 
 The model is fitted by solving:
-\[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - log (1 + e^{x_i^{T}\beta  + \beta_0} )  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2} \]
+\[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - log (1 + e^{x_i^{T}\beta  + \beta_0} )  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2^2} \]
 
 Deviance is -2 log likelihood:
 \[D = -2\sum\limits_{i=1}\limits^{N}{(y log(\hat{y}) + (1 - y)log(1-\hat{y})  )}\]
@@ -209,7 +185,7 @@ When building a Poisson model, we usually model dependency of the mean on the lo
 
 The model is fitted by solving:
 
-\[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - e^{x_i^{T}\beta  + \beta_0})  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2} \]
+\[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - e^{x_i^{T}\beta  + \beta_0})  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \| \beta \|_2^2} \]
 
 Deviance is 
 
@@ -225,23 +201,66 @@ It is usually used with inverse or log link, inverse is the canonical link.
 
 
 
-\textbf{Validation}
 \textbf{Example}
-
 % Strong Rules paper
 
-\subsubsection{Key parameters}
-%@NOTE Cursory definition of features listed in full at end of doc; currently labeled appendix
-%Specific parameters to elaborate on?
-%—Family
-%—Link function
-%—Cross Validation
-%—Alpha Penalties
-%—Strong Rules
-%—etc.
 
-\section{Elastic Net Penalty} 
-To avoid over-fitting and to reduce variance of the prediction error, we introduce a penalty to model-fitting. There are two common penalized linear models: Ridge Regression and Lasso. 
+\section{GLM on H2O}
+This sections describes specifics of GLM implementation on h2o such as selecting regularization parameters and handling of categoricals. 
+
+H2O's glm implementation presents a high performacne distributed algorithm which scales linearly with the number of rows and works extremely well for datasets with limited number of active predictors. 
+
+\subsection{Summary of features} 
+In summary, H2O's GLM functionalities include:
+
+\subsection{Summary of features} 
+In summary, H2O's GLM functionalities include:
+
+
+\begin{itemize} 
+\item fits generalized linear model with elastic net penalty
+\item supported GLM families include Gaussian, Binomial, Poisson and Gamma
+\item efficient handling of categorical variables
+\item efficient computation full regularization path
+\item efficient distributed n-fold cross validation
+\item distributed grid search over elastic-net parameter $\alpha$
+\item upper and lower boudns for coefficients
+\item proximal operator interface
+\end{itemize}
+
+\subsection{Performance Characteistics}
+The implementation is based on iterative reweighted least squares with ADMM inner solver to deal with L1 penalty. Every iteration of the algorithm consists of following steps:
+\begin{enumerate} 
+\item generate weigthed least squares problem based on previous solution, i.e. vector of weights w and reponse z 
+\item compute the weighted gram matrix $X^TWX$ and $X^Tz$ vector
+\item decompose the gram matrix (Cholesky decomposition) and apply ADMM solver to solve l1 penalized least squares problem
+\end{enumerate}
+
+Steps 1 and 2 are performed distributed, step 3 is computed in parallel on a single node. We can thus characterize the computational complexity and scalability of dataset with M observations and N columns (predictors) on a cluster with n nodes with p cpus each as follows:
+
+\[ O({MN^2 \over pn} + {N^3 \over p})\]
+
+And the overall memory cost is given by:
+
+\[ O(MN + N^2pn)\]
+
+In case of $M >> N$ we can forget the second term and the algorithm scales linearly both in the number of nodes and number of cpus per node. However, the equation above also implies that our algorithm is limited in the number of predictors it can handle since the size of the Gram matrix grows quadratically (memory and network throughput issue) with the number of predictors and it's decomposition cost grows as cube of the number of predictors (computational cost issue). H2O can get around these limitation in many cases due to its handling of categoricals and employing strong rules to filter out inactive predictors, both are described later in this chapter.  
+
+\subsection{Categorical Variables}
+When applying linear models to datasets with categorical varibales, typical approach is to expand the categoricals into set of binary vectors, one vector per each categorical level (e.g. by calling model.matrix in R). H2O performs similar expansion automaticaly so no changes to the dataset are needed. Each categorical column is then treated as a set of sparse binary vectors, with exactly one of them being 1 per line. Since such expansion leads to correlation with intercept column, another typical 
+\subsection{Cross-Validation}
+All validation values can be computed either on training data set (the default) or using nfold crossvalidation ($nfolds > 1$). When using nfold cross-validation, we randomly split data into n equally sized parts and train each of the n models on n-1 parts and compute validation on the part which was not used for training.The reported validation parameters are then obtained as follows:
+\begin{itemize} 
+\item null deviance is sum of null deviances of n-models (each uses null model based on the subset of the data)
+\item residual deviance is sum of residual deviances of all n-models.
+\item AIC
+\item AUC is based on ROC curve build  by summing up confusion matrices built for all n-models.
+This means for each threshold, we get confusion matrix which includes all the rows from
+the training set, however, each row is classified exclusively by the model
+which did not have it in its training set. Computation of AUC itself is then the same as in non-crossvalidatied case. 
+\end{itemize}
+
+\subsection{Selecting Penalty Parameters}
 
 Ridge Regression penalizes the L2 norm of the vector of coefficients. 
 
@@ -261,13 +280,16 @@ Lambda search is essentially an automatic efficient grid search over the $\lambd
 
 \subsection{Strong Rules}
 
+\subsection{Handling Datasets High Number of Predictors}
+\subsection{Coefficient Constraints}
+upper,lower bounds, proximal operator interface
 
-\section{Use case: Classification with Airline data} \label{3}
+\section{Use case: Classification with Airline data}
 
 
-\subsection{Airline dataset overview} \label{3.1}
+\subsection{Airline dataset overview} 
 
-The Airline dataset can be downloaded here: \underbar {https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip}. Remember to save the .csv file to your working directory by clicking  "View Raw."  Before running the Airline demo, we'll first review how to load data with H2O. 
+The Airline dataset can be downloaded here: \url{https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip}. Remember to save the .csv file to your working directory by clicking  "View Raw."  Before running the Airline demo, we'll first review how to load data with H2O. 
 
 \subsubsection{Loading data} \label{2.5}
 
@@ -399,16 +421,16 @@ To download the model, open the terminal window, create a directory where the mo
 \section{References}
 
 
-http://h2o.ai
+\url{http://h2o.ai}
 
-http://github.com/0xdata/h2o.git
+\url{http://github.com/0xdata/h2o.git}
 
-http://docs.0xdata.com
+\url{http://docs.0xdata.com}
 
-https://0xdata.atlassian.net/secure/Dashboard.jspa
+\url{https://0xdata.atlassian.net/secure/Dashboard.jspa}
 
-https://groups.google.com/forum/#!forum/h2ostream
+\url{https://groups.google.com/forum/#!forum/h2ostream}
 
-"Strong Rules for Discarding Predictors in Lasso-type Problems" (http://statweb.stanford.edu/~tibs/ftp/strong.pdf)
+"Strong Rules for Discarding Predictors in Lasso-type Problems" (\url{http://statweb.stanford.edu/~tibs/ftp/strong.pdf})
 
 \end{document}
