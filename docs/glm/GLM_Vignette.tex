@@ -2,6 +2,7 @@
 \usepackage[english]{babel}
 \usepackage{amsmath,amsthm,amsfonts,amssymb,epsfig}
 \usepackage[left=1.1in,top=1in,right=1.1in]{geometry}
+\usepackage{url}
 \usepackage{array}
 \usepackage{datetime}
 \usepackage{lipsum}
@@ -47,7 +48,9 @@ The main advantage of an L1 penalty is that with sufficiently high $\lambda$, it
 
 As mentioned before, model-fitting works and scales well if numcols $<<$ numrows. However, in many cases we want to fit a GLM model over many predictors (10,000 or more) with an L1 penalty, selecting only a few of them for the model. The rest will have a zero coefficient and will not be part of the model. To maintain excellent performance and scaling properties in such cases, we employ strong rules  (as described in "Strong Rules for Discarding Predictors in Lasso-type Problems") to limit the set of active coefficients. The performance of the algorithm is then limited by the number of coefficients in the model, rather than the number of coefficients present in the training data set. 
 
-The algorithm can handle categorical variables, which are treated as a special kind of sparse vectors: each categorical column is expanded on the fly into multiple binary vectors. %Each value in the original vector is mapped into n values, with exactly one value being set to 1 and the others are 0. Because the some of the columns categorical maps to is always 1, it will be correlated with intercept.%- Jessica: This section is a bit unclear 
+The algorithm can handle categorical variables, which are treated as a special kind of sparse vectors: each categorical column is expanded on the fly into multiple binary vectors. 
+
+
 
 To prevent such a correlation, we usually skip one of the levels (the first one). This is not necessary with a non-zero penalty and H2O has an option to include or factor levels in the model. All levels are always included when computing the whole regularization path. This is useful when interpreting the variable importance of the model. 
 
@@ -167,7 +170,7 @@ or alternatively:
 \[log {\hat{y} \over 1- \hat{y}} = log{Pr(y=1|x) \over Pr(y=0|x)} = x^T \beta + \beta_0\]
 
 The model is fitted by solving:
-\[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - log (1 + e^{x_i^{T}\beta  + \beta_0} )  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \|\beta\|_2^2} \]
+\[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}(y_i (x_i^{T}\beta  + \beta_0) - log (1 + e^{x_i^{T}\beta  + \beta_0} )  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \| \beta \|_2^2} \]
 
 Deviance is -2 log likelihood:
 \[D = -2\sum\limits_{i=1}\limits^{N}{(y log(\hat{y}) + (1 - y)log(1-\hat{y})  )}\]
@@ -198,8 +201,6 @@ Deviance is
 The gamma distribution is useful for modeling a positive continuous response variable, where the conditional variance of the response grows with its mean but  the coefficient of variation of the response $\sigma^2(x)/μ(x)$ is constant for all x,  i.e., it has a constant coefficient of variation.
 
 It is usually used with inverse or log link, inverse is the canonical link.
-
-
 
 \textbf{Example}
 % Strong Rules paper
@@ -259,14 +260,6 @@ This means for each threshold, we get confusion matrix which includes all the ro
 the training set, however, each row is classified exclusively by the model
 which did not have it in its training set. Computation of AUC itself is then the same as in non-crossvalidatied case. 
 \end{itemize}
-
-\subsection{Selecting Penalty Parameters}
-
-Ridge Regression penalizes the L2 norm of the vector of coefficients. 
-
-Lasso penalizes the L1 norm of the parameter vector.
-
-Elastic net combines the two and adds an additional argument $\alpha$ that drives the distribution of the penalty between L1 and L2.
 
 \subsection{Selecting Penalty Parameters}
 
