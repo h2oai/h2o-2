@@ -21,8 +21,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         print "I guess for big 0xcust files, we don't need schema='put'"
         print "For files that we want to put (for testing put), we can get non-private files"
 
-        csvFilename = 'part-00000b'
-        hex_key = csvFilename + ".hex"
+        # apparently h2o will create a "_" to replace the "-"..so lets force the destination key name
+        csvFilename = "part-00000b"
+        hex_key = "part_00000b.hex"
         importFolderPath = '/mnt/0xcustomer-datasets/c2'
         csvPathname = importFolderPath + "/" + csvFilename
 
@@ -30,7 +31,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # looks like it takes the hex string (two chars)
         start = time.time()
         # hardwire TAB as a separator, as opposed to white space (9)
-        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=False)
+        parseResult = h2i.import_parse(path=csvPathname, schema='local', 
+            separator=9, hex_key=hex_key, doSummary=False, timeoutSecs=500)
+
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
         print "Parse result['destination_key']:", parseResult['destination_key']
 
