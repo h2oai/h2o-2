@@ -131,9 +131,9 @@ Another metric frequently used for model selection is The Akaike information cri
 , where k is number of model parameters and L is likelihood of the model over the dataset.
 
 \subsection{Regularization with Elastic Net Penalty} 
-We introduce penalty to model-fitting to avoid over-fitting, reduce variance of the prediction error and to deal with correlated predictors. There are two common penalized linear models, Ridge Regression and Lasso. Ridge regression provides greater numerical stability and is easier (faster) to compute. On the other hand, Lasso leads to a sparse solution which is big advantage in many situations as it can be used for feature selection and produce models with fewer parameters. When ecnoutering highly correlated columns, l2 penalty tends to push all of the coefficients towards each other, while l1 penalty will pick one and remove the others (0 coefficients).
+We introduce penalty to model-fitting to avoid over-fitting, reduce variance of the prediction error and to deal with correlated predictors. There are two common penalized linear models, Ridge Regression and Lasso. Ridge regression provides greater numerical stability and is easier (faster) to compute. On the other hand, Lasso leads to a sparse solution which is big advantage in many situations as it can be used for feature selection and produce models with fewer parameters. When ecnoutering highly correlated columns, l2 penalty tends to push all of the coefficients towards each other, while L1 penalty will pick one and remove the others (0 coefficients).
 
-Elastic net combines the two and adds another parameter $\alpha$ which controls distribution of the pnelaty between l1 and l2. The combination of the two penalties is benefitial since l1 gives sparsity while l2 gives stability and encourages grouping effect (group of correlated variables tends to be dropped or aded into the model all at once).One possible use of the $\alpha$ argument is to do lasso with very little l2 penalty ($\alpha$ almost 1) to stabilize the computation (improve convergence speed)
+Elastic net combines the two and adds another parameter $\alpha$ which controls distribution of the pnelaty between L1 and l2. The combination of the two penalties is benefitial since L1 gives sparsity while l2 gives stability and encourages grouping effect (group of correlated variables tends to be dropped or aded into the model all at once).One possible use of the $\alpha$ argument is to do lasso with very little l2 penalty ($\alpha$ almost 1) to stabilize the computation (improve convergence speed)
 
 Model fitting problem with elastic net penalty becomes:
 
@@ -237,7 +237,7 @@ The implementation is based on iterative reweighted least squares with ADMM inne
 \begin{enumerate} 
 \item generate weigthed least squares problem based on previous solution, i.e. vector of weights w and reponse z 
 \item compute the weighted gram matrix $X^TWX$ and $X^Tz$ vector
-\item decompose the gram matrix (Cholesky decomposition) and apply ADMM solver to solve l1 penalized least squares problem
+\item decompose the gram matrix (Cholesky decomposition) and apply ADMM solver to solve L1 penalized least squares problem
 \end{enumerate}
 
 Steps 1 and 2 are performed distributed, step 3 is computed in parallel on a single node. We can thus characterize the computational complexity and scalability of dataset with M observations and N columns (predictors) on a cluster with n nodes with p cpus each as follows:
@@ -269,24 +269,34 @@ All validation values can be computed either on training data set (the default) 
 \begin{itemize} 
 \item null deviance is sum of null deviances of n-models (each uses null model based on the subset of the data)
 \item residual deviance is sum of residual deviances of all n-models.
-\item AIC
+\item AIC is based on log-likelihood, which is summed up similiarly to deviance
 \item AUC is based on ROC curve build  by summing up confusion matrices built for all n-models.
 This means for each threshold, we get confusion matrix which includes all the rows from
 the training set, however, each row is classified exclusively by the model
 which did not have it in its training set. Computation of AUC itself is then the same as in non-crossvalidatied case. 
 \end{itemize}
 
-\subsection{Selecting Penalty Parameters}
+\subsection{Selecting Regularization Parameters}
+To get the best possible model, we need to find optimal values of the regularization parameters $\alpha$ and $\lambda$. 
+To this end, h2o provides grid search over $\alpha$ and a special form of grid search called lambda search over $\lambda$. The recommended way to find optimal regularization settings on h2o is to do a grid search over few $\alpha$ values with automatic lambda search for each $\alpha$. Both are described below in greater detail. 
+\subsubsection{Grid Search Over Alpha}
+Alpha search is not always needed and simply fixing its value to 0.5 (or 0 or 1 if we only want Ridge or Lasso) works in most cases. If $\alpha$ search is needed, usually only few values suffice. Alpha search is invoked by simply supplying list of values for $\alpha$ instead of a single value. H2O will then produce one model per $\alpha$ value (the grid search computation can be done in parallel dependening on the cluster resources and it is in general more efificent than computing different models separately from R). 
 
-Since the L1 penalty produces a sparse solution, penalized GLM with  $\alpha > 0$ where a sufficiently high value of $\lambda$ will produce a null model (i.e., a model with no non-zero coefficients except the intercept). As a result, it only makes sense to compute the models for $\lambda < \lambda_{max}$, where $lambda_{max}$ is the smallest $\lambda$ leading to a null solution.
+The care should be taken when including $\alpha=0$ or $\alpha=1$ in the grid search. $\alpha=0$ will produce dense solution and it can be really slow (or even impossible) to compute in large N situations. $\alpha=1$ has no L2 penalty and therefore less numerically stable and can be very slow as well due to slower convergence. In general it is safer to run with $alpha=1-\epsilon$ instead.
 
-\subsubsection{Grid Search}
 \subsubsection{Lambda Search}
-Lambda search is essentially an automatic efficient grid search over the $\lambda$ parameter. It computes GLM models for the full regularization path, which is an exponentially decreasing sequence of values, starting at $\lambda_{max}$ and finishing with $\lambda_{min} = \gamma\lambda_{max}, \gamma \in (0,1)$ . $\lambda_{max}$ is defined as the smallest $\lambda$ s.t. the resulting model has no non-zero coefficients other than intercept. Since 
+Lambda search can be turned on by passing in \textit{lambda\_search = T} option and it can be further parametrized by \textit{n\_lambdas} and \textit{lambda\_min\_ratio} parameters. When the option is set, h2o will perform a specialized grid search over list of \textit{n\_lambdas} $\lambda$ values, producing one model per each $\lambda$ value. 
 
+The $\lambda$-list is automatically generated as an exponentially decreasing sequnce going from $\lambda_{max}$,
+the smallest $\lambda$ s.t.the solution is a model with all 0s, to $\lambda_{min} = $ \textit{lambda\_min\_ratio} * $ \lambda_{max}$.
 
+H2O will compute $\lambda$-models sequentially and in decreasing order, warm-starting the model for $\lambda_k$ with solution for $\lambda_{k-1}$. By warm staring the models we get higher performance (typically models for subsequent $\lambda$s are close to each other and so we need only few iterations per $\lambda$ (typically 2 or 3). We also achieve gerater numerical stability, since models with higher penalty are easier to compute and so we start with an easy problem and then keep making only small changes to it.
+    
+\subsubsection{Grid Search Over Lambdas}
+While automatic lambda search is the preferred way, it is also possible to do a grid search over lambda values by passing in vector of lambdas and seeting lambda-search option to false. The behavior will be identical to lambda search except for using user-supplied list of lambdas instead (still capped at $\lambda_{max}$).
 
-\subsection{Strong Rules}
+\subsection{Strong Rules} %TODO add references
+Strong Rules 
 
 \subsection{Coefficient Constraints}
 upper,lower bounds, proximal operator interface
