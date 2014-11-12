@@ -12,6 +12,9 @@
 \hypersetup{colorlinks, urlcolor={blue}}
 \usepackage{graphicx}
 \graphicspath{ {images/} }
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+\newcommand{\argmax}{\operatornamewithlimits{argmax}}
+
 
 \begin{document}
 
@@ -229,7 +232,7 @@ In summary, H2O's GLM functionalities include:
 \item proximal operator interface
 \end{itemize}
 
-\subsection{Performance Characteistics}
+\subsection{Performance Characteristics}
 The implementation is based on iterative reweighted least squares with ADMM inner solver to deal with L1 penalty. Every iteration of the algorithm consists of following steps:
 \begin{enumerate} 
 \item generate weigthed least squares problem based on previous solution, i.e. vector of weights w and reponse z 
@@ -247,8 +250,20 @@ And the overall memory cost is given by:
 
 In case of $M >> N$ we can forget the second term and the algorithm scales linearly both in the number of nodes and number of cpus per node. However, the equation above also implies that our algorithm is limited in the number of predictors it can handle since the size of the Gram matrix grows quadratically (memory and network throughput issue) with the number of predictors and it's decomposition cost grows as cube of the number of predictors (computational cost issue). H2O can get around these limitation in many cases due to its handling of categoricals and employing strong rules to filter out inactive predictors, both are described later in this chapter.  
 
+
+\subsection{H2O GLM Model Output}
+\subsubsection{Coefficients}
+\subsubsection{Normalized Coefficients}
+\subsubsection{Validation}
+\subsubsection{Generating Predictions}
+
 \subsection{Categorical Variables}
-When applying linear models to datasets with categorical varibales, typical approach is to expand the categoricals into set of binary vectors, one vector per each categorical level (e.g. by calling model.matrix in R). H2O performs similar expansion automaticaly so no changes to the dataset are needed. Each categorical column is then treated as a set of sparse binary vectors, with exactly one of them being 1 per line. Since such expansion leads to correlation with intercept column, another typical 
+When applying linear models to datasets with categorical varibales, the usual approach is to expand the categoricals into set of binary vectors, one vector per each categorical level (e.g. by calling model.matrix in R). H2O performs similar expansion automaticaly and no prior changes to the dataset are needed. Each categorical column is treated as a set of sparse binary vectors.
+
+\subsubsection{Largest Categorical Trick}
+Categoricals have special handling during glm computation as well. When forming the gram matrix, we can explouit the fact that columns belongin to the same categorical never co-occur and the gram matrix region belonging to these columns will not have any non-zero elements outside of the diagonal. We can thus keep it in sparse representation taking only O(N) elements instead of O(N*N). Furthemore, complexity of Choelsky decomposition of a matrix which starts with a diagonal region can be greatly reduced. H2O's GLM exploits these two facts to handle the largest categorical "for free". Therefore, when analyzing the performance of GLM in the equation expressed above, we can subtract the size of the largest categoricals from the number of predictors.
+\[ N = \sum\limits_{c \in C} (\|c.domain\|) - \argmax\limits_{c \in C} \|c.domain\|  + \| Nums \| \]
+
 \subsection{Cross-Validation}
 All validation values can be computed either on training data set (the default) or using nfold crossvalidation ($nfolds > 1$). When using nfold cross-validation, we randomly split data into n equally sized parts and train each of the n models on n-1 parts and compute validation on the part which was not used for training.The reported validation parameters are then obtained as follows:
 \begin{itemize} 
@@ -273,9 +288,11 @@ Lambda search is essentially an automatic efficient grid search over the $\lambd
 
 \subsection{Strong Rules}
 
-\subsection{Handling Datasets High Number of Predictors}
 \subsection{Coefficient Constraints}
 upper,lower bounds, proximal operator interface
+
+\subsection{Handling Datasets High Number of Predictors}
+
 
 \section{Use case: Classification with Airline data}
 
