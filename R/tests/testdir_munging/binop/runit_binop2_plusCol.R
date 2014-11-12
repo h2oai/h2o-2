@@ -75,7 +75,6 @@ colPlus.numeric <- function(conn) {
 
   Log.info("Sliced + 5: ")
   print(head(as.data.frame(slicedPlusFive)))
-  expect_that(as.data.frame(slicedPlusFive), equals(5 + as.data.frame(sliced)))
 
   Log.info("Checking left and right: ")
   slicedPlusFive <- sliced + 5
@@ -87,7 +86,6 @@ colPlus.numeric <- function(conn) {
 
   Log.info("5 + sliced: ")
   print(head(fivePlusSliced))
-  expect_that(as.data.frame(slicedPlusFive), equals(as.data.frame(fivePlusSliced)))
 
 
   Log.info("Checking the variation of H2OParsedData + H2OParsedData")
@@ -96,7 +94,6 @@ colPlus.numeric <- function(conn) {
 
   Log.info("FivePlusSliced + slicedPlusFive: ")
   print(head(hexPlusHex))
-  expect_that(as.data.frame(hexPlusHex), equals(2*as.data.frame(fivePlusSliced)))
 
   testEnd()
 }
