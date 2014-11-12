@@ -62,44 +62,46 @@ To prevent such a correlation, we usually skip one of the levels (the first one)
 You can load the latest CRAN H2O package by running:
 
 \begin{spverbatim}
-install.packages("h2o")
+> install.packages("h2o")
 \end{spverbatim}
 \bigskip
 \noindent
-Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O download table:\underbar{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}. Open your R Console and run the following to install the latest H2O build in R:
+Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O download table:
+\underbar{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}. Open your R Console and run the following to install the latest H2O build in R:
 
 \begin{spverbatim}
 # The following two commands remove any previously installed H2O packages for R.
-if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+> if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+> if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 
-if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+# Next, we download, install and initialize the H2O package for R
+# replace the *s below with the release number found on our download page
+> install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/
+master/****/R", getOption("repos"))))
 
-# Next, we download, install and initialize the H2O package for R (filling in the *'s with the matching digits in the download table)
-install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/
-****/R", getOption("repos"))))
-
-library(h2o)
+# Load h2o library in R
+> library(h2o)
 
 \end{spverbatim}
 \noindent
-If you are operating on a single node, initialize H2O with
+To launch on a single node, initialize H2O on all the cores of your machine with
 
 \begin{spverbatim}
-h2o_server = h2o.init()
+> localH2O = h2o.init(nthreads = -1)
 
 \end{spverbatim}
 \noindent
 With this command, the H2O R module will start an instance of H2O automatically at localhost:54321. Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but you should specify the IP and port number appropriate to your specific environment.
 
 \begin{spverbatim}
-h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE)
+> h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345)
 
 \end{spverbatim}
 \noindent
 An automatic demo is available to see \texttt{h2o.glm} at work. Run the following command to observe an example classification model built through H2O's GLM:
 
 \begin{spverbatim}
-demo(h2o.glm)
+> demo(h2o.glm)
 \end{spverbatim}
 
 \subsection{Support} 
@@ -159,8 +161,13 @@ Deviance is simply the sum of squared errors:
 
 
 \textbf{Example}
+Included in the H2O package is a prostate cancer data set. The data was collected for a study done by Dr. Donn Young at The Ohio State University Comprehensive Cancer Center of patients with varying degrees of prostate cancer. Below a model is built to predict the volume (VOL) of tumors obtained from ultrasounds based on features such as age and race.
 
-
+\begin{spverbatim}
+> filepath = system.file("extdata", "prostate.csv",package = "h2o")
+> prostate.hex = h2o.importFile(object = localH2O, filepath, key = "prostate.hex")
+> gaussian.fit = h2o.glm(x = c("AGE", "RACE", "PSA", "GLEASON"), y = "VOL", data = prostate.hex, family = "gaussian")
+\end{spverbatim}
 
 \subsubsection{Logistic Regression (Binomial Family)}
 Logistic regression can be used in case of a binary classification problem, where the response is categorical with two levels. It models dependency as $Pr(y = 1|x)$. The canonical link for binomial family is logit (log of the odds), its inverse is a logistic function that takes any real number on the input and projects it onto the 0,1 range (s-curve). 
@@ -181,6 +188,14 @@ Deviance is -2 log likelihood:
 \textbf{Decision threshold}
 
 \textbf{Example}
+Using the prostate data set build a binomial model that classify whether there is penetration of the prostatic capsule (CAPSULE). Make sure the entries in the CAPSULE column are binary entries by using the \texttt{h2o.table()} function. Change the regression by setting the family to binomial.
+\begin{spverbatim}
+> h2o.table(prostate.hex[,"CAPSULE"])
+  row.names Count
+1         0   227
+2         1   153
+> binomial.fit = h2o.glm(x = c("AGE", "RACE", "PSA", "GLEASON"), y = "CAPSULE", data = prostate.hex, family = "binomial")
+\end{spverbatim}
 
 \subsubsection{Poisson Models}
 Poisson regression is generally used in cases where the response represents counts and we assume errors have a Poisson distribution. In general, it can be applied to any data where the response is non-negative. 
@@ -199,6 +214,13 @@ Deviance is
 
 
 \textbf{Example}
+Load the Insurance data from the MASS library and import into H2O. Run a poisson model that predicts the number of claims (Claims) based on the district the policy holder is in (District), their age (Age), and the type of car they own (Group).
+\begin{spverbatim}
+> library(MASS)
+> data(Insurance)
+> insurance.hex = as.h2o(localH2O, Insurance)
+> poisson.fit = h2o.glm(x = c("District", "Group", "Age"), y = "Claims", data = insurance.hex, family = "poisson")
+\end{spverbatim}
 
 \subsubsection{Gamma Models}
 The gamma distribution is useful for modeling a positive continuous response variable, where the conditional variance of the response grows with its mean but  the coefficient of variation of the response $\sigma^2(x)/μ(x)$ is constant for all x,  i.e., it has a constant coefficient of variation.
@@ -206,6 +228,14 @@ The gamma distribution is useful for modeling a positive continuous response var
 It is usually used with inverse or log link, inverse is the canonical link.
 
 \textbf{Example}
+To change the link function from the default inverse function to the log link function modify the \textt{link} argument.
+
+\begin{spverbatim}
+> gamma.inverse <- h2o.glm(x=c("AGE","RACE","CAPSULE","DCAPS","PSA","VOL"), y="DPROS", data=prostate.hex, family="gamma", link="inverse")
+
+> gamma.log <- h2o.glm(x=c("AGE","RACE","CAPSULE","DCAPS","PSA","VOL"), y="DPROS", data=prostate.hex, family="gamma", link="log")
+\end{spverbatim}
+
 % Strong Rules paper
 
 
@@ -315,7 +345,7 @@ The Airline dataset can be downloaded here: \url{https://github.com/0xdata/h2o/b
 
 Loading a dataset in R for use with H2O is slightly different from the usual methodology, because we must convert our datasets into \texttt{H2OParsedData} objects. In this example, we will use a toy weather dataset that can be downloaded here: \underbar{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/weather.csv}. First, load the data to your current working directory in your R Console (do this for any future dataset downloads), and then run the following command:
 \begin{spverbatim}
-weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", header = TRUE, sep = ",", key = "weather.hex")
+weather.hex = h2o.uploadFile(localH2O, path = "weather.csv", header = TRUE, sep = ",", key = "weather.hex")
 \end{spverbatim}
 \bigskip
 \noindent
@@ -330,10 +360,10 @@ Returning to the Airline dataset demo, we first load the dataset with H2O and se
 \begin{spverbatim}
 
 #Load the data and prepare for modeling
-% @TODO h2o_server not found FIXXXXXXX & CHECK VARIABLES
-air_train.hex = h2o.uploadFile(h2o_server, path = "AirlinesTrain.csv", header = TRUE, sep = ",", key = "airline_train.hex")
+% @TODO localH2O not found FIXXXXXXX & CHECK VARIABLES
+air_train.hex = h2o.uploadFile(localH2O, path = "AirlinesTrain.csv", header = TRUE, sep = ",", key = "airline_train.hex")
 
-air_test.hex = h2o.uploadFile(h2o_server, path = "AirlinesTest.csv", header = TRUE, sep = ",", key = "airline_test.hex")
+air_test.hex = h2o.uploadFile(localH2O, path = "AirlinesTest.csv", header = TRUE, sep = ",", key = "airline_test.hex")
 
 x = c("Year", "Month", "DayofMonth", "DayOfWeek", "UniqueCarrier", "FlightNum", "Origin", "Dest", "Distance")
 y = "IsArrDelayed" 
