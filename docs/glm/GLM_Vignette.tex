@@ -282,10 +282,92 @@ In case of $M >> N$ we can forget the second term and the algorithm scales linea
 
 
 \subsection{H2O GLM Model Output}
-\subsubsection{Coefficients}
-\subsubsection{Normalized Coefficients}
+The detailed output of the GLM model v3aries depending on the distribution the model is fitted with. In general though, there are common parts of the output for all Families: Coefficients \& Normalized Coefficients, Validation, and Prediction. We'll cover the model output from the point-of-view of an R user.
+
+First let's build a simple GLM on a small dataset and see what we get out:
+
+\begin{verbatim}
+library(h2o)
+
+# instantiate h2o
+h <- h2o.init()
+
+# path to the data
+# path split up so it's document friendly
+data.bucket <- "https://raw.githubusercontent.com/0xdata/h2o/master/smalldata"
+data.path <- paste(data.bucket, "/logreg/prostate_train.csv", sep = "")
+
+# import the data from the url
+hex <- h2o.importFile(h, data.path)
+
+# build a binomial regression
+m <- h2o.glm(x = 3:9, y = 2, data = hex, family = "binomial")  # no other features tweaked... yet
+\end{verbatim}
+
+The default \texttt{show} of this model has the following output:
+
+\begin{verbatim}
+IP Address: 127.0.0.1 
+Port      : 54321 
+Parsed Data Key: prostate_train.hex 
+
+GLM2 Model Key: GLMModel__8b954fd700d924f3e9dee8717b8246ef
+
+Coefficients:
+      AGE      RACE     DPROS     DCAPS       PSA       VOL   GLEASON Intercept 
+ -0.07668  -0.10320   0.59479   0.13549   0.43841  -0.22215   1.19657  -0.49458 
+
+Normalized Coefficients:
+      AGE      RACE     DPROS     DCAPS       PSA       VOL   GLEASON Intercept 
+ -0.07668  -0.10320   0.59479   0.13549   0.43841  -0.22215   1.19657  -0.49458 
+
+Degrees of Freedom: 304 Total (i.e. Null);  297 Residual
+Null Deviance:     412.1
+Residual Deviance: 301.9  AIC: 317.9
+Deviance Explained: 0.26733 
+ Best Threshold: 0.44
+
+Confusion Matrix:
+        Predicted
+Actual   false true Error
+  false    147   34 0.188
+  true      32   92 0.258
+  Totals   179  126 0.216
+
+AUC =  0.8318927 (on train) 
+\end{verbatim}
+
+Briefly, the output contains the IP, Port of the H2O cluster the model was trained on. It includes the data key, the model key, the coefficients, and then some model metrics. Let's look at these more in-depth.
+
+\subsubsection{Coefficients \& Normalized Coefficients}
+These are the regression coefficients. H2O does not provide p-values for regression coefficients because they are not defined for regularized regression. H2O's GLM performs elastic net regularization by default ($\alpha = 0.5$). We provide knobs to change the $L_1$ and $L_2$ penalties. Additionally, we offer a $\lambda$-search option (similar to R's \texttt{glmnet} package), that by default searches for the optimal $\lambda$.
+
+H2O provides Coefficients and Normalized Coefficients. The difference is that Normalized Coefficients are computed on scaled (demeaned, unit variance) data. H2O also provides a value for each level in your factor columns. No extra effort in one-hot'ing your data is required -- H2O handles this automagically.
+
+Finally, when comparing H2O's GLM with other implementations, you may notice some variance in the coefficients -- but this is expected. Coefficients need not match, but the solution to the objective function must match. If it does not then email support@0xdata.com and tell us!
 \subsubsection{Validation}
+
+H2O's GLM performs 10-fold cross-validation by default. It does this by holding out data modulo 10. This is fast and gives some idea of how the model will generalize. However, it's always best to evaluate the model using some holdout data.
+
 \subsubsection{Generating Predictions}
+
+The following R code will generate predictions:
+
+\begin{verbatim}
+test.path <- paste(data.bucket, "/logreg/prostate_test.csv", sep = "")
+
+# import the data from the url
+test <- h2o.importFile(h, test.path)
+
+# generate the predictions
+predictions <- h2o.predict(m, test)
+
+# look at the first 6 entries of predictions
+predictions
+
+# generate the model metrics
+h2o.performance(data=predictions[,3], reference=test[,1])
+\end{verbatim}
 
 \subsection{Categorical Variables}
 When applying linear models to datasets with categorical varibales, the usual approach is to expand the categoricals into set of binary vectors, one vector per each categorical level (e.g. by calling model.matrix in R). H2O performs similar expansion automaticaly and no prior changes to the dataset are needed. Each categorical column is treated as a set of sparse binary vectors.
