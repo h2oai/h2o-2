@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
         print "actual   classification error:" + format(actualErr)
         print "expected classification error:" + format(expectedErr)
         if actualErr != expectedErr and abs((expectedErr - actualErr)/expectedErr) > relTol:
-            raise Exception("Scored classification error of %s is not within %s %% relative error of %s" %
+            raise Exception("Scored classification error of %s is not within %s %% relative error of %s. This is likely due to intentional race conditions during multi-threading. Please re-run this test." %
                             (actualErr, float(relTol)*100, expectedErr))
 
 
