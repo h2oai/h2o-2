@@ -1,7 +1,5 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
-library(gains)
-
 
 test.h2o.nfold <- function(conn) {
   tolerance <- 1e-4
