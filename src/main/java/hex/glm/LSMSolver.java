@@ -394,7 +394,7 @@ public abstract class LSMSolver extends Iced{
       Arrays.fill(z, 0);
       if(_lambda>0 || _addedL2 > 0)
         gram.addDiag(_lambda*(1-_alpha) + _addedL2);
-      if(_alpha > 0 && _lambda > 0)
+      if(bounds || (_alpha > 0 && _lambda > 0))
         gram.addDiag(rho);
       if(_wgiven != null){
         gram.addDiag(_proximalPenalties);
@@ -416,7 +416,7 @@ public abstract class LSMSolver extends Iced{
       decompTime = (t2-t1);
       if(!chol.isSPD())
         throw new NonSPDMatrixException(gram);
-      if(_alpha == 0 || _lambda == 0 && !bounds){ // no l1 penalty nor upper/lower bounds
+      if((_alpha == 0 || _lambda == 0) && !bounds){ // no l1 penalty nor upper/lower bounds
         System.arraycopy(xy, 0, z, 0, xy.length);
         chol.solve(z);
         gram.addDiag(-gram._diagAdded + d);
