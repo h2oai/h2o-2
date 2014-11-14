@@ -2,6 +2,7 @@ package hex.glm;
 
 import hex.FrameTask;
 import hex.glm.GLMParams.Family;
+import hex.glm.GLMParams.Link;
 import hex.gram.Gram;
 
 import java.util.Arrays;
@@ -246,9 +247,9 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       double w, eta, mu, var, z;
       final int numStart = _dinfo.numStart();
       double d = 1;
-      if( _glm.family == Family.gaussian){
+      if( _glm.family == Family.gaussian && _glm.link == Link.identity){
         w = 1;
-        z = y;
+        z = _glm.link(y);
         mu =  off + ((_validate || _computeGradient)?computeEta(ncats,cats,nums.length-_noffsets,nums,_beta):0);
       } else {
         eta = computeEta(ncats, cats,nums.length-_noffsets,nums,_beta);
