@@ -67,7 +67,11 @@ You can load the latest CRAN H2O package by running:
 \bigskip
 \noindent
 Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O download table:
-\underbar{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}. Open your R Console and run the following to install the latest H2O build in R:
+
+\indent \indent \indent \underbar{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}.
+
+\noindent
+Open your R Console and run the following to install the latest H2O build in R:
 
 \begin{spverbatim}
 # The following two commands remove any previously installed H2O packages for R.
@@ -91,23 +95,21 @@ To launch on a single node, initialize H2O on all the cores of your machine with
 
 \end{spverbatim}
 \noindent
-With this command, the H2O R module will start an instance of H2O automatically at localhost:54321. Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but you should specify the IP and port number appropriate to your specific environment.
+The function \texttt{h2o.init()} will initialize a H2O instance and instantiates a H2O client module. By default the H2O instance will launch on localhost:54321. Alternatively, to establish a connection to an existing H2O cluster node explicitly state the IP address (\texttt{ip = "localhost"}) and port number (\texttt{port = 54321}) in the \texttt{h2o.init()} call.
 
 \noindent
 Run the following command to observe an example classification model built through H2O's GLM:
 
 \begin{spverbatim}
-# Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
-prostatePath = system.file("extdata", "prostate.csv", package = "h2o")
-prostate.hex = h2o.importFile(localH2O, path = prostatePath, key = "prostate.hex")
-h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex,
-        family = "binomial", nfolds = 0, alpha = 0.5, lambda_search = FALSE,
-        use_all_factor_levels = FALSE, variable_importances = FALSE, higher_accuracy = FALSE)
+# Build a GLM model on prostate data with formula: CAPSULE ~ AGE + RACE + PSA + DCAPS
+> prostatePath = system.file("extdata", "prostate.csv", package = "h2o")
+> prostate.hex = h2o.importFile(localH2O, path = prostatePath, key = "prostate.hex")
+> h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5, lambda_search = FALSE, use_all_factor_levels = FALSE, variable_importances = FALSE, higher_accuracy = FALSE)
 \end{spverbatim}
 
 \vspace{10 mm}
 \noindent
-You should see the following output:
+The output of the model build will include coefficients as well as some validation statistics:
 
 \begin{spverbatim}       
 IP Address: 127.0.0.1 
@@ -137,36 +139,38 @@ Actual   false true Error
   true      18  135 0.118
   Totals    93  287 0.447
 
-AUC =  0.7157151 (on train) 
+AUC =  0.7157151 (on train)
 \end{spverbatim}
 
 \subsection{Support} 
 
-Users of the H2O package may submit general enquiries and bug reports to the 0xdata support address:\underbar {h2ostream@googlegroups.com}. Alternatively, specific bugs or issues may be filed to the 0xdata JIRA: \underbar{https://0xdata.atlassian.net/secure/Dashboard.jspa}.
+Users of the H2O package may submit general enquiries and bug reports privately to H2O via email: \underbar {support@0xdata.com}; or publicly post them to: \underbar {h2ostream@googlegroups.com}. Specific bugs or issues will be filed to H2O's JIRA: 
+\underbar{https://0xdata.atlassian.net/secure/Dashboard.jspa}.
 
 \section{Generalized Linear Modeling} 
 This section contains a brief overview of generalized linear models and follows up with a few details for each model family.
 
-The generalized linear model is a generalization of linear regression. Linear regression models the dependency of response y on a vector of predictors x ($y \sim x^T \beta + \beta_0$), with the assumption that y has a gaussian distribution, with the mean being a linear function of x (+ the offset) and a deviance of $\sigma$ (independent of x), i.e. $ y = \mathcal{N}(x^T \beta + \beta_0 , \sigma^2) $. In many situations, these assumptions are overly restrictive but we would still want to take advantage of linear models. GLM generalizes linear regression in following ways: 
+Generalized linear models are generalization of linear regressions. Linear regression models the dependency of response y on a vector of predictors x ($y \sim x^T \beta + \beta_0$). The models are built with the assumptions that y has a gaussian distribution with a variance of $\sigma^2$ and the mean is a linear function of x with an offset of some constant $\beta_0$, i.e. $ y = \mathcal{N}(x^T \beta + \beta_0 ,  \sigma^2) $. These assumptions can be overly restrictive for real world data that do not necessarily follow have a gaussian distribution. GLM generalizes linear regression in following ways: 
 \begin{itemize} 
-\item adds a non-linear link function, so that $link(y) \sim x^T \beta + \beta_0$.
-\item allows variance to depend on the predicted value (family argument).
+\item adds a non-linear link function which transforms the expectation of response variable, so that $link(y) \sim x^T \beta + \beta_0$.
+\item allows variance to depend on the predicted value by specifying the conditional distribution of the response variable or the family argument.
 
 \end{itemize}
-This generalization allows us to apply GLM to problems such as binary classification (Logistic regression).
-GLM models are fitted by maximizing the likelihood.
+This generalization allows us to use GLM on problems such as binary classification (Logistic regression).
 
 \subsubsection{Model Fitting}
-GLM models are fitted by maximizing the likelihood. For gaussian family, maximum likelihood is simply minimal mean squared error which has an analytical solution and it can be solved with ordinary least squares. For all other families, the maximum likelihood problem has no analytical solution and we have to use an iterative method (typical examples are IRLSM, Newton method, gradient descent, L-BFGS). 
+GLM models are fitted by maximizing the likelihood. For gaussian family, maximum likelihood is simply minimal mean squared error which has an analytical solution and can be solved with ordinary least squares. For all other families, the maximum likelihood problem has no analytical solution so we must use an iterative method such as IRLSM, Newton method, gradient descent, and L-BFGS.
 \subsubsection{Model Validation}
-Evaluating quality of the model is critical part of any data-modelling/prediction task. There are several standard ways how to evalute quality of fitted GLM model. The most common is to judge by deviance statistic. Deviance is based on comparing log likelihood of the fitted model with log likelihood of the saturated model (theoretical perfect model).
+Evaluating the quality of the model is a critical part of any data-modeling and scoring process. There are several standard ways on how to evalute the quality of the fitted GLM model; the most common method is to use the resulting deviance. Deviance is calculated by comparing the log likelihood of the fitted model with log likelihood of the saturated model (or theoretically perfect model).
 
 \[ deviance = 2({ln(L_{s})} - {ln(L_{m})}) \]
 
-Another metric frequently used for model selection is The Akaike information criterion (AIC). AIC is a measure of the relative quality of a statistical model for a given set of data. It is usefull for model comparison. Unlike deviance (which would have perfect value for saturated model), it takes into account the complexity of the given model. It is based on meassuring information loss when replacing original data with the model itself. Unlike deviance, it does not meassure absolute quality of the fit (comparison against null-hypothesis). AIC is defined as follows:
+Another metric frequently used for model selection is the Akaike information criterion (AIC). AIC is a measure of the relative quality of a statistical model for a given set of data by calculating the information loss when replacing the original data with the model itself. Unlike deviance which would assign a perfect value for the saturated model and measures the absolute quality of the fit with a comparison against the null-hypothesis, it takes into account the complexity of the given model. AIC is defined as follows:
 
-\[ aic = 2k - 2ln(L_{m})\]
-, where k is number of model parameters and L is likelihood of the model over the dataset.
+\[ aic = 2(k - ln(L_{m}))\]
+
+\noindent
+where k is the number of model parameters and $ln(L_{m})$ is log likelihood of the fitted model over the data.
 
 \subsection{Regularization with Elastic Net Penalty} 
 We introduce penalty to model-fitting to avoid over-fitting, reduce variance of the prediction error and to deal with correlated predictors. There are two common penalized linear models, Ridge Regression and Lasso. Ridge regression provides greater numerical stability and is easier (faster) to compute. On the other hand, Lasso leads to a sparse solution which is big advantage in many situations as it can be used for feature selection and produce models with fewer parameters. When ecnoutering highly correlated columns, l2 penalty tends to push all of the coefficients towards each other, while L1 penalty will pick one and remove the others (0 coefficients).
@@ -641,7 +645,8 @@ April 29, 2009
   2012.
 \bibitem{elastic}
 Hui Zou and Trevor Hastie
-Regularization and variable selection via the elastic netJ. R. Statist. Soc. B (2005) 67, Part 2, pp. 301–320
+Regularization and variable selection via the elastic net
+J. R. Statist. Soc. B (2005) 67, Part 2, pp. 301–320
 
 \bibitem{lasso}
 Robert Tibshirani
