@@ -1660,7 +1660,7 @@ h2o.deepfeatures <- function(data, model, key = "", layer = -1) {
   # cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
   cf_error = c(1-diag(cf_matrix)/apply(cf_matrix,1,sum), 1-sum(diag(cf_matrix))/sum(cf_matrix))
   cf_matrix = rbind(cf_matrix, cf_total)
-  cf_matrix = cbind(cf_matrix, round(cf_error, 3))
+  cf_matrix = cbind(cf_matrix, round(cf_error, 5))
   
   if(!is.null(actual_names))
     dimnames(cf_matrix) = list(Actual = c(actual_names, "Totals"), Predicted = c(predict_names, "Error"))
