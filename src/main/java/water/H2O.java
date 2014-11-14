@@ -10,6 +10,8 @@ import jsr166y.*;
 import water.Job.JobCancelledException;
 import water.fvec.Chunk;
 import water.fvec.Frame;
+import water.ga.EventHit;
+import water.ga.GoogleAnalytics;
 import water.nbhm.NonBlockingHashMap;
 import water.persist.*;
 import water.util.*;
@@ -83,6 +85,10 @@ public final class H2O {
   public static void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
   public static void ignore(Throwable e, String msg) { ignore(e, msg, true); }
   public static void ignore(Throwable e, String msg, boolean printException) { Log.debug(Sys.WATER, msg + (printException? e.toString() : "")); }
+
+  //Google analytics performance measurement
+  public static GoogleAnalytics GA;
+  public static int CLIENT_TYPE_GA_CUST_DIM = 1;
 
   // --------------------------------------------------------------------------
   // Embedded configuration for a full H2O node to be implanted in another
@@ -882,6 +888,10 @@ public final class H2O {
     VERSION = getVersion();   // Pick this up from build-specific info.
     START_TIME_MILLIS = System.currentTimeMillis();
 
+    GA = new GoogleAnalytics("UA-56665317-2","H2O",H2O.getVersion());
+    if((new File(".h2o_no_collect")).exists() || (new File(System.getProperty("user.home")+"/.h2o_no_collect")).exists())
+      GA.setEnabled(false);
+
     // Parse args
     Arguments arguments = new Arguments(args);
     arguments.extract(OPT_ARGS);
@@ -941,6 +951,8 @@ public final class H2O {
     }
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
+
+    postStartupGAEvents();
   }
 
   /** Starts the local k-v store.
@@ -1980,5 +1992,10 @@ public final class H2O {
         if (gracefulShutdownInitiated) { break; }
       }
     }
+  }
+
+  private static void postStartupGAEvents() {
+    //TODO place an EventHit that records the HDFS version at startup
+    GA.postAsync(new EventHit("System startup info", "Cloud", "Cloud size", CLOUD.size()));
   }
 }

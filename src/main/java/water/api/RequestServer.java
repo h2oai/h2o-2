@@ -30,6 +30,7 @@ import water.*;
 import water.api.Upload.PostFile;
 import water.api.handlers.ModelBuildersMetadataHandlerV1;
 import water.deploy.LaunchJar;
+import water.ga.AppViewHit;
 import water.schemas.HTTP404V1;
 import water.schemas.HTTP500V1;
 import water.schemas.Schema;
@@ -388,7 +389,7 @@ public class RequestServer extends NanoHTTPD {
   }
 
   // uri serve -----------------------------------------------------------------
-  void maybeLogRequest (String uri, String method, Properties parms) {
+  void maybeLogRequest (String uri, String method, Properties parms, Properties header) {
     boolean filterOutRepetitiveStuff = true;
 
     String log = String.format("%-4s %s", method, uri);
@@ -416,6 +417,11 @@ public class RequestServer extends NanoHTTPD {
     }
 
     Log.info(Sys.HTTPD, log);
+
+    if(header.getProperty("user-agent") != null)
+      H2O.GA.postAsync(new AppViewHit(uri).customDimension(H2O.CLIENT_TYPE_GA_CUST_DIM, header.getProperty("user-agent")));
+    else
+      H2O.GA.postAsync(new AppViewHit(uri));
   }
 
   ///////// Stuff for URL parsing brought over from H2O2:
@@ -464,7 +470,7 @@ public class RequestServer extends NanoHTTPD {
     Request.RequestType type = Request.RequestType.requestType(uri);
     String requestName = type.requestName(uri);
 
-    maybeLogRequest(uri, method, parms);
+    maybeLogRequest(uri, method, parms, header);
 
     // determine version
     int version = parseVersion(uri);

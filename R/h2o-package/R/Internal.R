@@ -209,7 +209,7 @@ h2o.setLogPath <- function(path, type) {
     
     hg = basicHeaderGatherer()
     tg = basicTextGatherer()
-    postForm(myURL, style = "POST", .opts = curlOptions(headerfunction = hg$update, writefunc = tg[[1]]), ...)
+    postForm(myURL, style = "POST", .opts = curlOptions(headerfunction = hg$update, writefunc = tg[[1]], useragent=R.version.string), ...)
     temp = tg$value()
     
     # Log HTTP response from H2O
@@ -221,7 +221,7 @@ h2o.setLogPath <- function(path, type) {
     if(!file.exists(cmdDir)) stop(cmdDir, " directory does not exist")
     write(s, file = .pkg.env$h2o.__LOG_COMMAND, append = TRUE)
   } else
-    temp = postForm(myURL, style = "POST", ...)
+    temp = postForm(myURL, style = "POST", .opts = curlOptions(useragent=R.version.string), ...)
   
   # The GET code that we used temporarily while NanoHTTPD POST was known to be busted.
   #
