@@ -716,6 +716,8 @@ public final class H2O {
     public String beta = null;
     public String mem_watchdog = null; // For developer debugging
     public boolean md5skip = false;
+    public boolean ga_opt_out = false;
+    public String ga_hdp_ver = null;
   }
 
   public static void printHelp() {
@@ -774,6 +776,9 @@ public final class H2O {
     "\n" +
     "    -license <licenseFilePath>\n" +
     "          Path to license file on local filesystem.\n" +
+    "\n" +
+    "    -ga_opt_out\n" +
+    "          Opt out of sending anonymous usage metrics to Google Analytics.\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
@@ -889,8 +894,12 @@ public final class H2O {
     START_TIME_MILLIS = System.currentTimeMillis();
 
     GA = new GoogleAnalytics("UA-56665317-2","H2O",H2O.getVersion());
-    if((new File(".h2o_no_collect")).exists() || (new File(System.getProperty("user.home")+"/.h2o_no_collect")).exists())
+    if((new File(".h2o_no_collect")).exists()
+            || (new File(System.getProperty("user.home")+"/.h2o_no_collect")).exists()
+            || OPT_ARGS.ga_opt_out ) {
       GA.setEnabled(false);
+      Log.info("Opted out of sending usage metrics.");
+    }
 
     // Parse args
     Arguments arguments = new Arguments(args);
@@ -1995,7 +2004,8 @@ public final class H2O {
   }
 
   private static void postStartupGAEvents() {
-    //TODO place an EventHit that records the HDFS version at startup
+    if (OPT_ARGS.ga_hdp_ver != null)
+      GA.postAsync(new EventHit("System startup info", "Hadoop version", OPT_ARGS.ga_hdp_ver, 1));
     GA.postAsync(new EventHit("System startup info", "Cloud", "Cloud size", CLOUD.size()));
   }
 }

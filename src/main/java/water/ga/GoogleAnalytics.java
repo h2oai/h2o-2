@@ -154,7 +154,7 @@ public class GoogleAnalytics {
       //Process custom metrics
       processCustomMetricParameters(request, postParms);
 
-      Log.warn("GA Processed all parameters and sending the request " + postParms);
+      Log.debug("GA Processed all parameters and sending the request " + postParms);
 
       HttpPost httpPost = new HttpPost(config.getUrl());
       try {
