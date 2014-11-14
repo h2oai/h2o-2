@@ -961,7 +961,8 @@ public final class H2O {
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
 
-    postStartupGAEvents();
+    if (SELF == H2O.CLOUD._memary[0]) // only node[0] needs to report
+      postStartupGAEvents();
   }
 
   /** Starts the local k-v store.

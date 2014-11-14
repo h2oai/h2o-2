@@ -104,7 +104,7 @@ public class GoogleAnalytics {
       config.getRequestParameterDiscoverer().discoverParameters(config, defaultRequest);
     }
 
-    Log.info("Initializing Google Analytics with config=" + config + " and defaultRequest=" + defaultRequest);
+    Log.debug("Initializing Google Analytics with config=" + config + " and defaultRequest=" + defaultRequest);
 
     this.config = config;
     this.defaultRequest = defaultRequest;
