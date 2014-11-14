@@ -959,7 +959,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         throw new RuntimeException(LogInfo("got NaNs and/or Infs in beta"));
       } else {
         final double bdiff = beta_diff(glmt._beta, newBeta);
-        if(_glm.family == Family.gaussian) {
+        if(_glm.family == Family.gaussian && _glm.link == Link.identity) {
           checkKKTAndComplete(getCompleter(),glmt, newBeta, false);
           return;
         } else if (bdiff < beta_epsilon || _iter >= max_iter) { // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda_value

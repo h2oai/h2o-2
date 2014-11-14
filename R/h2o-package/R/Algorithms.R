@@ -397,10 +397,11 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                             variable_importances = as.numeric(variable_importances), use_all_factor_levels = as.numeric(use_all_factor_levels), 
                             link = link, offset = offset, has_intercept = as.numeric(has_intercept), non_negative = as.numeric(non_negative))
 
-  if (x_ignore=="")
-    x <- setdiff(colnames(data),y)
-  else
-    x <- setdiff(colnames(data)[-(x_ignore+1)], y)
+
+  if (length(x_ignore) == 1) {
+    if (x_ignore=="")
+      x <- setdiff(colnames(data),y)
+  } else x <- setdiff(colnames(data)[-(x_ignore+1)], y)
 
   params = list(x=x, y=y, family=.h2o.__getFamily(family, tweedie.var.p=tweedie.p),
                 link = link, nfolds=nfolds, alpha=alpha, nlambda=nlambda,

@@ -27,7 +27,7 @@
 \textsc{November 2014}
 \end{center}
 \bigskip
-\bigskip
+\bigskip 
 \bigskip
 \bigskip
 \tableofcontents
@@ -67,7 +67,11 @@ You can load the latest CRAN H2O package by running:
 \bigskip
 \noindent
 Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O download table:
-\underbar{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}. Open your R Console and run the following to install the latest H2O build in R:
+
+\indent \indent \indent \underbar{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}.
+
+\noindent
+Open your R Console and run the following to install the latest H2O build in R:
 
 \begin{spverbatim}
 # The following two commands remove any previously installed H2O packages for R.
@@ -91,46 +95,82 @@ To launch on a single node, initialize H2O on all the cores of your machine with
 
 \end{spverbatim}
 \noindent
-With this command, the H2O R module will start an instance of H2O automatically at localhost:54321. Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but you should specify the IP and port number appropriate to your specific environment.
+The function \texttt{h2o.init()} will initialize a H2O instance and instantiates a H2O client module. By default the H2O instance will launch on localhost:54321. Alternatively, to establish a connection to an existing H2O cluster node explicitly state the IP address (\texttt{ip = "localhost"}) and port number (\texttt{port = 54321}) in the \texttt{h2o.init()} call.
 
-\begin{spverbatim}
-> h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345)
-
-\end{spverbatim}
 \noindent
-An automatic demo is available to see \texttt{h2o.glm} at work. Run the following command to observe an example classification model built through H2O's GLM:
+Run the following command to observe an example classification model built through H2O's GLM:
 
 \begin{spverbatim}
-> demo(h2o.glm)
+# Build a GLM model on prostate data with formula: CAPSULE ~ AGE + RACE + PSA + DCAPS
+> prostatePath = system.file("extdata", "prostate.csv", package = "h2o")
+> prostate.hex = h2o.importFile(localH2O, path = prostatePath, key = "prostate.hex")
+> h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5, lambda_search = FALSE, use_all_factor_levels = FALSE, variable_importances = FALSE, higher_accuracy = FALSE)
+\end{spverbatim}
+
+\vspace{10 mm}
+\noindent
+The output of the model build will include coefficients as well as some validation statistics:
+
+\begin{spverbatim}       
+IP Address: 127.0.0.1 
+Port      : 54321 
+Parsed Data Key: prostate.hex 
+
+GLM2 Model Key: GLMModel__827586bb2c59ba79dc129b8500174940
+
+Coefficients:
+      AGE      RACE     DCAPS       PSA Intercept 
+ -0.01104  -0.63136   1.31888   0.04713  -1.10896 
+
+Normalized Coefficients:
+      AGE      RACE     DCAPS       PSA Intercept 
+ -0.07208  -0.19495   0.40972   0.94253  -0.33707 
+
+Degrees of Freedom: 379 Total (i.e. Null);  375 Residual
+Null Deviance:     512.3
+Residual Deviance: 449.5  AIC: 459.5
+Deviance Explained: 0.12254 
+ Best Threshold: 0.28
+
+Confusion Matrix:
+        Predicted
+Actual   false true Error
+  false     75  152 0.670
+  true      18  135 0.118
+  Totals    93  287 0.447
+
+AUC =  0.7157151 (on train)
 \end{spverbatim}
 
 \subsection{Support} 
 
-Users of the H2O package may submit general enquiries and bug reports to the 0xdata support address:\underbar {h2ostream@googlegroups.com}. Alternatively, specific bugs or issues may be filed to the 0xdata JIRA: \underbar{https://0xdata.atlassian.net/secure/Dashboard.jspa}.
+Users of the H2O package may submit general enquiries and bug reports privately to H2O via email: \underbar {support@0xdata.com}; or publicly post them to: \underbar {h2ostream@googlegroups.com}. Specific bugs or issues will be filed to H2O's JIRA: 
+\underbar{https://0xdata.atlassian.net/secure/Dashboard.jspa}.
 
 \section{Generalized Linear Modeling} 
 This section contains a brief overview of generalized linear models and follows up with a few details for each model family.
 
-The generalized linear model is a generalization of linear regression. Linear regression models the dependency of response y on a vector of predictors x ($y \sim x^T \beta + \beta_0$), with the assumption that y has a gaussian distribution, with the mean being a linear function of x (+ the offset) and a deviance of $\sigma$ (independent of x), i.e. $ y = \mathcal{N}(x^T \beta + \beta_0 , \sigma^2) $. In many situations, these assumptions are overly restrictive but we would still want to take advantage of linear models. GLM generalizes linear regression in following ways: 
+Generalized linear models are generalization of linear regressions. Linear regression models the dependency of response y on a vector of predictors x ($y \sim x^T \beta + \beta_0$). The models are built with the assumptions that y has a gaussian distribution with a variance of $\sigma^2$ and the mean is a linear function of x with an offset of some constant $\beta_0$, i.e. $ y = \mathcal{N}(x^T \beta + \beta_0 ,  \sigma^2) $. These assumptions can be overly restrictive for real world data that do not necessarily follow have a gaussian distribution. GLM generalizes linear regression in following ways: 
 \begin{itemize} 
-\item adds a non-linear link function, so that $link(y) \sim x^T \beta + \beta_0$.
-\item allows variance to depend on the predicted value (family argument).
+\item adds a non-linear link function which transforms the expectation of response variable, so that $link(y) \sim x^T \beta + \beta_0$.
+\item allows variance to depend on the predicted value by specifying the conditional distribution of the response variable or the family argument.
 
 \end{itemize}
-This generalization allows us to apply GLM to problems such as binary classification (Logistic regression).
-GLM models are fitted by maximizing the likelihood.
+This generalization allows us to use GLM on problems such as binary classification (Logistic regression).
 
 \subsubsection{Model Fitting}
-GLM models are fitted by maximizing the likelihood. For gaussian family, maximum likelihood is simply minimal mean squared error which has an analytical solution and it can be solved with ordinary least squares. For all other families, the maximum likelihood problem has no analytical solution and we have to use an iterative method (typical examples are IRLSM, Newton method, gradient descent, L-BFGS). 
+GLM models are fitted by maximizing the likelihood. For gaussian family, maximum likelihood is simply minimal mean squared error which has an analytical solution and can be solved with ordinary least squares. For all other families, the maximum likelihood problem has no analytical solution so we must use an iterative method such as IRLSM, Newton method, gradient descent, and L-BFGS.
 \subsubsection{Model Validation}
-Evaluating quality of the model is critical part of any data-modelling/prediction task. There are several standard ways how to evalute quality of fitted GLM model. The most common is to judge by deviance statistic. Deviance is based on comparing log likelihood of the fitted model with log likelihood of the saturated model (theoretical perfect model).
+Evaluating the quality of the model is a critical part of any data-modeling and scoring process. There are several standard ways on how to evalute the quality of the fitted GLM model; the most common method is to use the resulting deviance. Deviance is calculated by comparing the log likelihood of the fitted model with log likelihood of the saturated model (or theoretically perfect model).
 
 \[ deviance = 2({ln(L_{s})} - {ln(L_{m})}) \]
 
-Another metric frequently used for model selection is The Akaike information criterion (AIC). AIC is a measure of the relative quality of a statistical model for a given set of data. It is usefull for model comparison. Unlike deviance (which would have perfect value for saturated model), it takes into account the complexity of the given model. It is based on meassuring information loss when replacing original data with the model itself. Unlike deviance, it does not meassure absolute quality of the fit (comparison against null-hypothesis). AIC is defined as follows:
+Another metric frequently used for model selection is the Akaike information criterion (AIC). AIC is a measure of the relative quality of a statistical model for a given set of data by calculating the information loss when replacing the original data with the model itself. Unlike deviance which would assign a perfect value for the saturated model and measures the absolute quality of the fit with a comparison against the null-hypothesis, it takes into account the complexity of the given model. AIC is defined as follows:
 
-\[ aic = 2k - 2ln(L_{m})\]
-, where k is number of model parameters and L is likelihood of the model over the dataset.
+\[ aic = 2(k - ln(L_{m}))\]
+
+\noindent
+where k is the number of model parameters and $ln(L_{m})$ is log likelihood of the fitted model over the data.
 
 \subsection{Regularization with Elastic Net Penalty} 
 We introduce penalty to model-fitting to avoid over-fitting, reduce variance of the prediction error and to deal with correlated predictors. There are two common penalized linear models, Ridge Regression and Lasso. Ridge regression provides greater numerical stability and is easier (faster) to compute. On the other hand, Lasso leads to a sparse solution which is big advantage in many situations as it can be used for feature selection and produce models with fewer parameters. When ecnoutering highly correlated columns, l2 penalty tends to push all of the coefficients towards each other, while L1 penalty will pick one and remove the others (0 coefficients).
@@ -228,7 +268,7 @@ The gamma distribution is useful for modeling a positive continuous response var
 It is usually used with inverse or log link, inverse is the canonical link.
 
 \textbf{Example}
-To change the link function from the default inverse function to the log link function modify the \textt{link} argument.
+To change the link function from the default inverse function to the log link function modify the \textit{link} argument.
 
 \begin{spverbatim}
 > gamma.inverse <- h2o.glm(x=c("AGE","RACE","CAPSULE","DCAPS","PSA","VOL"), y="DPROS", data=prostate.hex, family="gamma", link="inverse")
@@ -247,9 +287,6 @@ H2O's glm implementation presents a high performacne distributed algorithm which
 \subsection{Summary of features} 
 In summary, H2O's GLM functionalities include:
 
-\subsection{Summary of features} 
-In summary, H2O's GLM functionalities include:
-
 
 \begin{itemize} 
 \item fits generalized linear model with elastic net penalty
@@ -262,24 +299,50 @@ In summary, H2O's GLM functionalities include:
 \item proximal operator interface
 \end{itemize}
 
-\subsection{Performance Characteristics}
-The implementation is based on iterative reweighted least squares with ADMM inner solver to deal with L1 penalty. Every iteration of the algorithm consists of following steps:
-\begin{enumerate} 
-\item generate weigthed least squares problem based on previous solution, i.e. vector of weights w and reponse z 
-\item compute the weighted gram matrix $X^TWX$ and $X^Tz$ vector
-\item decompose the gram matrix (Cholesky decomposition) and apply ADMM solver to solve L1 penalized least squares problem
-\end{enumerate}
+\subsection{Input Parameters}
+\subsubsection{Predictors \& Response}
+Every model must specify its predictors and response. It is the equivalent formula object in R. Predictors and response are specified by \textit{source} and \textit{x} and \textit{y} parameters with optional \textit{offset} parameter. 
 
-Steps 1 and 2 are performed distributed, step 3 is computed in parallel on a single node. We can thus characterize the computational complexity and scalability of dataset with M observations and N columns (predictors) on a cluster with n nodes with p cpus each as follows:
+\textit{source} refers to a frame containing training dataset. All predictors and the response (and offset if there is one) must be part of this frame.
 
-\[ O({MN^2 \over pn} + {N^3 \over p})\]
+\textit{x} contains list of column names or column indices referring to vectros from the source frame, can not contain .
 
-And the overall memory cost is given by:
+\textit{y} is a column name or index referring to a vector from the source frame.
 
-\[ O(MN + N^2pn)\]
+\textit{offset} is a column name or index referring to a vector from the source frame.
+  
+\subsubsection{Family \& Link}
+Family and Link are both optional parameters, default family is \textit{Gaussian} and default link is canonical link for selected family. These are passed in as strings, e.g. \textit{family='gamma', link = 'log'}.
+While it is possible to select other than canonical link, it can lead to unstable computation. Known safe combinations are Gaussian + Log or Inverse and Gamma with log.  
 
-In case of $M >> N$ we can forget the second term and the algorithm scales linearly both in the number of nodes and number of cpus per node. However, the equation above also implies that our algorithm is limited in the number of predictors it can handle since the size of the Gram matrix grows quadratically (memory and network throughput issue) with the number of predictors and it's decomposition cost grows as cube of the number of predictors (computational cost issue). H2O can get around these limitation in many cases due to its handling of categoricals and employing strong rules to filter out inactive predictors, both are described later in this chapter.  
+\subsubsection{Regularization}
+Regularization is specified by \textit{alpha}, \textit{lambda}, \textit{lambda\_search}, \textit{lambda\_min\_ratio}, \textit{nlambda} and related \textit{return\_all\_lambda} arguments, all of which are optional. 
+\textbf{Note:} Lambda values are capped at $\lambda_{max}$ which is the smalles $\lambda$ s.t. the solution is empty model (all zeros except for intercept).
 
+\textit{alpha} argument controls the elastic net penalty distribution. It can have any value in (0,1) range (inclusive) or a vector of values (triggers grid search).
+
+\textit{lambda} argument controls the penalty strength, it can have any positive value or a vector of values (triggers grid search)
+
+\textit{lambda\_search} if set, h2o will perform automatic grid search over lambda parameter (lambda parameter's value is ignored int his case). H2O will generate a list of \textit{nlambda} values starting at $\lambda_{max}$ and ending at $\lambda_{min} = \lambda_{max}$ \textit{lambda\_min\_ratio} and then compute a model for each of them.
+It is highly recommended every time computation time is not a critical issue, as it will provide better more stable results in general. 
+ 
+\textit{lambda\_min\_ratio}, \textit{nlambda} parametrize the \textit{lambda\_search}.
+
+\textit{return\_all\_lambda} if set and if running grid search over lambda, h2o will return a list of models, one per each lambda. Default value is false, in which case h2o will return the best model.  
+
+\subsection{Coefficient Constraints}
+Coefficinet constraints allow user to set special conditions over the model coefficients. Currently supported constraints are upper and lower bounds and proximal operator \cite{prox} interface. 
+
+The constraints are specified as a frame with following vecs (matched by name, all vecs can be sparse):
+\begin{itemize}
+\item \textit{names (mandatory)}  - coefficient names. 
+\item \textit{lower\_bounds (optional)} - coefficient lower bounds , must be $<= 0$
+\item \textit{upper\_bounds (optional)} - coefficient upper bounds , must be $>= 0$
+\item \textit{beta\_given (optional)} - specifies the given solution in proximal operator interface
+\item \textit{rho (mandatory if beta\_given specified, otherwise ignored)} - specifies per-column L2 penalties on the distance from the given solution
+\end{itemize}
+ 
+Proximal operator interface allows user to run the glm with proximal penalty on a distance from a specified given solution. It has various uses. It can be used as part of ADMM consesus algorithm to obtain unified solution over separate h2o clouds. Other known use case is in bayesian regression approximation.
 
 \subsection{H2O GLM Model Output}
 The detailed output of the GLM model v3aries depending on the distribution the model is fitted with. In general though, there are common parts of the output for all Families: Coefficients \& Normalized Coefficients, Validation, and Prediction. We'll cover the model output from the point-of-view of an R user.
@@ -340,11 +403,10 @@ AUC =  0.8318927 (on train)
 Briefly, the output contains the IP, Port of the H2O cluster the model was trained on. It includes the data key, the model key, the coefficients, and then some model metrics. Let's look at these more in-depth.
 
 \subsubsection{Coefficients \& Normalized Coefficients}
-These are the regression coefficients. H2O does not provide p-values for regression coefficients because they are not defined for regularized regression. H2O's GLM performs elastic net regularization by default ($\alpha = 0.5$). We provide knobs to change the $L_1$ and $L_2$ penalties. Additionally, we offer a $\lambda$-search option (similar to R's \texttt{glmnet} package), that by default searches for the optimal $\lambda$.
+\textit{Coefficients} are the predictor weights, i.e. the actual model used for prediction. 
 
-H2O provides Coefficients and Normalized Coefficients. The difference is that Normalized Coefficients are computed on scaled (demeaned, unit variance) data. H2O also provides a value for each level in your factor columns. No extra effort in one-hot'ing your data is required -- H2O handles this automagically.
+If \textit{standardize} option is set, H2O will return another set of coefficients, \textit{Normalized Coefficients}. These are the predictor weights of standardized data and are included only for informative purposes (e.g. to compare relative variable importance). In this case, the \textit{Coefficients} are obtained from \textit{Normalized Coefficients} by \textbf{reversing} the data standardization process (de-scaled, intercept adjusted by added offset) so that they can be applied to data in its original form (i.e. no standardization prior to scoring). \textit{Note:} These are \textbf{not} the same as coefficients of a model buidl on non-standardized data.
 
-Finally, when comparing H2O's GLM with other implementations, you may notice some variance in the coefficients -- but this is expected. Coefficients need not match, but the solution to the objective function must match. If it does not then email support@0xdata.com and tell us!
 \subsubsection{Validation}
 
 H2O's GLM performs 10-fold cross-validation by default. It does this by holding out data modulo 10. This is fast and gives some idea of how the model will generalize. However, it's always best to evaluate the model using some holdout data.
@@ -368,6 +430,7 @@ predictions
 # generate the model metrics
 h2o.performance(data=predictions[,3], reference=test[,1])
 \end{verbatim}
+
 
 \subsection{Categorical Variables}
 When applying linear models to datasets with categorical varibales, the usual approach is to expand the categoricals into set of binary vectors, one vector per each categorical level (e.g. by calling model.matrix in R). H2O performs similar expansion automaticaly and no prior changes to the dataset are needed. Each categorical column is treated as a set of sparse binary vectors.
@@ -408,12 +471,28 @@ H2O will compute $\lambda$-models sequentially and in decreasing order, warm-sta
 While automatic lambda search is the preferred way, it is also possible to do a grid search over lambda values by passing in vector of lambdas and seeting lambda-search option to false. The behavior will be identical to lambda search except for using user-supplied list of lambdas instead (still capped at $\lambda_{max}$).
 
 \subsection{Strong Rules} %TODO add references
-Strong Rules 
+H2O glm employs strong rules \cite{strong} to discard predictors which are likely to have 0 coefficients prior to model building. According to \cite{strong}, we can identify such predictors based on a gradient with great accuracy (very few false nagtives, virtually no false positives in practice) and thus greatly reduce the computational complexity of model fitting and enable running on wide datasets with tens of thousands of predictors, provided that there is a limited number of active predictors. 
 
-\subsection{Coefficient Constraints}
-upper,lower bounds, proximal operator interface
+When applying the strong rules, we evaluate the gradient at strarting solution, filter out inactiove coefficients and fit a model using only a subset of the available predictors. Since strong rules may have false positives (extremely rare in practice), we need to check the solution (test the kkt conditions) and verify that all discarded predictors indeed have 0 coefficients.  
 
-\subsection{Handling Datasets High Number of Predictors}
+\subsection{Performance Characteristics}
+The implementation is based on iterative reweighted least squares with ADMM \cite{admm} inner solver to deal with L1 penalty. Every iteration of the algorithm consists of following steps:
+\begin{enumerate} 
+\item generate weigthed least squares problem based on previous solution, i.e. vector of weights w and reponse z 
+\item compute the weighted gram matrix $X^TWX$ and $X^Tz$ vector
+\item decompose the gram matrix (Cholesky decomposition) and apply ADMM solver to solve L1 penalized least squares problem
+\end{enumerate}
+
+Steps 1 and 2 are performed distributed, step 3 is computed in parallel on a single node. We can thus characterize the computational complexity and scalability of dataset with M observations and N columns (predictors) on a cluster with n nodes with p cpus each as follows:
+
+\[ O({MN^2 \over pn} + {N^3 \over p})\]
+
+And the overall memory cost is given by:
+
+\[ O(MN + N^2pn)\]
+
+In case of $M >> N$ we can forget the second term and the algorithm scales linearly both in the number of nodes and number of cpus per node. However, the equation above also implies that our algorithm is limited in the number of predictors it can handle since the size of the Gram matrix grows quadratically (memory and network throughput issue) with the number of predictors and it's decomposition cost grows as cube of the number of predictors (computational cost issue). H2O can get around these limitation in many cases due to its handling of categoricals and employing strong rules to filter out inactive predictors, both are described later in this chapter.  
+\subsubsection{Handling Datasets High Number of Predictors}
 
 
 \section{Use case: Classification with Airline data}
@@ -503,6 +582,7 @@ Java models are currently not available for GLM.
 \\
 \\
 To download the model, open the terminal window, create a directory where the model will be saved, set the new directory as the working directory, and follow the curl and java compile commands displayed in the instructions at the top of the Java model.
+\section{Comparison With Other Tools}
 
 \newpage
 \section{Appendix A: Complete parameter list}
@@ -550,19 +630,55 @@ To download the model, open the terminal window, create a directory where the mo
 
 
 \newpage
-\section{References}
 
+\begin{thebibliography}{9}
 
-\url{http://h2o.ai}
+\bibitem{glmnet}
+Jerome Friedman, Trevor Hastie, Rob Tibshirani
+Regularization Paths for Generalized Linear Models via Coordinate Descent
+April 29, 2009
 
+\bibitem{strong}
+  Robert Tibshirani, Jacob Bien, Jerome Friedman, Trevor Hastie, Noah Simon, Jonathan Tay- lor, and Ryan J. Tibshirani
+  Strong Rules for Discarding Predictors in Lasso-type Problems
+  J. R. Statist. Soc. B, vol. 74, 
+  2012.
+\bibitem{elastic}
+Hui Zou and Trevor Hastie
+Regularization and variable selection via the elastic net
+J. R. Statist. Soc. B (2005) 67, Part 2, pp. 301–320
+
+\bibitem{lasso}
+Robert Tibshirani
+Regression Shrinkage and Selection via the Lasso
+Journal of the Royal Statistical Society. Series B (Methodological), Volume 58, Issue 1 (1996), 267-288
+
+\bibitem{admm}
+S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein
+Distributed Optimization and Statistical Learning via the Alternating Direction Method of Multipliers
+Foundations and Trends in Machine Learning, 3(1):1–122, 2011. (Original draft posted November 2010.)
+
+\bibitem{prox}
+N. Parikh and S. Boyd
+Proximal Algorithms
+Foundations and Trends in Optimization, 1(3):123-231, 2014.
+
+\bibitem{git}
 \url{http://github.com/0xdata/h2o.git}
 
+\bibitem{docs}
 \url{http://docs.0xdata.com}
 
-\url{https://0xdata.atlassian.net/secure/Dashboard.jspa}
-
+\bibitem{stream}
 \url{https://groups.google.com/forum/#!forum/h2ostream}
 
-"Strong Rules for Discarding Predictors in Lasso-type Problems" (\url{http://statweb.stanford.edu/~tibs/ftp/strong.pdf})
+\bibitem{h2o}
+\url{http://h2o.ai}
+\bibitem{jira}
+\url{https://0xdata.atlassian.net/secure/Dashboard.jspa}
+\end{thebibliography}
+
+%\url{http://h2o.ai}
+
 
 \end{document}
