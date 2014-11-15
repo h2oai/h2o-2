@@ -109,7 +109,7 @@ setMethod("show", "H2OGapStatModel", function(object) {
 })
 
 summary.H2OGapStatModel <-
-function(object) {
+function(object, ...) {
   x    <- 1:length(object@model$log_within_ss)
   lwk  <- object@model$log_within_ss
   elwk <- object@model$boot_within_ss
@@ -143,7 +143,8 @@ function(object) {
 }
 
 plot.H2OGapStatModel<-
-function(object) {
+function(x, ...) {
+  object <- x
   x    <- 1:length(object@model$log_within_ss)
   lwk  <- object@model$log_within_ss
   elwk <- object@model$boot_within_ss
