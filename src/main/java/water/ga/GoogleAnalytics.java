@@ -104,7 +104,7 @@ public class GoogleAnalytics {
       config.getRequestParameterDiscoverer().discoverParameters(config, defaultRequest);
     }
 
-    Log.debug("Initializing Google Analytics with config=" + config + " and defaultRequest=" + defaultRequest);
+    //Log.debug("Initializing Google Analytics with config=" + config + " and defaultRequest=" + defaultRequest);
 
     this.config = config;
     this.defaultRequest = defaultRequest;
@@ -143,7 +143,7 @@ public class GoogleAnalytics {
     try {
       List<NameValuePair> postParms = new ArrayList<NameValuePair>();
 
-      Log.debug("GA Processing " + request);
+      //Log.debug("GA Processing " + request);
 
       //Process the parameters
       processParameters(request, postParms);
@@ -154,7 +154,7 @@ public class GoogleAnalytics {
       //Process custom metrics
       processCustomMetricParameters(request, postParms);
 
-      Log.debug("GA Processed all parameters and sending the request " + postParms);
+      //Log.debug("GA Processed all parameters and sending the request " + postParms);
 
       HttpPost httpPost = new HttpPost(config.getUrl());
       try {
@@ -169,7 +169,7 @@ public class GoogleAnalytics {
         Log.warn("GA connectivity suffered a protocol error.  "+e.toString());
       }
 
-      Log.debug("GA response: " +httpResponse.toString());
+      //Log.debug("GA response: " +httpResponse.toString());
       response.setStatusCode(httpResponse.getStatusLine().getStatusCode());
       response.setPostedParms(postParms);
 

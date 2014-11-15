@@ -913,8 +913,8 @@ public class h2odriver extends Configured implements Tool {
     }
     String hadoopVersion = calcHadoopVersion();
     conf.set(h2omapper.H2O_HADOOP_VERSION, hadoopVersion);
-    if((new File(".h2o_no_collect")).exists() || (new File(System.getProperty("user.home")+"/.h2o_no_collect")).exists()) {
-      conf.set(h2omapper.H2O_GA_OPTOUT, "-ga_optout");
+    if((new File(".h2o_no_collect")).exists() || (new File(System.getProperty("user.home")+ File.separator + ".h2o_no_collect")).exists()) {
+      conf.set(h2omapper.H2O_GA_OPTOUT, "-ga_opt_out");
     }
 
     // Set up job stuff.

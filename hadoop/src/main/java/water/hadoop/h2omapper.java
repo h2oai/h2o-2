@@ -432,7 +432,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
       }
     }
     if (hadoopVersion != null) {
-      argsList.add("-ga_hdp_ver");
+      argsList.add("-ga_hadoop_ver");
       argsList.add(hadoopVersion);
     }
     if (gaOptOut != null) argsList.add(gaOptOut);
