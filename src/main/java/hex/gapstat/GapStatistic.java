@@ -28,7 +28,7 @@ public class GapStatistic extends Job.ColumnsJob {
   public int k_max = 10;
 
   @API(help = "Fraction of data size to replicate in each MC simulation.", filter = Default.class, json = true, dmin = 0, dmax = 1)
-  public double bootstrap_fraction = .33;
+  public double bootstrap_fraction = .1;
 
   @API(help = "Max iteratiors per clustering.")
   public int max_iter = 50;
@@ -115,7 +115,7 @@ public class GapStatistic extends Job.ColumnsJob {
           fs = new Futures();
           DKV.remove(Key.make(km_bs.dest()+"_clusters"), fs);
           bwkbs[b] = Math.log(res_bs.mse());
-          gs_model.b++;
+          gs_model.b = b+1;
           gs_model.update(self());
         }
         double sum_bwkbs = 0.;
@@ -126,10 +126,11 @@ public class GapStatistic extends Job.ColumnsJob {
           sk_2 += (d - gs_model.wkbs[k - 1]) * (d - gs_model.wkbs[k - 1]) * 1. / (double) b_max;
         }
         gs_model.sk[k - 1] = Math.sqrt(sk_2) * Math.sqrt(1 + 1. / (double) b_max);
-        gs_model.k++;
+        gs_model.k = k;
         for(int i = 0; i < gs_model.wks.length; ++i) gs_model.gap_stats[i] = gs_model.wkbs[i] - gs_model.wks[i];
         gs_model.update(self());
       }
+      gs_model.compute_k_best();
     }
     catch(JobCancelledException ex) {
       Log.info("Gap Statistic Computation was cancelled.");
