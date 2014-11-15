@@ -26,7 +26,7 @@ h2o.clusterInfo <- function(client) {
 
   res = NULL
   {
-    res = fromJSON(postForm(myURL, .params = list(quiet="true", skip_ticks="true"), style = "POST"))
+    res = fromJSON(postForm(myURL, .params = list(quiet="true", skip_ticks="true"), style = "POST", .opts = curlOptions(useragent=R.version.string)))
 
     nodeInfo = res$nodes
     numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
@@ -37,7 +37,7 @@ h2o.clusterInfo <- function(client) {
       # to post it's information yet.
       threeSeconds = 3
       Sys.sleep(threeSeconds)
-      res = fromJSON(postForm(myURL, style = "POST"))
+      res = fromJSON(postForm(myURL, style = "POST", .opts = curlOptions(useragent=R.version.string)))
     }  
   }
   
@@ -275,9 +275,9 @@ h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "
   url = paste(url, "?key=", URLencode(path), sep="")
   if(file.exists(h2o.getLogPath("Command"))) .h2o.__logIt(url, NULL, "Command")
   if(silent)
-    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))))
+    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = curlOptions(useragent=R.version.string))
   else
-    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
+    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = curlOptions(verbose = TRUE, useragent=R.version.string))
   rawData = new("H2ORawData", h2o=object, key=path)
   if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names, parser_type = parser_type) else rawData
 }
