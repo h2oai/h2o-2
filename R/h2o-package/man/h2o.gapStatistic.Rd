@@ -7,7 +7,7 @@ Compute Gap Statistic from H2O Dataset
 Compute the gap statistic of a H2O dataset. The gap statistic is a measure of the goodness of fit of a clustering algorithm. For each number of clusters \code{k}, it compares \eqn{\log(W(k))} with \eqn{E^*[\log(W(k))]} where the latter is defined via bootstrapping.
 }
 \usage{
-h2o.gapStatistic(data, cols = "", K = 10, B = 10, boot_frac = 0.33, max_iter = 50, seed = 0)
+h2o.gapStatistic(data, cols = "", K = 10, B = 10, boot_frac = 0.1, max_iter = 50, seed = 0)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
