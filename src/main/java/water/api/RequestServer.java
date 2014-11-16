@@ -30,6 +30,7 @@ import water.*;
 import water.api.Upload.PostFile;
 import water.api.handlers.ModelBuildersMetadataHandlerV1;
 import water.deploy.LaunchJar;
+import water.ga.AppViewHit;
 import water.schemas.HTTP404V1;
 import water.schemas.HTTP500V1;
 import water.schemas.Schema;
@@ -97,6 +98,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
     Request.addToNavbar(registerRequest(new Impute()),        "Impute",                 "Data");
     Request.addToNavbar(registerRequest(new Interaction()),   "Interaction",            "Data");
+    Request.addToNavbar(registerRequest(new CreateFrame()),   "Create Frame",           "Data");
     Request.addToNavbar(registerRequest(new FrameSplitPage()),"Split Frame",            "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
     Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
@@ -124,21 +126,21 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new AUC()),             "AUC",                  "Score");
     Request.addToNavbar(registerRequest(new HitRatio()),        "HitRatio",             "Score");
     Request.addToNavbar(registerRequest(new PCAScore()),        "PCAScore",             "Score");
-    Request.addToNavbar(registerRequest(new GainsLiftTable()),"Gains/Lift Table (Beta)","Score");
+    Request.addToNavbar(registerRequest(new GainsLiftTable()),  "Gains/Lift Table",     "Score");
     Request.addToNavbar(registerRequest(new Steam()),      "Multi-model Scoring (Beta)","Score");
 
     // Admin
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",                     "Admin");
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",           "Admin");
-    Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",              "Admin");
-    Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
+    Request.addToNavbar(registerRequest(new WaterMeterPerfbar()),  "Water Meter (Perfbar)",    "Admin");
+    Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new JProfile()),    "Profiler",                 "Admin");
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
-    Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new NetworkTest()), "Network Test",             "Admin");
-    Request.addToNavbar(registerRequest(new UDPDropTest()), "Udp drop",                 "Admin");
-    Request.addToNavbar(registerRequest(new TaskStatus()),  "Task status",              "Admin");
-    Request.addToNavbar(registerRequest(new WaterMeterPerfbar()),  "Water Meter (Perfbar)",    "Admin");
+    Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",              "Admin");
+    Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
+    Request.addToNavbar(registerRequest(new UDPDropTest()), "UDP Drop Test",            "Admin");
+    Request.addToNavbar(registerRequest(new TaskStatus()),  "Task Status",              "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials
@@ -158,7 +160,6 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new NFoldFrameExtractPage());
       registerRequest(new Console());
       registerRequest(new GapStatistic());
-      registerRequest(new CreateFrame());
       registerRequest(new InsertMissingValues());
       registerRequest(new KillMinus3());
       registerRequest(new SaveModel());
@@ -173,7 +174,6 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold Frame Extract", "Beta");
       Request.addToNavbar(registerRequest(new Console()),              "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),         "Gap Statistic",        "Beta");
-      Request.addToNavbar(registerRequest(new CreateFrame()),          "Create Frame",         "Beta");
       Request.addToNavbar(registerRequest(new InsertMissingValues()),  "Insert Missing Values","Beta");
       Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
       Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");
@@ -389,7 +389,7 @@ public class RequestServer extends NanoHTTPD {
   }
 
   // uri serve -----------------------------------------------------------------
-  void maybeLogRequest (String uri, String method, Properties parms) {
+  void maybeLogRequest (String uri, String method, Properties parms, Properties header) {
     boolean filterOutRepetitiveStuff = true;
 
     String log = String.format("%-4s %s", method, uri);
@@ -417,6 +417,11 @@ public class RequestServer extends NanoHTTPD {
     }
 
     Log.info(Sys.HTTPD, log);
+
+    if(header.getProperty("user-agent") != null)
+      H2O.GA.postAsync(new AppViewHit(uri).customDimension(H2O.CLIENT_TYPE_GA_CUST_DIM, header.getProperty("user-agent")));
+    else
+      H2O.GA.postAsync(new AppViewHit(uri));
   }
 
   ///////// Stuff for URL parsing brought over from H2O2:
@@ -465,7 +470,7 @@ public class RequestServer extends NanoHTTPD {
     Request.RequestType type = Request.RequestType.requestType(uri);
     String requestName = type.requestName(uri);
 
-    maybeLogRequest(uri, method, parms);
+    maybeLogRequest(uri, method, parms, header);
 
     // determine version
     int version = parseVersion(uri);

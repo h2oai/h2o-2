@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, getpass
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i
 import h2o_summ
 
 
@@ -29,13 +29,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud()
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
@@ -68,7 +64,6 @@ class Basic(unittest.TestCase):
                 legalValues[x] = x
         
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
-            h2o.beta_features = False
             csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -77,7 +72,6 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
-            h2o.beta_features = True
             summaryResult = h2o_cmd.runSummary(key=hex_key, cols=0, max_ncols=1)
             if h2o.verbose:
                 print "summaryResult:", h2o.dump_json(summaryResult)

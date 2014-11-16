@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -8,13 +8,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
@@ -22,7 +18,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM2_gamma_fail1(self):
-        h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
         for trial in range(5):

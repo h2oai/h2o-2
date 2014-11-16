@@ -1,8 +1,8 @@
 import unittest
 import random, sys, time, re
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import h2o_browse as h2b, h2o_gbm
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 
 # this only covers the params for gbm
 # FIX! what about the other algos below
@@ -27,21 +27,16 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
 
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3, java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GBM_regression_rand2(self):
-        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
         files = [
@@ -88,7 +83,6 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 # GBM train****************************************
-                h2o.beta_features = True
                 trainStart = time.time()
                 gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
                     timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)

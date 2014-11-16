@@ -1,22 +1,24 @@
 
-import h2o, h2o_cmd, sys
-import time, random, re
+import sys, time, random, re
+import h2o_cmd
+import h2o_nodes
 import h2o_browse as h2b
+from h2o_test import dump_json, verboseprint, check_sandbox_for_errors
 
 def checkForBadFP(value, name='min_value', nanOkay=False, infOkay=False, json=None):
     # if we passed the json, dump it for debug
     if 'Infinity' in str(value) and not infOkay:
         if json:
-            print h2o.dump_json(json)
+            print dump_json(json)
         raise Exception("Infinity in inspected %s can't be good for: %s" % (str(value), name))
     if 'NaN' in str(value) and not nanOkay:
         if json:
-            print h2o.dump_json(json)
+            print dump_json(json)
         raise Exception("NaN in inspected %s can't be good for: %s" % (str(value), name))
 
 def checkScalarResult(resultExec, resultKey, allowEmptyResult=False, nanOkay=False):
     # make the common problems easier to debug
-    h2o.verboseprint("checkScalarResult resultExec:", h2o.dump_json(resultExec))
+    verboseprint("checkScalarResult resultExec:", dump_json(resultExec))
 
     if 'funstr' not in resultExec:
         emsg = "checkScalarResult: 'funstr' missing"
@@ -35,15 +37,15 @@ def checkScalarResult(resultExec, resultKey, allowEmptyResult=False, nanOkay=Fal
         num_cols = resultExec["num_cols"]
         num_rows = resultExec["num_rows"]
         cols = resultExec["cols"]
-        # print "cols:", h2o.dump_json(cols)
+        # print "cols:", dump_json(cols)
 
     if emsg:
-        print "\nKey: '" + str(resultKey) + "' resultExec:\n", h2o.dump_json(resultExec)
+        print "\nKey: '" + str(resultKey) + "' resultExec:\n", dump_json(resultExec)
         sys.stdout.flush()
         raise Exception("exec result (resultExec) missing what we expected. Look at json above. " + emsg)
 
     if (cols and (not num_rows or num_rows==0) ) and not allowEmptyResult:
-        print "resultExec[0]:", h2o.dump_json(resultExec)
+        print "resultExec[0]:", dump_json(resultExec)
         raise Exception ("checkScalarResult says 'cols' exist in exec json response,"+\
             " but num_rows: %s is 0 or None. Is that an expected 'empty' key state?" % num_rows+\
             " Use 'allowEmptyResult if so.")
@@ -90,26 +92,26 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, 
     if m is not None:
         execExpr = re.sub('<m>', str(m), execExpr)
         execExpr = re.sub('<m-1>', str(m-1), execExpr)
-    ### h2o.verboseprint("\nexecExpr:", execExpr)
+    ### verboseprint("\nexecExpr:", execExpr)
     print "execExpr:", execExpr
     return execExpr
 
 
 def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2oError=False):
     if not node:
-        node = h2o.nodes[0]
+        node = h2o_nodes.nodes[0]
     start = time.time()
     # FIX! Exec has 'escape_nan' arg now. should we test?
     # 5/14/13 removed escape_nan=0
 
     kwargs = {'str': execExpr} 
     resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
-    h2o.verboseprint('exec took', time.time() - start, 'seconds')
-    h2o.verboseprint(resultExec)
+    verboseprint('exec took', time.time() - start, 'seconds')
+    verboseprint(resultExec)
 
     if 'cols' in resultExec and resultExec['cols']: # not null
         if 'funstr' in resultExec and resultExec['funstr']: # not null
-            raise Exception("cols and funstr shouldn't both be in resultExec: %s" % h2o.dump_json(resultExec))
+            raise Exception("cols and funstr shouldn't both be in resultExec: %s" % dump_json(resultExec))
         else:
             print "Frame return"
             # if test said to look at a resultKey, it's should be in h2o k/v store
@@ -117,7 +119,7 @@ def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2
             if resultKey is not None:
                 kwargs = {'str': resultKey} 
                 resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
-                h2o.verboseprint("resultExec2:", h2o.dump_json(resultExec))
+                verboseprint("resultExec2:", dump_json(resultExec))
 
             # handles the 1x1 data frame result. Not really interesting if bigger than 1x1?
             result = resultExec['cols'][0]['min']
@@ -137,7 +139,7 @@ def exec_zero_list(zeroList,timeoutSecs=60):
     # zero the list of Results using node[0]
     for exprTemplate in zeroList:
         execExpr = fill_in_expr_template(exprTemplate,0, 0, 0, None)
-        (resultExec, result) = exec_expr(h2o.nodes[0], execExpr, None,timeoutSecs)
+        (resultExec, result) = exec_expr(h2o_nodes.nodes[0], execExpr, None,timeoutSecs)
 
 
 def exec_expr_list_rand(lenNodes, exprList, keyX, 
@@ -167,7 +169,7 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
         row = str(random.randint(minRow,maxRow))
 
         execExpr = fill_in_expr_template(exprTemplate, colX, ((trial+1)%4)+1, row, keyX)
-        (resultExec, result) = exec_expr(h2o.nodes[execNode], execExpr, None, 
+        (resultExec, result) = exec_expr(h2o_nodes.nodes[execNode], execExpr, None, 
             timeoutSecs, ignoreH2oError)
 
         checkScalarResult(resultExec, None, allowEmptyResult=allowEmptyResult, nanOkay=nanOkay)
@@ -183,7 +185,7 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
 
         ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
         # slows things down to check every iteration, but good for isolation
-        if (h2o.check_sandbox_for_errors()):
+        if check_sandbox_for_errors():
             raise Exception(
                 "Found errors in sandbox stdout or stderr, on trial #%s." % trial)
         trial += 1
@@ -213,12 +215,12 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
                 resultKey = keyX
 
             # v2
-            (resultExec, result) = exec_expr(h2o.nodes[execNode], execExpr, None, timeoutSecs)
-            print "\nexecResult:", h2o.dump_json(resultExec)
+            (resultExec, result) = exec_expr(h2o_nodes.nodes[execNode], execExpr, None, timeoutSecs)
+            print "\nexecResult:", dump_json(resultExec)
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             # slows things down to check every iteration, but good for isolation
-            if (h2o.check_sandbox_for_errors()):
+            if check_sandbox_for_errors():
                 raise Exception(
                     "Found errors in sandbox stdout or stderr, on trial #%s." % trial)
 

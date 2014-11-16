@@ -65,8 +65,10 @@ for (resp in 1:length(targets)) {
     )
 
   ## Collect cross-validation error
-  MSE <- cvmodel@sumtable[[1]]$prediction_error   #If cvmodel is a grid search model
-  #MSE <- cvmodel@model$valid_sqr_error            #If cvmodel is not a grid search model
+
+  cvmodel <- cvmodel@model[[1]] #Only if cvmodel is a grid search model
+
+  MSE <- cvmodel@model$valid_sqr_error
   RMSE <- sqrt(MSE)
   CMRMSE <- CMRMSE + RMSE #column-mean-RMSE
   MSEs[resp] <- MSE
@@ -76,8 +78,8 @@ for (resp in 1:length(targets)) {
   cat("\nCross-validated CMRMSE so far:", CMRMSE/resp)
     
   cat("\n\nTaking parameters from grid search winner for", targets[resp], "...\n")
-  p <- cvmodel@sumtable[[1]]  #If cvmodel is a grid search model
-  #p <- cvmodel@model$params   #If cvmodel is not a grid search model
+
+  p <- cvmodel@model$params
 
   ## Build an ensemble model on full training data - should perform better than the CV model above
   for (n in 1:ensemble_size) {

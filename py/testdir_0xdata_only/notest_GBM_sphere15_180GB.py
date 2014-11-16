@@ -1,13 +1,12 @@
 import unittest, time, sys, random, math, json
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_jobs
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_kmeans, h2o_import as h2i, h2o_jobs
 import socket
 
 # kevin@mr-0xb1:~/h2o/py/testdir_hosts$ ls -ltr /home3/0xdiag/datasets/kmeans_big
 # -rw-rw-r-- 1 0xdiag 0xdiag 183538602156 Aug 24 11:43 syn_sphere15_2711545732row_6col_180GB_from_7x.csv
 # -rwxrwxr-x 1 0xdiag 0xdiag         1947 Aug 24 12:21 sphere15_makeit
 DO_GBM = True
-FROM_HDFS = 'CDH4'
 DELETE_KEYS = True
 
 class Basic(unittest.TestCase):
@@ -16,26 +15,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            if 'Kevin' in socket.gethostname(): # for testing with little files on a little machine
-                global FROM_HDFS
-                FROM_HDFS = None
-                java_heap_GB = 20
-            else:
-                java_heap_GB = 240
-            h2o.build_cloud(1, java_heap_GB=java_heap_GB, enable_benchmark_log=True)
-        else:
-            if FROM_HDFS == 'CDH3':
-                h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True,
-                    use_hdfs=True, hdfs_version='cdh3', hdfs_name_node="mr-0x6") # override the config file
-            elif FROM_HDFS == 'CDH4':
-                h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True,
-                    use_hdfs=True, hdfs_version='cdh4', hdfs_name_node="mr-0x6") # override the config file
-            else:
-                h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
+        h2o.init(enable_benchmark_log=True,
+            use_hdfs=True, hdfs_version='cdh4', hdfs_name_node="mr-0x6") # override the config file
 
     @classmethod
     def tearDownClass(cls):
@@ -44,12 +27,8 @@ class Basic(unittest.TestCase):
     def test_GBM_sphere15_180GB(self):
         csvFilename = 'syn_sphere15_2711545732row_6col_180GB_from_7x.csv'
         totalBytes = 183538602156
-        if FROM_HDFS:
-            importFolderPath = "datasets/kmeans_big"
-            csvPathname = importFolderPath + '/' + csvFilename
-        else:
-            importFolderPath = "/home3/0xdiag/datasets/kmeans_big"
-            csvPathname = importFolderPath + '/' + csvFilename
+        importFolderPath = "datasets/kmeans_big"
+        csvPathname = importFolderPath + '/' + csvFilename
 
         # FIX! put right values in
         # will there be different expected for random vs the other inits?
@@ -87,14 +66,9 @@ class Basic(unittest.TestCase):
             start = time.time()
             timeoutSecs = 2 * 3600
             kwargs = {}
-            if FROM_HDFS:
-                parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
-                    timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2,
-                    benchmarkLogging=benchmarkLogging, **kwargs)
-            else:
-                parseResult = h2i.import_parse(path=csvPathname, schema='local', hex_key=hex_key,
-                    timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2,
-                    benchmarkLogging=benchmarkLogging, **kwargs)
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2,
+                benchmarkLogging=benchmarkLogging, **kwargs)
 
             elapsed = time.time() - start
             fileMBS = (totalBytes/1e6)/elapsed
@@ -122,7 +96,6 @@ class Basic(unittest.TestCase):
                 }
 
             kwargs = params.copy()
-            h2o.beta_features = True
             timeoutSecs = 1800
 
             start = time.time()
@@ -137,7 +110,6 @@ class Basic(unittest.TestCase):
             print "\nGBMResult:", GBMResult
             # print "\nGBMResult:", h2o.dump_json(GBMResult)
 
-            h2o.beta_features = False
             h2o.check_sandbox_for_errors()
 
             if DELETE_KEYS:

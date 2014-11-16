@@ -15,7 +15,7 @@ library(h2o)
 
 library(stringr)
 
-## Connect to H2O server (On server(s), run 'java -jar h2o.jar -Xmx8G -port 53322 -name TradeShift' first)
+## Connect to H2O server (On server(s), run 'java -Xmx8g -ea -jar h2o.jar -port 53322 -name TradeShift' first)
 ## Go to http://server:53322/ to check Jobs/Data/Models etc.
 #h2oServer <- h2o.init(ip="server", port = 53322)
 h2o.shutdown(h2oServer)

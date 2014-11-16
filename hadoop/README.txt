@@ -41,7 +41,7 @@ $ cd hadoop
 RUN JOB
 -------
 
-$ hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver [-jt <jobtracker:port>] -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
+$ hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
 
 (Note: -nodes refers to H2O nodes.  This may be less than or equal to
        the number of hadoop machines running TaskTrackers where hadoop 

@@ -1,6 +1,7 @@
-import random, time
-import h2o, h2o_cmd, h2o_gbm, h2o_exec as h2e
-import csv
+import random, time, csv
+import h2o_cmd, h2o_gbm, h2o_exec as h2e, h2o_util
+import h2o_nodes
+from h2o_test import check_sandbox_for_errors, dump_json, verboseprint
 
 # params is mutable here
 def pickRandRfParams(paramDict, params):
@@ -29,7 +30,7 @@ def pickRandRfParams(paramDict, params):
 
 def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False, **kwargs):
     if not node:
-        node = h2o.nodes[0]
+        node = h2o_nodes.nodes[0]
 
     if 'warnings' in rfv:
         warnings = rfv['warnings']
@@ -41,7 +42,6 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     #****************************
     # if we are checking after confusion_matrix for predict, the jsonschema is different
-        
 
     if 'cm' in rfv:
         cm = rfv['cm'] # only one
@@ -53,7 +53,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         elif 'rf_model' in rfv:
             rf_model = rfv['rf_model']
         else:
-            raise Exception("no rf_model in rfv? %s" % h2o.dump_json(rfv))
+            raise Exception("no rf_model in rfv? %s" % dump_json(rfv))
 
         cms = rf_model['cms']
         print "number of cms:", len(cms)
@@ -63,7 +63,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         print "cms[-1]['_predErr']:", cms[-1]['_predErr']
         print "cms[-1]['_classErr']:", cms[-1]['_classErr']
 
-        ## print "cms[-1]:", h2o.dump_json(cms[-1])
+        ## print "cms[-1]:", dump_json(cms[-1])
         ## for i,c in enumerate(cms):
         ##    print "cm %s: %s" % (i, c['_arr'])
 
@@ -78,7 +78,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         print "errs[-1]:", errs[-1]
         print "errs:", errs
         # if we got the ntree for comparison. Not always there in kwargs though!
-        param_ntrees = kwargs.get('ntrees',None)
+        param_ntrees = kwargs.get('ntrees', None)
         if (param_ntrees is not None and used_trees != param_ntrees):
             raise Exception("used_trees should == param_ntree. used_trees: %s"  % used_trees)
         if (used_trees+1)!=len(cms) or (used_trees+1)!=len(errs):
@@ -135,15 +135,11 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         print "pctWrong:", "%5.2f" % pctWrong
 
     if checkScoringOnly:
-        h2o.check_sandbox_for_errors()
+        check_sandbox_for_errors()
         classification_error = pctWrong
         return (round(classification_error,2), classErrorPctList, totalScores)
 
-    #****************************
-    # more testing for RFView
-
     # it's legal to get 0's for oobe error # if sample_rate = 1
-
     sample_rate = kwargs.get('sample_rate', None)
     validation = kwargs.get('validation', None)
     print "kevin:", sample_rate, validation
@@ -153,17 +149,47 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         raise Exception("scores in RFView seems wrong. scores:", scoresList)
 
     varimp = rf_model['varimp']
+
+    if 'importance' in kwargs and kwargs['importance']:
+        max_var = varimp['max_var']
+        variables = varimp['variables']
+        varimpSD = varimp['varimpSD']
+        varimp2 = varimp['varimp']
+
+        # what is max_var? it's 100 while the length of the others is 54 for covtype
+        if not max_var:
+            raise Exception("varimp.max_var is None? %s" % max_var)
+        # if not variables:
+        #     raise Exception("varimp.variables is None? %s" % variables)
+        if not varimpSD:
+            raise Exception("varimp.varimpSD is None? %s" % varimpSD)
+        if not varimp2:
+            raise Exception("varimp.varimp is None? %s" % varimp2)
+
+        # check that they all have the same length and that the importance is not all zero
+        # if len(varimpSD)!=max_var or len(varimp2)!=max_var or len(variables)!=max_var:
+        #    raise Exception("varimp lists seem to be wrong length: %s %s %s" % \
+        #        (max_var, len(varimpSD), len(varimp2), len(variables)))
+
+        # not checking maxvar or variables. Don't know what they should be
+        if len(varimpSD) != len(varimp2):
+            raise Exception("varimp lists seem to be wrong length: %s %s" % \
+                (len(varimpSD), len(varimp2)))
+
+        h2o_util.assertApproxEqual(sum(varimp2), 0.0, tol=1e-5, 
+            msg="Shouldn't have all 0's in varimp %s" % varimp2)
+
     treeStats = rf_model['treeStats']
     if not treeStats:
-        raise Exception("treeStats not right?: %s" % h2o.dump_json(treeStats))
-    # print "json:", h2o.dump_json(rfv)
+        raise Exception("treeStats not right?: %s" % dump_json(treeStats))
+    # print "json:", dump_json(rfv)
     data_key = rf_model['_dataKey']
     model_key = rf_model['_key']
     classification_error = pctWrong
 
     if not noPrint: 
         if 'minLeaves' not in treeStats or not treeStats['minLeaves']:
-            raise Exception("treeStats seems to be missing minLeaves %s" % h2o.dump_json(treeStats))
+            raise Exception("treeStats seems to be missing minLeaves %s" % dump_json(treeStats))
         print """
          Leaves: {0} / {1} / {2}
           Depth: {3} / {4} / {5}
@@ -180,7 +206,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     
     ### modelInspect = node.inspect(model_key)
     dataInspect = h2o_cmd.runInspect(key=data_key)
-    h2o.check_sandbox_for_errors()
+    check_sandbox_for_errors()
     return (round(classification_error,2), classErrorPctList, totalScores)
 
 def simpleCheckRFScore(node=None, rfv=None, noPrint=False, **kwargs):
@@ -203,8 +229,8 @@ def trainRF(trainParseResult, scoreParseResult=None, **kwargs):
            **kwargs)
 
     rftime      = time.time()-start 
-    h2o.verboseprint("RF train results: ", trainResult)
-    h2o.verboseprint("RF computation took {0} sec".format(rftime))
+    verboseprint("RF train results: ", trainResult)
+    verboseprint("RF computation took {0} sec".format(rftime))
 
     trainResult['python_call_timer'] = rftime
     return trainResult
@@ -226,7 +252,7 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, timeoutSecs=120, **kwar
 
     h2o_cmd.runInspect(key='Predict.hex', verbose=True)
 
-    predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+    predictCMResult = h2o_nodes.nodes[0].predict_confusion_matrix(
         actual=parseKey,
         vactual=vactual,
         predict=predictKey,
@@ -244,8 +270,8 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, timeoutSecs=120, **kwar
     scoreResult = predictCMResult
 
     rftime      = time.time()-start 
-    h2o.verboseprint("RF score results: ", scoreResult)
-    h2o.verboseprint("RF computation took {0} sec".format(rftime))
+    verboseprint("RF score results: ", scoreResult)
+    verboseprint("RF computation took {0} sec".format(rftime))
     scoreResult['python_call_timer'] = rftime
     return scoreResult
 
@@ -336,16 +362,16 @@ def predict_and_compare_csvs(model_key, hex_key, predictHexKey,
     h2e.exec_expr(execExpr="Z.hex="+hex_key+"[,"+str(y+1)+"]", timeoutSecs=30)
 
     start = time.time()
-    predict = h2o.nodes[0].generate_predictions(model_key=model_key,
+    predict = h2o_nodes.nodes[0].generate_predictions(model_key=model_key,
         data_key=hex_key, destination_key=predictHexKey)
     print "generate_predictions end on ", hex_key, " took", time.time() - start, 'seconds'
-    h2o.check_sandbox_for_errors()
+    check_sandbox_for_errors()
     inspect = h2o_cmd.runInspect(key=predictHexKey)
     h2o_cmd.infoFromInspect(inspect, 'predict.hex')
 
-    h2o.nodes[0].csv_download(src_key="Z.hex", csvPathname=csvSrcOutputPathname)
-    h2o.nodes[0].csv_download(src_key=predictHexKey, csvPathname=csvPredictPathname)
-    h2o.check_sandbox_for_errors()
+    h2o_nodes.nodes[0].csv_download(src_key="Z.hex", csvPathname=csvSrcOutputPathname)
+    h2o_nodes.nodes[0].csv_download(src_key=predictHexKey, csvPathname=csvPredictPathname)
+    check_sandbox_for_errors()
 
     print "Do a check of the original output col against predicted output"
     (rowNum1, originalOutput) = compare_csv_at_one_col(csvSrcOutputPathname,

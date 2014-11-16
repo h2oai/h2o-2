@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 import time, random
 
 print "This tries to mimic the use of the file pathname with ImportFile like R does"
@@ -11,12 +11,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=1)
 
     @classmethod
     def tearDownClass(cls):

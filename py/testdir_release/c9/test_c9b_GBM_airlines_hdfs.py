@@ -2,14 +2,12 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 import h2o_common
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c9b_GBM_airlines_hdfs(self):
-        h2o.beta_features = True
-
         files = [
                  ('datasets', 'airlines_all.csv', 'airlines_all.hex', 1800, 'IsDepDelayed')
                 ]

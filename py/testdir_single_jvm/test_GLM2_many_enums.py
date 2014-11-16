@@ -1,6 +1,6 @@
 import unittest, random, sys, time, re
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 
 # details:
 # Apparently we don't have any new EOL separators for hive?, just new column separator
@@ -71,13 +71,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1,java_heap_GB=1)
 
     @classmethod
     def tearDownClass(cls):
@@ -85,7 +81,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM2_many_enums(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         n = 200

@@ -1,6 +1,6 @@
 import unittest, random, sys, time, os
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 import h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, header, SEED):
@@ -30,13 +30,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts(java_heap_GB=4)
+        h2o.init(3, java_heap_GB=4)
 
 
     @classmethod

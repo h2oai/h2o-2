@@ -9,8 +9,10 @@ setClass("H2OParsedData", representation(h2o="H2OClient", key="character", logic
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
 # setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
-setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame"))
+setClassUnion("data.frameORnull", c("data.frame", "NULL"))
+setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame", gains="data.frameORnull"))
 
+setClass("H2OGapStatModel", contains="H2OModel")
 setClass("H2OCoxPHModel", contains="H2OModel", representation(summary="list", survfit="list"))
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 setClass("H2OKMeansModel", contains="H2OModel")
@@ -96,6 +98,66 @@ setMethod("show", "H2OGrid", function(object) {
   temp = data.frame(t(sapply(object@sumtable, c)))
   cat("\nSummary\n"); print(temp)
 })
+
+
+setMethod("show", "H2OGapStatModel", function(object) {
+  cat("\n")
+  cat("Number of KMeans Run: ", object@model$params$K*(object@model$params$B + 1), "\n")
+  cat("Optimal Number of Clusters: ", object@model$k_opt, "\n")
+  cat("\nFor more, try `summary` and `plot` methods.\n\n")
+  cat("\n")
+})
+
+summary.H2OGapStatModel <-
+function(object, ...) {
+  x    <- 1:length(object@model$log_within_ss)
+  lwk  <- object@model$log_within_ss
+  elwk <- object@model$boot_within_ss
+  sdev <- object@model$se_boot_within_ss
+  gaps <- object@model$gap_stats
+
+  row.names <- c("LWCSS", "E[LWCSS]", "sdevs", "gaps")
+
+  fr <- matrix(ncol=length(x), nrow=4)
+  fr[1,] <- lwk
+  fr[2,] <- elwk
+  fr[3,] <- sdev
+  fr[4,] <- gaps
+  fr <- as.data.frame(fr)
+  rownames(fr) <- row.names
+  colnames(fr) <- x
+
+#  cat("\n")
+#  cat("(LWCSS = Log of Within Cluster Sum of Squares)", "\n\n")
+#  cat("LWCSS for each k (log(W_k)):\n", lwk, "\n\n")
+#  cat("Expected LWCSS for each k (log(W*_k)):\n", elwk, "\n\n")
+#  cat("Standard Errors Expected LWCSS for each k:\n", sdev, "\n\n")
+#  cat("Gap Statistics:\n", gaps, "\n\n")
+#  cat("\n")
+  print(fr)
+
+  cat("\nTry plotting the Gap Statistic Model:\n")
+  cat("\nExample: plot(my.model)\n\n")
+
+  invisible(return(fr))
+}
+
+plot.H2OGapStatModel<-
+function(x, ...) {
+  object <- x
+  x    <- 1:length(object@model$log_within_ss)
+  lwk  <- object@model$log_within_ss
+  elwk <- object@model$boot_within_ss
+  sdev <- object@model$se_boot_within_ss
+  gaps <- object@model$gap_stats
+
+  par(mfrow=c(3,1))
+  plot(x, lwk, xlab="number of clusters k", ylab = "log(W_k)", type="o", pch=19)
+  plot(x, lwk, xlab="number of clusters k", ylab = "obs and exp log(W_k)", pch = "O", type="o", ylim=c(0,max(lwk, elwk)))
+  lines(x,elwk, pch="E", type="o")
+  plot(x, gaps, ylim=c(min(gaps-sdev), max(gaps+sdev)), type="o", pch=19, xlab="number of clusters k", ylab="Gap")
+  suppressWarnings(arrows(x, gaps-sdev, x, gaps+sdev, length=0.05, angle=90, code=3))  # suppress warning on case where sdev ~ 0
+}
 
 setMethod("show", "H2OCoxPHModel", function(object)
   get("print.coxph", getNamespace("survival"))(object@model))
@@ -214,7 +276,7 @@ setMethod("show", "H2OKMeansModel", function(object) {
     cat("\n\nCluster means:\n"); print(model$centers)
     cat("\nClustering vector:\n"); print(summary(model$cluster))
     cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
-    cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
+#    cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
     cat("\nAvailable components:\n\n"); print(names(model))
 })
 
@@ -1420,6 +1482,44 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
+
+#'
+#' The H2O Gains Method
+#'
+#' Construct the gains table and lift charts for binary outcome algorithms. Lift charts and gains tables
+#' are commonly applied to marketing.
+#'
+#' Ties are broken by building quantiles over the data (tie-breaking needed in deciding which group an observation
+#' belongs). Please examine the GainsTask within the GainsLiftTable.java class for more details on ranking.
+#'
+#' The values returned are in percent form if `percents` is TRUE.
+h2o.gains <- function(actual, predicted, groups=10, percents = FALSE) {
+  if(class(actual) != "H2OParsedData") stop("`actual` must be an H2O parsed dataset")
+  if(class(predicted) != "H2OParsedData") stop("`predicted` must be an H2O parsed dataset")
+  if(ncol(actual) != 1) stop("Must specify exactly one column for `actual`")
+  if(ncol(predicted) != 1) stop("Must specify exactly one column for `predicted`")
+  if(groups < 1) stop("`groups` must be  >= 1. Got: " %p0% groups)
+
+  h2o <- actual@h2o
+  res <- .h2o.__remoteSend(h2o, .h2o.__GAINS, actual = actual@key, vactual = 0, predict = predicted@key, vpredict = 0, groups = groups)
+  resp_rates <- res$response_rates
+  avg <- res$avg_response_rate
+  groups <- res$groups
+  percents <- 99*percents + 1  # multiply by 100 or by 1
+  lifts <- resp_rates / avg
+
+  # need to build a data frame with 4 columns: Quantile, Response Rate, Lift, Cum. Lift
+  col_names <- c("Quantile", "Mean.Response", "Lift", "Cume.Pct.Total.Lift")
+
+  gains_table <- data.frame(
+    Quantile        = qtiles <- seq(0,1,1/groups)[-1] * percents,
+    Response.Rate   = resp_rates, # * percents,
+    Lift            = (resp_rates / avg),
+    Cumulative.Lift = cumsum(lifts/groups) * percents
+  )
+  colnames(gains_table) <- col_names
+  gains_table
+}
 
 setMethod("which", "H2OParsedData", function(x, arr.ind = FALSE, useNames = TRUE) {
   .h2o.__unop2("which", x)

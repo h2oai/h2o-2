@@ -248,7 +248,7 @@ public class AUCData extends Iced {
       if (idxCriter == null) return false;
 
       sb.append("<div>");
-      DocGen.HTML.section(sb, "Scoring for Binary Classification");
+      DocGen.HTML.section(sb, "<a href=\"http://en.wikipedia.org/wiki/Receiver_operating_characteristic\">Scoring for Binary Classification</a>");
 
       // data for JS
       sb.append("\n<script type=\"text/javascript\">");//</script>");
@@ -347,6 +347,7 @@ public class AUCData extends Iced {
       for (int i = 0; i < my_cms.length; ++i)
         sb.append("\t<option value='" + i + "'" + (my_thresholds[i] == threshold() ? "selected='selected'" : "") + ">" + my_thresholds[i] + "</option>\n");
       sb.append("</select></td></tr>");
+      sb.append("</td>");
       sb.append("</table>");
 
 

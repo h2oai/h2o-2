@@ -1,9 +1,9 @@
 import unittest
 import random, sys, time
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import json
 
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd
 import h2o_kmeans, h2o_import as h2i
 
 class Basic(unittest.TestCase):
@@ -12,21 +12,16 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2,java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(2,java_heap_GB=4)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_KMeansGrid_basic_fvec(self):
-        h2o.beta_features = True
-        if localhost:
+        if h2o.localhost:
             csvFilenameList = [
                 # ('covtype.data', 60),
                 ('covtype.data', 800),

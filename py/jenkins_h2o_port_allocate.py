@@ -62,15 +62,14 @@ def jenkins_h2o_port_allocate():
     if executor<0 or executor>=EXECUTOR_NUM:
         raise Exception("executor: %s wrong? Expecting 1-8 jenkins executors on a machine (0-7 exp.)" % executor)
 
-    hostname = socket.gethostname()
-    hostnameIndex = USED_HOSTNAMES.index(hostname)
-
     h2oPort = DEFAULT_BASE_PORT
     h2oPortOffset = 0
+    hostname = socket.gethostname()
     if hostname not in USED_HOSTNAMES:
         print "WARNING: this hostname: %s isn't in my list. You should add it?" % hostname
         print "Will use default base port"
     else:
+        hostnameIndex = USED_HOSTNAMES.index(hostname)
         h2oPortOffset = PORTS_PER_SLOT * (executor + hostnameIndex)
         h2oPort += h2oPortOffset
 

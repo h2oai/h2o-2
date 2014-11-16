@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, json
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_common
+import h2o, h2o_cmd, h2o_kmeans, h2o_import as h2i, h2o_common
 import socket
 
 print "Assumes you ran ../build_for_clone.py in this directory"
@@ -14,7 +14,6 @@ DO_REAL = True
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c5_KMeans_sphere_h1m(self):
-        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 

@@ -1,6 +1,6 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 import getpass
 
 RANDOM_UDP_DROP = False
@@ -11,12 +11,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='mr-0x6', random_udp_drop=RANDOM_UDP_DROP)
-        else:
-            h2o_hosts.build_cloud_with_hosts(1, use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='mr-0x6', random_udp_drop=RANDOM_UDP_DROP)
+        h2o.init(use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='mr-0x6', random_udp_drop=RANDOM_UDP_DROP)
 
     @classmethod
     def tearDownClass(cls):

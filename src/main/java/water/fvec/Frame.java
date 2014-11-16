@@ -230,8 +230,9 @@ public class Frame extends Lockable<Frame> {
   }
 
   public int find( Vec vec ) {
-    for( int i=0; i<_vecs.length; i++ )
-      if( vec.equals(_vecs[i]) )
+    Vec[] vecs = vecs();
+    for( int i=0; i<vecs.length; i++ )
+      if( vec.equals(vecs[i]) )
         return i;
     return -1;
   }

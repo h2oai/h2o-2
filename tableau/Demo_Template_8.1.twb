@@ -18,8 +18,8 @@
       <column caption='Port' datatype='integer' name='[Parameter 11]' param-domain-type='any' role='measure' type='quantitative' value='54321'>
         <calculation class='tableau' formula='54321' />
       </column>
-      <column caption='Path To Data' datatype='string' name='[Parameter 12]' param-domain-type='any' role='measure' type='nominal' value='&quot;/Users/Amy/0xdata/data/airlines_all.05p.csv&quot;'>
-        <calculation class='tableau' formula='&quot;/Users/Amy/0xdata/data/airlines_all.05p.csv&quot;' />
+      <column caption='Path To Data' datatype='string' name='[Parameter 12]' param-domain-type='any' role='measure' type='nominal' value='&quot;https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip?raw=true&quot;'>
+        <calculation class='tableau' formula='&quot;https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip?raw=true&quot;' />
       </column>
       <column caption='Beta' datatype='boolean' name='[Parameter 13]' param-domain-type='list' role='measure' type='nominal' value='true'>
         <calculation class='tableau' formula='true' />
@@ -28,8 +28,8 @@
           <member value='false' />
         </members>
       </column>
-      <column caption='Local H2O Heap Size' datatype='string' name='[Parameter 14]' param-domain-type='any' role='measure' type='nominal' value='&quot;4g&quot;'>
-        <calculation class='tableau' formula='&quot;4g&quot;' />
+      <column caption='Local H2O Heap Size' datatype='string' name='[Parameter 14]' param-domain-type='any' role='measure' type='nominal' value='&quot;1g&quot;'>
+        <calculation class='tableau' formula='&quot;1g&quot;' />
       </column>
       <column caption='(GLM) Lambda' datatype='string' name='[Parameter 15]' param-domain-type='any' role='measure' type='nominal' value='&quot;1.0E-5&quot;'>
         <calculation class='tableau' formula='&quot;1.0E-5&quot;' />
@@ -415,8 +415,8 @@
         <column caption='Port' datatype='integer' name='[Parameter 11]' param-domain-type='any' role='measure' type='quantitative' value='54321'>
           <calculation class='tableau' formula='54321' />
         </column>
-        <column caption='Path To Data' datatype='string' name='[Parameter 12]' param-domain-type='any' role='measure' type='nominal' value='&quot;/Users/Amy/0xdata/data/airlines_all.05p.csv&quot;'>
-          <calculation class='tableau' formula='&quot;/Users/Amy/0xdata/data/airlines_all.05p.csv&quot;' />
+        <column caption='Path To Data' datatype='string' name='[Parameter 12]' param-domain-type='any' role='measure' type='nominal' value='&quot;https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip?raw=true&quot;'>
+          <calculation class='tableau' formula='&quot;https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip?raw=true&quot;' />
         </column>
         <column caption='Beta' datatype='boolean' name='[Parameter 13]' param-domain-type='list' role='measure' type='nominal' value='true'>
           <calculation class='tableau' formula='true' />
@@ -425,8 +425,8 @@
             <member value='false' />
           </members>
         </column>
-        <column caption='Local H2O Heap Size' datatype='string' name='[Parameter 14]' param-domain-type='any' role='measure' type='nominal' value='&quot;4g&quot;'>
-          <calculation class='tableau' formula='&quot;4g&quot;' />
+        <column caption='Local H2O Heap Size' datatype='string' name='[Parameter 14]' param-domain-type='any' role='measure' type='nominal' value='&quot;1g&quot;'>
+          <calculation class='tableau' formula='&quot;1g&quot;' />
         </column>
         <column caption='(GLM) Lambda' datatype='string' name='[Parameter 15]' param-domain-type='any' role='measure' type='nominal' value='&quot;1.0E-5&quot;'>
           <calculation class='tableau' formula='&quot;1.0E-5&quot;' />

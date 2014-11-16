@@ -1,6 +1,6 @@
 import unittest, time, sys, re
-sys.path.extend(['.','..','py'])
-import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_nn, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_gbm
 
 def write_syn_dataset(csvPathname, rowCount, rowDataTrue, rowDataFalse, outputTrue, outputFalse):
     dsf = open(csvPathname, "w+")
@@ -18,13 +18,9 @@ class test_NN_twovalues(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # fails with 3
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1, java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts(1)
+        h2o.init(1, java_heap_GB=4)
         # h2b.browseTheCloud()
 
     @classmethod
@@ -32,7 +28,6 @@ class test_NN_twovalues(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_DeepLearning_twovalues(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_twovalues.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename

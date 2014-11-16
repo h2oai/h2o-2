@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o_cmd, h2o, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -8,12 +8,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud()
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
 
     @classmethod
@@ -21,7 +16,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_nulls_fvec(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         # we're going to insert <NUL> (0x0) in between every byte!

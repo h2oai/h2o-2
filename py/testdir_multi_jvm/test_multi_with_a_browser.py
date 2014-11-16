@@ -2,9 +2,9 @@
 # copies the jars for me, etc. Just hangs at the end for 10 minutes while I play with the browser
 import unittest
 import time,sys
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
-import h2o_cmd, h2o, h2o_hosts
+import h2o_cmd, h2o
 import h2o_browse as h2b
 
 class Basic(unittest.TestCase):
@@ -13,12 +13,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        h2o.beta_features = True
-        if (localhost):
-            h2o.build_cloud(3, java_heap_GB=1, use_hdfs=True)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3, java_heap_GB=1, use_hdfs=True)
 
     @classmethod
     def tearDownClass(cls):

@@ -1,7 +1,7 @@
 import unittest, random, sys, time, os
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_import as h2i
 import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
 print "This injects the full set of single byte UTF8 in a col, except for some special h2o chars"
@@ -55,13 +55,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=1)
 
     @classmethod
     def tearDownClass(cls):
@@ -81,7 +77,7 @@ class Basic(unittest.TestCase):
                 hex_key=hex_key, timeoutSecs=10, doSummary=False, separator=H2O_COL_SEPARATOR) 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)
             
-            print "Parsed with special unichr(%s) which is %s:" % (unicodeNum, unichr(unicodeNum))
+            print "Parsed with special unichr(%s):" % unicodeNum
             # print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
             self.assertEqual(numRows, expNumRows, msg='Using unichr(0x%x) Wrong numRows: %s Expected: %s' % \

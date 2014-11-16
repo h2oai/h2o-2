@@ -1,6 +1,6 @@
 import unittest, sys, random, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -16,17 +16,12 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_import_covtype_parse_1jvm_fvec(self):
-        h2o.beta_features = True
         csvFilename = "covtype.data"
         importFolderPath = "standard"
         trialMax = 2
-        localhost = h2o.decide_if_localhost()
         for tryHeap in [4,3,2,1]:
             print "\n", tryHeap,"GB heap, 1 jvms, import folder, then loop parsing 'covtype.data' to unique keys"
-            if (localhost):
-                h2o.build_cloud(node_count=1, java_heap_GB=tryHeap)
-            else:
-                h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap)
+            h2o.init(java_heap_GB=tryHeap)
 
             for trial in range(trialMax):
                 # import each time, because h2o deletes source file after parse

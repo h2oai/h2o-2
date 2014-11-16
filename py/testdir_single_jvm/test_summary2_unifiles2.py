@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, getpass
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_browse as h2b, h2o_print as h2p
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_util, h2o_browse as h2b, h2o_print as h2p
 import h2o_summ
 
 print "same as test_summary2_unifiles.py but using local runif_.csv single col for comparison testing"
@@ -31,20 +31,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud()
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_summary2_unifiles2(self):
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # new with 1000 bins. copy expected from R
         tryList = [
@@ -87,7 +82,6 @@ class Basic(unittest.TestCase):
             numRows = inspect["numRows"]
             numCols = inspect["numCols"]
 
-            h2o.beta_features = True
             # okay to get more cols than we want
             summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))

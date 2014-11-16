@@ -14,7 +14,6 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def sub_c3_fvec_long(self, csvFilenameList):
-        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
@@ -67,7 +66,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     h2o.cloudPerfH2O.message(msg)
 
                 if DO_GLM:
-                    # remove the output too! (378)
+                    # output 378 can't be in this
                     ignore_x = [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]
                     ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
 
@@ -107,7 +106,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
     def notest_A_c3_fvec_one(self):
-        h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
             ("*[1][0][0].dat.gz", "file_1_A.dat.gz", 1 * avgMichalSize, 1800),
@@ -115,7 +113,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         self.sub_c3_fvec_long(csvFilenameList)
 
     def notest_B_c3_fvec_two(self):
-        h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
             ("*[1][0][0-1].dat.gz", "file_2_A.dat.gz", 2 * avgMichalSize, 1800),
@@ -123,7 +120,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         self.sub_c3_fvec_long(csvFilenameList)
 
     def test_C_c3_fvec_ten(self):
-        h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
             ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 1800),
@@ -131,7 +127,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         self.sub_c3_fvec_long(csvFilenameList)
 
     def test_D_c3_fvec_50(self):
-        h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
             ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 2400),

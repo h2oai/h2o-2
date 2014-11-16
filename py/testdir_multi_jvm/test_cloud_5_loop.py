@@ -1,6 +1,6 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_hosts
+sys.path.extend(['.','..','../..','py'])
+import h2o
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
 
             start = time.time()
-            h2o.build_cloud(tryNodes, retryDelaySecs=2, timeoutSecs=max(30,10*tryNodes), java_heap_GB=1)
+            h2o.init(tryNodes, retryDelaySecs=2, timeoutSecs=max(30,10*tryNodes), java_heap_GB=1)
             print "trial #%d: Build cloud of %d in %d secs" % (trial, tryNodes, (time.time() - start))
 
             h2o.verify_cloud_size()

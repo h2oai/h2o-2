@@ -1,7 +1,7 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_glm, h2o_gbm, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_import as h2i, h2o_exec, h2o_glm, h2o_gbm, h2o_exec as h2e
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -9,19 +9,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=10)
-        else:
-            h2o_hosts.build_cloud_with_hosts(java_heap_GB=10)
+        h2o.init(java_heap_GB=10)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GLM2_covtype_train(self):
-        h2o.beta_features = True
         importFolderPath = "standard"
         csvFilename = 'covtype.shuffled.data'
         csvPathname = importFolderPath + "/" + csvFilename
@@ -70,6 +64,7 @@ class Basic(unittest.TestCase):
             'alpha': 0.1, 
             'lambda': 1e-5, 
             'family': 'binomial',
+            'higher_accuracy': 1,
         }
         timeoutSecs = 180
 

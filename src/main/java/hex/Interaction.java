@@ -20,9 +20,6 @@ public class Interaction extends Job {
   @API(help = "Input data frame", required = true, filter = Default.class, json=true)
   public Frame source;
 
-  @API(help = "Output data frame, containing the interaction vector", required = false, filter = Default.class, json=true)
-  public String target;
-
   @API(help = "Column indices (0-based) of factors for which interaction is to be computed", filter=colsNamesIdxFilter.class, displayName="Interaction columns")
   public int[] factors = new int[0];
   class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
@@ -49,12 +46,13 @@ public class Interaction extends Job {
           throw new IllegalArgumentException("Column " + source.names()[v] + " is not a factor.");
         }
       }
-      if (target == null) {
-        target = source._key.toString() + ".interaction.";
+      if (destination_key == null) {
+        String target = source._key.toString() + ".interaction.";
         target += "C" + factors[0];
         for (int i=1; i<factors.length; ++i) {
           target += "_C" + factors[i];
         }
+        destination_key = Key.make(target);
       }
 
       Timer time = new Timer();
@@ -72,18 +70,18 @@ public class Interaction extends Job {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    Frame fr = UKV.get(Key.make(target));
+    Frame fr = UKV.get(dest());
     if (fr==null) {
       return false;
     }
     RString aft = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-    aft.replace("key", target);
+    aft.replace("key", destination_key.toString());
     DocGen.HTML.section(sb, report() + "<br/>Frame '" + aft.toString() + "' contains the interaction feature(s).");
     return true;
   }
 
   private String report() {
-    Frame res = UKV.get(Key.make(target));
+    Frame res = UKV.get(dest());
     if (!pairwise)
     return "Created interaction feature " + res.names()[0]
             + " (order: " + factors.length + ") with " + res.lastVec().domain().length + " factor levels"

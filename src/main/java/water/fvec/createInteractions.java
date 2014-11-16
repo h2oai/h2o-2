@@ -105,7 +105,7 @@ public class createInteractions extends H2O.H2OCountedCompleter {
 
   @Override
   public void compute2() {
-    DKV.remove(Key.make(_ci.target));
+    DKV.remove(_ci.dest());
 
     ArrayList<int[]> al = new ArrayList<int[]>();
     if (!_ci.pairwise || _ci.factors.length < 3) {
@@ -174,7 +174,7 @@ public class createInteractions extends H2O.H2OCountedCompleter {
         }
       }
       if (_target == null) {
-        _target = new Frame(Key.make(_ci.target), _out.names(), _out.vecs());
+        _target = new Frame(_ci.dest(), _out.names(), _out.vecs());
         _target.delete_and_lock(_job);
       } else {
         _target.add(_out, true);

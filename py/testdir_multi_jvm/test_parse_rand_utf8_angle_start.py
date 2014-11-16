@@ -1,8 +1,8 @@
 import unittest
 import random, sys, time, os
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e, h2o_browse as h2b
+import h2o, h2o_cmd, h2o_import as h2i, h2o_exec as h2e, h2o_browse as h2b
 import codecs
 
 print "Always start with right angle"
@@ -143,13 +143,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2,java_heap_GB=1,use_flatfile=True)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(2,java_heap_GB=1,use_flatfile=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -158,7 +154,6 @@ class Basic(unittest.TestCase):
     def test_parse_rand_utf8_angle_start(self):
 
         h2b.browseTheCloud()
-        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (1000, 1, 'cA', 120),

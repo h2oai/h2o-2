@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_util, h2o_exec
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_util, h2o_exec
 
 zeroList = [
         'Result0 = 0',
@@ -17,13 +17,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(2)
 
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -35,7 +31,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec2_sum(self):
-        h2o.beta_features = True
         print "Replicating covtype.data by 2x for results comparison to 1x"
         filename1x = 'covtype.data'
         pathname1x = h2i.find_folder_and_filename('home-0xdiag-datasets', 'standard/covtype.data', returnFullPath=True)

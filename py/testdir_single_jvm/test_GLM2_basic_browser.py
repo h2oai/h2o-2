@@ -1,7 +1,7 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_glm, h2o_jobs, h2o_browse as h2b
+import h2o, h2o_cmd, h2o_import as h2i, h2o_exec, h2o_glm, h2o_jobs, h2o_browse as h2b
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -9,12 +9,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1, java_heap_GB=10)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(1, java_heap_GB=10)
 
     @classmethod
     def tearDownClass(cls):
@@ -23,7 +18,6 @@ class Basic(unittest.TestCase):
     def test_GLM2_basic_browser(self):
         h2b.browseTheCloud()
 
-        h2o.beta_features=True
         importFolderPath = "logreg"
         csvFilename = 'prostate.csv'
         csvPathname = importFolderPath + "/" + csvFilename

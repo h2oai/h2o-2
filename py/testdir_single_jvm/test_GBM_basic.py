@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_gbm
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_import as h2i, h2o_jobs, h2o_gbm
 
 DO_CLASSIFICATION = True
 
@@ -10,19 +10,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(1)
+        h2o.init(1)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GBM_basic_benign(self):
-        h2o.beta_features = True
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
         csvPathname = 'logreg/' + csvFilename
@@ -117,7 +111,6 @@ class Basic(unittest.TestCase):
             print h2o_gbm.pp_cm(cm)
         else:
             print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
-
 
 if __name__ == '__main__':
     h2o.unit_main()

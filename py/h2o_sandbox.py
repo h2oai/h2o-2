@@ -47,7 +47,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
     else:
         tempFileList = os.listdir(LOG_DIR)
         if verbose:
-            print "kbn1:", tempFileList
+            print "tempFileList:", tempFileList
         # don't search the R stdout/stderr
         # this matches the python h2o captured stdout/stderr, and also any downloaded h2o logs
         # not the commands.log
@@ -61,7 +61,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                 goodLogsList.append(filename)
 
         if verbose:
-            print "kbn2:", goodLogsList
+            print "goodLogsList:", goodLogsList
         if len(goodLogsList)==0:
             # let this go...sh2junit.py apparently calls h2o_sandbox() looking for h2o logs?
             emsg = "Unexpected: h2o_sandbox found 0 files in %s that matched the stdout/stderr or log pattern" % LOG_DIR
@@ -163,7 +163,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                 #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                 foundBadPartial = regex1.search(line)
                 foundBad = foundBadPartial and not (
-                    ('Retrying after IO error') or
+                    ('Retrying after IO error' in line) or
                     ('Error on' in line) or
                     # temporary hack. getting these on shutdown in multi-machine
                     # ApiWatch  ERRR WATER: ApiPortWatchdog: Failed trying to connect to REST API IP and Port (/10.73.149.39:54323, 30000 ms)

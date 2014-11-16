@@ -1,6 +1,6 @@
 import unittest, time, sys, random, logging
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -34,12 +34,7 @@ class Basic(unittest.TestCase):
         importFolderPath = 'standard'
 
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
-            localhost = h2o.decide_if_localhost()
-            if (localhost):
-                h2o.build_cloud(2,java_heap_GB=tryHeap, 
-                    enable_benchmark_log=True)
-            else:
-                h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap/2, enable_benchmark_log=True)
+            h2o.init(2,java_heap_GB=tryHeap, enable_benchmark_log=True)
 
             for trial in range(trialMax):
                 csvPathname = importFolderPath + "/" + csvFilepattern

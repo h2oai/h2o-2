@@ -11,6 +11,9 @@
 .MAX_INSPECT_COL_VIEW = 10000
 .LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!", "is.na")
 
+"%p0%"   <- function(x,y) assign(deparse(substitute(x)), paste(x, y, sep = ""), parent.frame())  # paste0
+"%p%"    <- function(x,y) assign(deparse(substitute(x)), paste(x, y), parent.frame()) # paste
+
 # Initialize functions for R logging
 .myPath = paste(Sys.getenv("HOME"), "Library", "Application Support", "h2o", sep=.Platform$file.sep)
 if(.Platform$OS.type == "windows")
@@ -106,6 +109,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__DOMAIN_MAPPING = "2/DomainMapping.json"
 .h2o.__SET_DOMAIN = "2/SetDomains.json"
 .h2o.__PAGE_ALLMODELS = "2/Models.json"
+.h2o.__GAINS <- "2/GainsLiftTable.json"
 
 .h2o.__PAGE_IMPUTE= "2/Impute.json"
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
@@ -205,7 +209,7 @@ h2o.setLogPath <- function(path, type) {
     
     hg = basicHeaderGatherer()
     tg = basicTextGatherer()
-    postForm(myURL, style = "POST", .opts = curlOptions(headerfunction = hg$update, writefunc = tg[[1]]), ...)
+    postForm(myURL, style = "POST", .opts = curlOptions(headerfunction = hg$update, writefunc = tg[[1]], useragent=R.version.string), ...)
     temp = tg$value()
     
     # Log HTTP response from H2O
@@ -217,7 +221,7 @@ h2o.setLogPath <- function(path, type) {
     if(!file.exists(cmdDir)) stop(cmdDir, " directory does not exist")
     write(s, file = .pkg.env$h2o.__LOG_COMMAND, append = TRUE)
   } else
-    temp = postForm(myURL, style = "POST", ...)
+    temp = postForm(myURL, style = "POST", .opts = curlOptions(useragent=R.version.string), ...)
   
   # The GET code that we used temporarily while NanoHTTPD POST was known to be busted.
   #

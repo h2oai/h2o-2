@@ -1,6 +1,6 @@
 import unittest, time, sys, time, random, json
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 DO_RF = False
 class Basic(unittest.TestCase):
@@ -10,33 +10,22 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # assume we're at 0xdata with it's hdfs namenode
-        global localhost
-        localhost = h2o.decide_if_localhost()
         # hdfs_config='/opt/mapr/conf/mapr-clusters.conf', 
         #        # hdfs_name_node='mr-0x1.0xdata.loc:7222')
         #        hdfs_version='mapr2.1.3',
         print "This doesn't work. we don't package mapr files with h2o"
-        if (localhost):
-            h2o.build_cloud(1, 
-                java_heap_GB=15,
-                enable_benchmark_log=True,
-                use_maprfs=True, 
-                hdfs_version='mapr3.1.1',
-                hdfs_name_node='mr-0x2:7222')
-        else:
-            h2o_hosts.build_cloud_with_hosts(1, 
-                java_heap_GB=15,
-                enable_benchmark_log=True,
-                use_maprfs=True, 
-                hdfs_version='mapr3.1.1',
-                hdfs_name_node='mr-0x2:7222')
+        h2o.init(1, 
+            java_heap_GB=15,
+            enable_benchmark_log=True,
+            use_maprfs=True, 
+            hdfs_version='mapr3.1.1',
+            hdfs_name_node='mr-0x2:7222')
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_B_hdfs_files(self):
-        # h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
@@ -123,9 +112,7 @@ class Basic(unittest.TestCase):
             print "Loading", csvFilename, 'from maprfs'
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs, 
-                doSummary=False, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
-            if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+                doSummary=False, benchmarkLogging=benchmarkLogging)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 
@@ -136,7 +123,6 @@ class Basic(unittest.TestCase):
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
 
-
             if DO_RF:
                 print "\n" + csvFilename
                 start = time.time()
@@ -145,9 +131,7 @@ class Basic(unittest.TestCase):
                     }
                 paramsString = json.dumps(kwargs)
                 RFview = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=2000, 
-                    benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features, **kwargs)
-                if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+                    benchmarkLogging=benchmarkLogging, **kwargs)
                 elapsed = time.time() - start
                 print "rf end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 

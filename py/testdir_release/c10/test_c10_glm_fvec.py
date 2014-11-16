@@ -15,7 +15,6 @@ print "via the cloned cloud mechanism (h2o-nodes.json)"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c10_glm_fvec(self):
-        h2o.beta_features = True
         print "Since the python is not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"
@@ -49,10 +48,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # h2o_glm.findXFromColumnInfo(key=parseResult['destination_key'], keepList=keepList)
         # see README.txt in 0xcustomer-datasets/c3 for the col names to use in keepList above, to get the indices
         
+        y = 0
         ignore_x = []
         x = [6,7,8,10,12,31,32,33,34,35,36,37,40,41,42,43,44,45,46,47,49,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70]
         for i in range(numCols):
-            if i not in x:
+            if i not in x and i!=y:
                 ignore_x.append(i)
 
         # since we're no long zero based, increment by 1
@@ -61,7 +61,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         
         # GLM Train***********************************************************
         keepPattern = None
-        y = 0
         print "y:", y
         # don't need the intermediate Dicts produced from columnInfoFromInspect
         x = h2o_glm.goodXFromColumnInfo(y, keepPattern=keepPattern, key=parseResult['destination_key'], timeoutSecs=300)

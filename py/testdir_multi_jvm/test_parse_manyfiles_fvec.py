@@ -1,6 +1,6 @@
 import unittest, time, sys, random, logging
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 import h2o_exec as h2e, h2o_jobs
 
 DO_IMPORT_CHECK = True
@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         # time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_benchmark_import(self):
+    def test_parse_manyfiles_fvec(self):
         # typical size of the michal files
         avgMichalSizeUncompressed = 237270000 
         avgMichalSize = 116561140 
@@ -56,20 +56,14 @@ class Basic(unittest.TestCase):
         pollTimeoutSecs = 180
         retryDelaySecs = 10
 
-        localhost = h2o.decide_if_localhost()
-        if localhost:
-            tryHeap = 4
-            h2o.build_cloud(2,java_heap_GB=tryHeap, enable_benchmark_log=True)
-        else:
-            tryHeap = 28
-            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap, enable_benchmark_log=True)
+        tryHeap = 6
+        h2o.init(2, java_heap_GB=tryHeap, enable_benchmark_log=True)
 
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             # pop open a browser on the cloud
             ### h2b.browseTheCloud()
 
             # to avoid sticky ports?
-            h2o.beta_features = True
 
             for trial in range(trialMax):
                 # (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/*")
@@ -218,7 +212,7 @@ class Basic(unittest.TestCase):
                 ### time.sleep(3600)
 
                 ### h2o.tear_down_cloud()
-                if not localhost:
+                if not h2o.localhost:
                     print "Waiting 30 secs before building cloud again (sticky ports?)"
                     ### time.sleep(30)
 

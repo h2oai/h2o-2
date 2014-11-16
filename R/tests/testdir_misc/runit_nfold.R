@@ -1,0 +1,53 @@
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
+source('../findNSourceUtils.R')
+
+test.h2o.nfold <- function(conn) {
+  tolerance <- 1e-4
+
+  conn = h2o.init()
+  hex <- h2o.importFile(conn, normalizePath(locate("smalldata/logreg/prostate.csv")))
+  predictors = c(3:9)
+  response = 2
+  NFOLDS = 4
+
+  # let GBM do the n-fold CV
+  m <- h2o.gbm(x = predictors, y = response, data = hex, nfolds=NFOLDS)
+
+  # now do the same by hand
+  # H2O doesn't support writes into a row range at this point, do in R instead for simplicity
+  predictions = numeric(length = nrow(hex))
+  offset = 1
+  for (i in 1:NFOLDS) {
+    folds = h2o.nFoldExtractor(hex, nfolds=NFOLDS, fold_to_extract = i)
+    train = folds[[1]]
+    valid = folds[[2]]
+    model <- h2o.gbm(x = predictors, y = response, data = train)
+    pred <- h2o.predict(model, valid)
+    len <- nrow(valid)
+    pred.R <- as.data.frame(pred[,3])
+    predictions[offset:(offset+len-1)] <- as.matrix(pred.R)
+    offset <- offset + len
+  }
+
+  # compare metrics
+  perf <- h2o.performance(as.h2o(conn,predictions), hex[,response])
+  auc <- m@model$auc
+  accuracy <- m@model$accuracy
+  cm <- m@model$confusion
+
+  auc
+  perf@model$auc
+  if (abs(auc - perf@model$auc) > tolerance) stop("AUC is wrong")
+
+  accuracy
+  perf@model$accuracy
+  if (abs(accuracy - perf@model$accuracy) > tolerance) stop("accuracy is wrong")
+
+  cm
+  perf@model$confusion
+  if (max(abs(cm[1:9] - perf@model$confusion[1:9])) != 0) stop("cm is wrong")
+
+  testEnd()
+}
+
+doTest("Test H2O N-Fold CV", test.h2o.nfold)

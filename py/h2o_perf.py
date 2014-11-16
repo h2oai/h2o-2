@@ -1,6 +1,8 @@
 import logging, psutil
 import h2o
 import time, os, re
+import h2o_nodes
+from h2o_test import dump_json, verboseprint
 
 class PerfH2O(object):
     # so a test can create multiple logs
@@ -120,7 +122,7 @@ class PerfH2O(object):
 
         # complicated because it's all one big string 
         # and lots of info we don't want. 
-        jstackResult = h2o.nodes[0].jstack()
+        jstackResult = h2o_nodes.nodes[0].jstack()
         node0 = jstackResult['nodes'][0]
         stack_traces = node0["traces"]
         # all one string
@@ -211,9 +213,9 @@ class PerfH2O(object):
         DO_IOP = True
         DO_BLOCKED = False
 
-        node = h2o.nodes[0]
+        node = h2o_nodes.nodes[0]
         stats = node.iostatus()
-        ### h2o.verboseprint("log_iostats:", h2o.dump_json(stats))
+        ### verboseprint("log_iostats:", dump_json(stats))
         histogram = stats['histogram']
 
         def log_window(k,w):
@@ -277,7 +279,7 @@ class PerfH2O(object):
             # something wrong if 0?
             if totalSockets == 0:
                 print "WARNING: is something wrong with this io stats response?"
-                print h2o.dump_json(stats)
+                print dump_json(stats)
 
             logging.critical("iostats: " + "Total sockets: " + str(totalSockets))
             if DO_BLOCKED:

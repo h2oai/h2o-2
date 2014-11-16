@@ -4,7 +4,7 @@ import unittest
 import time,sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 import h2o_common
 
 import h2o_browse as h2b
@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         # Uses your username specific json: pytest_config-<username>.json
 
         # do what my json says, but with my hdfs. hdfs_name_node from the json
-        h2o_hosts.build_cloud_with_hosts(use_hdfs=True)
+        h2o.init(use_hdfs=True)
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
@@ -26,7 +26,6 @@ class Basic(unittest.TestCase):
         h2b.browseTheCloud()
         csvFilename = "airlines_all.csv"
         csvPathname='airlines/airlines_all.csv'
-        h2o.beta_features = True
         hex_key = csvFilename + ".hex"
         start = time.time()
         timeoutSecs=1200

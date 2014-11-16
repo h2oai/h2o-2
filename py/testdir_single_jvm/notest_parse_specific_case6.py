@@ -1,7 +1,7 @@
 import unittest, random, sys, time, os
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_import as h2i
 import codecs, unicodedata
 print "create some specific small datasets with exp row/col combinations"
 print "This is CR in quoted string. EOL is LF. Shows that we can't escape the alternate EOLs (or any EOL)"
@@ -50,13 +50,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=1)
 
     @classmethod
     def tearDownClass(cls):
@@ -77,7 +73,7 @@ class Basic(unittest.TestCase):
                 hex_key=hex_key, timeoutSecs=10, doSummary=False)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=60)
             
-            print "Parsed with special unichr(%s) which is %s:" % (unicodeNum, unichr(unicodeNum))
+            print "Parsed with special unichr(%s)" % unicodeNum
             print "inspect:", h2o.dump_json(inspect)
             numRows = inspect['numRows']
             numCols = inspect['numCols']

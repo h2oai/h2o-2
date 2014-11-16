@@ -1,6 +1,6 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_exec as h2e
 
 MINFILES = 10
 MINDONE = 1
@@ -11,11 +11,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(java_heap_GB=20)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(java_heap_GB=20)
 
     @classmethod
     def tearDownClass(cls):
@@ -56,7 +52,9 @@ class Basic(unittest.TestCase):
             trial +=1
 
             start = time.time() 
-            parseResult = h2i.parse_only(pattern=importKey, 
+            # some data has ,, in the header row. can't have multiple NAs. h2o doesn't like
+            # force header=0..should mean headers get treated as NAs
+            parseResult = h2i.parse_only(pattern=importKey, header=0,
                 timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
             elapsed = time.time() - start
             print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \

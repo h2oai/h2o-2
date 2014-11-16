@@ -1,6 +1,6 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_util, h2o_browse as h2b
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_import as h2i, h2o_exec, h2o_util, h2o_browse as h2b
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -30,12 +30,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(2, java_heap_GB=7)
-        else:
-            h2o_hosts.build_cloud_with_hosts(java_heap_GB=10)
+        h2o.init(2, java_heap_GB=7)
         h2b.browseTheCloud()
 
     @classmethod
@@ -155,7 +150,6 @@ class Basic(unittest.TestCase):
         return rfvScoring
 
     def test_rf_covtype_train_oobe_fvec(self):
-        h2o.beta_features = True
         print "\nRun test iterations/compare with covtype.data"
         rfv1 = self.rf_covtype_train_oobe('covtype.data', checkExpectedResults=False, expectedAuc=0.95)
         (ce1, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFScore(rfv=rfv1)

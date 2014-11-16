@@ -1,6 +1,6 @@
 import unittest, time, sys, random, string
-sys.path.extend(['.','..','py'])
-import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_nn, h2o_cmd, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -8,16 +8,12 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
-        localhost = h2o.decide_if_localhost()
+        global SEED
         SEED = h2o.setup_random_seed()
-        if localhost:
-            h2o.build_cloud(java_heap_GB=12)
-        else:
+        h2o.init(java_heap_GB=12)
             # requires user 0xcustomer to access c21 data. So needs to be run with a -cj *json, 
             # or as user 0xcustomer
             # or a config json for the user needs to exist in this directory (like pytest_config-jenkins.json)
-            h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -36,8 +32,8 @@ class Basic(unittest.TestCase):
         # self.assertEqual(missingValuesList, [], "%s should have 3 cols of NAs: %s" % (csvPathname_train, missingValuesList)
         numCols = inspect['numCols']
         numRows = inspect['numRows']
-        rSummary = h2o_cmd.runSummary(key=hex_key, rows=numRows, cols=numCols)
-        h2o_cmd.infoFromSummary(rSummary)
+        rSummary = h2o_cmd.runSummary(key=hex_key)
+        h2o_cmd.infoFromSummary(rSummary, rows=numRows, cols=numCols)
 
         csvPathname_test  = importFolderPath + '/persona_clean_deep.tsv.zip'
         validation_key = 'test.hex'

@@ -1,7 +1,7 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import h2o_browse as h2b
-import h2o, h2o_hosts, h2o_util, h2o_log
+import h2o, h2o_util, h2o_log
 
 
 NODE_NUM = 3
@@ -11,11 +11,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(NODE_NUM)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(NODE_NUM)
 
     @classmethod
     def tearDownClass(cls):

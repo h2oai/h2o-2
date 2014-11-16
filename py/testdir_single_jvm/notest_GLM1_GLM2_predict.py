@@ -1,6 +1,6 @@
 import unittest, time, sys, csv 
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_glm, h2o_exec as h2e, h2o_util
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_exec as h2e, h2o_util
 import h2o_browse as h2b, h2o_rf
 
 print "Comparing GLM1 and GLM2 on covtype, with different alpha/lamba combinations"
@@ -29,12 +29,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
@@ -42,7 +37,6 @@ class Basic(unittest.TestCase):
 
     def test_GLM1_GLM2_predict(self):
         # h2b.browseTheCloud()
-        h2o.beta_features = False
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         trees = 15
@@ -96,7 +90,6 @@ class Basic(unittest.TestCase):
 
         #**************************************************************************
         # first glm1
-        h2o.beta_features = False
         CLASS = 1
         # try ignoring the constant col to see if it makes a diff
         kwargs = {
@@ -130,7 +123,6 @@ class Basic(unittest.TestCase):
 
         #**************************************************************************
         # then glm2
-        h2o.beta_features = True
         kwargs = {
             # 'ignored_cols': 'C29',
             'standardize': STANDARDIZE,

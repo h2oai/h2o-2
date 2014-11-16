@@ -1,0 +1,24 @@
+
+# is this the final response? no..redirect
+{
+  "Request2": 0, 
+  "description": "Anomaly", 
+  "destination_key": "a.hex", 
+  "dl_autoencoder_model": "d.hex", 
+  "end_time": 0, 
+  "exception": null, 
+  "job_key": "$0301c0a8012838d4ffffffff$_a2e6296543df0951137a312d5f23411e", 
+  "response_info": {
+    "h2o": "pytest-kevin-5473", 
+    "node": "/192.168.1.40:54327", 
+    "redirect_url": "/2/Progress2.json?job_key=%240301c0a8012838d4ffffffff%24_a2e6296543df0951137a312d5f23411e&destination_key=a.hex", 
+    "status": "redirect", 
+    "time": 0
+  }, 
+  "source": {
+    "_key": "x.hex"
+  }, 
+  "start_time": 1403890661782, 
+  "state": "RUNNING", 
+  "thresh": 1.0
+}

@@ -1,5 +1,6 @@
-import h2o_cmd, h2o, h2o_util
+import h2o_cmd, h2o_util
 import re, random, math
+from h2o_test import verboseprint, dump_json, check_sandbox_for_errors
 
 def pickRandDeepLearningParams(paramDict, params):
     randomGroupSize = random.randint(1,len(paramDict))
@@ -14,9 +15,8 @@ def pickRandDeepLearningParams(paramDict, params):
 
 ## Check that the last scored validation error is within a certain relative error of the expected result
 def checkLastValidationError(self, model, rows, expectedErr, relTol, **kwargs):
-
     errsLast = model['validation_errors'][-1] # last scoring result
-    h2o.verboseprint("Deep Learning 'Last scoring on test set:'", h2o.dump_json(errsLast))
+    verboseprint("Deep Learning 'Last scoring on test set:'", dump_json(errsLast))
     expectedSamples = rows * kwargs['epochs']
     print 'Expecting ' + format(expectedSamples) + ' training samples'
     if errsLast['training_samples'] != expectedSamples:
@@ -30,7 +30,7 @@ def checkLastValidationError(self, model, rows, expectedErr, relTol, **kwargs):
     warnings = None
 
     # shouldn't have any errors
-    h2o.check_sandbox_for_errors()
+    check_sandbox_for_errors()
 
     return (warnings)
 
@@ -45,6 +45,6 @@ def checkScoreResult(self, result, expectedErr, relTol, **kwargs):
     warnings = None
 
     # shouldn't have any errors
-    h2o.check_sandbox_for_errors()
+    check_sandbox_for_errors()
 
     return (warnings)

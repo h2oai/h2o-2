@@ -1,6 +1,6 @@
 import unittest, time, sys, random, string
-sys.path.extend(['.','..','py'])
-import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_nn, h2o_cmd, h2o_import as h2i
 
 DO_SUMMARY=False
 
@@ -10,16 +10,12 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
-        localhost = h2o.decide_if_localhost()
+        global SEED
         SEED = h2o.setup_random_seed()
-        if localhost:
-            h2o.build_cloud(java_heap_GB=12)
-        else:
+        h2o.init(java_heap_GB=12)
             # requires user 0xcustomer to access c21 data. So needs to be run with a -cj *json, 
             # or as user 0xcustomer
             # or a config json for the user needs to exist in this directory (like pytest_config-jenkins.json)
-            h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -32,8 +28,10 @@ class Basic(unittest.TestCase):
         hex_key = 'train.hex'
         validation_key = 'test.hex'
         timeoutSecs = 300
-        parseResult  = h2i.import_parse(path=csvPathname_train, hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
-        parseResultV = h2i.import_parse(path=csvPathname_test, hex_key=validation_key, timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
+        parseResult  = h2i.import_parse(path=csvPathname_train, hex_key=hex_key, 
+            timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
+        parseResultV = h2i.import_parse(path=csvPathname_test, hex_key=validation_key, 
+            timeoutSecs=timeoutSecs, doSummary=DO_SUMMARY)
         inspect = h2o_cmd.runInspect(None, hex_key)
         print "\n" + csvPathname_train, \
             "    numRows:", "{:,}".format(inspect['numRows']), \

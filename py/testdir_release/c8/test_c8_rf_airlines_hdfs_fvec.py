@@ -1,6 +1,6 @@
 import unittest, sys, time
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_hosts, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_rf
+import h2o, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_rf
 
 # RF train parameters
 paramsTrainRF = { 
@@ -69,7 +69,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         return scoreParseResult 
 
     def test_c8_rf_airlines_hdfs(self):
-        h2o.beta_features = True
         trainParseResult = self.loadTrainData()
         kwargs   = paramsTrainRF.copy()
         trainResult = h2o_rf.trainRF(trainParseResult, **kwargs)

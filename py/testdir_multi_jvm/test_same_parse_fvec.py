@@ -1,6 +1,6 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_import as h2i
 
 class glm_same_parse(unittest.TestCase):
     def tearDown(self):
@@ -8,18 +8,13 @@ class glm_same_parse(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_same_parse_fvec(self):
-        h2o.beta_features = True
         print "\nput and parse of same file, but both src_key and hex_key are the h2o defaults..always different"
         for trial in range (10):
             start = time.time()

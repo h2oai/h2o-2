@@ -1,27 +1,22 @@
 import unittest
 import random, sys, time, re
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import h2o_browse as h2b, h2o_gbm
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(3, java_heap_GB=28)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init(3, java_heap_GB=28)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GBM_covtype_train_test(self):
-        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
         files = [
@@ -31,7 +26,6 @@ class Basic(unittest.TestCase):
         # h2b.browseTheCloud()
 
         for (importFolderPath, trainFilename, trainKey, timeoutSecs, response, testFilename, testKey) in files:
-            h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             start = time.time()
             xList = []
@@ -39,32 +33,16 @@ class Basic(unittest.TestCase):
             fList = []
 
             # Parse (train)****************************************
-            if h2o.beta_features:
-                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
             parseTrainResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + trainFilename, schema='local',
-                hex_key=trainKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
-            # hack
-            if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
-                print "Filling in the parseTrainResult['destination_key'] for h2o"
-                parseTrainResult['destination_key'] = trainKey
-
+                hex_key=trainKey, timeoutSecs=timeoutSecs, doSummary=False)
             elapsed = time.time() - start
             print "train parse end on ", trainFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "train parse result:", parseTrainResult['destination_key']
 
             # Parse (test)****************************************
-            if h2o.beta_features:
-                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
             parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
-                hex_key=testKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
-            # hack
-            if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
-                print "Filling in the parseTestResult['destination_key'] for h2o"
-                parseTestResult['destination_key'] = testKey
-
+                hex_key=testKey, timeoutSecs=timeoutSecs, doSummary=False)
             elapsed = time.time() - start
             print "test parse end on ", testFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -87,18 +65,13 @@ class Basic(unittest.TestCase):
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
 
-                h2o.beta_features = True
                 # translate it (only really need to do once . out of loop?
                 h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
                 ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
                 # GBM train****************************************
                 trainStart = time.time()
-                gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
-                    noPoll=True, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
-                # hack
-                if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+                gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
                 trainElapsed = time.time() - trainStart
                 print "GBM training completed in", trainElapsed, "seconds. On dataset: ", trainFilename
 
@@ -122,9 +95,6 @@ class Basic(unittest.TestCase):
                     model_key=modelKey,
                     destination_key=predictKey,
                     timeoutSecs=timeoutSecs)
-                # hack
-                if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 elapsed = time.time() - start
                 print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
@@ -149,7 +119,6 @@ class Basic(unittest.TestCase):
                 eList.append(pctWrong)
                 fList.append(trainElapsed)
 
-            h2o.beta_features = False
             xLabel = 'max_depth'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'

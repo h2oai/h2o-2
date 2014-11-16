@@ -1,9 +1,8 @@
 import unittest, time, sys
-sys.path.extend(['.','..','py'])
+sys.path.extend(['.','..','../..','py'])
 import copy
 
 print "Needs numpy, rpy2, and R installed. Run on 172.16.271-175"
-# FIX! maybe should update to build_cloud_with_hosts to run on 171-175?
 
 import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_import as h2i
 import numpy as np
@@ -114,7 +113,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud()
+        h2o.init()
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -123,7 +122,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_both(self):
-        h2o.beta_features = True
         if (1==1):
             csvFilenameList = [
                 ('logreg', 'benign.csv', 'binomial', 3, 10),
@@ -176,13 +174,8 @@ class Basic(unittest.TestCase):
             destination_key = parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, destination_key)
 
-            if h2o.beta_features:
-                num_cols = inspect['numCols']
-                num_rows = inspect['numRows']
-            else:
-                num_cols = inspect['num_cols']
-                num_rows = inspect['num_rows']
-
+            num_cols = inspect['numCols']
+            num_rows = inspect['numRows']
             print "num_cols", num_cols, "num_rows", num_rows
             ##  print h2o.dump_json(inspect)
 
@@ -216,26 +209,15 @@ class Basic(unittest.TestCase):
         
             print 'x:', x
 
-            if h2o.beta_features:
-                kwargs = { 
-                    'n_folds': 0, 
-                    'response': y, 
-                    # what about x?
-                    'family': family, 
-                    'alpha': 0, 
-                    'lambda': 0,
-                    'beta_epsilon': 1.0E-4, 
-                    'max_iter': 50 }
-            else:
-                kwargs = { 
-                    'n_folds': 0, 
-                    'y': y, 
-                    'x': x,
-                    'family': family, 
-                    'alpha': 0, 
-                    'lambda': 1e-4,
-                    'beta_epsilon': 1.0E-4, 
-                    'max_iter': 50 }
+            kwargs = { 
+                'n_folds': 0, 
+                'response': y, 
+                # what about x?
+                'family': family, 
+                'alpha': 0, 
+                'lambda': 0,
+                'beta_epsilon': 1.0E-4, 
+                'max_iter': 50 }
 
             if csvFilename=='benign.csv':
                 kwargs['ignored_cols'] = '0,1'

@@ -1,6 +1,6 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_jobs
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_kmeans, h2o_import as h2i, h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -11,19 +11,13 @@ class Basic(unittest.TestCase):
         global SEED
         SEED = h2o.setup_random_seed()
 
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud()
-        else:
-            h2o_hosts.build_cloud_with_hosts()
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_kmeans_benign(self):
-        h2o.beta_features = True # fvec
         importFolderPath = "logreg"
         csvFilename = "benign.csv"
         hex_key = "benign.hex"
@@ -80,7 +74,6 @@ class Basic(unittest.TestCase):
 
 
     def test_kmeans_prostate(self):
-        h2o.beta_features = True # fvec
 
         importFolderPath = "logreg"
         csvFilename = "prostate.csv"

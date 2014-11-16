@@ -1,10 +1,10 @@
 import unittest, random, sys, time
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_import as h2i
 
 print "Just do a failing case"
 def define_params(): 
-    paramDict = {'destination_key': None, 'standardize': None, 'family': 'poisson', 'beta_epsilon': None, 'max_iter': None, 'higher_accuracy': None, 'tweedie_variance_power': None, 'lambda_search': 1, 'ignored_cols': 0, 'source': u'covtype.20k.hex', 'parallelism': None, 'beta_eps': None, 'n_folds': 1, 'alpha': 0.8, 'use_all_factor_levels': None, 'response': 54, 'lambda': 0}
+    paramDict = {'destination_key': None, 'standardize': None, 'family': 'poisson', 'beta_epsilon': None, 'max_iter': None, 'higher_accuracy': None, 'tweedie_variance_power': None, 'lambda_search': 1, 'ignored_cols': 0, 'source': u'covtype.20k.hex', 'n_folds': 1, 'alpha': 0.8, 'use_all_factor_levels': None, 'response': 54, 'lambda': 0}
 
     return paramDict
     
@@ -14,20 +14,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED
         SEED = h2o.setup_random_seed()
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1)
-        else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+        h2o.init()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GLM2_poisson_fail(self):
-        h2o.beta_features = True
         csvPathname = 'covtype/covtype.20k.data'
         hex_key = 'covtype.20k.hex'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
