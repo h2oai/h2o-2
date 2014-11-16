@@ -476,7 +476,7 @@ public class NewChunk extends Chunk {
   // Return the data so compressed.
   static final int MAX_FLOAT_MANTISSA = 0x7FFFFF;
 
-  Chunk compress() {
+  public Chunk compress() {
     Chunk res = compress2();
     assert _len == res.len();
     assert !sparse() || !res.isSparse() || sparseLen() == res.sparseLen();
