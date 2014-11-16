@@ -77,6 +77,7 @@ public class NewChunk extends Chunk {
     }
   }
 
+  public Iterator<Value> values(){ return values(0,Integer.MAX_VALUE);}
   public Iterator<Value> values(int fromIdx, int toIdx){
     final int lId, gId;
     final int to = Math.min(toIdx, _len);
