@@ -1,24 +1,18 @@
 package hex.drf;
 
-import static hex.drf.TreeMeasuresCollector.asSSE;
-import static hex.drf.TreeMeasuresCollector.asVotes;
-import static water.util.Utils.div;
-import static water.util.Utils.sum;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.drf.TreeMeasuresCollector.TreeMeasures;
 import hex.drf.TreeMeasuresCollector.TreeSSE;
 import hex.drf.TreeMeasuresCollector.TreeVotes;
-import hex.gbm.*;
+import hex.gbm.DHistogram;
+import hex.gbm.DTree;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
-
-import java.util.Arrays;
-import java.util.Random;
-
+import hex.gbm.SharedTreeModelBuilder;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.*;
@@ -26,6 +20,14 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+
+import java.util.Arrays;
+import java.util.Random;
+
+import static hex.drf.TreeMeasuresCollector.asSSE;
+import static hex.drf.TreeMeasuresCollector.asVotes;
+import static water.util.Utils.div;
+import static water.util.Utils.sum;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
@@ -217,6 +219,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     else if (seed == -1) _seed = _seedGenerator.nextLong(); else _seed = seed;
     if (sample_rate==1f && validation!=null)
       Log.warn(Sys.DRF__, "Sample rate is 100% and no validation dataset is specified. There are no OOB data to compute out-of-bag error estimation!");
+    if (!classification && do_grpsplit) {
+      Log.warn(Sys.DRF__, "Group splitting not defined for DRF. Switching off group splitting.");
+      do_grpsplit = false;
+    }
   }
 
   @Override protected void initAlgo(DRFModel initialModel) {
