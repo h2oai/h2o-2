@@ -10,6 +10,8 @@ import jsr166y.*;
 import water.Job.JobCancelledException;
 import water.fvec.Chunk;
 import water.fvec.Frame;
+import water.ga.EventHit;
+import water.ga.GoogleAnalytics;
 import water.nbhm.NonBlockingHashMap;
 import water.persist.*;
 import water.util.*;
@@ -83,6 +85,10 @@ public final class H2O {
   public static void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
   public static void ignore(Throwable e, String msg) { ignore(e, msg, true); }
   public static void ignore(Throwable e, String msg, boolean printException) { Log.debug(Sys.WATER, msg + (printException? e.toString() : "")); }
+
+  //Google analytics performance measurement
+  public static GoogleAnalytics GA;
+  public static int CLIENT_TYPE_GA_CUST_DIM = 1;
 
   // --------------------------------------------------------------------------
   // Embedded configuration for a full H2O node to be implanted in another
@@ -710,6 +716,8 @@ public final class H2O {
     public String beta = null;
     public String mem_watchdog = null; // For developer debugging
     public boolean md5skip = false;
+    public boolean ga_opt_out = false;
+    public String ga_hadoop_ver = null;
   }
 
   public static void printHelp() {
@@ -890,6 +898,14 @@ public final class H2O {
     printAndLogVersion();
     printWarningIfRootOnMac();
 
+    GA = new GoogleAnalytics("UA-56665317-2","H2O",H2O.getVersion());
+    if((new File(".h2o_no_collect")).exists()
+            || (new File(System.getProperty("user.home")+File.separator+".h2o_no_collect")).exists()
+            || OPT_ARGS.ga_opt_out ) {
+      GA.setEnabled(false);
+      Log.info("Opted out of sending usage metrics.");
+    }
+
     if (OPT_ARGS.baseport != 0) {
       DEFAULT_PORT = OPT_ARGS.baseport;
     }
@@ -941,6 +957,8 @@ public final class H2O {
     }
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
+
+    startGAStartupReport();
   }
 
   /** Starts the local k-v store.
@@ -1037,6 +1055,10 @@ public final class H2O {
 
   private static void startMemoryWatchdog() {
     new MemoryWatchdogThread().start();
+  }
+
+  private static void startGAStartupReport() {
+    new GAStartupReportThread().start();
   }
 
   // Used to update the Throwable detailMessage field.
@@ -1978,6 +2000,32 @@ public final class H2O {
         if (gracefulShutdownInitiated) { break; }
         check();
         if (gracefulShutdownInitiated) { break; }
+      }
+    }
+  }
+
+  public static class GAStartupReportThread extends Thread {
+    final private String threadName = "GAStartupReport";
+    final private int sleepMillis = 150 * 1000; //2.5 min
+
+    // Constructor.
+    public GAStartupReportThread() {
+      super("GAStartupReport");        // Only 9 characters get printed in the log.
+      setDaemon(true);
+      setPriority(MAX_PRIORITY - 2);
+    }
+
+    // Class main thread.
+    @Override
+    public void run() {
+      try {
+        Thread.sleep (sleepMillis);
+      }
+      catch (Exception ignore) {};
+      if (H2O.SELF == H2O.CLOUD._memary[0]) {
+        if (OPT_ARGS.ga_hadoop_ver != null)
+          H2O.GA.postAsync(new EventHit("System startup info", "Hadoop version", OPT_ARGS.ga_hadoop_ver, 1));
+        H2O.GA.postAsync(new EventHit("System startup info", "Cloud", "Cloud size", CLOUD.size()));
       }
     }
   }

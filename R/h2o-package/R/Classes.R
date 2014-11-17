@@ -12,6 +12,7 @@ setClass("H2OGrid", representation(key="character", data="H2OParsedData", model=
 setClassUnion("data.frameORnull", c("data.frame", "NULL"))
 setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame", gains="data.frameORnull"))
 
+setClass("H2OGapStatModel", contains="H2OModel")
 setClass("H2OCoxPHModel", contains="H2OModel", representation(summary="list", survfit="list"))
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 setClass("H2OKMeansModel", contains="H2OModel")
@@ -97,6 +98,66 @@ setMethod("show", "H2OGrid", function(object) {
   temp = data.frame(t(sapply(object@sumtable, c)))
   cat("\nSummary\n"); print(temp)
 })
+
+
+setMethod("show", "H2OGapStatModel", function(object) {
+  cat("\n")
+  cat("Number of KMeans Run: ", object@model$params$K*(object@model$params$B + 1), "\n")
+  cat("Optimal Number of Clusters: ", object@model$k_opt, "\n")
+  cat("\nFor more, try `summary` and `plot` methods.\n\n")
+  cat("\n")
+})
+
+summary.H2OGapStatModel <-
+function(object, ...) {
+  x    <- 1:length(object@model$log_within_ss)
+  lwk  <- object@model$log_within_ss
+  elwk <- object@model$boot_within_ss
+  sdev <- object@model$se_boot_within_ss
+  gaps <- object@model$gap_stats
+
+  row.names <- c("LWCSS", "E[LWCSS]", "sdevs", "gaps")
+
+  fr <- matrix(ncol=length(x), nrow=4)
+  fr[1,] <- lwk
+  fr[2,] <- elwk
+  fr[3,] <- sdev
+  fr[4,] <- gaps
+  fr <- as.data.frame(fr)
+  rownames(fr) <- row.names
+  colnames(fr) <- x
+
+#  cat("\n")
+#  cat("(LWCSS = Log of Within Cluster Sum of Squares)", "\n\n")
+#  cat("LWCSS for each k (log(W_k)):\n", lwk, "\n\n")
+#  cat("Expected LWCSS for each k (log(W*_k)):\n", elwk, "\n\n")
+#  cat("Standard Errors Expected LWCSS for each k:\n", sdev, "\n\n")
+#  cat("Gap Statistics:\n", gaps, "\n\n")
+#  cat("\n")
+  print(fr)
+
+  cat("\nTry plotting the Gap Statistic Model:\n")
+  cat("\nExample: plot(my.model)\n\n")
+
+  invisible(return(fr))
+}
+
+plot.H2OGapStatModel<-
+function(x, ...) {
+  object <- x
+  x    <- 1:length(object@model$log_within_ss)
+  lwk  <- object@model$log_within_ss
+  elwk <- object@model$boot_within_ss
+  sdev <- object@model$se_boot_within_ss
+  gaps <- object@model$gap_stats
+
+  par(mfrow=c(3,1))
+  plot(x, lwk, xlab="number of clusters k", ylab = "log(W_k)", type="o", pch=19)
+  plot(x, lwk, xlab="number of clusters k", ylab = "obs and exp log(W_k)", pch = "O", type="o", ylim=c(0,max(lwk, elwk)))
+  lines(x,elwk, pch="E", type="o")
+  plot(x, gaps, ylim=c(min(gaps-sdev), max(gaps+sdev)), type="o", pch=19, xlab="number of clusters k", ylab="Gap")
+  suppressWarnings(arrows(x, gaps-sdev, x, gaps+sdev, length=0.05, angle=90, code=3))  # suppress warning on case where sdev ~ 0
+}
 
 setMethod("show", "H2OCoxPHModel", function(object)
   get("print.coxph", getNamespace("survival"))(object@model))
@@ -215,7 +276,7 @@ setMethod("show", "H2OKMeansModel", function(object) {
     cat("\n\nCluster means:\n"); print(model$centers)
     cat("\nClustering vector:\n"); print(summary(model$cluster))
     cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
-    cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
+#    cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
     cat("\nAvailable components:\n\n"); print(names(model))
 })
 

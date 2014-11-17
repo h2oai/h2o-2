@@ -397,10 +397,11 @@ h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5,
                             variable_importances = as.numeric(variable_importances), use_all_factor_levels = as.numeric(use_all_factor_levels), 
                             link = link, offset = offset, has_intercept = as.numeric(has_intercept), non_negative = as.numeric(non_negative))
 
-  if (x_ignore=="")
-    x <- setdiff(colnames(data),y)
-  else
-    x <- setdiff(colnames(data)[-(x_ignore+1)], y)
+
+  if (length(x_ignore) == 1) {
+    if (x_ignore=="")
+      x <- setdiff(colnames(data),y)
+  } else x <- setdiff(colnames(data)[-(x_ignore+1)], y)
 
   params = list(x=x, y=y, family=.h2o.__getFamily(family, tweedie.var.p=tweedie.p),
                 link = link, nfolds=nfolds, alpha=alpha, nlambda=nlambda,
@@ -1364,24 +1365,29 @@ h2o.hitRatio <- function(prediction, reference, k = 10, seed = 0) {
   return(temp)
 }
 
-h2o.gapStatistic <- function(data, cols = "", K.max = 10, B = 100, boot_frac = 0.33, seed = 0) {
+h2o.gapStatistic <- function(data, cols = "", K = 10, B = 10, boot_frac = 0.1, max_iter = 50, seed = 0) {
   args <- .verify_datacols(data, cols)
+  ignored_cols <- if (args$cols_ignore == "") "" else (match(args$cols_ignore, colnames(data)) - 1)
   if(!is.numeric(B) || B < 1) stop("B must be an integer greater than 0")
-  if(!is.numeric(K.max) || K.max < 2) stop("K.max must be an integer greater than 1")
+  if(!is.numeric(K) || K < 2) stop("K.max must be an integer greater than 1")
   if(!is.numeric(boot_frac) || boot_frac < 0 || boot_frac > 1) stop("boot_frac must be a number between 0 and 1")
   if(!is.numeric(seed)) stop("seed must be numeric")
-  
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTAT, source = data@key, b_max = B, k_max = K.max, bootstrap_fraction = boot_frac, seed = seed)
+
+  res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTAT, source = data@key, ignored_cols = ignored_cols, b_max = B, k_max = K, bootstrap_fraction = boot_frac, seed = seed)
   .h2o.__waitOnJob(data@h2o, res$job_key)
-  res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTATVIEW, '_modelKey' = res$destination_key)
-  
-  result = list()
-  result$log_within_ss = res2$gap_model$wks
-  result$boot_within_ss = res2$gap_model$wkbs
-  result$se_boot_within_ss = res2$gap_model$sk
-  result$gap_stats = res2$gap_model$gap_stats
-  result$k_opt = res2$gap_model$k_best
-  return(result)
+  res2 <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTATVIEW, '_modelKey' = res$destination_key)
+
+  result <- list()
+  result$log_within_ss     <- res2$gap_model$wks
+  result$boot_within_ss    <- res2$gap_model$wkbs
+  result$se_boot_within_ss <- res2$gap_model$sk
+  result$gap_stats <- res2$gap_model$gap_stats
+  result$k_opt     <- res2$gap_model$k_best
+  result$params    <- list()
+  result$params$K  <- K
+  result$params$B  <- B
+  result$params$boot_frac <- boot_frac
+  new("H2OGapStatModel", data=data, key="", model = result)
 }
 
 h2o.performance <- function(data, reference, measure = "accuracy", thresholds, gains = TRUE, ...) {
