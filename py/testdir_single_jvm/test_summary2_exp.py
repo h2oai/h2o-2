@@ -65,12 +65,13 @@ class Basic(unittest.TestCase):
         LAMBD = random.uniform(0.005, 0.5)
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (10,     1, 'x.hex', 1, 20000,        ('C1', None, None, None, None, None)),
-            (100,    1, 'x.hex', 1, 20000,        ('C1', None, None, None, None, None)),
-            (1000,   1, 'x.hex', -5000, 0,        ('C1', None, None, None, None, None)),
-            (10000,  1, 'x.hex', -100000, 100000, ('C1', None, None, None, None, None)),
-            (100000, 1, 'x.hex', -1, 1,           ('C1', None, None, None, None, None)),
-            (1000000, 1, 'A.hex', 1, 100,          ('C1', None, None, None, None, None)),
+            (5,     1, 'x.hex', 1, 20000,         ['C1', None, None, None, None, None]),
+            (10,     1, 'x.hex', 1, 20000,        ['C1', None, None, None, None, None]),
+            (100,    1, 'x.hex', 1, 20000,        ['C1', None, None, None, None, None]),
+            (1000,   1, 'x.hex', -5000, 0,        ['C1', None, None, None, None, None]),
+            (10000,  1, 'x.hex', -100000, 100000, ['C1', None, None, None, None, None]),
+            (100000, 1, 'x.hex', -1, 1,           ['C1', None, None, None, None, None]),
+            (1000000, 1, 'A.hex', 1, 100,         ['C1', None, None, None, None, None]),
         ]
 
         timeoutSecs = 10
@@ -96,8 +97,11 @@ class Basic(unittest.TestCase):
             # add 5% for fp errors?
             maxDelta = 1.05 * maxDelta
 
+            expected[1] = expectedMin
+            expected[5] = expectedMax
+
             csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', header=0, hex_key=hex_key, timeoutSecs=30, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -128,7 +132,7 @@ class Basic(unittest.TestCase):
             mins = stats['mins']
             maxs = stats['maxs']
             pct = stats['pct']
-            expectedPct= [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+            expectedPct= [0.001, 0.001, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.99, 0.999]
             pctile = stats['pctile']
             # the thresholds h2o used, should match what we expected
             if expected[0]:
@@ -157,6 +161,20 @@ class Basic(unittest.TestCase):
 
             print "Can't estimate the bin distribution"
 
+            # figure out the expected max error
+            # use this for comparing to sklearn/sort
+            if expected[1] and expected[5]:
+                expectedRange = expected[5] - expected[1]
+                # because of floor and ceil effects due we potentially lose 2 bins (worst case)
+                # the extra bin for the max value, is an extra bin..ignore
+                expectedBin = expectedRange/(MAX_QBINS-2)
+                maxErr = expectedBin # should we have some fuzz for fp?
+
+            else:
+                print "Test won't calculate max expected error"
+                maxErr = 0
+
+
             pt = h2o_util.twoDecimals(pctile)
             mx = h2o_util.twoDecimals(maxs)
             mn = h2o_util.twoDecimals(mins)
@@ -179,13 +197,14 @@ class Basic(unittest.TestCase):
                 # also get the median with a sort (h2o_summ.percentileOnSortedlist()
                 h2o_summ.quantile_comparisons(
                     csvPathnameFull,
-                    skipHeader=True,
+                    skipHeader=False,
                     col=scipyCol,
                     datatype='float',
                     quantile=0.5 if DO_MEDIAN else 0.999,
                     h2oSummary2=pctile[5 if DO_MEDIAN else 10],
                     # h2oQuantilesApprox=qresult_single,
                     # h2oQuantilesExact=qresult,
+                    h2oSummary2MaxErr=maxErr,
                     )
 
 
