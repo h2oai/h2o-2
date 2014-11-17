@@ -220,7 +220,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     if (sample_rate==1f && validation!=null)
       Log.warn(Sys.DRF__, "Sample rate is 100% and no validation dataset is specified. There are no OOB data to compute out-of-bag error estimation!");
     if (!classification && do_grpsplit) {
-      Log.warn(Sys.DRF__, "Group splitting not defined for DRF. Switching off group splitting.");
+      Log.info(Sys.DRF__, "Group splitting not supported for DRF regression. Forcing group splitting to false.");
       do_grpsplit = false;
     }
   }
