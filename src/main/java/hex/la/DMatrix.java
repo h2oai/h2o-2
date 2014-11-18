@@ -1,7 +1,9 @@
 package hex.la;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.H2O.H2OEmptyCompleter;
 import water.fvec.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -12,6 +14,7 @@ import water.util.Utils;
 import javax.xml.bind.attachment.AttachmentUnmarshaller;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
 * Created by tomasnykodym on 11/13/14.
@@ -47,22 +50,46 @@ public class DMatrix  {
     return tgt;
   }
 
-  public static Frame mmul2(Frame x, Frame y) {
+  private static class MulProgress extends Iced {
+    final long chunksTotal;
+    long chunksDone;
+    String [] chunkTypes;
+    long [] chunkCnts;
+    long [] chunkSz;
+
+    public MulProgress(long n){chunksTotal = n; }
+
+    public float progress(){ return (float)((double)chunksTotal/chunksDone);}
+
+  }
+  public static Frame mmul(Frame x, Frame y) {
+    final Key progressKey = Key.make();
+    Frame z = new Frame(x.anyVec().makeZeros(y.numCols()));
+    DKV.put(progressKey, new MulProgress(z.vecs().length*z.anyVec().nChunks()));
+
+    Job j = new Job(Key.make(x._key + " %*% " + y._key),progressKey){
+      @Override public float progress(){
+        MulProgress p = DKV.get(progressKey).get();
+        return p.progress();
+      }
+    };
+    j.start(new H2OEmptyCompleter());
+
     if(x.numCols() != y.numRows())
       throw new IllegalArgumentException("dimensions do not match! x.numcols = " + x.numCols() + ", y.numRows = " + y.numRows());
     // make the target frame which is compatible with left hand side (same number of rows -> keep it's vector group and espc)
-    Frame z = new Frame(x.anyVec().makeZeros(y.numCols()));
     // make transpose co-located with y
     x = transpose(x,new Frame(y.anyVec().makeZeros((int)x.numRows())));
     x.reloadVecs();
-    new MatrixMulTsk2(x,y).doAll(z);
+    new MatrixMulTsk2(x,y,progressKey).doAll(z);
     z.reloadVecs();
     x.delete();
+    j.remove();
     return z;
   }
 
   // second version of matrix multiply -> no global transpose, just locally transpose chunks (rows compressed instead of column compressed)
-  public static Frame mmul(Frame x, Frame y) {
+  public static Frame mmul2(Frame x, Frame y) {
     if(x.numCols() != y.numRows())
       throw new IllegalArgumentException("dimensions do not match! x.numcols = " + x.numCols() + ", y.numRows = " + y.numRows());
     // make the target frame which is compatible with left hand side (same number of rows -> keep it's vector group and espc)
@@ -187,37 +214,70 @@ public class DMatrix  {
    */
   public static class MatrixMulTsk2 extends MRTask2<MatrixMulTsk> {
     private final Frame _X, _Y;
-
-    public MatrixMulTsk2(Frame X, Frame Y) {
+    final Key _progressKey;
+    public MatrixMulTsk2(Frame X, Frame Y, Key progressKey) {
       _X = X;
       _Y = Y;
+      _progressKey = progressKey;
     }
+    private static final int MAX_P = 10;
 
+    private transient AtomicInteger _j;
+    private class Cmp extends H2OCountedCompleter {
+      final int _i;
+      final Chunk [] chks;
+      final Vec [] xs;
+      public Cmp(int i, Chunk [] chks, Vec [] xs){
+        super(MatrixMulTsk2.this);
+        _i = i;
+        this.chks = chks;
+        this.xs = xs;
+      }
+
+      @Override
+      public void compute2() {throw H2O.fail("do not call!");}
+
+      @Override public void onCompletion(CountedCompleter caller){
+        int j = _j.incrementAndGet();
+        if(j < chks.length)
+          new VecMulTsk(new Cmp(j,chks,xs), chks[j], _fs).asyncExec(Utils.append(new Vec[]{_Y.vec(j)}, xs));
+      }
+    }
     public void map(Chunk [] chks) {
+      _j = new AtomicInteger(MAX_P);
       addToPendingCount(chks.length);
       int iStart = (int)chks[0]._start;
       int iEnd = iStart + chks[0]._len;
       Vec[] xs = Arrays.copyOfRange(_X.vecs(), iStart, iEnd);
-      for(int j = 0; j < chks.length; ++j)
-        new VecMulTsk(this,chks[j],_fs).asyncExec(Utils.append(new Vec[]{_Y.vec(j)}, xs));
+      for(int i = 0; i < Math.min(MAX_P,chks.length); ++i)
+        new VecMulTsk(new Cmp(i,chks,xs), chks[i], _fs).asyncExec(Utils.append(new Vec[]{_Y.vec(i)}, xs));
     }
   }
 
   private static final class VecMulTsk extends MRTask2<VecMulTsk> {
-    final transient Chunk _c;
+    final transient Key _k;
     final transient Futures _fs;
     double [] _res;
     public VecMulTsk(H2OCountedCompleter cmp, Chunk c, Futures fs) {
       super(cmp);
-      _c = c; _fs = fs;
+      _k = c._vec.chunkKey(c.cidx()); _fs = fs;
     }
     @Override
     public void map(Chunk [] chks) {
       _res = MemoryManager.malloc8d(chks.length-1);
+      int [] pos = MemoryManager.malloc4(chks.length-1);
+      for(int i = 0; i < pos.length; ++i)
+        pos[i] = chks[i+1].nextNZ(-1);
       for(int i = 0; i < chks[0]._len; i = chks[0].nextNZ(i)) {
         final double y = chks[0].at0(i);
-        for(int j = 1; j < chks.length; ++j)
-          _res[j-1] += y*chks[j].at0(i);
+        for(int j = 1; j < chks.length; ++j) {
+          if(chks[j] instanceof CXIChunk)
+            while(pos[j-1] < chks[j]._len && pos[j-1] < i)
+              pos[j-1] = chks[j].nextNZ(pos[j-1]);
+          else pos[j-1] = i;
+          if(pos[j-1] == i)
+            _res[j - 1] += y * chks[j].at0(i);
+        }
       }
     }
     @Override
@@ -225,10 +285,7 @@ public class DMatrix  {
 
     @Override
     public void postGlobal() {
-      assert _c.len() == _res.length;
-      for(int i = 0; i < _res.length; ++i)
-        _c.set0(i, _res[i]);
-      _c.close(_c.cidx(),_fs);
+      DKV.put(_k, new NewChunk(_res).compress(),_fs, false);
     }
   }
 
