@@ -12,7 +12,7 @@ train <- read.table("http://www.stat.berkeley.edu/~ledell/data/higgs_5k.csv", se
 test <- read.table("http://www.stat.berkeley.edu/~ledell/data/higgs_test_5k.csv", sep=",")
 
 
-# Convert R data.frames into H2O parsed data object
+# Convert R data.frames into H2O parsed data objects
 data <- as.h2o(localH2O, train)
 newdata <- as.h2o(localH2O, test)
 y <- "V1"

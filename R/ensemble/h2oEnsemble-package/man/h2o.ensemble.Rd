@@ -9,7 +9,7 @@ This function creates a "super learner" ensemble using the H2O base learning alg
 \usage{
 h2o.ensemble(x, y, data, family = "binomial", 
   learner, metalearner = "h2o.glm.wrapper", 
-  cvControl = list(V=10, shuffle=TRUE), 
+  cvControl = list(V=5, shuffle=TRUE), 
   seed = 1, parallel = "seq")
 }
 \arguments{
@@ -119,7 +119,7 @@ train <- read.table("http://www.stat.berkeley.edu/~ledell/data/higgs_5k.csv", se
 test <- read.table("http://www.stat.berkeley.edu/~ledell/data/higgs_test_5k.csv", sep=",")
 
 
-# Convert R data.frames into H2O parsed data object
+# Convert R data.frames into H2O parsed data objects
 data <- as.h2o(localH2O, train)
 newdata <- as.h2o(localH2O, test)
 y <- "V1"
