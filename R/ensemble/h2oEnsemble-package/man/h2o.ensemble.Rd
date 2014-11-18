@@ -106,53 +106,61 @@ Using an h2o algorithm wrapper function as the metalearner is not yet producing 
 \examples{
 \dontrun{
     
+# An example of binary classification using h2o.ensemble
+
 library(h2oEnsemble)
-library(caret)  #Used to generate data
-library(cvAUC)  #Used to calculate test set AUC (requires version >=0.0.2 of cvAUC)
-library(SuperLearner)  #For metalearner such as 'SL.glm'
+library(SuperLearner)  # For metalearner such as "SL.glm"
+library(cvAUC)  # Used to calculate test set AUC (requires version >=1.0.1 of cvAUC)
 localH2O <-  h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, nthreads = -1)
 
 
-# Create sample train and test sets.
-set.seed(1)
-train <- twoClassSim(n = 1000, intercept = -13)
-test <- twoClassSim(n = 1000, intercept = -13)
-train[,c("Class")] <- ifelse(train[,c("Class")]=="Class2", 1, 0)
-test[,c("Class")] <- ifelse(test[,c("Class")]=="Class2", 1, 0)
+# Import a sample binary outcome train/test set into R
+train <- read.table("http://www.stat.berkeley.edu/~ledell/data/higgs_5k.csv", sep=",")
+test <- read.table("http://www.stat.berkeley.edu/~ledell/data/higgs_test_5k.csv", sep=",")
 
+
+# Convert R data.frames into H2O parsed data object
 data <- as.h2o(localH2O, train)
 newdata <- as.h2o(localH2O, test)
-y <- "Class"
+y <- "V1"
 x <- setdiff(names(data), y)
 family <- "binomial"
 
 
-# Set up the ensemble by choosing a base learner library and metalearer
-learner <- c("h2o.randomForest.wrapper", "h2o.gbm.wrapper", 
-    "h2o.glm.wrapper", "h2o.deeplearning.wrapper")
+# Create a custom base learner library & specify the metalearner
+h2o.randomForest.1 <- function(..., ntrees = 1000, nbins = 100, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, nbins = nbins, seed = seed)
+h2o.deeplearning.1 <- function(..., hidden = c(500,500), activation = "Rectifier", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+h2o.deeplearning.2 <- function(..., hidden = c(200,200,200), activation = "Tanh", seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+learner <- c("h2o.randomForest.1", "h2o.deeplearning.1", "h2o.deeplearning.2")
+metalearner <- c("SL.glm")
 
-metalearner <- "SL.glm"
 
-
-# Train the ensemble
+# Train the ensemble using 4-fold CV to generate level-one data
+# More CV folds will take longer to train, but should increase performance
 fit <- h2o.ensemble(x = x, y = y, data = data, family = family, 
-                     learner = learner, metalearner = metalearner) 
+                    learner = learner, metalearner = metalearner,
+                    cvControl = list(V=4))
 
 
 # Generate predictions on the test set
 pred <- predict(fit, newdata)
+labels <- as.data.frame(newdata[,c(y)])[,1]
 
 
 # Ensemble test AUC 
-AUC(predictions=as.data.frame(pred$pred)[,1], labels=as.data.frame(newdata$Class)$Class)
-# 0.9745787
+AUC(predictions=as.data.frame(pred$pred)[,1], labels=labels)
+# 0.7681649
 
-# Base learner test set AUC (for comparison)
-sapply(seq(ncol(pred$basepred)), function(i) AUC(as.data.frame(pred$basepred)[,i], as.data.frame(newdata$Class)$Class)) 
-# 0.9519398 0.8957430 0.8838828 0.9604108
 
-# Note that the ensemble results above are not reproducible since h2o.deeplearning is not reproducible when using multiple cores.  
-# The results from the other three base learners should be reproducible, however.
+# Base learner test AUC (for comparison)
+L <- length(learner)
+sapply(seq(L), function(l) AUC(predictions = as.data.frame(pred$basepred)[,l], labels = labels)) 
+# 0.7583084 0.7145333 0.7123253
+
+
+# Note that the ensemble results above are not reproducible since 
+# h2o.deeplearning is not reproducible when using multiple cores.
+# For reproducible results, use h2o.init(nthreads = 1)
 
 }
 }
