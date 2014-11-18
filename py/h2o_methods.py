@@ -464,9 +464,11 @@ def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2
 def store_view(self, timeoutSecs=60, print_params=False, **kwargs):
     params_dict = {
         # now we should default to a big number, so we see everything
+        'filter': None,
         'view': 10000,
         'offset': 0,
     }
+    # no checking on legal kwargs?
     params_dict.update(kwargs)
     if print_params:
         print "\nStoreView params list:", params_dict

@@ -5,18 +5,10 @@
         "model": { "type": "object", "properties": {
             "_dataKey": { "type": "string" },
             "_key": { "type": "string" },
-            "_domains": { "type": "array", "items": 
-                { "type": "string" }
-            },
-            "_names": { "type": "array", "items": 
-                { "type": "string" }
-            },
-            "cluster_variances": { "type": "array", "items":
-                { "type": "number" } 
-            },
-            "clusters": { "type": "array", "items":
-                { "type": "array" }
-            },
+            "_domains": { "type": "array", "items": { "type": "string" } },
+            "_names": { "type": "array", "items": { "type": "string" } },
+            "cluster_variances": { "type": "array", "items": { "type": "number" } },
+            "clusters": { "type": "array", "items": { "type": "array" } },
             "error": { "type": "number" },
             "iterations": { "type": "number" },
             "max_iter": { "type": "number" },
