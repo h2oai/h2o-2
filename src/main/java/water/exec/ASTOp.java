@@ -3,6 +3,7 @@ package water.exec;
 import hex.FrameTask.DataInfo;
 import hex.Quantiles;
 import hex.gram.Gram.GramTask;
+import hex.la.DMatrix;
 import hex.la.Matrix;
 import org.apache.commons.math3.util.ArithmeticUtils;
 import org.joda.time.DateTime;
@@ -1553,7 +1554,7 @@ class ASTMMult extends ASTOp {
   }
   @Override ASTOp make() { return new ASTMMult(); }
   @Override void apply(Env env, int argcnt, ASTApply apply) {
-    env.poppush(3,new Matrix(env.ary(-2)).mult(env.ary(-1)),null);
+    env.poppush(3, DMatrix.mmul(env.ary(-2),env.ary(-1)),null);
   }
 }
 
@@ -1582,7 +1583,7 @@ class ASTMTrans extends ASTOp {
       Frame fr = new Frame(new String[] {"C1"}, new Vec[] {vec});
       env.poppush(2,new Matrix(fr).trans(),null);
     } else
-      env.poppush(2,new Matrix(env.ary(-1)).trans(),null);
+      env.poppush(2,DMatrix.transpose(env.ary(-1)),null);
   }
 }
 

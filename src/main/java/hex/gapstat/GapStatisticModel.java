@@ -40,8 +40,8 @@ public class GapStatisticModel extends Model implements Job.Progress {
   @API(help = "The gap statistics per value of k.")
   double[] gap_stats;
 
-   @API(help = "Optimal number of clusters.")
-   int k_best = 1;
+  @API(help = "Optimal number of clusters.")
+  int k_best = 1;
 
   public GapStatisticModel(Key selfKey, Key dataKey, Frame fr, int ks, double[] wks, double[] log_wks, double[] sk, int k_max, int b_max, int k, int b) {
     super(selfKey, dataKey, fr,  /* priorClassDistribution */ null);
@@ -63,8 +63,7 @@ public class GapStatisticModel extends Model implements Job.Progress {
 
   @Override
   public float progress() {
-//    float p1 = (float) ((double) (k - 1) / (double) k_max);
-    return (float) (( (double) (k - 1) /  (double) k_max ) +  (double) b / (double) ( b_max * k_max ));
+    return ((k-1)*(b_max+1) + b + 1)/ (float)(k_max*(b_max+1));
   }
 
   @Override protected float[] score0(double[] data, float[] preds) {
@@ -175,46 +174,22 @@ public class GapStatisticModel extends Model implements Job.Progress {
     sb.append("</table></span>");
 
     //Compute optimal k: min k such that G_k >= G_(k+1) - s_(k+1)
-    int kmin = -1;
-    for (int i = 0; i < gaps.length-1; ++i) {
-      int cur_k = i + 1;
-      if(gaps[cur_k] == 0) {
-        kmin = 0;
-        k_best = 1; //= kmin;
-        break;
-      }
-      if (i == gaps.length - 1) {
-        kmin = cur_k;
-        k_best = kmin;
-        break;
-      }
-      if ( gaps[i] >= (gaps[i+1] - sks[i+1])) {
-        kmin = cur_k;
-        k_best = kmin;
-        break;
-      }
-    }
-
-    if (kmin <= 0) k_best = 1;
-
-    if (log_wks[log_wks.length -1] != 0) {
+    int kmin = compute_k_best();
+    if (log_wks[log_wks.length - 1] != 0) {
       DocGen.HTML.section(sb, "Best k:");
       if (kmin <= 1) {
         sb.append("No optimal number of clusters found (best k = 1).");
       } else {
-      sb.append("k = ").append(kmin);
+        sb.append("k = ").append(kmin);
       }
     } else {
       DocGen.HTML.section(sb, "Best k so far:");
       if (kmin <= 1) {
         sb.append("No k computed yet...");
       } else {
-      sb.append("k = ").append(kmin);
+        sb.append("k = ").append(kmin);
       }
     }
-
-    if (k_best <= 0) k_best = (int)Double.NaN;
-    if (k_best == 0) k_best = 1;
 
     float[] K = new float[ks];
     float[] wks_y = new float[ks];
@@ -241,8 +216,6 @@ public class GapStatisticModel extends Model implements Job.Progress {
             DocGen.HTML.toJSArray(new StringBuilder(), names, null, gap_stats.length),
             DocGen.HTML.toJSArray(new StringBuilder(), gs , null, gap_stats.length)
     );
-//    D3Plot plt2 = new D3Plot(K, gs, "k (Number of clusters)", " Gap Statistics ", "Gap Statistic Elbow Plot", true, false);
-//    plt2.generate(sb);
 
     DocGen.HTML.section(sb, "Gap Statistics Less Standard Errors");
     sb.append("<br />");
@@ -255,5 +228,43 @@ public class GapStatisticModel extends Model implements Job.Progress {
             DocGen.HTML.toJSArray(new StringBuilder(), names, null, gap_stats.length),
             DocGen.HTML.toJSArray(new StringBuilder(), new_gs , null, gap_stats.length)
     );
+  }
+
+  int compute_k_best() {
+    double[] gaps = gaps();
+    double[] log_wks = wks();
+    double[] sks = sk();
+    int kmin = -1;
+    for (int i = 0; i < gaps.length - 1; ++i) {
+      int cur_k = i + 1;
+      if (gaps[cur_k] == 0) {
+        kmin = 0;
+        k_best = 1; //= kmin;
+        break;
+      }
+      if (i == gaps.length - 1) {
+        kmin = cur_k;
+        k_best = kmin;
+        break;
+      }
+      if (gaps[i] >= (gaps[i + 1] - sks[i + 1])) {
+        kmin = cur_k;
+        k_best = kmin;
+        break;
+      }
+    }
+
+    if (kmin <= 0) k_best = 1;
+
+    if (log_wks[log_wks.length - 1] != 0) {
+      if (kmin > 1) k_best = kmin;
+    } else {
+      if (kmin > 1) k_best = kmin;
+    }
+
+    if (k_best <= 0) k_best = (int)Double.NaN;
+    if (k_best == 0) k_best = 1;
+
+    return kmin;
   }
 }

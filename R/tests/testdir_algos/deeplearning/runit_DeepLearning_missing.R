@@ -28,7 +28,9 @@ check.deeplearning_missing <- function(conn) {
     train = splits[[1]]
     test  = splits[[2]]
 
-    hh=h2o.deeplearning(x=c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22),y=24,activation='RectifierWithDropout',l1=1e-5,input_dropout=0.2,data=train,validation=test,hidden=c(200,200));
+    hh=h2o.deeplearning(x=3:22,y=24,data=train,validation=test,
+                        activation='RectifierWithDropout', hidden=c(200,200),
+                        l1=1e-5,input_dropout=0.2);
     print(hh)
     errors[i] = hh@model$valid_class_error
   }
