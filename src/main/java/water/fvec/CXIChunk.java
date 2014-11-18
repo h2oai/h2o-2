@@ -57,8 +57,21 @@ public class CXIChunk extends Chunk {
   @Override boolean setNA_impl(int idx)         { return false; }
 
   @Override protected long at8_impl(int idx) {
-    int off = findOffset(idx);
+    int off = _offCache;
+    int prevIdx = getId(off);
+    if(prevIdx == idx)
+      return getIValue(off);
+    if(prevIdx < idx) {
+      int nextIdx = getId(off + _ridsz + _valsz);
+      if(nextIdx > idx) return 0;
+      if(nextIdx == idx) {
+        _offCache = (off += _ridsz + _valsz);
+        return getIValue(off);
+      }
+    }
+    off = findOffset(idx);
     if(getId(off) != idx)return 0;
+    _offCache = off;
     long v = getIValue(off);
     if( v== NAS[_valsz_log])
       throw new IllegalArgumentException("at8 but value is missing");
@@ -173,9 +186,18 @@ public class CXIChunk extends Chunk {
     return this;
   }
 
+  protected transient volatile int _offCache = OFF;
   @Override public final int nextNZ(int rid){
-    final int off = rid == -1?OFF:findOffset(rid);
+    if(rid == -1) {
+      _offCache = OFF;
+      return getId(OFF);
+    }
+    int off = _offCache;
     int x = getId(off);
+    if(x != rid) {
+      off = _offCache = rid == -1 ? OFF : findOffset(rid);
+      x = getId(off);
+    }
     if(x > rid)return x;
     if(off < _mem.length - _ridsz - _valsz)
       return getId(off + _ridsz + _valsz);
