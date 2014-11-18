@@ -434,6 +434,10 @@ public final class ParseDataset2 extends Job {
       eut.doAll(evecs);
     }
 
+    Futures fs = new Futures();
+    for(final Vec v2:fr.vecs())
+      v2.rollupStats(fs);
+    fs.blockForPending();
     logParseResults(job, fr);
 
     // Release the frame for overwriting
