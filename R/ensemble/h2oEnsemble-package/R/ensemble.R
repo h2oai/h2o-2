@@ -1,7 +1,7 @@
 h2o.ensemble <-
 function(x, y, data, family = "binomial", 
                          learner, metalearner = "h2o.glm.wrapper",
-                         cvControl = list(), seed = 1, parallel = "seq") {
+                         cvControl = list(V=5, shuffle=TRUE), seed = 1, parallel = "seq") {
   
   # This function is derived from the subsemble::subsemble function, 
   # although it only implements standard stacking / SuperLearner functionality, 
@@ -191,7 +191,7 @@ function(x, y, data, family = "binomial",
 }
 
 
-.cv_control <- function(V = 10L, stratifyCV = TRUE, shuffle = TRUE){
+.cv_control <- function(V = 5L, stratifyCV = TRUE, shuffle = TRUE){
   # Parameters that control the CV process
   # Only part of this being used currently --  
   # Stratification is not enabled yet in the h2o.ensemble function.
