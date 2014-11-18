@@ -73,6 +73,7 @@ function(x, y, data, family = "binomial",
   # Fit the final L models on all data to be saved with the fit
   # As above, this parallel code should probably be modified to use doPar or similar to replace all the if/else
   # Also, we should not "FORK"...
+  print("Fitting final base models on full data")
   if (inherits(parallel, "cluster")) {
     #If the parallel object is a snow cluster
     fitlist <- parSapply(cl=parallel, X=1:L, FUN=.fitWrapper, y=y, xcols=x, data=data,

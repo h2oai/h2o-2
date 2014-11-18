@@ -4,12 +4,13 @@
 H2O Ensemble
 }
 \description{
-This function creates a super learner ensemble using the H2O base learning algorithms specified by the user.
+This function creates a "super learner" ensemble using the H2O base learning algorithms specified by the user.
 }
 \usage{
 h2o.ensemble(x, y, data, family = "binomial", 
   learner, metalearner = "h2o.glm.wrapper", 
-  cvControl = list(), seed = 1, parallel = "seq")
+  cvControl = list(V=10, shuffle=TRUE), 
+  seed = 1, parallel = "seq")
 }
 \arguments{
   \item{x}{
@@ -34,10 +35,10 @@ A string specifying the prediction algorithm used to learn the optimal combinati
 A list of parameters to control the cross-validation process. The \code{V} parameter is an integer representing the number of cross-validation folds and defaults to 10. Other parmeters are \code{stratifyCV} and \code{shuffle}, which are not yet enabled. 
 }
   \item{seed}{
-A random seed to be set (integer); defaults to 1. If \code{NULL}, then a random seed will not be set.
+A random seed to be set (integer); defaults to 1. If \code{NULL}, then a random seed will not be set.  The seed is set prior to creating the CV folds and prior to model training for base learning and metalearning.
 }
   \item{parallel}{
-A character string specifying optional parallelization. Use \code{"seq"} for sequential computation (the default). Use \code{"multicore"} to perform the V-fold (internal) cross-validation step as well as the final base learning step in parallel over all available cores. Or parallel can be a snow cluster object. Both parallel options use the built-in functionality of the R core "parallel" package.
+A character string specifying optional parallelization. Use \code{"seq"} for sequential computation (the default) of the cross-validation and base learning steps. Use \code{"multicore"} to perform the V-fold (internal) cross-validation step as well as the final base learning step in parallel over all available cores. Or parallel can be a snow cluster object. Both parallel options use the built-in functionality of the R core "parallel" package.  Currently, only \code{"seq"} is compatible with the parallelized H2O algorithms, so this argument may be removed or modified in the future.
 }
 }
 
@@ -84,7 +85,12 @@ A list of runtimes for various steps of the algorithm.  The list contains \code{
 }
 \references{
 van der Laan, M. J., Polley, E. C. and Hubbard, A. E. (2007) Super Learner, Statistical Applications of Genetics and Molecular Biology, 6, article 25. \cr
-\url{http://dx.doi.org/10.2202/1544-6115.1309}
+\url{http://dx.doi.org/10.2202/1544-6115.1309}\cr
+\url{http://biostats.bepress.com/ucbbiostat/paper222}\cr
+\cr
+Breiman, L. (1996) Stacked Regressions, Machine Learning, 24:49–64.\cr
+\url{http://dx.doi.org/10.1007/BF00117832}\cr
+\url{http://statistics.berkeley.edu/sites/default/files/tech-reports/367.pdf}
 }
 \author{
 Erin LeDell \email{ledell@berkeley.edu}
@@ -100,20 +106,17 @@ Using an h2o algorithm wrapper function as the metalearner is not yet producing 
 \examples{
 \dontrun{
     
-library(h2o)
+library(h2oEnsemble)
 library(caret)  #Used to generate data
-library(cvAUC)  #Used to calculate test set AUC
+library(cvAUC)  #Used to calculate test set AUC (requires version >=0.0.2 of cvAUC)
 library(SuperLearner)  #For metalearner such as 'SL.glm'
-localH2O <-  h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O <-  h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, nthreads = -1)
 
 
 # Create sample train and test sets.
-n_train <- 1000
-n_test <- 1000
-
 set.seed(1)
-train <- twoClassSim(n = n_train, intercept = -13)
-test <- twoClassSim(n = n_test, intercept = -13)
+train <- twoClassSim(n = 1000, intercept = -13)
+test <- twoClassSim(n = 1000, intercept = -13)
 train[,c("Class")] <- ifelse(train[,c("Class")]=="Class2", 1, 0)
 test[,c("Class")] <- ifelse(test[,c("Class")]=="Class2", 1, 0)
 
@@ -141,14 +144,15 @@ pred <- predict(fit, newdata)
 
 
 # Ensemble test AUC 
-cvAUC(predictions=as.data.frame(pred$pred)[,1], labels=as.data.frame(newdata$Class)$Class)$cvAUC
+AUC(predictions=as.data.frame(pred$pred)[,1], labels=as.data.frame(newdata$Class)$Class)
 # 0.9745787
 
 # Base learner test set AUC (for comparison)
-sapply(seq(ncol(pred$basepred)), function(i) cvAUC(as.data.frame(pred$basepred)[,i], as.data.frame(newdata$Class)$Class)$cvAUC) 
+sapply(seq(ncol(pred$basepred)), function(i) AUC(as.data.frame(pred$basepred)[,i], as.data.frame(newdata$Class)$Class)) 
 # 0.9519398 0.8957430 0.8838828 0.9604108
 
-# Note that the ensemble results above are not reproducible since h2o.deeplearning is not reproducible when using multiple cores.  The results from the other three base learners should be reproducible, however.
+# Note that the ensemble results above are not reproducible since h2o.deeplearning is not reproducible when using multiple cores.  
+# The results from the other three base learners should be reproducible, however.
 
 }
 }
