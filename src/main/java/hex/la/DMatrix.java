@@ -9,9 +9,9 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.NewChunk.Value;
+import water.util.Log;
 import water.util.Utils;
 
-import javax.xml.bind.attachment.AttachmentUnmarshaller;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,33 +50,42 @@ public class DMatrix  {
     return tgt;
   }
 
-  private static class MulProgress extends Iced {
-    final long chunksTotal;
-    long chunksDone;
-    String [] chunkTypes;
-    long [] chunkCnts;
-    long [] chunkSz;
+  public static class MatrixMulStats extends Iced {
+    public final long chunksTotal;
+    public final long _startTime;
+    public long lastUpdateAt;
+    public long chunksDone;
+    public long size;
+    public int [] chunkTypes = new int[0];
+    public long [] chunkCnts = new long[0];
 
-    public MulProgress(long n){chunksTotal = n; }
+    public MatrixMulStats(long n){chunksTotal = n; _startTime = System.currentTimeMillis();}
 
     public float progress(){ return (float)((double)chunksTotal/chunksDone);}
 
   }
   public static Frame mmul(Frame x, Frame y) {
     final Key progressKey = Key.make();
+    int maxChunks = 2*H2O.CLOUD.size()*H2O.NUMCPUS;
+    int minChunks = H2O.CLOUD.size();
+    int optChunks = (maxChunks + minChunks) >> 1;
+    if(y.anyVec().nChunks() > maxChunks || y.anyVec().nChunks() < minChunks) {
+      Log.info("rebalancing frame from " + y.anyVec().nChunks() + " chunks to " + optChunks);
+      y = new Frame(y.names(), RebalanceDataSet.rebalanceAndReplace(optChunks, 100, y.vecs()));
+    }
     Frame z = new Frame(x.anyVec().makeZeros(y.numCols()));
-    DKV.put(progressKey, new MulProgress(z.vecs().length*z.anyVec().nChunks()));
+    DKV.put(progressKey, new MatrixMulStats(z.vecs().length*z.anyVec().nChunks()));
 
-    Job j = new Job(Key.make(x._key + " %*% " + y._key),progressKey){
+    Job j = new Job(Key.make(),progressKey){
       @Override public float progress(){
-        MulProgress p = DKV.get(progressKey).get();
+        MatrixMulStats p = DKV.get(progressKey).get();
         return p.progress();
       }
     };
-    j.start(new H2OEmptyCompleter());
-
+    j.description = (x._key != null && y._key != null)?(x._key + " %*% " + y._key):"matrix multiplication";
     if(x.numCols() != y.numRows())
       throw new IllegalArgumentException("dimensions do not match! x.numcols = " + x.numCols() + ", y.numRows = " + y.numRows());
+    j.start(new H2OEmptyCompleter());
     // make the target frame which is compatible with left hand side (same number of rows -> keep it's vector group and espc)
     // make transpose co-located with y
     x = transpose(x,new Frame(y.anyVec().makeZeros((int)x.numRows())));
@@ -209,6 +218,40 @@ public class DMatrix  {
 
   }
 
+
+  private static class UpdateProgress extends TAtomic<MatrixMulStats> {
+
+    final int _chunkSz;
+    final int _chunkType;
+
+    public UpdateProgress(int sz, int type) {
+      _chunkSz = sz;
+      _chunkType = type;
+    }
+
+    @Override
+    public MatrixMulStats atomic(MatrixMulStats old) {
+      old.chunkCnts = old.chunkCnts.clone();
+      int j = -1;
+      for(int i = 0; i < old.chunkTypes.length; ++i) {
+        if(_chunkType == old.chunkTypes[i]) {
+          j = i;
+          break;
+        }
+      }
+      if(j == -1) {
+        old.chunkTypes = Arrays.copyOf(old.chunkTypes,old.chunkTypes.length+1);
+        old.chunkCnts = Arrays.copyOf(old.chunkCnts,old.chunkCnts.length+1);
+        old.chunkTypes[old.chunkTypes.length-1] = _chunkType;
+        j = old.chunkTypes.length-1;
+      }
+      old.chunksDone++;
+      old.chunkCnts[j]++;
+      old.lastUpdateAt = System.currentTimeMillis();
+      old.size += _chunkSz;
+      return old;
+    }
+  }
   /**
    * Matrix multiplication task which takes input of two matrices, t(X) and Y and produces matrix X %*% Y.
    */
@@ -237,7 +280,12 @@ public class DMatrix  {
       @Override
       public void compute2() {throw H2O.fail("do not call!");}
 
+
       @Override public void onCompletion(CountedCompleter caller){
+        VecMulTsk tsk = (VecMulTsk)caller;
+        Chunk c = new NewChunk(tsk._res).compress();
+        DKV.put(tsk._k, c,_fs, false);
+        new UpdateProgress(c._mem.length,c.frozenType()).fork(_progressKey);
         int j = _j.incrementAndGet();
         if(j < chks.length)
           new VecMulTsk(new Cmp(j,chks,xs), chks[j], _fs).asyncExec(Utils.append(new Vec[]{_Y.vec(j)}, xs));
@@ -282,11 +330,6 @@ public class DMatrix  {
     }
     @Override
     public void reduce(VecMulTsk v) { Utils.add(_res,v._res);}
-
-    @Override
-    public void postGlobal() {
-      DKV.put(_k, new NewChunk(_res).compress(),_fs, false);
-    }
   }
 
   public static class TransposeTsk extends MRTask2<TransposeTsk> {

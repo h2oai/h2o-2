@@ -5,6 +5,7 @@ import java.util.Map;
 
 import hex.GridSearch;
 import hex.glm.GLM2;
+import hex.la.DMatrix;
 import water.*;
 import water.api.RequestBuilders.Response;
 import water.fvec.Frame;
@@ -35,6 +36,7 @@ public class Inspector extends Request2 {
     REDIRECTS.put(Model.class,    sa("/2/%typename{}View", "_modelKey"));
     REDIRECTS.put(GLM2.GLMGrid.class, sa("/2/GLMGridView", "grid_key"));
     REDIRECTS.put(GridSearch.class, sa("/2/%typename{}Progress", "destination_key"));
+    REDIRECTS.put(DMatrix.MatrixMulStats.class,sa("/2/MMStats","src_key"));
   }
 
   @API(help="H2O key to inspect.", filter=Default.class, json=true, required=true, gridable=false)

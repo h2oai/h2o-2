@@ -104,6 +104,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
     // Register Inspect2 just for viewing frames
     registerRequest(new Inspect2());
+    registerRequest(new MMStats());
 
     // FVec models
     Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",                   "Model");
