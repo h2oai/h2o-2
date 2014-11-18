@@ -33,7 +33,7 @@ Erin LeDell \email{ledell@berkeley.edu}
 }
 
 \seealso{
-\code{\link[h2oEnsemble::h2o.ensemble]{h2o.ensemble}}
+\code{\link[h2oEnsemble:h2o.ensemble]{h2o.ensemble}}
 }
 \examples{
 # See h2o.ensemble documentation for an example.

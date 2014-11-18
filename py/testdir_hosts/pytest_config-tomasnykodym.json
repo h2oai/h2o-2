@@ -8,7 +8,7 @@
     "use_home_for_ice": true,
 
     "h2o_per_host": 1, 
-    "java_heap_GB": 20, 
+    "java_heap_GB": 160, 
 
     "hdfs_name_node": "172.16.2.176",
     "hdfs_version": "cdh4",
@@ -17,7 +17,11 @@
     "use_flatfile": true,
 
     "ip": [        
-        "172.16.2.181"                            
+        "172.16.2.188",
+        "172.16.2.189",
+        "172.16.2.190"                            
     ]
 }
+
+
 

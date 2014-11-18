@@ -26,7 +26,19 @@ public class CXDChunk extends CXIChunk {
     return (long)d;
   }
   @Override protected double atd_impl(int idx) {
-    int off = findOffset(idx);
+    int off = _offCache;
+    int prevIdx = getId(off);
+    if(prevIdx == idx)
+      return getFValue(off);
+    if(prevIdx < idx) {
+      int nextIdx = getId(off + _ridsz + _valsz);
+      if(nextIdx > idx) return 0;
+      if(nextIdx == idx) {
+        _offCache = (off += _ridsz + _valsz);
+        return getFValue(off);
+      }
+    }
+    off = findOffset(idx);
     if(getId(off) != idx)return 0;
     return getFValue(off);
   }

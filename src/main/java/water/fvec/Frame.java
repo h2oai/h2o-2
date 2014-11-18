@@ -632,6 +632,15 @@ public class Frame extends Lockable<Frame> {
     return s+"}";
   }
 
+  public void replaceVecs(Vec [] vecs){
+    if(vecs.length != _vecs.length)
+      throw new IllegalArgumentException("Incompatible number of vecs");
+    _vecs = vecs;
+    _col0 = _vecs[0];
+    for(int i = 0; i < _keys.length; ++i)
+      _keys[i] = vecs[i]._key;
+  }
+
   // Print fixed-width row & fixed-width headers (more compressed print
   // format).  Returns the column formats.
   public String[] toStringHdr( StringBuilder sb ) {

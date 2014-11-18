@@ -1,13 +1,13 @@
 package water.fvec;
 
 import jsr166y.CountedCompleter;
-import water.H2O;
-import water.Key;
-import water.MRTask2;
+import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.util.Log;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by tomasnykodym on 3/28/14.
@@ -91,7 +91,64 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
     if(_out != null)_out.delete(_jobKey,0.0f);
     return true;
   }
+  public static class RebalanceAndReplaceDriver extends H2OCountedCompleter {
+    final AtomicInteger _cntr;
+    final int _maxP;
+    final Vec [] _vecs;
+    Vec [] _newVecs;
+    final int _nChunks;
+    public RebalanceAndReplaceDriver(int nChunks, int maxP, Vec... vecs){
+      _cntr = new AtomicInteger(maxP);
+      _maxP = maxP;
+      _vecs = vecs;
+      _nChunks = nChunks;
+    }
 
+    @Override
+    public void compute2() {
+      long [] espc = MemoryManager.malloc8(_nChunks+1);
+      int rpc = (int)(_vecs[0].length() / _nChunks);
+      int rem = (int)(_vecs[0].length() % _nChunks);;
+      Arrays.fill(espc, rpc);
+      for (int i = 0; i < rem; ++i) ++espc[i];
+      long sum = 0;
+      for (int i = 0; i < espc.length; ++i) {
+        long s = espc[i];
+        espc[i] = sum;
+        sum += s;
+      }
+      _newVecs = new Vec(Vec.newKey(),espc).makeZeros(_vecs.length);
+      setPendingCount(_vecs.length-1);
+      for(int i = 0; i < Math.min(_vecs.length,_maxP); ++i) {
+        new RebalanceTask(new Cmp(), _vecs[i]).asyncExec(_newVecs[i]);
+      }
+    }
+
+    private class Cmp extends H2OCountedCompleter {
+      Cmp(){super(RebalanceAndReplaceDriver.this);}
+      @Override
+      public void compute2() { throw H2O.fail("do not call!");}
+
+      @Override
+      public void onCompletion(CountedCompleter caller) {
+        int i = _cntr.incrementAndGet();
+        RebalanceTask rbt = (RebalanceTask)caller;
+        Futures fs = new Futures();
+        for(Vec v:rbt._srcVecs)
+          v.remove(fs);
+        fs.blockForPending();;
+        if(i < _newVecs.length) {
+          new RebalanceTask(new Cmp(), _vecs[i]).asyncExec(_newVecs[i]);
+        }
+      }
+    }
+  }
+
+  public static Vec[] rebalanceAndReplace(int nchunks, int maxP, Vec... vecs) {
+    RebalanceAndReplaceDriver rbt = new RebalanceAndReplaceDriver(nchunks, maxP, vecs);
+    H2O.submitTask(rbt).join();
+    return rbt._newVecs;
+  }
   public static class RebalanceTask extends MRTask2<RebalanceTask> {
     final Vec [] _srcVecs;
     public RebalanceTask(H2O.H2OCountedCompleter cmp, Vec... srcVecs){super(cmp);_srcVecs = srcVecs;}
