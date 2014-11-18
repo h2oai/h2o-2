@@ -162,6 +162,7 @@ function(x, y, data, family = "binomial",
   for (i in seq(V*L)) {
     Zdf[Zdf$fold_id==idxs$v[i],idxs$l[i]]  <- cvRes[[i]]
   }
+  names(Zdf) <- c(learner, "fold_id")
   # Regarding Z assignment commented below: When converting this h2o object to a data.frame later, 
   # it gets messed up...returning memory address instead of predicted value for h2o.gbm, for example
   # Z <- as.h2o(localH2O, Zdf, key="Z")
@@ -169,7 +170,6 @@ function(x, y, data, family = "binomial",
   # Therefore, for now, we will return Z as an R data.frame.  
   # This should be fixed though, so we don't have to pull the Z matrix into R memory
   Zdf[,c(y)] <- as.data.frame(data[,c(y)])[,1]  #Concat outcome column to Z
-  names(Zdf) <- c(learner, "fold_id", y)
   return(Zdf)
 }
 
@@ -184,6 +184,7 @@ function(x, y, data, family = "binomial",
 
 # Wrapper function for .fitFun to record system.time
 .fitWrapper <- function(l, y, xcols, data, family, learner, seed) {
+  print(sprintf("Training base learner %s for final fit", l))
   fittime <- system.time(fit <- .fitFun(l, y, xcols, data, family, 
                                         learner, seed), gcFirst=FALSE)
   return(list(fit=fit, fittime=fittime))
@@ -209,38 +210,37 @@ function(x, y, data, family = "binomial",
 
 
 
-predict.h2o.ensemble <- 
-  function(object, newdata) {
-    
-    L <- length(object$basefits)
-    basepreddf <- as.data.frame(matrix(NA, nrow = nrow(newdata), ncol = L))
-    for (l in seq(L)) {
-      if (object$family == "binomial") {
-        basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
-                                                                     newdata = newdata)))$X1 
-      } else {
-        basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
-                                                                     newdata = newdata)))$predict
-      }
-    }
-    names(basepreddf) <- names(object$basefits)
-    basepreddf[basepreddf < object$ylim[1]] <- object$ylim[1]  #Enforce bounds
-    basepreddf[basepreddf > object$ylim[2]] <- object$ylim[2]
-    basepred <- as.h2o(localH2O, basepreddf, key="basepred")
-    
-    if (grepl("H2O", class(object$metafit))) {
-      # H2O ensemble metalearner from wrappers.R
-      pred <- h2o.predict(object=object$metafit, newdata=basepred)
+predict.h2o.ensemble <- function(object, newdata) {
+  
+  L <- length(object$basefits)
+  basepreddf <- as.data.frame(matrix(NA, nrow = nrow(newdata), ncol = L))
+  for (l in seq(L)) {
+    if (object$family == "binomial") {
+      basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
+                                                                   newdata = newdata)))$X1 
     } else {
-      # SuperLearner wrapper function metalearner
-      pred <- predict(object=object$metafit$fit, newdata=basepred)
+      basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
+                                                                   newdata = newdata)))$predict
     }
-    # TO DO: Maybe restrict bounds here, but change code to work for pred as H2OParsedData obj
-    #pred[pred < object$ylim[1]] <- object$ylim[1]  #Enforce bounds
-    #pred[pred > object$ylim[2]] <- object$ylim[2]
-    out <- list(pred = pred, basepred = basepred)
-    return(out)
   }
+  names(basepreddf) <- names(object$basefits)
+  basepreddf[basepreddf < object$ylim[1]] <- object$ylim[1]  #Enforce bounds
+  basepreddf[basepreddf > object$ylim[2]] <- object$ylim[2]
+  basepred <- as.h2o(localH2O, basepreddf, key="basepred")
+  
+  if (grepl("H2O", class(object$metafit))) {
+    # H2O ensemble metalearner from wrappers.R
+    pred <- h2o.predict(object=object$metafit, newdata=basepred)
+  } else {
+    # SuperLearner wrapper function metalearner
+    pred <- predict(object=object$metafit$fit, newdata=basepred)
+  }
+  # TO DO: Maybe restrict bounds here, but change code to work for pred as H2OParsedData obj
+  #pred[pred < object$ylim[1]] <- object$ylim[1]  #Enforce bounds
+  #pred[pred > object$ylim[2]] <- object$ylim[2]
+  out <- list(pred = pred, basepred = basepred)
+  return(out)
+}
 
 
 
