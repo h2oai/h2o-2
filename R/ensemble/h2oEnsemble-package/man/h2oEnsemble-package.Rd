@@ -12,8 +12,8 @@ This package implements the super learner ensemble (stacking) algorithm using th
 \tabular{ll}{
 Package: \tab h2oEnsemble\cr
 Type: \tab Package\cr
-Version: \tab 0.0.1\cr
-Date: \tab 2014-10-08\cr
+Version: \tab 0.0.2\cr
+Date: \tab 2014-11-17\cr
 License: \tab Apache License (== 2.0)\cr
 }
 }
@@ -24,8 +24,14 @@ Maintainer: Erin LeDell <ledell@berkeley.edu>
 }
 \references{
 van der Laan, M. J., Polley, E. C. and Hubbard, A. E. (2007) Super Learner, Statistical Applications of Genetics and Molecular Biology, 6, article 25. \cr
-\url{http://dx.doi.org/10.2202/1544-6115.1309}
+\url{http://dx.doi.org/10.2202/1544-6115.1309}\cr
+\url{http://biostats.bepress.com/ucbbiostat/paper222}\cr
+\cr
+Breiman, L. (1996) Stacked Regressions, Machine Learning, 24:49–64.\cr
+\url{http://dx.doi.org/10.1007/BF00117832}\cr
+\url{http://statistics.berkeley.edu/sites/default/files/tech-reports/367.pdf}
 }
+
 \keyword{ models }
 \seealso{
 \code{\link[SuperLearner:SuperLearner]{SuperLearner}}, \code{\link[subsemble:subsemble]{subsemble}}

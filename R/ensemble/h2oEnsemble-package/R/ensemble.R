@@ -1,7 +1,7 @@
 h2o.ensemble <-
 function(x, y, data, family = "binomial", 
                          learner, metalearner = "h2o.glm.wrapper",
-                         cvControl = list(), seed = 1, parallel = "seq") {
+                         cvControl = list(V=5, shuffle=TRUE), seed = 1, parallel = "seq") {
   
   # This function is derived from the subsemble::subsemble function, 
   # although it only implements standard stacking / SuperLearner functionality, 
@@ -73,6 +73,7 @@ function(x, y, data, family = "binomial",
   # Fit the final L models on all data to be saved with the fit
   # As above, this parallel code should probably be modified to use doPar or similar to replace all the if/else
   # Also, we should not "FORK"...
+  print("Fitting final base models on full data")
   if (inherits(parallel, "cluster")) {
     #If the parallel object is a snow cluster
     fitlist <- parSapply(cl=parallel, X=1:L, FUN=.fitWrapper, y=y, xcols=x, data=data,
@@ -161,6 +162,7 @@ function(x, y, data, family = "binomial",
   for (i in seq(V*L)) {
     Zdf[Zdf$fold_id==idxs$v[i],idxs$l[i]]  <- cvRes[[i]]
   }
+  names(Zdf) <- c(learner, "fold_id")
   # Regarding Z assignment commented below: When converting this h2o object to a data.frame later, 
   # it gets messed up...returning memory address instead of predicted value for h2o.gbm, for example
   # Z <- as.h2o(localH2O, Zdf, key="Z")
@@ -168,7 +170,6 @@ function(x, y, data, family = "binomial",
   # Therefore, for now, we will return Z as an R data.frame.  
   # This should be fixed though, so we don't have to pull the Z matrix into R memory
   Zdf[,c(y)] <- as.data.frame(data[,c(y)])[,1]  #Concat outcome column to Z
-  names(Zdf) <- c(learner, "fold_id", y)
   return(Zdf)
 }
 
@@ -183,13 +184,14 @@ function(x, y, data, family = "binomial",
 
 # Wrapper function for .fitFun to record system.time
 .fitWrapper <- function(l, y, xcols, data, family, learner, seed) {
+  print(sprintf("Training base learner %s for final fit", l))
   fittime <- system.time(fit <- .fitFun(l, y, xcols, data, family, 
                                         learner, seed), gcFirst=FALSE)
   return(list(fit=fit, fittime=fittime))
 }
 
 
-.cv_control <- function(V = 10L, stratifyCV = TRUE, shuffle = TRUE){
+.cv_control <- function(V = 5L, stratifyCV = TRUE, shuffle = TRUE){
   # Parameters that control the CV process
   # Only part of this being used currently --  
   # Stratification is not enabled yet in the h2o.ensemble function.
@@ -208,45 +210,37 @@ function(x, y, data, family = "binomial",
 
 
 
-predict.h2o.ensemble <- 
-  function(object, newdata) {
-    
-    L <- length(object$basefits)
-    basepreddf <- as.data.frame(matrix(NA, nrow = nrow(newdata), ncol = L))
-    for (l in seq(L)) {
-      if (object$family == "binomial") {
-        basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
-                                                                     newdata = newdata)))$X1 
-      } else {
-        basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
-                                                                     newdata = newdata)))$predict
-      }
-    }
-    names(basepreddf) <- names(object$basefits)
-    basepreddf[basepreddf < object$ylim[1]] <- object$ylim[1]  #Enforce bounds
-    basepreddf[basepreddf > object$ylim[2]] <- object$ylim[2]
-    
-    # basepred <- as.h2o(localH2O, basepreddf, key="basepred")  
-    # If we pull out h2o.gbm, h2o.glm or h2o.deeplearning predicted vals from as.data.frame(basepred), 
-    # the memory locations instead of the actual float values are returned... definitely a bug
-    # Rounding to 3 digits is a silly hack for an h2o bug that causes memory addresses to be returned instead of floats
-    # For some reason, it works okay if we round the pred values
-    basepreddf <- round(basepreddf, digits=3)
-    basepred <- as.h2o(localH2O, basepreddf, key="basepred")
-    
-    if (grepl("H2O", class(object$metafit))) {
-      # H2O ensemble metalearner from wrappers.R
-      pred <- h2o.predict(object=object$metafit, newdata=basepred)
+predict.h2o.ensemble <- function(object, newdata) {
+  
+  L <- length(object$basefits)
+  basepreddf <- as.data.frame(matrix(NA, nrow = nrow(newdata), ncol = L))
+  for (l in seq(L)) {
+    if (object$family == "binomial") {
+      basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
+                                                                   newdata = newdata)))$X1 
     } else {
-      # SuperLearner wrapper function metalearner
-      pred <- predict(object=object$metafit$fit, newdata=basepred)
+      basepreddf[, l] <- as.data.frame(do.call('h2o.predict', list(object = object$basefits[[l]],
+                                                                   newdata = newdata)))$predict
     }
-    # TO DO: Maybe restrict bounds here, but change code to work for pred as H2OParsedData obj
-    #pred[pred < object$ylim[1]] <- object$ylim[1]  #Enforce bounds
-    #pred[pred > object$ylim[2]] <- object$ylim[2]
-    out <- list(pred = pred, basepred = basepred)
-    return(out)
   }
+  names(basepreddf) <- names(object$basefits)
+  basepreddf[basepreddf < object$ylim[1]] <- object$ylim[1]  #Enforce bounds
+  basepreddf[basepreddf > object$ylim[2]] <- object$ylim[2]
+  basepred <- as.h2o(localH2O, basepreddf, key="basepred")
+  
+  if (grepl("H2O", class(object$metafit))) {
+    # H2O ensemble metalearner from wrappers.R
+    pred <- h2o.predict(object=object$metafit, newdata=basepred)
+  } else {
+    # SuperLearner wrapper function metalearner
+    pred <- predict(object=object$metafit$fit, newdata=basepred)
+  }
+  # TO DO: Maybe restrict bounds here, but change code to work for pred as H2OParsedData obj
+  #pred[pred < object$ylim[1]] <- object$ylim[1]  #Enforce bounds
+  #pred[pred > object$ylim[2]] <- object$ylim[2]
+  out <- list(pred = pred, basepred = basepred)
+  return(out)
+}
 
 
 

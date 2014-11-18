@@ -22,8 +22,8 @@ h2o.glm.wrapper <- function(x, y, data, key = "", family = "binomial", link, nfo
 }
 
 
-h2o.gbm.wrapper <- function(x, y, data, key = "", family = "binomial", n.trees = 1000, interaction.depth = 5, 
-                     n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, importance = FALSE, nfolds = 0, validation, 
+h2o.gbm.wrapper <- function(x, y, data, key = "", family = "binomial", n.trees = 10, interaction.depth = 5, 
+                     n.minobsinnode = 10, shrinkage = 0.1, n.bins = 20, importance = FALSE, nfolds = 0, validation, 
                      balance.classes = FALSE, max.after.balance.size = 5, ...) {
   
   h2o.gbm(x = x, y = y, data = data, key = key, distribution = ifelse(family=="binomial", "multinomial", "gaussian"), 
@@ -34,8 +34,8 @@ h2o.gbm.wrapper <- function(x, y, data, key = "", family = "binomial", n.trees =
 }
 
 
-h2o.randomForest.wrapper <- function(x, y, data, key = "", family = "binomial", ntree = 500, 
-                                              depth = 20, mtries = -1, sample.rate = 2/3, nbins = 100, seed = 1, 
+h2o.randomForest.wrapper <- function(x, y, data, key = "", family = "binomial", ntree = 50, 
+                                              depth = 20, mtries = -1, sample.rate = 2/3, nbins = 20, seed = -1, 
                                               importance = FALSE, nfolds = 0, validation, nodesize = 1, 
                                               balance.classes = FALSE, max.after.balance.size = 5, doGrpSplit = TRUE,
                                               verbose = FALSE, oobee = TRUE, stat.type = "ENTROPY", type = "fast", ...){
@@ -51,7 +51,7 @@ h2o.randomForest.wrapper <- function(x, y, data, key = "", family = "binomial", 
 
 h2o.deeplearning.wrapper <- function(x, y, data, key = "", family = "binomial", override_with_best_model,
                                 nfolds = 0, validation, checkpoint = "", autoencoder, use_all_factor_levels, 
-                                activation, hidden, epochs, train_samples_per_iteration, seed = 1, adaptive_rate,
+                                activation, hidden, epochs, train_samples_per_iteration, seed, adaptive_rate,
                                 rho, epsilon, rate, rate_annealing, rate_decay, momentum_start,
                                 momentum_ramp, momentum_stable, nesterov_accelerated_gradient,
                                 input_dropout_ratio, hidden_dropout_ratios, l1, l2, max_w2,
