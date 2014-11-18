@@ -120,8 +120,7 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
       _newVecs = new Vec(Vec.newKey(),espc).makeZeros(_vecs.length);
       setPendingCount(_vecs.length-1);
       for(int i = 0; i < Math.min(_vecs.length,_maxP); ++i) {
-        Vec tgtVec = null;
-        new RebalanceTask(new Cmp(), _vecs[i]).asyncExec(tgtVec);
+        new RebalanceTask(new Cmp(), _vecs[i]).asyncExec(_newVecs[i]);
       }
     }
 

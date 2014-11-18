@@ -33,15 +33,15 @@ public class MMStats  extends Request2 {
   public String prettyprint(long l){
     long gigs = l >> 30;
     long megs = (l-gigs) >> 20;
-    long kbs = (l - gigs - megs) >> 10;
-    long bytes = (l - gigs - megs - kbs);
+    long kbs = (l - (gigs << 30) - (megs << 20)) >> 10;
+    long bytes = l - (gigs << 30) - (megs << 20) - (kbs << 10);
     return (gigs > 0?(gigs + "GB "):"") + (megs > 0?(megs + "MB "):("")) + (kbs > 0?(kbs + "KB "):("")) + bytes + "B";
   }
   public String pprintTime(long l){
     long secs = l/1000;
     long hrs = secs/3600;
-    long min = (secs-hrs)/60;
-    secs = secs - hrs - min;
+    long min = (secs-hrs*3600)/60;
+    secs = secs - hrs*3600 - min*60;
     return hrs + "hrs " + min + "min " + secs + "s";
   }
   @Override

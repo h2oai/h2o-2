@@ -61,17 +61,17 @@ public class DMatrix  {
 
     public MatrixMulStats(long n){chunksTotal = n; _startTime = System.currentTimeMillis();}
 
-    public float progress(){ return (float)((double)chunksTotal/chunksDone);}
+    public float progress(){ return (float)((double)chunksDone/chunksTotal);}
 
   }
   public static Frame mmul(Frame x, Frame y) {
     final Key progressKey = Key.make();
-    int maxChunks = 2*H2O.CLOUD.size()*H2O.NUMCPUS;
-    int minChunks = H2O.CLOUD.size();
+    int minChunks = Math.max(H2O.CLOUD.size(),H2O.NUMCPUS);
+    int maxChunks = 2*minChunks;
     int optChunks = (maxChunks + minChunks) >> 1;
     if(y.anyVec().nChunks() > maxChunks || y.anyVec().nChunks() < minChunks) {
       Log.info("rebalancing frame from " + y.anyVec().nChunks() + " chunks to " + optChunks);
-      y = new Frame(y.names(), RebalanceDataSet.rebalanceAndReplace(optChunks, 100, y.vecs()));
+      y.replaceVecs(RebalanceDataSet.rebalanceAndReplace(optChunks, 100, y.vecs()));
     }
     Frame z = new Frame(x.anyVec().makeZeros(y.numCols()));
     DKV.put(progressKey, new MatrixMulStats(z.vecs().length*z.anyVec().nChunks()));
@@ -93,6 +93,7 @@ public class DMatrix  {
     new MatrixMulTsk2(x,y,progressKey).doAll(z);
     z.reloadVecs();
     x.delete();
+    DKV.remove(j.dest());
     j.remove();
     return z;
   }
@@ -316,9 +317,9 @@ public class DMatrix  {
       int [] pos = MemoryManager.malloc4(chks.length-1);
       for(int i = 0; i < pos.length; ++i)
         pos[i] = chks[i+1].nextNZ(-1);
-      for(int i = 0; i < chks[0]._len; i = chks[0].nextNZ(i)) {
-        final double y = chks[0].at0(i);
-        for(int j = 1; j < chks.length; ++j) {
+      for(int j = 1; j < chks.length; ++j) {
+        for(int i = 0; i < chks[0]._len; i = chks[0].nextNZ(i)) {
+          final double y = chks[0].at0(i);
           if(chks[j] instanceof CXIChunk)
             while(pos[j-1] < chks[j]._len && pos[j-1] < i)
               pos[j-1] = chks[j].nextNZ(pos[j-1]);
