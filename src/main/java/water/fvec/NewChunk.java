@@ -60,6 +60,17 @@ public class NewChunk extends Chunk {
     _start = C._start;
   }
 
+  public NewChunk( Vec vec, int cidx, double [] vals) {
+    this(vec,cidx);
+    _ds = vals;
+    _sparseLen = _len = vals.length;
+    _nzCnt = 0;
+    for(double d:vals){
+      if(Double.isNaN(d)) ++_naCnt;
+      else if(d != 0)
+        _nzCnt++;
+    }
+  }
   // Pre-sized newchunks.
   public NewChunk( Vec vec, int cidx, int len ) {
     this(vec,cidx);

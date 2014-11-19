@@ -45,5 +45,8 @@ public class C0LChunk extends Chunk {
     }
     return nc;
   }
+  @Override
+  public int nextNZ(int i){return (_con == 0)?_len:i+1;}
+  @Override public boolean isSparse(){return _con == 0;}
   @Override public int sparseLen(){return _con == 0?0:_len;}
 }

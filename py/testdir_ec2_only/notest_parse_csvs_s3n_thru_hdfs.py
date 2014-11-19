@@ -42,7 +42,6 @@ class Basic(unittest.TestCase):
             parseResult = h2i.parse_only(pattern=s3nKey, hex_key=s3nFilename + ".hex",
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
 
-            print s3nFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 
             start = time.time()

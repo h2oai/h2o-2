@@ -30,7 +30,6 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             csvPathname = "datasets/" + csvFilename
             parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', timeoutSecs=60)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?

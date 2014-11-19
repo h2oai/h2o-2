@@ -102,6 +102,12 @@ public abstract class Chunk extends Iced implements Cloneable {
   /** Set the element as missing the slow way.  */
   public final boolean setNA( long i )       { long x = i-_start; return (0 <= x && x < _len) ? setNA0((int)x) : _vec.setNA(i); }
 
+  public void setAll(double [] vals) {
+    setWrite();
+    _chk2 = new NewChunk(_vec,cidx(),vals).compress();
+  }
+  public Chunk modifiedChunk(){return _chk2;}
+
   private void setWrite() {
     if( _chk2 != null ) return; // Already setWrite
     assert !(this instanceof NewChunk) : "Cannot direct-write into a NewChunk, only append";
@@ -189,7 +195,15 @@ public abstract class Chunk extends Iced implements Cloneable {
    * @return array of chunk-relative indeces of values stored in this chunk.
    */
   public int  nonzeros(int [] res){
-    for( int i = 0; i < _len; ++i) res[i] = i;
+    if(!isSparse())
+      for( int i = 0; i < _len; ++i)
+        res[i] = i;
+    else {
+      int j = 0;
+      for (int i = nextNZ(-1); i < _len; i = nextNZ(i))
+        res[j++] = i;
+      assert res.length == j;
+    }
     return _len;
   }
 

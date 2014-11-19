@@ -43,7 +43,7 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
 
   /**
    * Constructor for re-balancing the dataset (e.g. for performance reasons).
-   * Resulting dataset will have requested number of chunks and rows will be unfirmly distributed with the
+   * Resulting dataset will have requested number of chunks and rows will be uniformly distributed with the
    * same rows-per chunk count in all chunk (+/- 1).
    */
   public RebalanceDataSet(Frame srcFrame, Key dstKey, int nchunks) { this(srcFrame,dstKey,nchunks,null,null);}

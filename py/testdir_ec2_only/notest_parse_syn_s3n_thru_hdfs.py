@@ -30,16 +30,14 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
             elapsed = time.time() - start
-
-            print hex_key, 'h2o reported parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
             print "Trial #", trial, "completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + hex_key + \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
             print "Removing", hex_key
             removeKeyResult = h2o.nodes[0].remove_key(key=hex_key)
