@@ -19,6 +19,7 @@ public class MMStats  extends Request2 {
   @API(help = "An existing H2O key pointin to MatrixMulStats object.", required = true, filter = Default.class, gridable = false)
   Key src_key;
 
+
   MatrixMulStats _stats;
 
   @Override
@@ -27,7 +28,8 @@ public class MMStats  extends Request2 {
     if (v == null)
       return Response.error("key(\"" + src_key + "\" does not exist!");
     _stats = v.get();
-    return Response.done(this);
+    float progress = (float)_stats.chunksDone/_stats.chunksTotal;
+    return Response.poll(this, (int) (100 * progress), 100, "job_key", _stats.jobKey, "destination_key",src_key);
   }
 
   public String prettyprint(long l){

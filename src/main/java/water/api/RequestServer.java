@@ -170,6 +170,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new Debug());
       registerRequest(new UnlockKeys());
     } else {
+      Request.addToNavbar(registerRequest(new MatrixMultiply()),       "Matrix Multiply",      "Beta");
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
       Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold Frame Extract", "Beta");
