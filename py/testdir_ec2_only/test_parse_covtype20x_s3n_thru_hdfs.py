@@ -29,7 +29,6 @@ class Basic(unittest.TestCase):
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
             elapsed = time.time() - start
 
-            print 'h2o reported parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
             print "Trial #", trial, "completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

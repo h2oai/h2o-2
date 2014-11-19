@@ -257,20 +257,19 @@ class Basic(unittest.TestCase):
 
 
             print "parseResult['destination_key']: " + parseResult['destination_key']
-            print 'parse time:', parseResult['response']['time']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
             # more reporting: (we can error here if extra col in header, causes all NA for missing col of data)
             h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
 
             # should match # of cols in header or ??
-            self.assertEqual(inspect['num_cols'], totalCols, \
-                "parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], totalCols))
+            self.assertEqual(inspect['numCols'], totalCols, \
+                "parse created result with the wrong number of cols %s %s" % (inspect['numCols'], totalCols))
 
             # do we end up parsing one data rows as a header because of mismatch in gen/param
             h2oLosesOneData = (headerRowsDone==0) and (kwargs['header']==1) and not DATA_HAS_HDR_ROW
@@ -285,9 +284,9 @@ class Basic(unittest.TestCase):
             if h2oGainsOneData:
                 totalDataRows += 1
                 
-            self.assertEqual(inspect['num_rows'], totalDataRows,
+            self.assertEqual(inspect['numRows'], totalDataRows,
                 "parse created result with the wrong number of rows (header rows don't count) h2o: %s gen'ed: %s" % \
-                (inspect['num_rows'], totalDataRows))
+                (inspect['numRows'], totalDataRows))
 
             # put in an ignore param, that will fail unless headers were parsed correctly
             # doesn't matter if the header got a comment, should see it

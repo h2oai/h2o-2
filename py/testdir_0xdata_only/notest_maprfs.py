@@ -113,7 +113,6 @@ class Basic(unittest.TestCase):
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs, 
                 doSummary=False, benchmarkLogging=benchmarkLogging)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 
             elapsed = time.time() - start

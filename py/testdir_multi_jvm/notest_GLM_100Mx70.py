@@ -68,14 +68,14 @@ class Basic(unittest.TestCase):
                 timeoutSecs=2000, retryDelaySecs=5, initialDelaySecs=10, pollTimeoutSecs=60)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
 
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(num_rows), \
-                "    num_cols:", "{:,}".format(num_cols)
+                "    numRows:", "{:,}".format(numRows), \
+                "    numCols:", "{:,}".format(numCols)
 
-            y = num_cols - 1
+            y = numCols - 1
             kwargs = {
                 'family': 'binomial',
                 'link': 'logit',

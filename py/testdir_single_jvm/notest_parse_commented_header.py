@@ -86,20 +86,19 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', schema='local',
                 hex_key=hex_key, header=1, timeoutSecs=timeoutSecs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
-            print 'parse time:', parseResult['response']['time']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
             # should match # of cols in header or ??
-            self.assertEqual(inspect['num_cols'], totalCols, 
-                "parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], totalCols))
-            self.assertEqual(inspect['num_rows'], totalRows,
+            self.assertEqual(inspect['numCols'], totalCols, 
+                "parse created result with the wrong number of cols %s %s" % (inspect['numCols'], totalCols))
+            self.assertEqual(inspect['numRows'], totalRows,
                 "parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
-                (inspect['num_rows'], totalRows))
+                (inspect['numRows'], totalRows))
 
             kwargs = {'sample': 75, 'depth': 25, 'ntree': 1, 'ignore': 'ID,CAPSULE'}
 

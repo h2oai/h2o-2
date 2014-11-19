@@ -35,7 +35,7 @@ def run_rf(files,configs):
 
         inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
         row = {'java_heap_GB':java_heap_GB,'dataset':'mnist8m',
-                'nTrainRows': inspect['num_rows'],'nCols':inspect['num_cols'],
+                'nTrainRows': inspect['numRows'],'nCols':inspect['numCols'],
                 #'nIgnoredCols':nIgnoredCols,'ignoredCols':ignoredCols,
                 'trainParseWallTime':trainParseWallTime}
 
@@ -62,7 +62,7 @@ def run_rf(files,configs):
         testParseWallTime = time.time() - testParseWallStart
         #End Test File Parse#
         inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
-        row.update({'nTestRows':inspect['num_rows']})
+        row.update({'nTestRows':inspect['numRows']})
         row.update({'testParseWallTime':testParseWallTime})
         modelKey = rfView['model_key']
         

@@ -31,15 +31,14 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9)
             print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             start = time.time()
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=500)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
-            # num_rows = inspect['num_rows']
-            # num_cols = inspect['num_cols']
+            # numRows = inspect['numRows']
+            # numCols = inspect['numCols']
 
             keepPattern = "oly_|mt_|b_"
             y = "is_purchase"

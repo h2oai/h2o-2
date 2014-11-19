@@ -174,16 +174,16 @@ class Basic(unittest.TestCase):
             destination_key = parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, destination_key)
 
-            num_cols = inspect['numCols']
-            num_rows = inspect['numRows']
-            print "num_cols", num_cols, "num_rows", num_rows
+            numCols = inspect['numCols']
+            numRows = inspect['numRows']
+            print "numCols", numCols, "numRows", numRows
             ##  print h2o.dump_json(inspect)
 
             # create formula and the x for H2O GLM
             formula = "V" + str(y+1) + " ~ "
             x = None
             col_names = ""
-            for c in range(0,num_cols):
+            for c in range(0,numCols):
                 if csvFilename=='clslowbwt.dat' and c==6:
                     print "Not including col 6 for this dataset from x"
                 if csvFilename=='benign.csv' and (c==0 or c==1):

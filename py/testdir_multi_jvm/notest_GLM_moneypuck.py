@@ -58,16 +58,16 @@ class Basic(unittest.TestCase):
             csvPathname = importFolderPath + "/" + csvFilename
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=2000, hex_key=hex_key)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
 
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(num_rows), \
-                "    num_cols:", "{:,}".format(num_cols)
+                "    numRows:", "{:,}".format(numRows), \
+                "    numCols:", "{:,}".format(numCols)
 
             max_iter = 9
             # assume the last col is the output!
-            y = num_cols-1
+            y = numCols-1
             kwargs = {
                 'y': y, 
                 'family': 'poisson',

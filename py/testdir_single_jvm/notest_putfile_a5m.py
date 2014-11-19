@@ -31,7 +31,6 @@ class Basic(unittest.TestCase):
 
             # creates csvFilename and csvFilename.hex  keys
             parseResult = h2i.import_parse(path=csvPathname, schema='put', timeoutSecs=500)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 

@@ -96,8 +96,8 @@ def create_node(possMember, h2oNodes, expectedSize, hdfsSetup):
     name_list = []
     for i, n in enumerate(nodes):
         print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
-        print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
-        java_heap_GB = (n['tot_mem_bytes']+0.0)/(1024*1024*1024)
+        print "max_mem_bytes (GB):", "%0.2f" % ((n['max_mem_bytes']+0.0)/(1024*1024*1024))
+        java_heap_GB = (n['max_mem_bytes']+0.0)/(1024*1024*1024)
         java_heap_GB = int(round(java_heap_GB,0))
         num_cpus = n['num_cpus']
         print "java_heap_GB:", java_heap_GB
@@ -156,6 +156,7 @@ def create_node(possMember, h2oNodes, expectedSize, hdfsSetup):
             'hdfs_version': hdfs_version, # something is checking for this.
             'hdfs_name_node': hdfs_name_node, # Do we need this for hdfs url generation correctly?
             'hdfs_config': hdfs_config,
+            'aws_credentials': 'false',
         }
 
         # this is the total list so far

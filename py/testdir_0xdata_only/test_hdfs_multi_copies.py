@@ -22,7 +22,6 @@ class Basic(unittest.TestCase):
         # defaults to /datasets
         parseResult = h2i.import_parse(path='datasets/manyfiles-nflx-gz/*', schema='hdfs', hex_key='manyfiles.hex', 
             exclude=None, header=None, timeoutSecs=600)
-        print "*copies* regex to hdfs /datasets", 'parse time:', parseResult['response']['time']
         print "parse result:", parseResult['destination_key']
         sys.stdout.flush() 
 

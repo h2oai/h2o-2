@@ -23,12 +23,12 @@ class Basic(unittest.TestCase):
         modelKey = 'GBMModelKey'
         if h2o.localhost:
             files = [
-                # None forces num_cols to be used. assumes you set it from Inspect
+                # None forces numCols to be used. assumes you set it from Inspect
                 ('manyfiles-nflx-gz', 'file_1[0-9][0-9].dat.gz', 'file_100.hex', 1800, None, 'file_1.dat.gz', 'file_1_test.hex')
                 ]
         else:
             files = [
-                # None forces num_cols to be used. assumes you set it from Inspect
+                # None forces numCols to be used. assumes you set it from Inspect
                 ('manyfiles-nflx-gz', 'file_[0-9].dat.gz', 'file_10.hex', 1800, None, 'file_1[0-9].dat.gz', 'file_10_test.hex')
                 ]
 
@@ -56,17 +56,17 @@ class Basic(unittest.TestCase):
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
             inspect = h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
 
             # Make col 378 it something we can do binomial regression on!
             execExpr = '%s[,378] = %s[,378]>15 ? 1 : 0' % (trainKey, trainKey)
             resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=500)
 
             # Parse (test)****************************************
-            parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
+            parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='s3n',
                 hex_key=testKey, timeoutSecs=timeoutSecs, doSummary=False)
 
             elapsed = time.time() - start
@@ -83,7 +83,7 @@ class Basic(unittest.TestCase):
 
             # GBM (train iterate)****************************************
             # if not response:
-            #     response = num_cols - 1
+            #     response = numCols - 1
             response = 378
             print "Using the same response %s for train and test (which should have a output value too)" % response
 

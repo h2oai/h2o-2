@@ -157,9 +157,9 @@ def probe_node(line, h2oNodes):
         raise Exception("cloud_size %s at %s disagrees with -expected_size %s" % (cloud_size, node_name, args.expected_size))
 
     for n in nodes:
-        # print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
-        # print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
-        java_heap_GB = (n['tot_mem_bytes']+0.0)/(1024*1024*1024)
+        print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
+        print "max_mem_bytes (GB):", "%0.2f" % ((n['max_mem_bytes']+0.0)/(1024*1024*1024))
+        java_heap_GB = (n['max_mem_bytes']+0.0)/(1024*1024*1024)
         java_heap_GB = int(round(java_heap_GB,0))
         # print "java_heap_GB:", java_heap_GB
         # print 'num_cpus:', n['num_cpus']
@@ -205,6 +205,7 @@ def probe_node(line, h2oNodes):
             'hdfs_version': args.hdfs_version, # something is checking for this. I guess we could set this in tests as a hack
             'hdfs_name_node': args.hdfs_name_node, # hmm. do we have to set this to do hdfs url generation correctly?
             'hdfs_config': args.hdfs_config,
+            'aws_credentials': 'false',
         }
 
         # this is the total list so far

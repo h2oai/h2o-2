@@ -154,7 +154,6 @@ class Basic(unittest.TestCase):
                                 benchmarkLogging=benchmarkLogging)
 
                     elapsed = time.time() - start
-                    print src_key, 'parse time:', parseResult['response']['time']
                     print "parse result:", parseResult['destination_key']
                     print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                         "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

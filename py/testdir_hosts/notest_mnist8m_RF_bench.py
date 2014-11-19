@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
             print "Parsing training file took ", trainParseWallTime ," seconds." 
             inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
             row = {'java_heap_GB':java_heap_GB,'dataset':'mnist8m',
-                    'nTrainRows': inspect['num_rows'],'nCols':inspect['num_cols'],
+                    'nTrainRows': inspect['numRows'],'nCols':inspect['numCols'],
                     #'nIgnoredCols':nIgnoredCols,'ignoredCols':ignoredCols,
                     'trainParseWallTime':trainParseWallTime}
     
@@ -92,7 +92,7 @@ class Basic(unittest.TestCase):
             #End Test File Parse#
             print "Parsing testing file took ", testParseWallTime, " seconds."
             inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
-            row.update({'nTestRows':inspect['num_rows']})
+            row.update({'nTestRows':inspect['numRows']})
             row.update({'testParseWallTime':testParseWallTime})
             
             #RFView (score on test)#
