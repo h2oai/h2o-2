@@ -28,8 +28,11 @@ public class MMStats  extends Request2 {
     if (v == null)
       return Response.error("key(\"" + src_key + "\" does not exist!");
     _stats = v.get();
-    float progress = (float)_stats.chunksDone/_stats.chunksTotal;
-    return Response.poll(this, (int) (100 * progress), 100, "job_key", _stats.jobKey, "destination_key",src_key);
+    if(Job.isRunning(_stats.jobKey)) {
+      float progress = (float) _stats.chunksDone / _stats.chunksTotal;
+      return Response.poll(this, (int) (100 * progress), 100, "job_key", _stats.jobKey, "destination_key", src_key);
+    }
+    else return Inspector.redirect(this,src_key);
   }
 
   public String prettyprint(long l){

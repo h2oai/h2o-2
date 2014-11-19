@@ -17,10 +17,21 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
-* Created by tomasnykodym on 11/13/14.
+ * Created by tomasnykodym on 11/13/14.
+ *
+ * Distributed matrix operations such as (sparse) multiplication and transpose.
 */
 public class DMatrix  {
 
+  /**
+   * Transpose the Frame as if it was a matrix (i.e. rows become coumns).
+   * Must be all numeric, currently will fail if there are too many rows ( >= ~.5M).
+   * Result will be put into a new Vectro Group and will be balanced so that each vec will have
+   * (4*num cpus in the cluster) chunks.
+   *
+   * @param src
+   * @return
+   */
   public static Frame transpose(Frame src){
     int nchunks = Math.min(src.numCols(),4*H2O.NUMCPUS*H2O.CLOUD.size());
     long [] espc = new long[nchunks+1];
@@ -37,6 +48,15 @@ public class DMatrix  {
     return transpose(src, new Frame(new Vec(Vec.newKey(),espc).makeZeros((int)src.numRows())));
   }
 
+  /**
+   * Transpose the Frame as if it was a matrix (rows <-> columns).
+   * Must be all numeric, will fail if there are too many rows ( >= ~.5M).
+   *
+   * Result is made to be compatible (i.e. the same vector group and chunking) with the target frame.
+   *
+   * @param src
+   * @return
+   */
   public static Frame transpose(Frame src, Frame tgt){
     if(src.numRows() != tgt.numCols() || src.numCols() != tgt.numRows())
       throw new IllegalArgumentException("dimension do not match!");
@@ -50,8 +70,17 @@ public class DMatrix  {
     return tgt;
   }
 
+  /**
+   * (MR)Task performing the matrix transpose.
+   * It is to be applied to the source frame.
+   * Target frame must be created up front (e.g. via Vec.makeZeros() call)
+   * and passed in as an argument.
+   *
+   * Task will utilize sparsity and will preserve compression if possible
+   * (compression may differ because of switching from column compressed to row-compressed form)
+   */
   public static class TransposeTsk extends MRTask2<TransposeTsk> {
-    final Frame _tgt;
+    final Frame _tgt; // Target dataset, should be created up front, e.g. via Vec.makeZeros(n) call.
     public TransposeTsk(Frame tgt){ _tgt = tgt;}
     public void map(Chunk [] chks) {
       final Frame tgt = _tgt;
@@ -71,7 +100,7 @@ public class DMatrix  {
             v.add2Chunk(t);
           }
         }
-        for(NewChunk t:tgtChunks) {
+        for(NewChunk t:tgtChunks) { // finalize the target chunks and close them
           t.addZeros((int)(espc[i+1] - espc[i]) - t.len());
           t.close(_fs);
         }
@@ -79,6 +108,7 @@ public class DMatrix  {
     }
   }
 
+  
   public static class MatrixMulStats extends Iced {
     public final Key jobKey;
     public final long chunksTotal;
