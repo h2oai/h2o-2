@@ -102,6 +102,12 @@ public abstract class Chunk extends Iced implements Cloneable {
   /** Set the element as missing the slow way.  */
   public final boolean setNA( long i )       { long x = i-_start; return (0 <= x && x < _len) ? setNA0((int)x) : _vec.setNA(i); }
 
+  public void setAll(double [] vals) {
+    setWrite();
+    _chk2 = new NewChunk(_vec,cidx(),vals).compress();
+  }
+  public Chunk modifiedChunk(){return _chk2;}
+
   private void setWrite() {
     if( _chk2 != null ) return; // Already setWrite
     assert !(this instanceof NewChunk) : "Cannot direct-write into a NewChunk, only append";

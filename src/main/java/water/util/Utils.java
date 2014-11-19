@@ -623,6 +623,23 @@ public class Utils {
     return res;
   }
 
+  public static int[] mergeSort(int[] a, int[] b) {
+    int[] res = new int[a.length + b.length];
+    int i = 0, j = 0;
+    for(int k = 0; k < res.length; ++k){
+      if(i == a.length){
+        System.arraycopy(b,j,res,k,res.length-k);
+        break;
+      }
+      if(j == b.length) {
+        System.arraycopy(a,i,res,k,res.length-k);
+        break;
+      }
+      res[k] = (a[i] > b[j])?b[j++]:a[i++];
+    }
+    return res;
+  }
+
   public static String[] append(String[] a, String[] b) {
     String[] res = new String[a.length + b.length];
     System.arraycopy(a, 0, res, 0, a.length);
