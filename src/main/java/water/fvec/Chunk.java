@@ -189,7 +189,15 @@ public abstract class Chunk extends Iced implements Cloneable {
    * @return array of chunk-relative indeces of values stored in this chunk.
    */
   public int  nonzeros(int [] res){
-    for( int i = 0; i < _len; ++i) res[i] = i;
+    if(!isSparse())
+      for( int i = 0; i < _len; ++i)
+        res[i] = i;
+    else {
+      int j = 0;
+      for (int i = nextNZ(-1); i < _len; i = nextNZ(i))
+        res[j++] = i;
+      assert res.length == j;
+    }
     return _len;
   }
 
