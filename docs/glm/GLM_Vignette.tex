@@ -163,7 +163,7 @@ This generalization allows us to use GLM on problems such as binary classificati
 \subsubsection{Model Fitting}
 GLM models are fitted by maximizing the likelihood. For the gaussian family, maximum likelihood is simply the minimal mean squared error, which has an analytical solution and can be solved with ordinary least squares. For all other families, the maximum likelihood problem has no analytical solution so we must use an iterative method such as IRLSM, Newton method, gradient descent, and L-BFGS.
 \subsubsection{Model Validation}
-Evaluating the quality of the model is a critical part of any data-modeling and scoring process. There are several standard ways on how to evalute the quality of the fitted GLM model; the most common method is to use the resulting deviance. Deviance is calculated by comparing the log likelihood of the fitted model with log likelihood of the saturated model (or theoretically perfect model).
+Evaluating the quality of the model is a critical part of any data-modeling and scoring process. There are several standard ways on how to evaluate the quality of the fitted GLM model; the most common method is to use the resulting deviance. Deviance is calculated by comparing the log likelihood of the fitted model with log likelihood of the saturated model (or theoretically perfect model).
 
 \[ deviance = 2({ln(L_{s})} - {ln(L_{m})}) \]
 
