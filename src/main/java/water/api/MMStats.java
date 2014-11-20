@@ -27,12 +27,13 @@ public class MMStats  extends Request2 {
     Value v = DKV.get(src_key);
     if (v == null)
       return Response.error("key(\"" + src_key + "\" does not exist!");
-    _stats = v.get();
-    if(Job.isRunning(_stats.jobKey)) {
-      float progress = (float) _stats.chunksDone / _stats.chunksTotal;
-      return Response.poll(this, (int) (100 * progress), 100, "job_key", _stats.jobKey, "destination_key", src_key);
+    try {
+      _stats = v.get();
+    } catch(Exception e) { // if job is done
+      return Inspector.redirect(this,src_key);
     }
-    else return Inspector.redirect(this,src_key);
+    float progress = (float) _stats.chunksDone / _stats.chunksTotal;
+    return Response.poll(this, (int) (100 * progress), 100, "job_key", _stats.jobKey, "destination_key", src_key);
   }
 
   public String prettyprint(long l){
@@ -51,6 +52,7 @@ public class MMStats  extends Request2 {
   }
   @Override
   public boolean toHTML(StringBuilder sb) {
+    if(_stats == null)return true;
     DocGen.HTML.arrayHead(sb);
     // Column labels
 
