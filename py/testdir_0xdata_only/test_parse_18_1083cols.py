@@ -3,6 +3,7 @@ sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common, h2o_exec as h2e
 import h2o_print
 
+print "18 files, each 1083 cols, almost 1GB each, uncompressed"
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -24,7 +25,7 @@ class Basic(unittest.TestCase):
         importFolderPath = "many_many"
         print "Using non-gz'ed files in", importFolderPath
         csvFilenameList= [
-            ("*.dat", "file_17_A.dat", 17 * avgMichalSize, 1800),
+            ("*.dat", "file_18_A.dat", 18 * avgMichalSize, 1800),
         ]
 
         pollTimeoutSecs = 120
