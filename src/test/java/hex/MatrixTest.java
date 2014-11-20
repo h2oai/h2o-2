@@ -91,7 +91,7 @@ public class MatrixTest extends TestUtil {
   @Test
   public void testMultiplicationSparse(){
     Futures fs = new Futures();
-    Key parsed = Key.make("arcene_parsed");
+    Key parsed = Key.make("sparse_data");
     GLMModel model = null;
     String[] data = new String[] {
       "1 2:.2 5:.5 9:.9\n-1 1:.1 4:.4 8:.8\n",
