@@ -288,7 +288,9 @@ public class DMatrix  {
       }
       zChunk.setAll(res);
       new UpdateProgress(zChunk.modifiedChunk()._mem.length,zChunk.modifiedChunk().frozenType()).fork(_progressKey);
-      _y = null;
+    }
+    @Override public void closeLocal(){
+      _y = null; // drop inputs 
       _progressKey = null;
     }
 
