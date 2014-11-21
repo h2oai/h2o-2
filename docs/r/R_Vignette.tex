@@ -99,11 +99,11 @@ Note: Our push to CRAN will be behind the bleeding edge version and due to resou
 
 To get the latest build, download it from \underbar{http://h2o.ai/download} and make sure to run the following (replacing the asterisks [*] with the version number): 
 \begin{spverbatim}
->if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
->if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
->install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/****/
+> if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+> if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+> install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/****/
 R", getOption("repos"))))
->library(h2o)
+> library(h2o)
 \end{spverbatim}
 
 \item If you are operating on a single node, initialize H2O using \begin{spverbatim} h2o_server = h2o.init()\end{spverbatim}\\
@@ -120,8 +120,10 @@ demo(glm)
 
 After making the build, navigate to the Rcran folder with the R package in the build’s directory, then run and install.
 \begin{spverbatim}
-
- R CMD INSTALL h2o_2.7.0.99999.tar.gz
+$ make clean
+$ make build
+$ cd target/R/src/contrib
+$ R CMD INSTALL h2o_2.7.0.99999.tar.gz
 * installing to library 'C:/Users//Documents/R/win-library/3.0'
 * installing *source* package 'h2o' ...
 ** R
@@ -139,8 +141,8 @@ DONE (h2o)
 \item Verify that H2O installed properly:
 \begin{spverbatim}
 
- library(h2o)
- localH2O = h2o.init()
+> library(h2o)
+> localH2O = h2o.init()
 \end{spverbatim}
 \end{enumerate}
 
@@ -174,7 +176,7 @@ The following section describes some of the tools and methods available in H2O f
 \item {\textbf{Training and Validation Sampling Plan}}: Design a random or stratified sampling plan to generate data sets for model training and scoring. 
 \end{itemize}
 
-\subsection{Demo: Splitting Data for Training}
+\subsection{Demo: Splitting Data}
 
 The following section depicts an example of data training using {\texttt{ddply()}}. Using this method, you can split your dataset and apply a function to the subsets.
 
@@ -185,17 +187,17 @@ library(h2o)
 localH2O = h2o.init()
 
 # Import iris dataset to H2O
-irisPath = system.file("extdata", "iris_wheader.csv", package = "h2o")
-iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
+> irisPath = system.file("extdata", "iris_wheader.csv", package = "h2o")
+> iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 
 # Add function taking mean of sepal_len column
-fun = function(df) { sum(df[,1], na.rm = T)/nrow(df) }
-h2o.addFunction(localH2O, fun)
+> fun = function(df) { sum(df[,1], na.rm = T)/nrow(df) }
+> h2o.addFunction(localH2O, fun)
 
 # Apply function to groups by class of flower
 # uses h2o's ddply, since iris.hex is an H2OParsedData object
-res = ddply(iris.hex, "class", fun)
-head(res)
+> res = ddply(iris.hex, "class", fun)
+> head(res)
 \end{spverbatim}
 
 \section{Models}
@@ -235,43 +237,44 @@ The following demo demonstrates how to import a file, define significant data, v
 > summary(airlines.hex)
 
 ## Define columns to ignore, quantiles and histograms
-> high_na_counts = h2o.ignoreColumns(data = airlines.hex)
-> high_na_counts
-[1] "AirTime"           "TaxiIn"            "TaxiOut"           "CancellationCode" 
-[5] "CarrierDelay"      "WeatherDelay"      "NASDelay"          "SecurityDelay"    
-[9] "LateAircraftDelay"
+> high_na_columns = h2o.ignoreColumns(data = airlines.hex)
+> delay_quantiles = quantile(x = airlines.hex$ArrDelay, na.rm = TRUE)
+> hist(airlines.hex$ArrDelay)
 
 ## Find number of flights by airport
 > originFlights = h2o.ddply(airlines.hex, 'Origin', nrow)
 > originFlights.R = as.data.frame(originFlights)
 
 ## Find number of cancellations per month
-> flightByMonth = h2o.ddply(airlines.hex,"Month", nrow)
-> end = Sys.time()
-> time_to_aggre_h2o = end - start
+> flightsByMonth = h2o.ddply(airlines.hex,"Month", nrow)
+> flightsByMonth.R = as.data.frame(originFlights)
 
 ## Find months with the highest cancellation ratio
 > fun = function(df) {sum(df$Cancelled)}
 > h2o.addFunction(h, fun)
 > cancellationsByMonth = h2o.ddply(airlines.hex,"Month", fun)
-> cancellation_rate = cbind(flightByMonth$Month,cancellationsByMonth$C1
-/flightByMonth$C1)
+> cancellation_rate = cancellationsByMonth$C1/flightsByMonth$C1)
+> rates_table = cbind(flightsByMonth$Month, cancellation_rate)
+> rates_table.R = as.data.frame(rates.table)
 
 # Construct test and train sets using sampling
-> airline.split = h2o.splitFrame(data = airlines.hex,ratios = 0.85)
-> airline.train = airline.split[[1]]
-> airline.test = airline.split[[2]]
+> airlines.split = h2o.splitFrame(data = airlines.hex,ratios = 0.85)
+> airlines.train = airlines.split[[1]]
+> airlines.test = airlines.split[[2]]
 
 # Display a summary using table-like functions
-> summary(as.factor(airline.train$Cancelled))
-> summary(as.factor(airline.test$Cancelled))
+> h2o.table(airlines.train$Cancelled)
+> h2o.table(airlines.test$Cancelled)
 
 # Set predictor and response variables
 > Y = "IsDepDelayed"
 > X = c("Origin", "Dest", "DayofMonth", "Year", "UniqueCarrier", "DayOfWeek", "Month", "DepTime", "ArrTime", "Distance")
 # Define the data for the model and display the results
-> airlines.glm<- h2o.glm(data=airlines.hex, x=X, y=Y, family = "binomial", nfolds = 1)
-> airlines.glm
+> airlines.glm <- h2o.glm(data=airlines.train, x=X, y=Y, family = "binomial", alpha = 0.5)
+
+# Predict using GLM model
+> pred = h2o.predict(object = airlines.glm, newdata = airlines.test)
+
 \end{spverbatim}
 
 \section{Data Manipulation in R}
@@ -392,7 +395,7 @@ Caution: While this can be very useful, be careful using this command when conve
 ##Imports data set
   |===================================================| 100%
 
- > prostate.data.frame<- as.data.frame(prostate.hex)
+ > prostate.data.frame <- as.data.frame(prostate.hex)
 ##Converts current data frame (prostate data set) to an R data frame
  > summary(prostate.data.frame) ##Displays summary of data frame
        ID            CAPSULE            AGE             RACE
@@ -406,13 +409,14 @@ Min.   :  1.00   Min.   :0.0000   Min.   :43.00   Min.   :0.000
 
 To convert an integer into a non-ordered factor (also called an enum or categorical), use {\texttt{as.factor( )}} with the name of the R reference object in parentheses followed by the number of the column to convert in brackets. 
 \begin{spverbatim}
-> prosPath = system.file("extdata", "prostate.csv", package="h2o")
-##Creates object that defines path
-> prostate.hex = h2o.importFile(localH2O, path = prosPath)
-##Imports data set
+# Import prostate data
+> prosPath <- system.file("extdata", "prostate.csv", package="h2o")
+> prostate.hex <- h2o.importFile(localH2O, path = prosPath)
 |===================================================| 100%
-> prostate.hex[,4] = as.factor(prostate.hex[,4]) 
-##Converts column 4 (RACE) to an enum
+## Converts column 4 (RACE) to an enum
+> is.factor(prostate.hex[,4])
+[1] FALSE
+> prostate.hex[,4]<-as.factor(prostate.hex[,4]) 
 > summary(prostate.hex)
  ID               CAPSULE          AGE             RACE    DPROS
  Min.   :  1.00   Min.   :0.0000   Min.   :43.00   1 :341  Min.   :1.000
@@ -445,28 +449,28 @@ Parsed Data Key: dataframe.h2o
 To create a hex key on the server running H2O for data sets that were manipulated in R, use {\texttt{h2o.assign( )}}. For instance, in the following example, the prostate data set was uploaded to the H2O instance and the data was manipulated to remove outliers. {\texttt{h2o.assign( )}} saves the new data set on the H2O server so that it can be analyzed using H2O without overwriting the original data set.  
 
 \begin{spverbatim}
-> prosPath = system.file("extdata", "prostate.csv", package=“h2o")
-##Creates object that defines path
-> prostate.hex = h2o.importFile(localH2O, path = prosPath)
-##Imports data set
+> prosPath <- system.file("extdata", "prostate.csv", package=“h2o")
+> prostate.hex<-h2o.importFile(localH2O, path = prosPath)
     |===================================================| 100%
-> prostate.qs = quantile(prostate.hex$PSA) 
-> PSA.outliers = prostate.hex[prostate.hex$PSA
-<= prostate.qs[2] | prostate.hex$PSA >=   prostate.qs[10],]
-> PSA.outliers = h2o.assign(PSA.outliers, "PSA.outliers")
-> nrow(prostate.hex)
-[1] 380
-> nrow(PSA.outliers)
-[1] 380
+## Assign a new name to prostate dataset in the KV store
+> prostate.hex@key
+[1] "prostate.hex"
+> prostate.hex <- h2o.assign(data = prostate.hex, key = "newName.hex")
+> prostate.hex@key
+[1] "newName.hex"
+
 \end{spverbatim}
 
 \subsection{Getting Column Names}
 
-To obtain a list of the column names in the data set, use {\texttt{colnames( )}} with the name of the R reference object in the parentheses. 
+To obtain a list of the column names in the data set, use {\texttt{colnames( )}} or {\texttt{names( )}} with the name of the R reference object in the parentheses. 
 
 \begin{spverbatim}
+##Displays the titles of the columns
 > colnames(iris.hex)
-[1] "C1" "C2" "C3" "C4" “C5" ##Displays the titles of the columns
+[1] "Sepal.Length" "Sepal.Width"  "Petal.Length" "Petal.Width"  "Species"     
+> names(iris.hex)
+[1] "Sepal.Length" "Sepal.Width"  "Petal.Length" "Petal.Width"  "Species"     
 \end{spverbatim}
 
 
@@ -475,10 +479,10 @@ To obtain a list of the column names in the data set, use {\texttt{colnames( )}}
 To obtain the maximum values for the real-valued columns in a data set, use {\texttt{max( )}} with the name of the R reference object in the parentheses. 
 To obtain the minimum values for the real-valued columns in a data set, use {\texttt{min( )}} with the name of the R reference object in the parentheses. 
 \begin{spverbatim}
-> min(prostate.hex)
-[1] 0
-> max(prostate.hex)
-[1] 380
+> min(prostate.hex$AGE)
+[1] 43
+> max(prostate.hex$AGE)
+[1] 79
 \end{spverbatim}
 
 
@@ -489,13 +493,23 @@ To request a quantile for a single numerical column, use {\texttt{quantile(Refer
 When you request for a full parsed data set consisting of a single column, {\texttt{quantile( )}} displays a matrix with quantile information for the data set. 
 
 \begin{spverbatim}
-> quantile(breadth.hex)
-  0%  25%  50%  75% 100% 
-   1    2    3    6   33 
-> quantile(breadth.hex$C1)
-  0%  25%  50%  75% 100% 
-   1    2    3    6   33
- \end{spverbatim}
+> prosPath <- system.file("extdata", "prostate.csv", package=“h2o")
+> prostate.hex <- h2o.importFile(localH2O, path = prosPath)
+# Returns the percentiles at 0, 10, 20, ..., 100%
+> prostate.qs <- quantile(prostate.hex$PSA, probs = (1:10)/10)
+> prostate.qs
+   10%    20%    30%    40%    50%    60%    70%    80%    90%   100% 
+   2.60    4.48    5.77    7.40    8.75   11.00  13.70   20.16   33.21  139.70 
+# Take the outliers or the bottom and top 10% of data
+> PSA.outliers <- prostate.hex[prostate.hex$PSA <= prostate.qs["10%"] | prostate.hex$PSA >=   prostate.qs["90%"],]
+# Check that the number of rows return is about 20% of the original data
+> nrow(prostate.hex)
+[1] 380
+> nrow(PSA.outliers)
+[1] 78
+> nrow(PSA.outliers)/nrow(prostate.hex)
+[1] 0.2052632
+\end{spverbatim}
 
 
 \subsection{Summarizing Data} 
@@ -528,9 +542,9 @@ To summarize multiple columns, use {\texttt{head(h2o.table (ObjectName[, c(Colum
 
 \begin{spverbatim}
 library(h2o)
-localH2O = h2o.init()
-prosPath = system.file("extdata", "prostate.csv", package="h2o")
-prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
+localH2O <- h2o.init()
+prosPath <- system.file("extdata", "prostate.csv", package="h2o")
+prostate.hex <- h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 summary(prostate.hex)
 
 # Counts of the ages of all patients
@@ -548,7 +562,7 @@ h2o.table(prostate.hex[,c(3,4)], return.in.R = TRUE)
 To append a column of random numbers to an H2O data frame for facilitating creation of testing/training data splits for analysis and validation in H2O, use {\texttt{h2o.runif()}} with the name of the R reference object in the parentheses. This method is best for customized frame splitting; otherwise, use {\texttt{h2o.splitFrame()}}. However, {\texttt{h2o.runif()}} is not as fast or stable as {\texttt{h2o.splitFrame()}}. 
 
 \begin{spverbatim}
-> s = h2o.runif(phbirths.hex) ##Creates object “s" for h2o.runif on phbirths data set
+> s <- h2o.runif(phbirths.hex) ##Creates object “s" for h2o.runif on phbirths data set
 > summary (s)  ##Summarize the results of h2o.runif
  rnd               
  Min.   :0.000105  
@@ -557,10 +571,10 @@ To append a column of random numbers to an H2O data frame for facilitating creat
  Mean   :0.492103  
  3rd Qu.:0.739377  
  Max.   :0.998859  
-> phbirths.train = phbirths.hex[s <= 0.8,] ##Create training set with threshold of 0.8
-> phbirths.train = h2o.assign(phbirths.train, “phbirths.train") ##Assign name to training set
-> phbirths.test = phbirths.hex[s > 0.8,] ##Create test set with threshold to filter values greater than 0.8
-> phbirths.test = h2o.assign(phbirths.test, “phbirths.test") ##Assign name to test set
+> phbirths.train <- phbirths.hex[s <= 0.8,] ##Create training set with threshold of 0.8
+> phbirths.train <- h2o.assign(phbirths.train, “phbirths.train") ##Assign name to training set
+> phbirths.test <- phbirths.hex[s > 0.8,] ##Create test set with threshold to filter values greater than 0.8
+> phbirths.test <- h2o.assign(phbirths.test, “phbirths.test") ##Assign name to test set
 > nrow(phbirths.train) + nrow(phbirths.test) ##Combine results of test & training sets, then display result
 [1] 1115
 \end{spverbatim}
@@ -571,11 +585,11 @@ To append a column of random numbers to an H2O data frame for facilitating creat
 To generate two subsets (according to specified ratios) from an existing H2O data set for testing/training, use {\texttt{h2o.splitFrame()}}.  This method is preferred over {\texttt{h2o.runif}} because it is faster and more stable. 
 
 \begin{spverbatim}
-prostate.split = h2o.splitFrame(data = prostate.hex , ratios = 0.75)
+prostate.split <- h2o.splitFrame(data = prostate.hex , ratios = 0.75)
 ##Splits data in prostate data frame with a ratio of 0.75
-prostate.train = prostate.split[1] 
+prostate.train <- prostate.split[1] 
 ##Creates training set from 1st data set in split
-prostate.test = prostate.split[2]
+prostate.test <- prostate.split[2]
 ##Creates training set from 1st data set in split
 \end{spverbatim}
 
@@ -585,14 +599,14 @@ prostate.test = prostate.split[2]
 To create a reference object to the data frame in H2O, use {\texttt{h2o.getFrame()}}. This is helpful for  users that alternate between the web UI and the R API or multiple users accessing the same H2O instance. The following example assumes prostate.hex is in the key-value (KV) store.
 
 \begin{spverbatim}
-> prostate.hex = h2o.getFrame(h2o = localH2O, key = "prostate.hex")
+> prostate.hex <- h2o.getFrame(h2o = localH2O, key = "prostate.hex")
 \end{spverbatim}
 
 
 \subsection{Getting Models}
  To create a reference object for the model in H2O, use {\texttt{h2o.getModel()}}. This is helpful for  users that alternate between the web UI and the R API or multiple users accessing the same H2O instance. The following example assumes GLMModel is in the key-value (KV) store.
 \begin{spverbatim}
-glm.model = h2o.getModel(h2o = localH2O, key = "GLMModel")
+glm.model <- h2o.getModel(h2o = localH2O, key = "GLMModel")
 \end{spverbatim}
 
 \subsection{Listing H2O Objects}
@@ -620,7 +634,7 @@ To remove an H2O object on the server associated with an object in the R environ
 To add a user-defined function in R to the H2O instance, use {\texttt{h2o.addFunction()}}, with the IP address of the H2O instance and the function in the parentheses.  
 \begin{spverbatim}
 library(h2o)
-localH2O = h2o.init()
+localH2O <- h2o.init()
 h2o.addFunction(localH2O, function(x) { 2*x + 5 }, "simpleFun")
 \end{spverbatim}
 
@@ -633,8 +647,7 @@ To run the models, use the following commands.
 
 For more information, use {\texttt{help(h2o.gbm)}}.
 \begin{spverbatim}
-> h2o.gbm(y = dependent, x = independent, data = australia.hex,
-> n.trees = 10, interaction.depth = 3,
+> h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3,
    n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
      |===================================================| 100%
  Mean-squared Error by tree:
