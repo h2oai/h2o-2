@@ -523,16 +523,17 @@ summary(weather.hex)
 
 \subsection{Performing a trial run} \label{3.2}
 Returning to the Airline dataset demo, we first load the dataset into H2O and select the variables we want to use to predict a chosen response. For example, we can model if flights are delayed based on the departure's scheduled day of the week and day of the month.
+% @TODO localH2O not found FIXXXXXXX & CHECK VARIABLES - [Code below tested & run in R - Jessica]%
+
 \begin{spverbatim}
 
 #Load the data and prepare for modeling
-% @TODO localH2O not found FIXXXXXXX & CHECK VARIABLES
-air_train.hex = h2o.uploadFile(localH2O, path = "AirlinesTrain.csv", header = TRUE, sep = ",", key = "airline_train.hex")
+air_train.hex = h2o.uploadFile(localH2O, path = "Downloads/AirlinesTrain.csv", header = TRUE, sep = ",", key = "airline_train.hex")
 
-air_test.hex = h2o.uploadFile(localH2O, path = "AirlinesTest.csv", header = TRUE, sep = ",", key = "airline_test.hex")
+air_test.hex = h2o.uploadFile(localH2O, path = "Downloads/AirlinesTest.csv", header = TRUE, sep = ",", key = "airline_test.hex")
 
-x = c("Year", "Month", "DayofMonth", "DayOfWeek", "UniqueCarrier", "FlightNum", "Origin", "Dest", "Distance")
-y = "IsArrDelayed" 
+x = c("fYear", "fMonth", "fDayofMonth", "fDayOfWeek", "UniqueCarrier", "Origin", "Dest", "Distance")
+y = "IsDepDelayed" 
 
 \end{spverbatim}
 
@@ -540,14 +541,14 @@ Now we train the GLM model:
 
 \begin{spverbatim}
 airline.glm <- h2o.glm(x=x, 
-                     y=y, 
-                     data=airline.train.hex,
-                     key = "glm_model",
-                     family="binomial",
-                     lambda_search = TRUE,
-                     return_all_lambda = TRUE,
-                     use_all_factor_levels = TRUE,
-                     variable_importances = TRUE)
+                       y=y, 
+                       data=air_train.hex,
+                       key = "glm_model",
+                       family="binomial",
+                       lambda_search = TRUE,
+                       return_all_lambda = TRUE,
+                       use_all_factor_levels = TRUE,
+                       variable_importances = TRUE)
 \end{spverbatim}
 
 \subsubsection{Extracting and handling the results} \label{3.2.1}
@@ -555,21 +556,26 @@ airline.glm <- h2o.glm(x=x,
 We can extract the parameters of our model, examine the scoring process, and make predictions on new data.
 
 %@ NOTE typoe in R demo test… i spelled performance wrong :(
+% [Jessica: Need some help with code below - 2nd to last line throws error still]
 \begin{spverbatim}
+print("Predict on GLM model")
+best_glm = airlines.glm@models[[airlines.glm@best_model]]
+air.results = h2o.predict(object = best_glm, newdata = air_test.hex)
 print("Check performance and AUC")
-perf = h2o.performance(air.results$YES,airline.test.hex$IsArrDelayed )
+perf = h2o.performance(air.results$YES,air_test.hex$IsDepDelayed )
 print(perf)
-perf@model\$auc
+perf@model$auc
 print("Show distribution of predictions with quantile.")
-quantile.H2OParsedData(air.results\$YES)  
+quantile.H2OParsedData(air.results$YES)  
 print("Extract strongest predictions.")
-top.air <- h2o.assign(air.results[air.results\$YES > quant[‘75%] ],key="top.air")
+top.air <- h2o.assign(air.results[air.results$YES > quant‘75%,key="top.air")
 top.air
 \end{spverbatim}
 \noindent
 \\
 \\
 Once we have a satisfactory model, the \texttt{h2o.predict()} command can be used to compute and store predictions on the new data, which can then be used for further tasks in the interactive modeling process.
+%[Jessica: I think this code needs work as well]
 \begin{spverbatim}
 #Perform classification on the held out data
 prediction = h2o.predict(airline.glm, newdata=air_test.hex)
