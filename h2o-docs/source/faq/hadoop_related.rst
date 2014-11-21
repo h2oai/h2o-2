@@ -43,6 +43,14 @@ description of your Hadoop environment, including the Hadoop distribution and ve
 
 Common Hadoop Questions
 """"""""""""""""""""""""
+
+**What versions of Hadoop are supported?**
+
+Currently, the major versions that H2O supports are HDP 1.3 and HDP 2.1. H2O also supports MapR 2.1 and 3.1, as well as CDH 4 and 5. 
+
+---
+
+
 **What's the syntax for the file path of a data set sitting in hdfs?**
 
 To locate an HDFS file, go to **Data > Import** and enter **hdfs://** in the **path** field. H\ :sub:`2`\ O automatically detects any HDFS paths. This is a good way to verify the path to your data set before importing through R or any other non-web API.

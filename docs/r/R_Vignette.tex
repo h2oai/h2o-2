@@ -630,6 +630,8 @@ h2o.addFunction(localH2O, function(x) { 2*x + 5 }, "simpleFun")
 To run the models, use the following commands. 
 \subsection{Gradient Boosted Models (GBM)}
  To generate gradient boosted models for developing forward-learning ensembles, use {\texttt{h2o.gbm()}}.  In the parentheses, define x (the predictor variable vector), y (the integer or categorical response variable), the distribution type (multinomial is the default, gaussian is used for regression), and the name of the H2OParsedData object. 
+
+For more information, use {\texttt{help(h2o.gbm)}}.
 \begin{spverbatim}
 > h2o.gbm(y = dependent, x = independent, data = australia.hex,
 > n.trees = 10, interaction.depth = 3,
@@ -657,7 +659,16 @@ Actual     0 3 6 7 14 16 17 19 20 25 38 43 61 75 82 107 138 150 167 191 200
 
 \subsection{Generalized Linear Models (GLM)}
 
-To generate a generalized linear model for developing linear models for exponential distributions, use {\texttt{h2o.glm()}}. You can apply regularization to the model by adjusting the lambda and alpha parameters.  
+
+Generalized linear models (GLM) are some of the most commonly-used models for many types of data analysis use cases. While some data analysis can be done using general linear models, if the variables are more complex, general linear models may not be as accurate. For example, if the dependent variable has a non-continuous distribution or if the effect of the predictors is not linear, generalized linear models will produce more accurate results than general linear models.  
+
+Generalized Linear Models (GLM) estimate regression models for outcomes following exponential distributions in general. In addition to the Gaussian (i.e. normal) distribution, these include Poisson, binomial, gamma and Tweedie distributions. Each serves a different purpose, and depending on distribution and link function choice, it can be used either for prediction or classification.
+
+H2O's GLM algorithm fits the generalized linear model with elastic net penalties. The model fitting computation is distributed, extremely fast,and scales extremely well for models with a limited number (~ low thousands) of predictors with non-zero coefficients. The algorithm can compute models for a single value of a penalty argument or the full regularization path, similar to glmnet. It can compute gaussian (linear), logistic, poisson, and gamma regression models.
+
+
+To generate a generalized linear model for developing linear models for exponential distributions, use {\texttt{h2o.glm()}}. You can apply regularization to the model by adjusting the lambda and alpha parameters. 
+For more information, use {\texttt{help(h2o.glm)}}.
 \begin{spverbatim}
 > prostate.hex = h2o.importFile(localH2O, path =
 "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv",
@@ -702,7 +713,7 @@ prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 
 \subsection{K-Means}
 
-To generate a K-Means model for data characterization, use {\texttt{h2o.kmeans()}}. This algorithm does not rely on a dependent variable. 
+To generate a K-Means model for data characterization, use {\texttt{h2o.kmeans()}}. This algorithm does not rely on a dependent variable. For more information, use {\texttt{help(h2o.kmeans)}}.
 \begin{spverbatim}
 > prostate.km = h2o.kmeans(data = prostate.hex, centers = 10,
 cols = c("AGE", "RACE", "VOL", "GLEASON"))
@@ -724,7 +735,7 @@ K-means clustering with 10 clusters of sizes 41, 27, 59, 17, 21, 47, 26, 61, 47,
 
 \subsection{Principal Components Analysis (PCA)}
 
-To map a set of variables onto a subspace using linear transformations, use {\texttt{h2o.prcomp()}}. This is the first step in Principal Components Regression. 
+To map a set of variables onto a subspace using linear transformations, use {\texttt{h2o.prcomp()}}. This is the first step in Principal Components Regression. For more information, use {\texttt{help(h2o.prcomp)}}.
 \begin{spverbatim}
 > ausPath = system.file("extdata", "australia.csv", package="h2o")
 > australia.hex = h2o.importFile(localH2O, path = ausPath)
@@ -743,7 +754,7 @@ Importance of components:
 
 \subsection{Principal Components Regression (PCR)}
 
-To map a set of variables to a set of linearly independent variables, use {\texttt{h2o.pcr()}}. The variables in the new set are linearly independent linear combinations of the original variables and exist in a lower-dimension subspace. This transformation is prepended to the regression model to improve results. 
+To map a set of variables to a set of linearly independent variables, use {\texttt{h2o.pcr()}}. The variables in the new set are linearly independent linear combinations of the original variables and exist in a lower-dimension subspace. This transformation is prepended to the regression model to improve results. For more information, use {\texttt{help(h2o.pcr)}}.
 \begin{spverbatim}
 prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
   "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")

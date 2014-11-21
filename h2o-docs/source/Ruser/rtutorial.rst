@@ -47,7 +47,6 @@ Follow one of the `deployment tutorials <http://docs.0xdata.com/index.html?highl
 	* on your desktop
 	* on ec2 instances
 	* on Hadoop servers
-	
 After launching the H\ :sub:`2`\ O cluster, initialize the connection by taking one node in the cluster and run **h2o.init** with the node's 
 IP Address and port in the parentheses.
 Note that the IP Address must be on your local machine. For the following example, change **192.168.1.161** to your local host. 
