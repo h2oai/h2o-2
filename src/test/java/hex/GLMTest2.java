@@ -175,7 +175,7 @@ public class GLMTest2  extends TestUtil {
 //      Degrees of Freedom: 379 Total (i.e. Null);  372 Residual
 //      Null Deviance:	    2015
 //      Residual Deviance: 1516 	AIC: 1532
-      // H2O differs on has_intercept and race, same residual deviance though
+      // H2O differs on intercept and race, same residual deviance though
       String [] cfs1 = new String [] {/*"Intercept","RACE.R2","RACE.R3",*/ "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
       double [] vals = new double [] {/*-95.16718, -0.67663, -2.11848,*/1, 2.31296, 3.47783, 0.10842, -0.08657, 2.90452};
       new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,true,fr.vec("AGE")),Family.binomial).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
@@ -304,7 +304,7 @@ public class GLMTest2  extends TestUtil {
     fr.delete();
     fr = DKV.get(k).get();
     try {
-      // H2O differs on has_intercept and race, same residual deviance though
+      // H2O differs on intercept and race, same residual deviance though
       String[] cfs1 = new String[]{"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON","Intercept"};
       double[] vals = new double[]{0, 0, 0.54788332,0.53816534, 0.02380097, 0, 0.98115670,-8.945984};
       new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source((Frame)fr.clone(), fr.vec("CAPSULE"), true, true), Family.binomial).setNonNegative(true).setRegularization(new double[]{1},new double[]{2.22E-5}).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
@@ -345,7 +345,7 @@ public class GLMTest2  extends TestUtil {
     FVecTest.makeByteVec(betaConsKey, "names, lower_bounds, upper_bounds\n AGE, -.5, .5\n RACE, -.5, .5\n DCAPS, -.4, .4\n DPROS, -.5, .5 \nPSA, -.5, .5\n VOL, -.5, .5\nGLEASON, -.5, .5");
     Frame betaConstraints = ParseDataset2.parse(parsed, new Key[]{betaConsKey});
     try {
-      // H2O differs on has_intercept and race, same residual deviance though
+      // H2O differs on intercept and race, same residual deviance though
       String[] cfs1 = new String[]{"AGE", "RACE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON","Intercept"};
       double[] vals = new double[]{-0.006502588, -0.500000000,  0.500000000,  0.400000000,  0.034826559, -0.011661747,  0.500000000, -4.564024 };
       new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source((Frame)fr.clone(), fr.vec("CAPSULE"), true, true), Family.binomial).setNonNegative(false).setRegularization(new double[]{1},new double[]{0.001607}).setBetaConstraints(betaConstraints).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
@@ -389,7 +389,7 @@ public class GLMTest2  extends TestUtil {
     fr = DKV.get(k).get();
     Frame score = null;
     try{
-      // H2O differs on has_intercept and race, same residual deviance though
+      // H2O differs on intercept and race, same residual deviance though
       String [] cfs1 = new String [] {"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
       double [] vals = new double [] { -1.23262,-0.07205, 0.47899, 0.13934, 0.03626, -0.01155, 0.63645};
       new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source((Frame)fr.clone(),fr.vec("CAPSULE"),false,false),Family.binomial).setRegularization(new double[]{0},new double[]{0}).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
@@ -488,7 +488,7 @@ public class GLMTest2  extends TestUtil {
     fr = DKV.get(k).get();
     Frame score = null;
     try{
-      // H2O differs on has_intercept and race, same residual deviance though
+      // H2O differs on intercept and race, same residual deviance though
       String [] cfs1 = new String [] {"RACE", "AGE", "DPROS", "PSA", "VOL", "GLEASON"};
       double [] vals = new double [] { -1.34515,-0.07731, 0.44422, 0.03559, -0.01001, 0.57414};
       new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,false,fr.vec("DCAPS")),Family.binomial).setRegularization(new double[]{0},new double[]{0}).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();

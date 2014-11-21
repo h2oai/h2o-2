@@ -62,8 +62,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   protected boolean standardize = true;
 
-  @API(help = "Include has_intercept term in the model.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
-  protected boolean has_intercept = true;
+  @API(help = "Include intercept term in the model.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
+  protected boolean intercept = true;
 
   @API(help = "Restrict coefficients to be non-negative.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   protected boolean non_negative = false;
@@ -109,7 +109,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   protected boolean lambda_search;
 
   @API(help="use strong rules to filter out inactive columns",filter=Default.class, importance = ParamImportance.SECONDARY)
-  protected boolean strong_rules_enabled = true;
+  protected boolean strong_rules = true;
 
   // intentionally not declared as API now
   int sparseCoefThreshold = 1000; // if more than this number of predictors, result vector of coefficients will be stored sparse
@@ -294,7 +294,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     description = desc;
     destination_key = dest;
     this.offset = src.offset;
-    this.has_intercept = src.intercept;
+    this.intercept = src.intercept;
     this.family = family;
     this.link = l;
     n_folds = nfolds;
@@ -430,7 +430,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         setHighAccuracy();
       if (link == Link.family_default)
         link = family.defaultLink;
-      _intercept = has_intercept ? 1 : 0;
+      _intercept = intercept ? 1 : 0;
       tweedie_link_power = 1 - tweedie_variance_power;// TODO
       if (tweedie_link_power == 0) link = Link.log;
       _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
@@ -474,9 +474,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, toEnum, true, true);
       TransformType dt = TransformType.NONE;
       if (standardize)
-        dt = has_intercept ? TransformType.STANDARDIZE : TransformType.DESCALE;
-      _srcDinfo = new DataInfo(fr, 1, has_intercept, use_all_factor_levels || lambda_search, dt, DataInfo.TransformType.NONE);
-      if (!has_intercept && _srcDinfo._cats > 0)
+        dt = intercept ? TransformType.STANDARDIZE : TransformType.DESCALE;
+      _srcDinfo = new DataInfo(fr, 1, intercept, use_all_factor_levels || lambda_search, dt, DataInfo.TransformType.NONE);
+      if (!intercept && _srcDinfo._cats > 0)
         throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
       _activeData = _srcDinfo;
       if (higher_accuracy) setHighAccuracy();
@@ -745,12 +745,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private double [] setSubmodel(final double[] newBeta, GLMValidation val, H2OCountedCompleter cmp){
-    int intercept = (has_intercept?1:0);
+    int intercept = (this.intercept ?1:0);
     double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
     if(val != null) val.null_deviance = _nullDeviance;
     if(_noffsets > 0){
       fullBeta = Arrays.copyOf(fullBeta,fullBeta.length + _noffsets);
-      if(has_intercept)
+      if(this.intercept)
         fullBeta[fullBeta.length-1] = fullBeta[fullBeta.length-intercept-_noffsets];
       for(int i = fullBeta.length-intercept-_noffsets; i < fullBeta.length-intercept; ++i)
         fullBeta[i] = 1;//_srcDinfo.applyTransform(i,1);
@@ -758,19 +758,19 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     final double [] newBetaDeNorm;
     final int numoff = _srcDinfo.numStart();
     if(_srcDinfo._predictor_transform == DataInfo.TransformType.STANDARDIZE) {
-      assert has_intercept;
+      assert this.intercept;
       newBetaDeNorm = fullBeta.clone();
-      double norm = 0.0;        // Reverse any normalization on the has_intercept
+      double norm = 0.0;        // Reverse any normalization on the intercept
       // denormalize only the numeric coefs (categoricals are not normalized)
       for( int i=numoff; i< fullBeta.length-intercept; i++ ) {
         double b = newBetaDeNorm[i]* _srcDinfo._normMul[i-numoff];
-        norm += b* _srcDinfo._normSub[i-numoff]; // Also accumulate the has_intercept adjustment
+        norm += b* _srcDinfo._normSub[i-numoff]; // Also accumulate the intercept adjustment
         newBetaDeNorm[i] = b;
       }
-      if(has_intercept)
+      if(this.intercept)
         newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
     } else if (_srcDinfo._predictor_transform == TransformType.DESCALE) {
-      assert !has_intercept;
+      assert !this.intercept;
       newBetaDeNorm = fullBeta.clone();
       for( int i=numoff; i< fullBeta.length; i++ )
         newBetaDeNorm[i] *= _srcDinfo._normMul[i-numoff];
@@ -1279,7 +1279,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private double [] nullModelBeta(DataInfo dinfo, double ymu){
     double[] beta = MemoryManager.malloc8d(_srcDinfo.fullN() + (dinfo._hasIntercept?1:0) - _noffsets);
-    if(has_intercept) {
+    if(intercept) {
       double icpt = _noffsets == 0?_glm.link(ymu):computeIntercept(dinfo,ymu,offset,response);
       if (dinfo._hasIntercept) beta[beta.length - 1] = icpt;
     }
@@ -1379,7 +1379,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       }
     for(int c = _srcDinfo.fullN()-_noffsets; c < _srcDinfo.fullN(); ++c)
       cols[selected++] = c;
-    if(!strong_rules_enabled || selected == _srcDinfo.fullN()){
+    if(!strong_rules || selected == _srcDinfo.fullN()){
       _activeCols = null;
       _activeData._adaptedFrame = _srcDinfo._adaptedFrame;
       _activeData = _srcDinfo;

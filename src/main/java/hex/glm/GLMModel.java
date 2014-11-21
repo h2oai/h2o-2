@@ -398,7 +398,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     for(int i = data_info._cats; i < data.length; ++i)
       eta += b[noff+i]*data[i];
     if(data_info._hasIntercept)
-      eta += b[b.length-1]; // add has_intercept
+      eta += b[b.length-1]; // add intercept
     double mu = glm.linkInv(eta);
     preds[0] = (float)mu;
     if( glm.family == Family.binomial ) { // threshold for prediction

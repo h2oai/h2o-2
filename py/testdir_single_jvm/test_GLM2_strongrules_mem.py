@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
         params = {
                     'alpha': 0.5,
                     'n_folds': 0,
-                    'strong_rules_enabled': 1,
+                    'strong_rules': 1,
                     'lambda_search': 0,
                     'response': 3000, 
                     'cols': [i for i in range(2900)],
@@ -49,7 +49,7 @@ class Basic(unittest.TestCase):
         #params = {
         #            'alpha': 0.5,
         #            'n_folds': 0,
-        #            'strong_rules_enabled': 0,
+        #            'strong_rules': 0,
         #            'lambda_search': 0,
         #            'response': 3000, 
         #            'cols': [i for i in range(2900)],

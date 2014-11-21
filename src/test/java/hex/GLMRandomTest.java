@@ -10,7 +10,6 @@ import water.fvec.Frame;
 import water.util.Log;
 
 import java.util.Random;
-import java.util.concurrent.Future;
 
 public class GLMRandomTest extends TestUtil {
   @BeforeClass public static void stall() {
@@ -207,14 +206,14 @@ public class GLMRandomTest extends TestUtil {
                                                             p.higher_accuracy = higher_accuracy;
                                                             p.use_all_factor_levels = use_all_factor_levels;
                                                             p.lambda_search = lambda_search;
-                                                            p.strong_rules_enabled = strong_rules;
+                                                            p.strong_rules = strong_rules;
                                                             p.max_predictors = max_predictors;
                                                             p.nlambdas = nlambdas;
                                                             p.lambda_min_ratio = lambda_min_ratio;
                                                             p.prior = prior;
                                                             p.variable_importances = variable_importances;
                                                             p.MAX_ITERATIONS_PER_LAMBDA = 5;
-                                                            p.has_intercept = intercept;
+                                                            p.intercept = intercept;
                                                             p.offset = (offset && frame.numCols() > 2)?frame.vec(1):null;
                                                             try {
                                                               p.invokeServe();
