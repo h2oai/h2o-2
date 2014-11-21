@@ -8,7 +8,7 @@ def define_params():
         'beta_epsilon': [None, 0.0001],
         'family': [None, 'gaussian', 'binomial', 'poisson'],
         # this is always the default 1 for now, until we adjust h2o_glm.py to accept no intercept
-        # 'has_intercept': [None, 0, 1],
+        # 'intercept': [None, 0, 1],
         'higher_accuracy': [None, 0, 1],
         'ignored_cols': [1,'C1','1,2','C1,C2'],
         'lambda': [0,1e-8,1e-4,1e-3],

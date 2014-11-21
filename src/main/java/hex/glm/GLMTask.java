@@ -32,7 +32,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     final int numStart = _dinfo.numStart();
     for (int i = 0; i < nnums; ++i) res += nums[i] * beta[numStart + i];
     if(_dinfo._hasIntercept)
-      res += beta[beta.length-1]; // has_intercept
+      res += beta[beta.length-1]; // intercept
     return res;
   }
   /**
@@ -296,7 +296,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
     @Override protected void chunkInit(){
       if(_computeGram)_gram = new Gram(_dinfo.fullN()-_noffsets, _dinfo.largestCat(), _dinfo._nums-_noffsets, _dinfo._cats, _dinfo._hasIntercept);
-      _xy = MemoryManager.malloc8d(_dinfo.fullN()+(_dinfo._hasIntercept?1:0)-_noffsets); // + 1 is for has_intercept
+      _xy = MemoryManager.malloc8d(_dinfo.fullN()+(_dinfo._hasIntercept?1:0)-_noffsets); // + 1 is for intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
       if(_validate){

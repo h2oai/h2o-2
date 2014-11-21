@@ -118,7 +118,7 @@ class Basic(unittest.TestCase):
                 'alpha': 0.6,
                 'n_folds': 1,
                 'beta_epsilon': 1e-4,
-                'strong_rules_enabled': 1,
+                'strong_rules': 1,
             }
 
             start = time.time()

@@ -417,9 +417,14 @@ To convert an integer into a non-ordered factor (also called an enum or categori
 > is.factor(prostate.hex[,4])
 [1] FALSE
 > prostate.hex[,4]<-as.factor(prostate.hex[,4]) 
-> summary(prostate.hex)
- ID               CAPSULE          AGE             RACE    DPROS
- Min.   :  1.00   Min.   :0.0000   Min.   :43.00   1 :341  Min.   :1.000
+> is.factor(prostate.hex[,4])
+[1] TRUE
+# Summary will return a count of the factors
+> summary(prostate.hex[,4])
+ RACE   
+ 1 :341 
+ 2 : 36 
+ 0 :  3 
 \end{spverbatim}
 
 
@@ -427,20 +432,31 @@ To convert an integer into a non-ordered factor (also called an enum or categori
 To transfer a data frame from the R environment to the H2O instance, use  {\texttt{as.h2o( )}}. In the parentheses, specify the name of the h2o.init object that communicates with R and H2O and the object in the R environment to be converted to an H2O object. Optionally, you can include the reference to the H2O instance (the key). Precede the key with {\texttt{key=}} and enclose the key in quotes as in the following example. 
 
 \begin{spverbatim}
-> as.h2o(localH2O, df, key= "dataframe.h2o")
-##Converts R object "df" to H2O object “dataframe.h2o"
+# Import the iris data into H2O
+> data(iris)
+> iris
+    Sepal.Length Sepal.Width Petal.Length Petal.Width    Species
+1            5.1         3.5          1.4         0.2     setosa
+2            4.9         3.0          1.4         0.2     setosa
+3            4.7         3.2          1.3         0.2     setosa
+4            4.6         3.1          1.5         0.2     setosa
+5            5.0         3.6          1.4         0.2     setosa
+6            5.4         3.9          1.7         0.4     setosa
+
+##Converts R object "iris" into H2O object “iris.hex"
+> iris.hex = as.h2o(localH2O, iris, key= "iris.hex")
   |=============================================================| 100%
 IP Address: localhost 
 Port      : 54321 
-Parsed Data Key: dataframe.h2o 
+Parsed Data Key: iris.hex 
 
-  X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 index
-1  1  1  1  1  1  1  1  1  1   1     1
-2  2  2  2  2  2  2  2  2  2   2     1
-3  3  3  3  3  3  3  3  3  3   3     1
-4  4  4  4  4  4  4  4  4  4   4     1
-5  5  5  5  5  5  5  5  5  5   5     1
-6  6  6  6  6  6  6  6  6  6   6     1
+  Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+1          5.1         3.5          1.4         0.2  setosa
+2          4.9         3.0          1.4         0.2  setosa
+3          4.7         3.2          1.3         0.2  setosa
+4          4.6         3.1          1.5         0.2  setosa
+5          5.0         3.6          1.4         0.2  setosa
+6          5.4         3.9          1.7         0.4  setosa
 \end{spverbatim}
 
 
@@ -537,23 +553,43 @@ For factors, this produces information about counts of elements within each fact
 
 
 \subsection{Summarizing Data in a Table} 
-To summarize the data, use {\texttt{h2o.table( )}}. Because H2O can handle larger data sets, it is possible to generate tables that are larger than R`s capacity. To minimize this risk, {\texttt{h2o.table}} is called inside of a {\texttt{head( )}} or {\texttt{tail( )}} command. Within {\texttt{head( )}}  and {\texttt{tail( )}}, specify the column numbers to summarize. 
+To summarize the data, use {\texttt{h2o.table( )}}. Because H2O can handle larger data sets, it is possible to generate tables that are larger than R`s capacity. To minimize this risk, {\texttt{h2o.table}} is called inside of a {\texttt{head( )}} or {\texttt{tail( )}} command if the argument {\texttt{return.in.R}} was set to {\texttt{TRUE}}.
+
 To summarize multiple columns, use {\texttt{head(h2o.table (ObjectName[, c(ColumnNumber,ColumnNumber)]))}} where {\texttt{ObjectName}} is the name of the object in R and {\texttt{ColumnNumber}} is the number of the column. 
 
 \begin{spverbatim}
-library(h2o)
-localH2O <- h2o.init()
-prosPath <- system.file("extdata", "prostate.csv", package="h2o")
-prostate.hex <- h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
-summary(prostate.hex)
-
 # Counts of the ages of all patients
-head(h2o.table(prostate.hex[,3]))
-h2o.table(prostate.hex[,3], return.in.R = TRUE)
+> h2o.table(prostate.hex[,"AGE"])
+IP Address: localhost 
+Port      : 54321 
+Parsed Data Key: Last.value.128 
+
+  row.names Count
+1        43     1
+2        47     1
+3        50     2
+4        51     3
+5        52     2
+6        53     4
+> h2o.table(prostate.hex[,"AGE"], return.in.R = TRUE)
+row.names
+43 47 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 
+ 1  1  2  3  2  4 10  5  7 10 10 13  9 13 20 11 17 24 23 16 28 23 29 24 13 15 13 14  9  4  5  2 
 
 # Two-way table of ages (rows) and race (cols) of all patients
-head(h2o.table(prostate.hex[,c(3,4)]))
-h2o.table(prostate.hex[,c(3,4)], return.in.R = TRUE)
+# Example: For the first row there is one count of a 43 year old that's labeled as RACE = 0
+> h2o.table(prostate.hex[,c("AGE","RACE")])
+IP Address: localhost 
+Port      : 54321 
+Parsed Data Key: Last.value.139 
+
+  row.names X0 X1 X2
+1        43  1  0  0
+2        47  0  1  0
+3        50  0  2  0
+4        51  0  3  0
+5        52  0  2  0
+6        53  0  3  1
 \end{spverbatim}
 
 
@@ -587,9 +623,9 @@ To generate two subsets (according to specified ratios) from an existing H2O dat
 \begin{spverbatim}
 prostate.split <- h2o.splitFrame(data = prostate.hex , ratios = 0.75)
 ##Splits data in prostate data frame with a ratio of 0.75
-prostate.train <- prostate.split[1] 
+prostate.train <- prostate.split[[1]] 
 ##Creates training set from 1st data set in split
-prostate.test <- prostate.split[2]
+prostate.test <- prostate.split[[2]]
 ##Creates training set from 1st data set in split
 \end{spverbatim}
 
@@ -606,7 +642,7 @@ To create a reference object to the data frame in H2O, use {\texttt{h2o.getFrame
 \subsection{Getting Models}
  To create a reference object for the model in H2O, use {\texttt{h2o.getModel()}}. This is helpful for  users that alternate between the web UI and the R API or multiple users accessing the same H2O instance. The following example assumes GLMModel is in the key-value (KV) store.
 \begin{spverbatim}
-glm.model <- h2o.getModel(h2o = localH2O, key = "GLMModel")
+gbm.model <- h2o.getModel(h2o = localH2O, key = "GBM_8e4591a9b413407b983d73fbd9eb44cf")
 \end{spverbatim}
 
 \subsection{Listing H2O Objects}
@@ -615,7 +651,7 @@ To generate a list of all H2O objects generated during a session, along with eac
 
 \begin{spverbatim}
 > h2o.ls(localH2O)
-                                                   Key Bytesize
+                                                   Key       Bytesize
       1               GBM_8e4591a9b413407b983d73fbd9eb44cf    40617
       2               GBM_a3ae2edf5dfadbd9ba5dc2e9560c405d     1516
 \end{spverbatim}
@@ -625,7 +661,7 @@ To generate a list of all H2O objects generated during a session, along with eac
 
 To remove an H2O object on the server associated with an object in the R environment, use {\texttt{h2o.rm()}}. For optimal performance, we recommend removing the object from the R environment as well using {\texttt{remove()}}, with the name of the object in the parentheses. If you do not specify an R environment, then the current environment is used. 
 \begin{spverbatim}
-> h2o.rm(object= localH2O, keys= "prostate.train")
+> h2o.rm(object = localH2O, keys = "prostate.train")
 \end{spverbatim}
 
 
@@ -633,9 +669,22 @@ To remove an H2O object on the server associated with an object in the R environ
 
 To add a user-defined function in R to the H2O instance, use {\texttt{h2o.addFunction()}}, with the IP address of the H2O instance and the function in the parentheses.  
 \begin{spverbatim}
-library(h2o)
-localH2O <- h2o.init()
-h2o.addFunction(localH2O, function(x) { 2*x + 5 }, "simpleFun")
+# Send the functional expression to H2O
+> simpleFun <- h2o.addFunction(localH2O, function(x) { 2*x + 5 }, "simpleFun")
+# Evaluate the expression across prostate's AGE column
+> calculated = h2o.exec(expr_to_execute = simpleFun(prostate.hex[,"AGE"]), h2o = localH2O)
+> cbind(prostate.hex[,"AGE"], calculated)
+IP Address: localhost 
+Port      : 54321 
+Parsed Data Key: Last.value.152 
+
+  AGE fun
+1  65 135
+2  72 149
+3  70 145
+4  76 157
+5  69 143
+6  71 147
 \end{spverbatim}
 
 
@@ -647,27 +696,40 @@ To run the models, use the following commands.
 
 For more information, use {\texttt{help(h2o.gbm)}}.
 \begin{spverbatim}
-> h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3,
-   n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
+> library(h2o)
+> localH2O <- h2o.init(nthreads = -1)
+> iris.hex <- as.h2o(localH2O, object = iris, headers = T, key = "iris.hex")
+> iris.gbm <- h2o.gbm(y = 1, x = 2:5, data = iris.hex, n.trees = 10,
+interaction.depth = 3, n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
      |===================================================| 100%
- Mean-squared Error by tree:
-  [1] 230760.11 166957.80 124904.30  94031.17  72367.01  57180.17  47092.85
-  [8]  39168.05  34456.00  31095.86  28397.10
+# To onbtain the Mean-squared Error by tree from the model object:
+> iris.gbm@model[,"err"]
+ [1] 0.68112220 0.47215388 0.33393673 0.24465574 0.18596269 0.14500129
+ [7] 0.11792983 0.10003321 0.08793070 0.07862922 0.07232574
 
 \end{spverbatim}
 
 To generate a classification model that uses labels, use {\texttt{distribution= "multinomial"}}: 
 \begin{spverbatim}
-> h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees
-= 15, interaction.depth = 5,
- n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
+> iris.gbm2 <- h2o.gbm(y = 5, x = 1:4, data = iris.hex, n.trees = 15,
+ interaction.depth = 5, n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
    
+IP Address: localhost 
+Port      : 54321 
+Parsed Data Key: iris.hex 
+
+GBM Model Key: GBM_baa2f910e4dcbd61fa60da4f2d034687 
+
 Confusion matrix:
-Reported on australia1.hex
-Predicted
-Actual     0 3 6 7 14 16 17 19 20 25 38 43 61 75 82 107 138 150 167 191 200
-  0      115 0 0 0  0  0  0  0  0  0  0  0  0  0  0   0   0   0   0   0   0
-. . .
+Reported on 0-fold cross-validated data 
+                 Predicted
+Actual            Iris-setosa Iris-versicolor Iris-virginica Error
+  Iris-setosa              50               0              0     0
+  Iris-versicolor           0              50              0     0
+  Iris-virginica            0               0             50     0
+  Totals                   50              50             50     0
+
+Overall Mean-squared Error:  0.3251718 
 \end{spverbatim}
 
 \subsection{Generalized Linear Models (GLM)}
@@ -683,68 +745,68 @@ H2O's GLM algorithm fits the generalized linear model with elastic net penalties
 To generate a generalized linear model for developing linear models for exponential distributions, use {\texttt{h2o.glm()}}. You can apply regularization to the model by adjusting the lambda and alpha parameters. 
 For more information, use {\texttt{help(h2o.glm)}}.
 \begin{spverbatim}
-> prostate.hex = h2o.importFile(localH2O, path =
+> prostate.hex <- h2o.importFile(localH2O, path =
 "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv",
 key = "prostate.hex")
-       |===================================================| 100%
+ |===================================================| 100%
 > h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data =
 prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
  |==========================================================| 100%
-     Coefficients:
-    AGE      RACE     DCAPS       PSA Intercept
-       -0.01104  -0.63136   1.31888   0.04713  -1.10896
+    Coefficients:
+    AGE          RACE     DCAPS       PSA   Intercept
+    -0.01104  -0.63136   1.31888   0.04713  -1.10896
 
-      Normalized Coefficients:
-    AGE      RACE     DCAPS       PSA Intercept
-       -0.07208  -0.19495   0.40972   0.94253  -0.33707
+    Normalized Coefficients:
+    AGE          RACE     DCAPS       PSA   Intercept
+    -0.07208  -0.19495   0.40972   0.94253  -0.33707
 
-      Degrees of Freedom: 379 Total (i.e. Null);  375 Residual
-      Null Deviance:     514.9
-      Residual Deviance: 461.3  AIC: 471.3
-      Deviance Explained: 0.10404
-      AUC: 0.68875  Best Threshold: 0.328
-    	Confusion Matrix:
-      Predicted
-      Actual   false true Error
+    Degrees of Freedom: 379 Total (i.e. Null);  375 Residual
+    Null Deviance:     514.9
+    Residual Deviance: 461.3  AIC: 471.3
+    Deviance Explained: 0.10404
+    AUC: 0.68875  Best Threshold: 0.328
+    
+    Confusion Matrix:
+            Predicted
+    Actual   false true Error
       false    127  100 0.441
       true      51  102 0.333
       Totals   178  202 0.397
 
-      Cross-Validation Models:
-       Nonzeros       AUC Deviance Explained
-      Model 1         4 0.6532738        0.048419803
-      Model 2         4 0.6316527       -0.006414532
-      Model 3         4 0.7100840        0.087779178
-      Model 4         4 0.8268698        0.243020554
-      Model 5         4 0.6354167        0.153190735
-      Model 6         4 0.6888889        0.041892118
-      Model 7         4 0.7366071        0.164717509
-      Model 8         4 0.6711310        0.004897310
-      Model 9         4 0.7803571        0.200384622
-      Model 10        4 0.7435897        0.114548543
+    Cross-Validation Models:
+                Nonzeros               Deviance Explained
+      Model 1      4       0.6532738      0.048419803
+      Model 2      4       0.6316527     -0.006414532
+      Model 3      4       0.7100840      0.087779178
+      Model 4      4       0.8268698      0.243020554
+      Model 5      4       0.6354167      0.153190735
+      Model 6      4       0.6888889      0.041892118
+      Model 7      4       0.7366071      0.164717509
+      Model 8      4       0.6711310      0.004897310
+      Model 9      4       0.7803571      0.200384622
+      Model 10     4       0.7435897      0.114548543
 \end{spverbatim}
 
 \subsection{K-Means}
 
 To generate a K-Means model for data characterization, use {\texttt{h2o.kmeans()}}. This algorithm does not rely on a dependent variable. For more information, use {\texttt{help(h2o.kmeans)}}.
 \begin{spverbatim}
-> prostate.km = h2o.kmeans(data = prostate.hex, centers = 10,
-cols = c("AGE", "RACE", "VOL", "GLEASON"))
+> iris.km = h2o.kmeans(data = iris.hex, centers = 3, cols = 1:4)
   |=========================================================| 100%
-print(prostate.km)
-IP Address: 127.0.0.1
-Port      : 54321
-Parsed Data Key: prostate6.hex
-K-Means Model Key: KMeans2_99fea55be4a22f741df74532d7844bb4
-K-means clustering with 10 clusters of sizes 41, 27, 59, 17, 21, 47, 26, 61, 47, 34
+> print(iris.km)
+IP Address: localhost 
+Port      : 54321 
+Parsed Data Key: iris.hex 
+K-Means Model Key: KMeans2_937845cadf924db4612c3a7d8f9744a0
+K-means clustering with 3 clusters of sizes 50, 38, 62
 
-      Cluster means:
-      AGE     RACE         VOL  GLEASON
-      1  69.73171 1.024390 37.99756098 6.512195
-      2  54.48148 1.111111  0.32222222 6.518519
-      3  62.59322 1.067797  0.19322034 5.966102
-      .....
-\end{spverbatim}
+Cluster means:
+        C1       C2       C3       C4
+1 5.006000 3.418000 1.464000 0.244000
+2 6.850000 3.073684 5.742105 2.071053
+3 5.901613 2.748387 4.393548 1.433871
+  ....
+> \end{spverbatim}
 
 \subsection{Principal Components Analysis (PCA)}
 
@@ -753,26 +815,35 @@ To map a set of variables onto a subspace using linear transformations, use {\te
 > ausPath = system.file("extdata", "australia.csv", package="h2o")
 > australia.hex = h2o.importFile(localH2O, path = ausPath)
   |=========================================================| 100%
-> australia.pca = h2o.prcomp(data = australia.hex, standardize = TRUE)
+> australia.pca <- h2o.prcomp(data = australia.hex, standardize = TRUE)
   |=========================================================| 100%
-
- Standard deviations:
+      ....
+PCA Model Key: PCA_8fbc38e360de5b3c1ae6b7cc754b499c
+Standard deviations:
  1.750703 1.512142 1.031181 0.8283127 0.6083786 0.5481364 0.4181621 0.2314953
       ....
 
-summary(australia.pca)
+> summary(australia.pca)
 Importance of components:
-....
+                             PC1       PC2       PC3        PC4        PC5        PC6        PC7         PC8
+Standard deviation     1.7507032 1.5121421 1.0311814 0.82831266 0.60837860 0.54813639 0.41816208 0.231495292
+Proportion of Variance 0.3831202 0.2858217 0.1329169 0.08576273 0.04626556 0.03755669 0.02185744 0.006698759
+Cumulative Proportion  0.3831202 0.6689419 0.8018588 0.88762155 0.93388711 0.97144380 0.99330124 1.000000000
 \end{spverbatim}
 
 \subsection{Principal Components Regression (PCR)}
 
 To map a set of variables to a set of linearly independent variables, use {\texttt{h2o.pcr()}}. The variables in the new set are linearly independent linear combinations of the original variables and exist in a lower-dimension subspace. This transformation is prepended to the regression model to improve results. For more information, use {\texttt{help(h2o.pcr)}}.
 \begin{spverbatim}
-prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
-  "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
-h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", 
+> prostate.pcr <- h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", 
   nfolds = 0, alpha = 0.5, ncomp = 2)
+      ....
+GLM2 Model Key: GLMModel__a71b8209871c4a70d037f113d99d4a89
+
+Coefficients:
+      PC0       PC1 Intercept 
+  3.55117   1.08603  -0.12964
+      ....
 \end{spverbatim}
 
 
@@ -784,7 +855,7 @@ The following section describes some of the prediction methods available in H2O.
 
 {\textbf{Confusion Matrix}}: Visualize the performance of an algorithm in a table to understand how a model performs.\bigskip
 
-{\textbf{Area Under Curve (AUC)}}: A graphical plot to visualize the performance of a model by its sensitivity, true positive, or false positive to select the best model.\bigskip
+{\textbf{Area Under Curve (AUC)}}: A graphical plot to visualize the performance of a model by its sensitivity, true positives and false positives to select the best model.\bigskip
 
 {\textbf{Hit Ratio}}: A classification matrix to visualize the ratio of the number of correctly classified and incorrectly classified cases.\bigskip
 
@@ -797,7 +868,7 @@ To apply an H2O model to a holdout set for predictions based on model results, u
 > prostate.fit = h2o.predict(object = prostate.glm, newdata = prostate.hex)
 > (prostate.fit)
 
-predict        X0        X1
+        predict        X0        X1
       1       0 0.7452267 0.2547732
       2       1 0.3969807 0.6030193
       3       1 0.4120950 0.5879050

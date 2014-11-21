@@ -1518,7 +1518,7 @@ def GLM_shared(self, key,
         'cols': None,
         'destination_key': None,
         'family': None,
-        'has_intercept': None, # use intercept in the model
+        'intercept': None, # use intercept in the model
         'higher_accuracy': None, # use line search (use if no convergence otherwise)
         'ignored_cols': None,
         'ignored_cols_by_name': None,
@@ -1535,7 +1535,7 @@ def GLM_shared(self, key,
         'response': None,
         'source': key,
         'standardize': None,
-        'strong_rules_enabled': None, # use strong rules to filter out inactive columns
+        'strong_rules': None, # use strong rules to filter out inactive columns
         'tweedie_variance_power': None,
         'use_all_factor_levels': None, # normally first factor is skipped. Set to use all levels.
         'variable_importances': None, # if use_all_factor_levels is off, base level is not shown
