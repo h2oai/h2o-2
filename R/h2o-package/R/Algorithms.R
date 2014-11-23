@@ -258,159 +258,198 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5,
-                    epsilon = 1e-4, standardize = TRUE, prior, variable_importances = FALSE, use_all_factor_levels = FALSE,
-                    tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100,
-                    higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1,
-                    offset, intercept = TRUE, non_negative = FALSE) {
-  
-  if(!is.character(key)) stop("key must be of class character")
-  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
-    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
-  if(!is.logical(variable_importances))  stop("variable_importances must be logical")
-  if(!is.logical(use_all_factor_levels)) stop("use_all_factor_levels must be logical")
-  if(!is.numeric(nfolds)) stop('nfolds must be numeric')
-  if( nfolds < 0 ) stop('nfolds must be >= 0')
-  if(!is.numeric(alpha)) stop('alpha must be numeric')
-  if( any(alpha < 0) ) stop('alpha must be >= 0')
-  if(!is.logical(intercept)) stop('intercept must be logical')
-  if(!is.logical(non_negative)) stop('non_negative must be logical')
-  if(missing(offset)) { offset <- "" }
-  else {
-    if(!is.numeric(offset) && !is.character(offset)) stop("offset must be either an index or column name")
-    if(is.character(offset)) x = unique(c(x, offset))
-    offset <- match(offset, colnames(data))
-    offset <- offset - 1
-  }
-  
+h2o.glm <- function(x, y, data, key = "",
+                    offset = NULL,
+                    family,
+                    link,
+                    tweedie.p = ifelse(family == "tweedie", 1.5, NA_real_),
+                    prior = NULL,
+                    nfolds = 0,
+                    alpha = 0.5,
+                    lambda = 1e-5,
+                    lambda_search = FALSE,
+                    nlambda = -1,
+                    lambda.min.ratio = -1,
+                    max_predictors = -1,
+                    return_all_lambda = FALSE,
+                    strong_rules = TRUE,
+                    standardize = TRUE,
+                    intercept = TRUE,
+                    non_negative = FALSE,
+                    use_all_factor_levels = FALSE,
+                    variable_importances = FALSE,
+                    epsilon = 1e-4,
+                    iter.max = 100,
+                    higher_accuracy = FALSE)
+{
   args <- .verify_dataxy(data, x, y)
-  
-  if(!is.numeric(nlambda)) stop("nlambda must be numeric")
-  if((nlambda != -1) && (length(nlambda) > 1 || nlambda < 0)) stop("nlambda must be a single number >= 0")
-  if(!is.numeric(lambda.min.ratio)) stop("lambda.min.ratio must be numeric")
-  if((lambda.min.ratio != -1) && (length(lambda.min.ratio) > 1 || lambda.min.ratio < 0 || lambda.min.ratio > 1))
-    stop("lambda.min.ratio must be a single number in [0,1]")
-  if(!is.numeric(lambda)) stop('lambda must be numeric')
-  if( any(lambda < 0) ) stop('lambda must be >= 0')
-  
-  if(!is.numeric(epsilon)) stop("epsilon must be numeric")
-  if( epsilon < 0 ) stop('epsilon must be >= 0')
-  if(!is.logical(standardize)) stop("standardize must be logical")
-  if(!missing(prior)) {
-    if(!is.numeric(prior)) stop("prior must be numeric")
-    if(prior < 0 || prior > 1) stop("prior must be in [0,1]")
-    if(family != "binomial") stop("prior may only be set for family binomial")
+
+  if (!is.character(key) && length(key) == 1L)
+    stop("'key' must be a character string")
+  if (nchar(key) > 0 && !grepl("^[a-zA-Z_][a-zA-Z0-9_.]*$", key))
+    stop("'key' must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
+
+  if (is.null(offset)) {
+    offset <- ""
+    x_ignore <- seq_len(ncol(data))[- sort(unique(c(args$y_i, args$x_i)))]
+  } else if(!(is.numeric(offset) || (is.character(offset) && (offset %in% colnames(data)))))
+    stop("offset must be either an index or column name")
+  else {
+    if (is.character(offset))
+      offset <- match(offset, colnames(data))
+    x_ignore <- seq_len(ncol(data))[- sort(unique(c(args$y_i, args$x_i, offset)))]
+    offset <- offset - 1L
   }
-  if(!is.numeric(tweedie.p)) stop('tweedie.p must be numeric')
-  if( family != 'tweedie' && !(missing(tweedie.p) || is.na(tweedie.p)) ) stop("tweedie.p may only be set for family tweedie")
-  if(!is.numeric(iter.max)) stop('iter.max must be numeric')
-  if(!is.logical(higher_accuracy)) stop("higher_accuracy must be logical")
-  if(!is.logical(lambda_search)) stop("lambda_search must be logical")
-  if(lambda_search && length(lambda) > 1) stop("When automatically searching, must specify single numeric value as lambda, which is interpreted as minimum lambda in generated sequence")
-  if(!is.logical(return_all_lambda)) stop("return_all_lambda must be logical")
-  if(!missing(link)) {
-    if(!is.character(link)) stop("link must be of class character")
-    if((family == 'gaussian') && !(link %in% c('identity', 'log', 'inverse'))) stop("Only identity, log, and inverse links are allowed for family=gaussian.")
-    if((family == 'binomial') && !(link %in% c('logit', 'log'))) stop("Only logit and log links are allowed for family=binomial.")
-    if((family == 'poisson') && !(link %in% c('log', 'identity'))) stop("Only log and identity links are allowed for family=poisson.")
-    if((family == 'gamma') && !(link %in% c('inverse', 'log', 'identity'))) stop("Only inverse, log, and identity links are allowed for family=gamma.")
-    if((family == 'tweedie') && !(link == 'tweedie')) stop("Only tweedie link allowed for family=tweedie.")
-  } else {link = "family_default"}
 
-  x_ignore = setdiff(1:ncol(data), c(args$x_i, args$y_i)) - 1
-  if(length(x_ignore) == 0) x_ignore = ''
-  
-  if(length(alpha) == 1) {
-    if(family == "tweedie")
-      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
-                              response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family,
-                              n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio,
-                              lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize),
-                              max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy),
-                              lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p,
-                              max_predictors = max_predictors, variable_importances = as.numeric(variable_importances),
-                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link, offset = offset,
-                              intercept = as.numeric(intercept), non_negative = as.numeric(non_negative))
-    else if(family == "binomial") {
-      if(missing(prior)) prior = -1
-      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
-                              response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family,
-                              n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio,
-                              lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize),
-                              max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy),
-                              lambda_search = as.numeric(lambda_search), prior = prior,
-                              max_predictors = max_predictors, variable_importances = as.numeric(variable_importances),
-                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link, offset = offset,
-                              intercept = as.numeric(intercept), non_negative = as.numeric(non_negative))
-    } else {
-      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
-                              response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family,
-                              n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio,
-                              lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize),
-                              max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy),
-                              lambda_search = as.numeric(lambda_search),
-                              max_predictors = max_predictors, variable_importances = as.numeric(variable_importances),
-                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link, offset = offset,
-                              intercept = as.numeric(intercept), non_negative = as.numeric(non_negative)) }
-
-    params = list(x=args$x, y=args$y, family = .h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds,
-                  alpha=alpha, nlambda=nlambda, lambda.min.ratio=lambda.min.ratio, lambda=lambda,
-                  beta_epsilon=epsilon, standardize=standardize, max_predictors = max_predictors,
-                  variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o,
-                  link = link, offset = offset, intercept = as.numeric(intercept), non_negative = as.numeric(non_negative))
-    .h2o.__waitOnJob(data@h2o, res$job_key)
-    .h2o.get.glm(data@h2o, as.character(res$destination_key), return_all_lambda)
-  } else
-    .h2o.glm2grid.internal(x_ignore, args$y, data, key, family, link,nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon,
-                           standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
-                           variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels,
-                           offset = offset, intercept = as.numeric(intercept), non_negative = as.numeric(non_negative))
-}
-
-.h2o.glm2grid.internal <- function(x_ignore, y, data, key, family, link, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
-                                   variable_importances, use_all_factor_levels, offset, intercept, non_negative) {
-  if(family == "tweedie")
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
-                            ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds,
-                            alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda,
-                            beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
-                            higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search),
-                            tweedie_variance_power = tweedie.p, variable_importances = as.numeric(variable_importances), 
-                            use_all_factor_levels = as.numeric(use_all_factor_levels), link = link, offset = offset,
-                            intercept = as.numeric(intercept), non_negative = as.numeric(non_negative))
-  else if(family == "binomial") {
-    if(missing(prior)) prior = -1
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
-                            ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds,
-                            alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda,
-                            beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
-                            higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), prior = prior,
-                            variable_importances = as.numeric(variable_importances), use_all_factor_levels = as.numeric(use_all_factor_levels),
-                            link = link, offset = offset, intercept = as.numeric(intercept), non_negative = as.numeric(non_negative))
-  }
+  if (length(x_ignore) == 0L)
+    x_ignore <- ""
   else
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
-                            ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds,
-                            alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda,
-                            beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
-                            higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search),
-                            variable_importances = as.numeric(variable_importances), use_all_factor_levels = as.numeric(use_all_factor_levels), 
-                            link = link, offset = offset, intercept = as.numeric(intercept), non_negative = as.numeric(non_negative))
+    x_ignore <- x_ignore - 1L
 
-  x <- NULL
-  if (length(x_ignore) == 1) {
-    if (x_ignore=="") x <- setdiff(colnames(data),y)
-  } else {
-    x <- setdiff(colnames(data)[-(x_ignore+1)], y)
+  if (!is.character(family) || length(family) != 1L)
+    stop("'family' must be a character string")
+  family <- match.arg(family,
+                      c("gaussian", "binomial", "poisson", "gamma", "tweedie"))
+
+  if (missing(link))
+    link <- "family_default"
+  else if (!is.character(link) || length(link) != 1L)
+    stop("'link' must be a character string")
+  else {
+    link <- match.arg(link, c("identity", "inverse", "log", "logit", "tweedie"))
+    switch(family,
+           gaussian = {
+             if (!(link %in% c("identity", "log", "inverse")))
+               stop("'link' must be one of 'identity', 'log', or 'inverse' when family = 'gaussian'")
+           },
+           binomial = {
+             if (!(link %in% c("logit", "log")))
+               stop("'link' must be one of 'logit' or 'log' when family = 'binomial'")
+           } ,
+           poisson = {
+             if (!(link %in% c("log", "identity")))
+               stop("'link' must be one of 'log' or 'identity' when family = 'poisson'")
+           },
+           gamma = {
+             if (!(link %in% c("inverse", "log", "identity")))
+               stop("'link' must be one of 'inverse', 'log', or 'identity' when family = 'gamma'")
+           },
+           tweedie = {
+             if (link != "tweedie")
+               stop("'link' must be one of 'tweedie' when family = 'tweedie'")
+           })
   }
-  params = list(x=x, y=y, family=.h2o.__getFamily(family, tweedie.var.p=tweedie.p),
-                link = link, nfolds=nfolds, alpha=alpha, nlambda=nlambda,
-                lambda.min.ratio=lambda.min.ratio, lambda=lambda, beta_epsilon=epsilon, standardize=standardize,
-                variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o,
-                offset = offset, intercept = as.numeric(intercept), non_negative = as.numeric(non_negative))
-  
+
+  if (!is.numeric(tweedie.p) || length(tweedie.p) != 1L)
+    stop("'tweedie.p' must a single number")
+  if (family == "tweedie" && is.na(tweedie.p))
+    stop("'tweedie.p' must be non-NA when family = 'tweedie'")
+
+  if (is.null(prior))
+    prior <- -1L
+  else if (family != "binomial")
+    stop("'prior' may only be set when family = 'binomial'")
+  else if (!is.numeric(prior) || length(prior) != 1L || is.na(prior) || prior < 0 || prior > 1)
+    stop("'prior' must be a number in [0, 1]")
+
+  if (!is.numeric(nfolds) || length(nfolds) != 1L || is.na(nfolds) || nfolds < 0)
+    stop("'nfolds' must be a non-negative integer")
+  nfolds <- as.integer(nfolds)
+
+  if (!is.numeric(alpha) || length(alpha) == 0L || any(is.na(alpha) | alpha < 0 | alpha > 1))
+    stop("'alpha' must be a vector of numbers in [0, 1]")
+
+  if (!is.numeric(lambda) || length(lambda) == 0L || any(is.na(lambda) | lambda < 0))
+    stop("'lambda' must be a vector of non-negative numbers")
+
+  if (!is.logical(lambda_search) || length(lambda_search) != 1L || is.na(lambda_search))
+    stop("'lambda_search' must be TRUE / FALSE")
+  if (lambda_search && length(lambda) > 1L)
+    stop("'lambda' must be a single non-negative value when lambda_search = TRUE")
+
+  if (!is.numeric(nlambda) || length(nlambda) != 1L || is.na(nlambda) || (nlambda != -1 && nlambda < 0))
+    stop("'nlambda' must be a non-negative integer")
+  nlambda <- as.integer(nlambda)
+
+  if (!is.numeric(lambda.min.ratio) || length(lambda.min.ratio) != 1L || is.na(lambda.min.ratio) ||
+      (lambda.min.ratio != -1 && lambda.min.ratio < 0) || lambda.min.ratio > 1)
+    stop("'lambda.min.ratio' must be a number in [0, 1]")
+
+  if (!is.numeric(max_predictors) || length(max_predictors) != 1L || is.na(max_predictors) ||
+      max_predictors < -1)
+    stop("'max_predictors' must be a non-negative integer")
+  max_predictors <- as.integer(max_predictors)
+
+  if (!is.logical(return_all_lambda) || length(return_all_lambda) != 1L || is.na(return_all_lambda))
+    stop("'return_all_lambda' must be TRUE / FALSE")
+
+  if (!is.logical(strong_rules) || length(strong_rules) != 1L || is.na(strong_rules))
+    stop("'strong_rules' must be TRUE / FALSE")
+
+  if (!is.logical(standardize) || length(standardize) != 1L || is.na(standardize))
+    stop("'standardize' must be TRUE / FALSE")
+
+  if (!is.logical(intercept) || length(intercept) != 1L || is.na(intercept))
+    stop("'intercept' must be TRUE / FALSE")
+
+  if (!is.logical(non_negative) || length(non_negative) != 1L || is.na(non_negative))
+    stop("'non_negative' must be TRUE / FALSE")
+
+  if (!is.logical(use_all_factor_levels) || length(use_all_factor_levels) != 1L ||
+      is.na(use_all_factor_levels))
+    stop("'use_all_factor_levels' must be TRUE / FALSE")
+
+  if (!is.logical(variable_importances) || length(variable_importances) != 1L ||
+      is.na(variable_importances))
+    stop("'variable_importances' must be TRUE / FALSE")
+
+  if (!is.numeric(epsilon) || length(epsilon) != 1L || is.na(epsilon) || epsilon < 0)
+    stop("'epsilon' must be a non-negative number")
+
+  if (!is.numeric(iter.max) || length(iter.max) != 1L || is.na(iter.max) || iter.max < 1)
+    stop("'iter.max' must be a positive integer")
+  iter.max <- as.integer(iter.max)
+
+  if (!is.logical(higher_accuracy) || length(higher_accuracy) != 1L || is.na(higher_accuracy))
+    stop("'higher_accuracy' must be TRUE / FALSE")
+
+  params <- list(data@h2o, .h2o.__PAGE_GLM2,
+                 destination_key       = key,
+                 source                = data@key,
+                 response              = args$y,
+                 ignored_cols          = paste0(x_ignore, collapse = ","),
+                 offset                = offset,
+                 family                = family,
+                 link                  = link,
+                 n_folds               = nfolds,
+                 alpha                 = alpha,
+                 nlambdas              = nlambda,
+                 lambda_min_ratio      = lambda.min.ratio,
+                 lambda                = lambda,
+                 lambda_search         = as.integer(lambda_search),
+                 max_predictors        = max_predictors,
+                 strong_rules          = as.integer(strong_rules),
+                 standardize           = as.integer(standardize),
+                 intercept             = as.integer(intercept),
+                 use_all_factor_levels = as.integer(use_all_factor_levels),
+                 non_negative          = as.integer(non_negative),
+                 variable_importances  = as.integer(variable_importances),
+                 beta_epsilon          = epsilon,
+                 max_iter              = iter.max,
+                 higher_accuracy       = as.integer(higher_accuracy))
+
+  if (family == "binomial")
+    params <- c(params, list(prior = prior))
+  else if (family == "tweedie")
+    params <- c(params, list(tweedie_variance_power = tweedie.p))
+
+  res <- do.call(.h2o.__remoteSend, params)
   .h2o.__waitOnJob(data@h2o, res$job_key)
-  .h2o.get.glm.grid(data@h2o, as.character(res$destination_key), return_all_lambda, data)
+
+  if (length(alpha) == 1L)
+    .h2o.get.glm(data@h2o, as.character(res$destination_key), return_all_lambda)
+  else
+    .h2o.get.glm.grid(data@h2o, as.character(res$destination_key), return_all_lambda, data)
 }
 
 h2o.getGLMLambdaModel <- function(model, lambda) {

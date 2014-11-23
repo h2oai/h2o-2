@@ -40,25 +40,65 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "GLM2";
   public final String _jobName;
+  transient public boolean _done = false;
 
   // API input parameters BEGIN ------------------------------------------------------------
-  class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
-
   @API(help="Column to be used as an offset, if you have one.", required=false, filter=responseFilter.class, json = true)
   public Vec offset = null;
   class responseFilter extends SpecialVecSelect { responseFilter() { super("source"); } }
 
-  public void setLambda(double l){ lambda = new double []{l};}
+  @API(help = "Family.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
+  protected Family family = Family.gaussian;
+
+  @API(help = "", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  protected Link link = Link.family_default;
+
+  @API(help = "Tweedie variance power", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  protected double tweedie_variance_power;
+
   public void setTweediePower(double pwr){
     tweedie_variance_power = pwr;
     tweedie_link_power = 1 - tweedie_variance_power;
     _glm = new GLMParams(family,tweedie_variance_power,link,tweedie_link_power);
   }
-  double [] beta_start = null;
-  @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true, importance = ParamImportance.CRITICAL)
-  public int max_iter = 100;
 
-  transient public boolean _done = false;
+  @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class, importance = ParamImportance.EXPERT)
+  protected double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
+  private double _iceptAdjust; // adjustment due to the prior
+
+  @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
+  protected int n_folds;
+
+  @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  protected double [] alpha = new double[]{0.5};
+
+  public final double DEFAULT_LAMBDA = 1e-5;
+  @API(help = "regularization strength", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  protected double [] lambda = new double[]{DEFAULT_LAMBDA};
+
+  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class, importance = ParamImportance.SECONDARY)
+  protected boolean lambda_search;
+
+  @API(help="number of lambdas to be used in a search",filter=Default.class, importance = ParamImportance.EXPERT)
+  protected int nlambdas = 100;
+
+  @API(help="min lambda used in lambda search, specified as a ratio of lambda_max",filter=Default.class, importance = ParamImportance.EXPERT)
+  protected double lambda_min_ratio = -1;
+
+  @API(help="lambda_search stop condition: stop training when model has more than than this number of predictors (or don't use this option if -1).",filter=Default.class, importance = ParamImportance.EXPERT)
+  protected int max_predictors = -1;
+
+  public void setLambda(double l){ lambda = new double []{l};}
+  private double _currentLambda = Double.POSITIVE_INFINITY;
+  public int MAX_ITERATIONS_PER_LAMBDA = 10;
+
+  @API(help="use strong rules to filter out inactive columns",filter=Default.class, importance = ParamImportance.SECONDARY)
+  protected boolean strong_rules = true;
+  // intentionally not declared as API now
+  int sparseCoefThreshold = 1000; // if more than this number of predictors, result vector of coefficients will be stored sparse
+
+  double [] beta_start = null;
+
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   protected boolean standardize = true;
 
@@ -71,64 +111,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help="lower bounds for coefficients",filter=Default.class,hide=true)
   protected Frame beta_constraints = null;
 
-  @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
-  protected int n_folds;
-
-  @API(help = "Family.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
-  protected Family family = Family.gaussian;
-
-  @API(help = "", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  protected Link link = Link.family_default;
-
-
-  @API(help = "Tweedie variance power", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  protected double tweedie_variance_power;
-
-  @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  protected double [] alpha = new double[]{0.5};
-
-  public final double DEFAULT_LAMBDA = 1e-5;
-
-  @API(help = "regularization strength", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  protected double [] lambda = new double[]{DEFAULT_LAMBDA};
-
-  private double _currentLambda = Double.POSITIVE_INFINITY;
-
-
-  @API(help = "beta_eps", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  protected double beta_epsilon = DEFAULT_BETA_EPS;
-
-  @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class, importance = ParamImportance.SECONDARY)
-  protected boolean higher_accuracy = false;
-
   @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class, importance = ParamImportance.SECONDARY)
   protected boolean use_all_factor_levels = false;
 
-
-  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class, importance = ParamImportance.SECONDARY)
-  protected boolean lambda_search;
-
-  @API(help="use strong rules to filter out inactive columns",filter=Default.class, importance = ParamImportance.SECONDARY)
-  protected boolean strong_rules = true;
-
-  // intentionally not declared as API now
-  int sparseCoefThreshold = 1000; // if more than this number of predictors, result vector of coefficients will be stored sparse
-
-  @API(help="lambda_Search stop condition: stop training when model has more than than this number of predictors (or don't use this option if -1).",filter=Default.class, importance = ParamImportance.EXPERT)
-  protected int max_predictors = -1;
-
-  @API(help="number of lambdas to be used in a search",filter=Default.class, importance = ParamImportance.EXPERT)
-  protected int nlambdas = 100;
-
-  @API(help="min lambda used in lambda search, specified as a ratio of lambda_max",filter=Default.class, importance = ParamImportance.EXPERT)
-  protected double lambda_min_ratio = -1;
-
-
-  @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class, importance = ParamImportance.EXPERT)
-  protected double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
-  private double _iceptAdjust; // adjustment due to the prior
-
-  public int MAX_ITERATIONS_PER_LAMBDA = 10;
   /**
    * Whether to compute variable importances for input features, based on the absolute
    * value of the coefficients.  For safety this should only be done if
@@ -138,6 +123,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "Compute variable importances for input features.  NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public boolean variable_importances = false;
 
+  @API(help = "beta_eps", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  protected double beta_epsilon = DEFAULT_BETA_EPS;
+
+  @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true, importance = ParamImportance.CRITICAL)
+  public int max_iter = 100;
+
+  @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class, importance = ParamImportance.SECONDARY)
+  protected boolean higher_accuracy = false;
 
   // API input parameters END ------------------------------------------------------------
 
