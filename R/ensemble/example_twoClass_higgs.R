@@ -53,4 +53,4 @@ sapply(seq(L), function(l) AUC(predictions = as.data.frame(pred$basepred)[,l], l
 
 # Note that the ensemble results above are not reproducible since 
 # h2o.deeplearning is not reproducible when using multiple cores.
-# For reproducible results, use h2o.init(nthreads = 1)
+# For reproducible results, pass reproducible=TRUE to h2o.deeplearning()
