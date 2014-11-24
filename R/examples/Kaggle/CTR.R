@@ -96,7 +96,7 @@ h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value 
 cat("\nTraining H2O model on training/validation splits days <30/30")
 ## Note: This could be grid search models, after which you would obtain the best model with model <- cvmodel@model[[1]]
 #cvmodel <- h2o.randomForest(data=train, validation=valid, x=c(3:ncol(train)), y=2,
-                            type="BigData", ntree=50, depth=20, seed=myseed)
+#                            type="BigData", ntree=50, depth=20, seed=myseed)
 cvmodel <- h2o.gbm(data=train, validation=valid, x=c(3:ncol(train)), y=2,
                             n.tree=100, interaction.depth=10)
 #cvmodel <- h2o.deeplearning(data=train, validation=valid, x=c(3:ncol(train)), y=2,
