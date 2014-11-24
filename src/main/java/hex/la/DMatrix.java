@@ -192,11 +192,9 @@ public class DMatrix  {
     @Override
     public void compute2() {
       _z = new Frame(_x.anyVec().makeZeros(_y.numCols()));
-      // first rebalance y to single chunk per column
-      final Key k = Key.makeSystem(Key.make().toString());
       int total_cores = H2O.CLOUD.size()*H2O.NUMCPUS;
       int chunksPerCol = _y.anyVec().nChunks();
-      int maxP = (8*total_cores)/chunksPerCol;
+      int maxP = 8*total_cores/chunksPerCol;
       _cntr = new AtomicInteger(maxP-1);
       addToPendingCount(2*_y.numCols()-1);
       for(int i = 0; i < Math.min(_y.numCols(),maxP); ++i)
@@ -204,13 +202,10 @@ public class DMatrix  {
     }
 
     private void forkVecTask(final int i) {
-      final long M = _y.vec(i).length();
       new GetNonZerosTsk(new H2OCallback<GetNonZerosTsk>(this) {
         @Override
         public void callback(GetNonZerosTsk gnz) {
-          double [] yVals = gnz._vals;
-          int [] idxs = gnz._idxs;
-          new VecTsk(new Callback(), _progressKey, yVals).asyncExec(Utils.append(_x.vecs(idxs), _z.vec(i)));
+          new VecTsk(new Callback(), _progressKey, gnz._vals).asyncExec(Utils.append(_x.vecs(gnz._idxs), _z.vec(i)));
         }
       }).asyncExec(_y.vec(i));
     }
@@ -241,7 +236,6 @@ public class DMatrix  {
     @Override public void map(Chunk c){
       int istart = (int)c._start;
       assert (c._start + c._len) == (istart + c._len);
-
       final int n = c.sparseLen();
       _idxs = MemoryManager.malloc4(n);
       _vals = MemoryManager.malloc8d(n);
@@ -263,10 +257,7 @@ public class DMatrix  {
       _idxs = idxs;
       _vals = vals;
     }
-
   }
-
-
   // compute single vec of the output in matrix multiply
   private static class VecTsk extends MRTask2<VecTsk> {
     double [] _y;
@@ -276,22 +267,35 @@ public class DMatrix  {
       _progressKey = progressKey;
       _y = y;
     }
-    @Override public void map(Chunk [] chks) {
 
+    @Override public void setupLocal(){_fr.lastVec().preWriting();}
+    @Override public void map(Chunk [] chks) {
       Chunk zChunk = chks[chks.length-1];
       double [] res = MemoryManager.malloc8d(chks[0]._len);
       for(int i = 0; i < _y.length; ++i) {
         final double yVal = _y[i];
         final Chunk xChunk = chks[i];
-        for(int k = xChunk.nextNZ(-1); k < res.length; k = xChunk.nextNZ(k))
-          res[k] += yVal*xChunk.at0(k);
+        for (int k = xChunk.nextNZ(-1); k < res.length; k = xChunk.nextNZ(k))
+          res[k] += yVal * xChunk.at0(k);
       }
-      zChunk.setAll(res);
-      new UpdateProgress(zChunk.modifiedChunk()._mem.length,zChunk.modifiedChunk().frozenType()).fork(_progressKey);
+      int [] nzs = MemoryManager.malloc4(res.length+1);
+      int j = 0;
+      for(int i = 0; i < res.length; ++i)
+        if(res[i] != 0)
+          nzs[j++] = i;
+      // NOTE: not using NewChunk.compress here as it was 1) too slow 2) result was too big, we want to treat chunks as sparse with much smaller sparse-ratio here
+      // (maybe update NewChunk to have different min-sparsity for double chunks)?
+      Chunk modChunk = (j < (res.length >> 1))?new CXDChunk(zChunk._start,res,nzs,j):new C8DChunk(zChunk._start,res);
+      new UpdateProgress(modChunk._mem.length,modChunk.frozenType()).fork(_progressKey);
+      DKV.put(zChunk._vec.chunkKey(zChunk.cidx()),modChunk,_fs);
     }
     @Override public void closeLocal(){
       _y = null; // drop inputs 
       _progressKey = null;
+    }
+
+    @Override public void postGlobal(){
+      _fr.lastVec().postWrite();
     }
 
   }
