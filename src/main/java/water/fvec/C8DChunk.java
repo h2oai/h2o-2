@@ -8,6 +8,13 @@ import water.UDP;
  * The empty-compression function, where data is in 'double's.
  */
 public class C8DChunk extends Chunk {
+  public C8DChunk (double [] vals){
+    _start = -1;
+    _mem = MemoryManager.malloc1(vals.length << 3);
+    _len = vals.length;
+    for(int i = 0, off = 0; i < vals.length; ++i, off += 8)
+      UDP.set8d(_mem,off,vals[i]);
+  }
   C8DChunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>3; }
   @Override protected final long   at8_impl( int i ) {
     double res = UDP.get8d(_mem,i<<3);

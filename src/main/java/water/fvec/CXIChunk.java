@@ -25,18 +25,18 @@ public class CXIChunk extends Chunk {
   protected CXIChunk(int len, int nzs, int valsz, byte [] buf){
     assert (valsz == 0 || valsz == 1 || valsz == 2 || valsz == 4 || valsz == 8);
     _len = len;
+    _ridsz = len >= 65535?4:2;
     int log = 0;
     while((1 << log) < valsz)++log;
     assert valsz == 0 || (1 << log) == valsz;
     _valsz = valsz;
     _valsz_log = log;
-    _ridsz = (len >= 65535)?4:2;
     UDP.set4(buf,0,len);
     byte b = (byte) _ridsz;
     buf[4] = b;
     buf[5] = (byte) _valsz;
     _mem = buf;
-    _sparseLen = (_mem.length - OFF) / (_valsz + _ridsz);
+    _sparseLen = nzs;
     assert (_mem.length - OFF) % (_valsz + _ridsz) == 0:"unexpected mem.length in sparse chunk: mem.length = " + (_mem.length - OFF) + "val_sz = " + _valsz + ", rowId_sz = " + _ridsz;
   }
 

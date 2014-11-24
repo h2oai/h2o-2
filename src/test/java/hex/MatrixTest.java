@@ -96,11 +96,9 @@ public class MatrixTest extends TestUtil {
     Frame M = getFrameForFile(mParsed, "smalldata/sparse_matrices/M2.svmlight");
     M.remove(0).remove(fs);
     Frame X2 = DMatrix.mmul(H,M);
-    double [][] x = Utils.asDoubles(X);
-    double [][] y = Utils.asDoubles(X2);
-    for(int i = 0; i < x.length; ++i)
-      for(int j = 0; j < y.length; ++j) // we match only up to 1e-3?
-        assertEquals("@ " + i + ", " + j + " " + x[i][j] + " != " + y[i][j], x[i][j],y[i][j],1e-3);
+    for(int i = 0; i < X.numRows(); ++i)
+      for(int j = 0; j < X.numCols(); ++j) // we match only up to 1e-3?
+        assertEquals("@ " + i + ", " + j + " " + X.vec(j).at(i) + " != " + X2.vec(j).at(i), X.vec(j).at(i),X2.vec(j).at(i),1e-3);
     X.delete();
     H.delete();
     M.delete();

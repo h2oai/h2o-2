@@ -285,7 +285,7 @@ public class DMatrix  {
           nzs[j++] = i;
       // NOTE: not using NewChunk.compress here as it was 1) too slow 2) result was too big, we want to treat chunks as sparse with much smaller sparse-ratio here
       // (maybe update NewChunk to have different min-sparsity for double chunks)?
-      Chunk modChunk = (j < (res.length >> 1))?new CXDChunk(zChunk._start,res,nzs,j):new C8DChunk(zChunk._start,res);
+      Chunk modChunk = (j < (res.length >> 1))?new CXDChunk(res,nzs,j):new C8DChunk(res);
       new UpdateProgress(modChunk._mem.length,modChunk.frozenType()).fork(_progressKey);
       DKV.put(zChunk._vec.chunkKey(zChunk.cidx()),modChunk,_fs);
     }
