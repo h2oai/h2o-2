@@ -35,12 +35,29 @@
 
 \newpage
 
+\section{What is H2O?}
+
+It is the only alternative to combine the power of highly advanced algorithms, the freedom of open source, and the capacity of truly scalable in-memory processing for big data on one or many nodes. Combined, these capabilities make it faster, easier, and more cost-effective to harness big data to maximum benefit for the business. 
+
+Data collection is easy. Decision making is hard. H2O makes it fast and easy to derive insights from your data through faster and better predictive modeling. Existing Big Data stacks are batch-oriented. Search and analytics need to be interactive. Use machines to learn machine-generated data. And more data beats better algorithms. 
+
+With H2O, you can make better predictions by harnessing sophisticated, ready-to-use algorithms and the processing power you need to analyze bigger data sets, more models, and more variables. 
+
+Get started with minimal effort and investment. H2O is an extensible open source platform that offers the most pragmatic way to put big data to work for your business. With H2O, you can work with your existing languages and tools. Further, you can extend the platform seamlessly into your Hadoop environments. Get H2O!
+
+Download H2O
+\underbar{http://www.h2o.ai/download}
+
+Join the Community
+\underbar{h2ostream@googlegroups.com} and \underbar{github.com/h2oai/h2o.git}
 
 \section{Introduction} \label{1}
 
-Generalized linear models (GLM) are some of the most commonly-used models for many types of data analysis use cases. While some data analysis can be done using general linear models, if the variables are more complex, general linear models may not be as accurate. For example, if the dependent variable has a non-continuous distribution or if the effect of the predictors is not linear, generalized linear models will produce more accurate results than general linear models.  
+Generalized linear models (GLM) are the workhorse for most predictive analysis use cases.  GLM is mostly used for regression (for example, logistic and linear regression).  Linear and logistic modeling are the standards of most predictive analytics. In addition to linear and logistic regression, GLM can also produce other types of regression models, such as Poisson, binomial, Tweedie, and gamma.  Dependent and independent variables measure the outcome based on fitting an equation. 
 
-H2O's GLM algorithm fits the generalized linear model with elastic net penalties. The model fitting computation is distributed, extremely fast,and scales extremely well for models with a limited number (~ low thousands) of predictors with non-zero coefficients. The algorithm can compute models for a single value of a penalty argument or the full regularization path, similar to glmnet. It can compute gaussian (linear), logistic, poisson, and gamma regression models. This document describes the usage of H2O's implementation of GLM in R.
+Generalized linear models are some of the most commonly-used models for many types of data analysis use cases. While some data analysis can be done using general linear models, if the variables are more complex, general linear models may not be as accurate. For example, if the dependent variable has a non-continuous distribution or if the effect of the predictors is not linear, generalized linear models will produce more accurate results than general linear models.  
+
+H2O's GLM algorithm fits the generalized linear model with elastic net penalties. The model fitting computation is distributed, extremely fast,and scales extremely well for models with a limited number (~ low thousands) of predictors with non-zero coefficients. The algorithm can compute models for a single value of a penalty argument or the full regularization path, similar to glmnet. It can compute . This document describes the usage of H2O's implementation of GLM in R.
 
 H2O's GLM fits the model by solving following problem:
 
@@ -298,8 +315,28 @@ In summary, H2O's GLM functionalities include:
 \item efficient computation full regularization path
 \item efficient distributed n-fold cross validation
 \item distributed grid search over elastic-net parameter $\alpha$
-\item upper and lower boudns for coefficients
+\item upper and lower bounds for coefficients
 \item proximal operator interface
+\end{itemize}
+
+\subsection{Benchmarks}
+
+Using GLM Logistic Regression for the airline dataset, a 42 GB .csv consisting of: 
+
+\begin{itemize}
+\item 1 billion rows
+\item 12 input columns
+\item 1 outcome column
+\item 9 numerical features
+\item 3 categorical features (with cardinalities 30, 376, and 380)
+\end{itemize}
+
+H2O has the following benchmarks for an AWS EC2 c3.2xlarge with 8 cores and 15 GB per node and a 1 GbE interconnect: 
+\begin{itemize}
+\item 16 EC2 Nodes: 34.9 seconds for 3 iterations (numerical and categorical)
+\item 16 EC2 Nodes: 16.5 seconds for 2 iterations (numerical)
+\item 48 EC2 Nodes: 14.2 seconds for 3 iterations (numerical and categorical)
+\item 48 EC2 Nodes: 5.6 seconds for 2 iterations (numerical)
 \end{itemize}
 
 \subsection{Input Parameters}
@@ -495,15 +532,13 @@ And the overall memory cost is given by:
 \[ O(MN + N^2pn)\]
 
 In case of $M >> N$, we can forget the second term and the algorithm scales linearly both in the number of nodes and number of CPUs per node. However, the equation above also implies that our algorithm is limited in the number of predictors it can handle, since the size of the Gram matrix grows quadratically (due to a memory and network throughput issue) with the number of predictors and its decomposition cost grows as the cube of the number of predictors (which is computational cost issue). H2O can get around these limitations in many cases due to its handling of categoricals and by employing strong rules to filter out inactive predictors; both are described later in this chapter.  
-\subsubsection{Handling Datasets High Number of Predictors}
-
 
 \section{Use case: Classification with Airline data}
 
 
 \subsection{Airline dataset overview} 
 
-The Airline dataset can be downloaded here: \url{https://github.com/0xdata/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip}. Remember to save the .csv file to your working directory by clicking  "View Raw."  Before running the Airline demo, we'll first review how to load data with H2O. 
+The Airline dataset can be downloaded here: \url{https://github.com/h2oai/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip}. Remember to save the .csv file to your working directory by clicking  "View Raw."  Before running the Airline demo, we'll first review how to load data with H2O. 
 
 \subsubsection{Loading data} \label{2.5}
 
@@ -600,10 +635,7 @@ To download the model,
 \item Set the new directory as the working directory.
 \item Follow the curl and java compile commands displayed in the instructions at the top of the Java model.
 \end{enumerate}
-\section{Comparison With Other Tools}
-
-\newpage
-\section{Appendix A: Complete parameter list}
+\section{Appendix: Parameters}
 \begin{itemize}
 \item \texttt{x}: A vector containing the names of the predictors in the model. No default.
 \item \texttt{y}: The name of the response variable in the model. No default.
@@ -684,7 +716,7 @@ Proximal Algorithms
 Foundations and Trends in Optimization, 1(3):123-231, 2014.
 
 \bibitem{git}
-\url{http://github.com/0xdata/h2o.git}
+\url{http://github.com/h2oai/h2o.git}
 
 \bibitem{docs}
 \url{http://docs.0xdata.com}

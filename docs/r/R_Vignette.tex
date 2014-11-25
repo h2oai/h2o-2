@@ -31,7 +31,7 @@
 
 \section{What is H2O?}
 
-It is the only alternative to combine the power of highly advanced algorithms, the freedom of open source, and the capacity of truly scalable in-memory processing for big data on one of many nodes. Combined, these capabilities make it faster, easier, and more cost-effective to harness big data to maximum benefit for the business. 
+It is the only alternative to combine the power of highly advanced algorithms, the freedom of open source, and the capacity of truly scalable in-memory processing for big data on one or many nodes. Combined, these capabilities make it faster, easier, and more cost-effective to harness big data to maximum benefit for the business. 
 
 Data collection is easy. Decision making is hard. H2O makes it fast and easy to derive insights from your data through faster and better predictive modeling. Existing Big Data stacks are batch-oriented. Search and analytics need to be interactive. Use machines to learn machine-generated data. And more data beats better algorithms. 
 
@@ -43,21 +43,21 @@ Download H2O
 \underbar{http://www.h2o.ai/download}
 
 Join the Community
-\underbar{h2ostream@googlegroups.com} and \underbar{github.com/0xdata/h2o.git}
+\underbar{h2ostream@googlegroups.com} and \underbar{github.com/h2oai/h2o.git}
 
 \section{Introduction}
 
 This documentation describes the functionality of R in H2O. Further information on H2O's system and algorithms, as well as R user documentation, can be found at the H2O website at \underbar{http://docs.h2o.ai}. This introductory section describes how H2O works with R, followed by a brief overview of generalized linear models (GLM). 
 
-R requires a reference object to the H2O instance because it uses a REST API to send functions to H2O. Data sets are not transmitted directly through the REST API. Instead, the user sends a command (containing an HDFS path to the data set, for example) either through the browser or via the REST API to ingest data from disk.
+R requires a reference object to the H2O instance because it uses a REST API to send functions to H2O. Data sets are not transmitted directly through the REST API. Instead, the user sends a command (for example, an HDFS path to the data set) either through the browser or via the REST API to ingest data from disk.
 
-The data set is then assigned a Key in H2O that the user may refer to in future commands to the web server. After preparing your dataset for modeling by defining the significant data and removing the insignificant data, you can create models to represent the results of the data analysis. One of the most popular models for data analysis is GLM. 
+The data set is then assigned a Key in H2O that you can use as a reference in future commands to the web server. After preparing your dataset for modeling by defining the significant data and removing the insignificant data, you can create models to represent the results of the data analysis. One of the most popular models for data analysis is GLM. 
 
 GLM estimates regression models for outcomes following exponential distributions in general. In addition to the Gaussian (i.e. normal) distribution, these include Poisson, binomial, gamma and Tweedie distributions. Each serves a different purpose, and depending on distribution and link function choice, it can be used either for prediction or classification.
 
 H2O supports Spark, YARN, and all versions of Hadoop. Hadoop is a scalable open-source file system that uses clusters to enable distributed storage and processing of datasets. Depending on your data size, you can get started on your desktop or scale using multiple nodes with Hadoop. 
 
-H2O nodes run as JVM invocations on Hadoop nodes. (Note that, for performance reasons, we recommend you avoid running an H2O node on the same hardware as the Hadoop NameNode if it can be avoided.)
+H2O nodes run as JVM invocations on Hadoop nodes. For performance reasons, we recommend you avoid running an H2O node on the same hardware as the Hadoop NameNode if possible.
 
 Since H2O nodes run as mapper tasks in Hadoop, administrators can see them in the normal JobTracker and TaskTracker frameworks. This provides process-level (i.e. JVM instance-level) visibility.
 
@@ -111,8 +111,8 @@ demo(glm)
 \end{spverbatim}
 \end{enumerate}
 
-\subsection{Making a build from Source Code} \begin{enumerate}
-\item If you are a developer who wants to make changes to the R package before building and installing it, pull the source code from Git (\underbar{https://github.com/0xdata/h2o}) and follow the instructions in From Source Code (Github) at \underbar{http://docs.h2o.ai/developuser/quickstart\_git.html}.
+\subsection{Making a build from Source Code} 
+If you are a developer who wants to make changes to the R package before building and installing it, pull the source code from Git (\underbar{https://github.com/h2oai/h2o}) and follow the instructions in From Source Code (Github) at \underbar{http://docs.h2o.ai/developuser/quickstart\_git.html}.
 
 After making the build, navigate to the Rcran folder with the R package in the build’s directory, then run and install.
 \begin{spverbatim}
@@ -134,21 +134,13 @@ DONE (h2o)
 \end{spverbatim}
 
 
-\item Verify that H2O installed properly:
-\begin{spverbatim}
-
-> library(h2o)
-> localH2O = h2o.init()
-\end{spverbatim}
-\end{enumerate}
-
 \section{H2O Initialization}
 
 \subsection{Launching from R}
 
 If you do not specify the argument {\texttt{max\_mem\_size}} when you run {\texttt{h2o.init( )}}, the default heap size of the H2O instance running on 32-bit Java is 1g. H2O checks the Java version and suggests an upgrade if you are running 32-bit Java. On 64-bit Java, the heap size is 1/4 of the total memory available on the machine. 
 
-For best performance, the allocated memory should be 4x the size of your data, but never more than the total amount of memory on your computer. For larger data sets, running on a server or service with more memory available for computing is recommended.
+For best performance, the allocated memory should be 4x the size of your data, but never more than the total amount of memory on your computer. For larger data sets, we recommend running on a server or service with more memory available for computing.
 
 
 To launch H2O from R, run the following in R:
@@ -178,7 +170,7 @@ To connect with an existing H2O cluster node other than the default localhost:54
 
 \subsection{Launching from the Command Line}
 
-After launching the H2O instance, initialize the connection by running {\texttt{h2o.init( )}} with the IP address and port number of a node in the cluster. In the following example, change 192.168.1.161to your local host. 
+After launching the H2O instance, initialize the connection by running {\texttt{h2o.init( )}} with the IP address and port number of a node in the cluster. In the following example, change 192.168.1.161 to your local host. 
 \begin{spverbatim}
 > library(h2o)
 > localH2O <- h2o.init(ip = '192.168.1.161', port =54321)
@@ -193,7 +185,7 @@ $ hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -ma
 
 \begin{itemize}
 \item For each major release of each distribution of hadoop, there is a driver jar file that the user will need to launch H2O with. Currently available driver jar files in each build of H2O includes {\texttt{h2odriver_cdh5.jar, h2odriver_hdp2.1.jar}}, and {\texttt{mapr2.1.3.jar}}.
-\item The above command launches exactly one 1g node of H2O, it is recommended you launch the cluster with 4 times the memory of your data file.
+\item The above command launches exactly one 1g node of H2O; however,  we recommend launching the cluster with 4 times the memory of your data file.
 \item{\texttt{mapperXmx}} is the mapper size or the amount of memory allocated to each node.
 \item{\texttt{nodes}} is the number of nodes requested to form the cluster.
 \item{\texttt{output}} is the name of the directory created each time a H2O cloud is created so it is necessary for the name to be unique each time it is launched.
@@ -250,7 +242,7 @@ The following section describes some important points to remember about data pre
 
 \item Although it may seem like you are manipulating the data in R due to the look and feel, once the data has been passed to H2O, all data munging occurs in the H2O instance. The information is passed to R through JSON APIs, so some functions may not have another method. 
 \item You are not limited by R's ability to handle data, but by the total amount of memory allocated to the H2O instance. To process large data sets, make sure to allocate enough memory. For more information, refer to ``Launching in R." 
-\item Be aware that it’s possible to manipulate datasets with thousands of factor levels using H2O in R, so if you ask H2O to display a table in R with information from high cardinality factors, the results may overwhelm R's capacity. 
+\item You can manipulate datasets with thousands of factor levels using H2O in R, so if you ask H2O to display a table in R with information from high cardinality factors, the results may overwhelm R`s capacity. 
 \item To manipulate data in R and not in H2O, use {\texttt{as.data.frame()}}, {\texttt{as.h2o()}}, and {\texttt{str()}}. \begin{itemize}
 \item {\texttt{as.data.frame( )}} converts an H2O data frame into an R data frame. Be aware that if your request exceeds R’s capabilities due to the amount of data, the R session will crash. If possible, we recommend only taking subsets of the entire data set (the necessary data columns or rows), and not the whole data set. 
 \item {\texttt{as.h2o( )}} transfers data from R to the H2O instance. We recommend ensuring that you allocate enough memory to the H2O instance for successful data transfer.
@@ -797,7 +789,7 @@ To generate a generalized linear model for developing linear models for exponent
 For more information, use {\texttt{help(h2o.glm)}}.
 \begin{spverbatim}
 > prostate.hex <- h2o.importFile(localH2O, path =
-"https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv",
+"https://raw.github.com/h2oai/h2o/master/smalldata/logreg/prostate.csv",
 key = "prostate.hex")
  |===================================================| 100%
 > h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data =
