@@ -301,7 +301,7 @@ Download the Airline dataset from:\newline {\href{https://github.com/h2oai/h2o/b
 
 \subsubsection{Loading data}  
 
-Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For this example, download the toy weather dataset from {\href{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/weather.csv}{\underbar{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/weather.csv}}.  Load the data to your current working directory in your R Console (do this for any future dataset downloads), and then run the following command.
+Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For this example, download the toy weather dataset from {\href{https://raw.githubusercontent.com/h2oai/h2o/master/smalldata/weather.csv}{\underbar{https://raw.githubusercontent.com/h2oai/h2o/master/smalldata/weather.csv}}.  Load the data to your current working directory in your R Console (do this for any future dataset downloads), and then run the following command.
 \begin{spverbatim}
 weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", header = TRUE, sep = ",", key = "weather.hex")
 \end{spverbatim}

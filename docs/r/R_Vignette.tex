@@ -395,7 +395,7 @@ The H2O package consolidates all of the various supported import functions using
 
 ## To import from HDFS, connect to your Hadoop cluster and start an H2O instance in R using the IP that was specified by Hadoop:
 > remoteH2O = h2o.init(ip= <IPAddress>, port =54321)
-> pathToData = "hdfs://mr-0xd6.0xdata.loc/datasets/airlines_all.csv"
+> pathToData = "hdfs://mr-0xd6.h2oai.loc/datasets/airlines_all.csv"
 > airlines.hex = h2o.importFile(remoteH2O, path = pathToData, key = "airlines.hex")
       |=================================================| 100%
 
