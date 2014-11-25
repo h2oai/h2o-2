@@ -6,7 +6,7 @@
 \usepackage{array}
 \usepackage{datetime}
 \usepackage{lipsum}
-\usepackage{url}
+\usepackage[hyphens]{url}
 \usepackage{spverbatim}
 \usepackage[parfill]{parskip}
 \usepackage[all,defaultlines]{nowidow}
@@ -40,14 +40,14 @@ With H2O, you can make better predictions by harnessing sophisticated, ready-to-
 Get started with minimal effort and investment. H2O is an extensible open source platform that offers the most pragmatic way to put big data to work for your business. With H2O, you can work with your existing languages and tools. Further, you can extend the platform seamlessly into your Hadoop environments. Get H2O!
 
 Download H2O
-\underbar{http://www.h2o.ai/download}
+\url{http://www.h2o.ai/download}
 
 Join the Community
-\underbar{h2ostream@googlegroups.com} and \underbar{github.com/h2oai/h2o.git}
+\url{h2ostream@googlegroups.com} and \url{github.com/h2oai/h2o.git}
 
 \section{Introduction}
 
-This documentation describes the functionality of R in H2O. Further information on H2O's system and algorithms, as well as R user documentation, can be found at the H2O website at \underbar{http://docs.h2o.ai}. This introductory section describes how H2O works with R, followed by a brief overview of generalized linear models (GLM). 
+This documentation describes the functionality of R in H2O. Further information on H2O's system and algorithms, as well as R user documentation, can be found at the H2O website at \url{http://docs.h2o.ai}. This introductory section describes how H2O works with R, followed by a brief overview of generalized linear models (GLM). 
 
 R requires a reference object to the H2O instance because it uses a REST API to send functions to H2O. Data sets are not transmitted directly through the REST API. Instead, the user sends a command (for example, an HDFS path to the data set) either through the browser or via the REST API to ingest data from disk.
 
@@ -61,7 +61,7 @@ H2O nodes run as JVM invocations on Hadoop nodes. For performance reasons, we re
 
 Since H2O nodes run as mapper tasks in Hadoop, administrators can see them in the normal JobTracker and TaskTracker frameworks. This provides process-level (i.e. JVM instance-level) visibility.
 
-H2O helps R users make the leap from laptop-based processing to large-scale environments. Hadoop helps H2O users scale their data processing capabilities based on their current needs. Using H2O, R, and Hadoop, you can create a complete end-to-end data analysis solution. For more information about H2O on Hadoop, refer to \underbar{http://docs.h2o.ai/bits/hadoop/H2O\_on\_Hadoop\_0xdata.pdf}.
+H2O helps R users make the leap from laptop-based processing to large-scale environments. Hadoop helps H2O users scale their data processing capabilities based on their current needs. Using H2O, R, and Hadoop, you can create a complete end-to-end data analysis solution. For more information about H2O on Hadoop, refer to \url{http://docs.h2o.ai/bits/hadoop/H2O\_on\_Hadoop\_0xdata.pdf}.
 
 This document will walk you through the four steps to data analysis with H2O: installing H2O, preparing your data for modeling (data munging), creating a model using state-of-the-art machine learning algorithms, and scoring your models. 
 
@@ -74,7 +74,7 @@ To use H2O with R, you can start H2O outside of R and connect to it, or you can 
 
 To download R:
 \begin{enumerate}
-\item Go to \underbar{http://cran.r-project.org/mirrors.html}. 
+\item Go to \url{http://cran.r-project.org/mirrors.html}. 
 \item Select your closest local mirror. 
 \item Select your operating system (Linux, OS X, or Windows). 
 \item Depending on your OS, download the appropriate file, along with any required packages. 
@@ -84,7 +84,7 @@ To download R:
 To download R Studio: 
 
 \begin{enumerate}
-\item Go to \underbar{http://www.rstudio.com/products/rstudio/}. 
+\item Go to \url{http://www.rstudio.com/products/rstudio/}. 
 \item Select your deployment type (desktop or server). 
 \item Download the file. 
 \item When the download is complete, unzip the file and install.
@@ -97,7 +97,7 @@ To download R Studio:
 
 Note: Our push to CRAN will be behind the bleeding edge version and due to resource constraints, may be behind the published version. However, there is a best-effort to keep the versions the same. 
 
-To get the latest build, download it from \underbar{http://h2o.ai/download} and make sure to run the following (replacing the asterisks [*] with the version number): 
+To get the latest build, download it from \url{http://h2o.ai/download} and make sure to run the following (replacing the asterisks [*] with the version number): 
 \begin{spverbatim}
 > if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 > if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
@@ -112,7 +112,7 @@ demo(glm)
 \end{enumerate}
 
 \subsection{Making a build from Source Code} 
-If you are a developer who wants to make changes to the R package before building and installing it, pull the source code from Git (\underbar{https://github.com/h2oai/h2o}) and follow the instructions in From Source Code (Github) at \underbar{http://docs.h2o.ai/developuser/quickstart\_git.html}.
+If you are a developer who wants to make changes to the R package before building and installing it, pull the source code from Git (\url{https://github.com/h2oai/h2o}) and follow the instructions in From Source Code (Github) at \url{http://docs.h2o.ai/developuser/quickstart\_git.html}.
 
 After making the build, navigate to the Rcran folder with the R package in the build’s directory, then run and install.
 \begin{spverbatim}
@@ -293,7 +293,7 @@ The following section describes the features and functions of some common models
 
 H2O supports the following models: Deep Learning, Generalized Linear Models (GLM), Gradient Boosted Regression (GBM), K-Means, Na\"{i}ve Bayes, Principal Components Analysis (PCA), Principal Components Regression (PCR), Random Forest (RF), and Cox Proportional Hazards (PH). 
 
-The list is growing quickly, so check back often at \underbar{www.h2o.ai} to see the latest additions. The following list describes some common model types and features. 
+The list is growing quickly, so check back often at \url{www.h2o.ai} to see the latest additions. The following list describes some common model types and features. 
 
 {\textbf{Generalized Linear Models (GLM)}}: A flexible generalization of ordinary linear regression for response variables that have error distribution models other than a normal distribution. GLM unifies various other statistical models, including linear, logistic, Poisson, and more.
 
@@ -369,7 +369,7 @@ The following demo demonstrates how to import a file, define significant data, v
 
 \section{Data Manipulation in R}
 
-The following section describes some common R commands. For a complete command list, including parameters, refer to \underbar{http://docs.h2o.ai/bits/h2o\_package.pdf}.
+The following section describes some common R commands. For a complete command list, including parameters, refer to \url{http://docs.h2o.ai/bits/h2o\_package.pdf}.
 For additional help within R's Help tab, precede the command with a question mark (for example, {\texttt{?h2o}}) for suggested commands containing the search terms. For more information on a command, precede the command with two question marks ({\texttt{??h2o}}). 
 
 \subsection{Importing Files}
@@ -924,25 +924,25 @@ To apply an H2O model to a holdout set for predictions based on model results, u
 \section{Support} 
 There are multiple ways to request support for H2O: \bigskip
 
-{\textbf{Email}}: {\underbar{support@h2o.ai}}
+{\textbf{Email}}: {\url{support@h2o.ai}}
 
-{\textbf{H2OStream on Google Groups}}: {\underbar{https://groups.google.com/d/forum/h2ostream}} 
+{\textbf{H2OStream on Google Groups}}: {\url{https://groups.google.com/d/forum/h2ostream}} 
 
-{\textbf{JIRA}}: {\underbar{http://jira.0xdata.com/}}
+{\textbf{JIRA}}: {\url{http://jira.0xdata.com/}}
 
-{\textbf{Meetup information}}: {\underbar{http://h2o.ai/events}}
+{\textbf{Meetup information}}: {\url{http://h2o.ai/events}}
 
 \newpage
 \section{References}\bigskip
 
 
-{\bfseries{R Package}}:  \underbar{http://docs.h2o.ai/bits/h2o\_package.pdf}
+{\bfseries{R Package}}:  \url{http://docs.h2o.ai/bits/h2o\_package.pdf}
 
-{\bfseries{R Ensemble documentation}}: \underbar{http://www.stat.berkeley.edu/~ledell/R/h2oEnsemble.pdf} 
+{\bfseries{R Ensemble documentation}}: \url{http://www.stat.berkeley.edu/~ledell/R/h2oEnsemble.pdf} 
 
-{\bfseries{Slide deck}}: \underbar{http://h2o.ai/blog/2013/08/big-data-science-in-h2o-with-r/} 
+{\bfseries{Slide deck}}: \url{http://h2o.ai/blog/2013/08/big-data-science-in-h2o-with-r/} 
 
-{\bfseries{R project website}}: \underbar{http://www.r-project.org} 
+{\bfseries{R project website}}: \url{http://www.r-project.org} 
 
 
 \section{Appendix: Commands} \label{Appendix} 
@@ -969,7 +969,7 @@ The following section lists some common commands by function that are available 
 {\texttt{h2o.createFrame}}: Create an H2O data frame, with optional randomization.\newline
 {\texttt{h2o.runif}}: Produce a vector of random uniform numbers.\newline
 {\texttt{h2o.interaction}}: Create interaction terms between categorical features of an H2O Frame.\newline
-
+\newpage
 \emph{Data Sampling / Splitting}\par
  {\texttt{h2o.sample}}: Sample an existing H2O Frame by number of observations.\newline
 {\texttt{h2o.splitFrame}: Split an existing H2O data set according to user-specified ratios.\newline
@@ -1085,7 +1085,7 @@ The following section lists some common commands by function that are available 
 
 \emph{Row / Column Aggregation}\par
 {\texttt{apply}: Apply a function over an H2O parsed data object (an array).\newline
-
+\newpage
 \emph{Group By Aggregation}\par
 {\texttt{h2o.ddply}}: Split H2O dataset, apply a function, and display results.\newline
 {\texttt{h2o.addFunction}}: Add a function defined in R to the H2O server for future use. \newline
@@ -1148,7 +1148,7 @@ The following section lists some common commands by function that are available 
 {\texttt{h2o.deeplearning}}: Perform Deep Learning neural networks on an H2OParsedData object.\newline
 {\texttt{h2o.anomaly}}: Detect anomalies in a H2O dataset using a H2O deep learning model with auto-encoding.\newline
 {\texttt{h2o.deepfeatures}}: Extract the non-linear features from a H2O dataset using a H2O deep learning model.\newline
-
+\newpage
 \emph{Model Scoring}\par
 {\texttt{h2o.predict}}: Obtain predictions from various fitted H2O model objects.\newline
 

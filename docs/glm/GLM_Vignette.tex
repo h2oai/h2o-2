@@ -46,10 +46,10 @@ With H2O, you can make better predictions by harnessing sophisticated, ready-to-
 Get started with minimal effort and investment. H2O is an extensible open source platform that offers the most pragmatic way to put big data to work for your business. With H2O, you can work with your existing languages and tools. Further, you can extend the platform seamlessly into your Hadoop environments. Get H2O!
 
 Download H2O
-\underbar{http://www.h2o.ai/download}
+\url{http://www.h2o.ai/download}
 
 Join the Community
-\underbar{h2ostream@googlegroups.com} and \underbar{github.com/h2oai/h2o.git}
+\url{h2ostream@googlegroups.com} and \url{github.com/h2oai/h2o.git}
 
 \section{Introduction} \label{1}
 
@@ -86,7 +86,7 @@ You can load the latest CRAN H2O package by running:
 \noindent
 Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O download table:
 
-\indent \indent \indent \underbar{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}.
+\indent \indent \indent \url{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}.
 
 \noindent
 Open your R Console and run the following to install the latest H2O build in R:
@@ -163,8 +163,8 @@ AUC =  0.7157151 (on train)
 
 \subsection{Support} 
 
-Users of the H2O package may submit general enquiries and bug reports privately to H2O via email: \underbar {support@h2o.ai}; or publicly post them to: \underbar {h2ostream@googlegroups.com}. Specific bugs or issues will be filed to H2O's JIRA: 
-\underbar{https://0xdata.atlassian.net/secure/Dashboard.jspa}.
+Users of the H2O package may submit general enquiries and bug reports privately to H2O via email: \url {support@h2o.ai}; or publicly post them to: \url {h2ostream@googlegroups.com}. Specific bugs or issues will be filed to H2O's JIRA: 
+\url{https://0xdata.atlassian.net/secure/Dashboard.jspa}.
 
 \section{Generalized Linear Modeling} 
 This section contains a brief overview of generalized linear models and follows up with a few details for each model family.
@@ -543,7 +543,7 @@ The Airline dataset can be downloaded here: \url{https://github.com/h2oai/h2o/bl
 \subsubsection{Loading data} \label{2.5}
 
 Loading a dataset in R for use with H2O is slightly different from the usual methodology because we must convert our datasets into \texttt{H2OParsedData} objects. In this example, we will use a toy weather dataset that can be downloaded here:\\ 
-\underbar{https://raw.githubusercontent.com/h2oai/h2o/master/smalldata/weather.csv}. 
+\url{https://raw.githubusercontent.com/h2oai/h2o/master/smalldata/weather.csv}. 
 First, load the data to your current working directory in your R Console (do this for any future dataset downloads), and then run the following command:
 \begin{spverbatim}
 weather.hex = h2o.uploadFile(localH2O, path = "weather.csv", header = TRUE, sep = ",", key = "weather.hex")

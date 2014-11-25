@@ -7,6 +7,7 @@
 \usepackage{lipsum}
 \usepackage{spverbatim}
 \usepackage{underscore}
+\usepackage[hyphens]{url}
 \usepackage{hyperref}
 \hypersetup{colorlinks, urlcolor={blue}}
 \usepackage{graphicx}
@@ -36,15 +37,15 @@ With H2O, you can make better predictions by harnessing sophisticated, ready-to-
 Get started with minimal effort and investment. H2O is an extensible open source platform that offers the most pragmatic way to put big data to work for your business. With H2O, you can work with your existing languages and tools. Further, you can extend the platform seamlessly into your Hadoop environments. Get H2O!
 
 Download H2O
-{\href{http://www.h2o.ai/download} {\underbar{http://www.h2o.ai/download}}
+{\url{http://www.h2o.ai/download}}
 
 Join the Community
-{\href{h2ostream@googlegroups.com} {\underbar{h2ostream@googlegroups.com}} and {\href{github.com/h2oai/h2o.git}{\underbar{github.com/h2oai/h2o.git}}
+{\url{h2ostream@googlegroups.com}} and {\url{github.com/h2oai/h2o.git}}
 
 
 \section{Introduction}
 
-This vignette presents the gradient boosted machine (GBM) framework in the H2O package at {\href{http://cran.r-project.org/web/packages/h2o/index.html}{\underbar{http://cran.r-project.org/web/packages/h2o/index.html}}}. Further documentation on H2O's system and algorithms can be found at the h2o.ai website at {\href{http://docs.h2o.ai}{\underbar{http://docs.h2o.ai}}} and the R package manual at {\href{http://cran.r-project.org/web/packages/h2o/h2o.pdf}{\underbar{http://cran.r-project.org/web/packages/h2o/h2o.pdf}}}. The full datasets and code of this vignette can be found at the H2O Github at {\href{github.com/h2oai/h2o.git}{\underbar{github.com/h2oai/h2o.git}}}. This introductory section provides instructions on getting H2O started, followed by a brief overview of gradient boosting.
+This vignette presents the gradient boosted machine (GBM) framework in the H2O package at {\url{http://cran.r-project.org/web/packages/h2o/index.html}}. Further documentation on H2O's system and algorithms can be found at the h2o.ai website at {\url{http://docs.h2o.ai}} and the R package manual at {\url{http://cran.r-project.org/web/packages/h2o/h2o.pdf}}. The full datasets and code of this vignette can be found at the H2O Github at {\url{github.com/h2oai/h2o.git}}. This introductory section provides instructions on getting H2O started, followed by a brief overview of gradient boosting.
 
 
 \section{Installation}
@@ -55,7 +56,7 @@ To use H2O with R, you can start H2O outside of R and connect to it, or you can 
 
 To download R:
 \begin{enumerate}
-\item Go to \underbar{http://cran.r-project.org/mirrors.html}. 
+\item Go to \url{http://cran.r-project.org/mirrors.html}. 
 \item Select your closest local mirror. 
 \item Select your operating system (Linux, OS X, or Windows). 
 \item Depending on your OS, download the appropriate file, along with any required packages. 
@@ -65,7 +66,7 @@ To download R:
 To download R Studio: 
 
 \begin{enumerate}
-\item Go to \underbar{http://www.rstudio.com/products/rstudio/}. 
+\item Go to \url{http://www.rstudio.com/products/rstudio/}. 
 \item Select your deployment type (desktop or server). 
 \item Download the file. 
 \item When the download is complete, unzip the file and install.
@@ -78,7 +79,7 @@ To download R Studio:
 
 Note: Our push to CRAN will be behind the bleeding edge version and due to resource constraints, may be behind the published version. However, there is a best-effort to keep the versions the same. 
 
-To get the latest build, download it from \underbar{http://h2o.ai/download} and make sure to run the following (replacing the asterisks [*] with the version number): 
+To get the latest build, download it from \url{http://h2o.ai/download} and make sure to run the following (replacing the asterisks [*] with the version number): 
 \begin{spverbatim}
 > if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 > if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
@@ -91,9 +92,10 @@ To see {\texttt{h2o.gbm}} at work, run the following command to observe an autom
 \begin{spverbatim}
 demo(h2o.gbm)
 \end{spverbatim}
+\end{enumerate}
 
 \subsection{Making a build from Source Code} 
-If you are a developer who wants to make changes to the R package before building and installing it, pull the source code from Git (\underbar{https://github.com/h2oai/h2o}) and follow the instructions in From Source Code (Github) at \underbar{http://docs.h2o.ai/developuser/quickstart\_git.html}.
+If you are a developer who wants to make changes to the R package before building and installing it, pull the source code from Git (\url{https://github.com/h2oai/h2o}) and follow the instructions in From Source Code (Github) at \url{http://docs.h2o.ai/developuser/quickstart\_git.html}.
 
 After making the build, navigate to the Rcran folder with the R package in the build’s directory, then run and install.
 \begin{spverbatim}
@@ -215,7 +217,7 @@ R is connected to H2O cluster:
 \noindent
 
 \subsection{Support} 
-Users of the H2O package may submit general enquiries and bug reports to h2o.ai support at {\href{h2ostream@googlegroups.com} {\underbar{h2ostream@googlegroups.com}}. Alternatively, specific bugs or issues may be filed to the h2o.ai JIRA at {\href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{\underbar{https://0xdata.atlassian.net/secure/Dashboard.jspa}}.
+Users of the H2O package may submit general enquiries and bug reports to h2o.ai support at {\url{h2ostream@googlegroups.com}}. Alternatively, specific bugs or issues may be filed to the h2o.ai JIRA at {\url{https://0xdata.atlassian.net/secure/Dashboard.jspa}}.
 
 \subsection{Gradient Boosting overview} 
 
@@ -248,7 +250,7 @@ H2O's GBM functionalities include:
 
 \subsubsection{Theory and framework} 
 
-Gradient boosting is a machine learning technique that combines two powerful tools: gradient-based optimization and boosting. Gradient-based optimization uses gradient computations in order to minimize a model's loss function with respect to the training data. Boosting additively collects an ensemble of weak models in order to ultimately create a strong learning system for predictive tasks. Here we consider gradient boosting in the example of K-class classification, although the model for regression follows similar logic. The following analysis follows from the discussion in Hastie et al (2010) at {\href{http://statweb.stanford.edu/~tibs/ElemStatLearn/}{\underbar{http://statweb.stanford.edu/~tibs/ElemStatLearn/}}.
+Gradient boosting is a machine learning technique that combines two powerful tools: gradient-based optimization and boosting. Gradient-based optimization uses gradient computations in order to minimize a model's loss function with respect to the training data. Boosting additively collects an ensemble of weak models in order to ultimately create a strong learning system for predictive tasks. Here we consider gradient boosting in the example of K-class classification, although the model for regression follows similar logic. The following analysis follows from the discussion in Hastie et al (2010) at {\url{http://statweb.stanford.edu/~tibs/ElemStatLearn/}}.
 \newline
 \\
 {\bf{\footnotesize{GBM for classification}}}
@@ -276,7 +278,7 @@ Output $f_k^{\hat{}}(x) = f_{kM}(x), \hspace{5pc} k=1,2,\dots,K$
 \line(1,0){500}
 \\
 \\ 
-In the above algorithm, the index $m$ tracks of the number of weak learners added to the current ensemble. Within this outer loop, there is an inner loop across each of the $K$ classes. In this inner loop, the first step is to compute the residuals, $r_{ikm}$, which are actually the gradient values, for each of the $N$ bins in the CART model, and then to fit a regression tree to these gradient computations. This fitting process is distributed and parallelized, and details on this framework can be found on the h2o.ai blog at \newline{\href{http://h2o.ai/blog/2013/10/building-distributed-gbm-h2o/}{\underbar{http://h2o.ai/blog/2013/10/building-distributed-gbm-h2o/}}.
+In the above algorithm, the index $m$ tracks of the number of weak learners added to the current ensemble. Within this outer loop, there is an inner loop across each of the $K$ classes. In this inner loop, the first step is to compute the residuals, $r_{ikm}$, which are actually the gradient values, for each of the $N$ bins in the CART model, and then to fit a regression tree to these gradient computations. This fitting process is distributed and parallelized, and details on this framework can be found on the h2o.ai blog at {\url{http://h2o.ai/blog/2013/10/building-distributed-gbm-h2o/}}.
 \\
 \\
 The final procedure in the inner loop is to add to the current model to the fitted regression tree, which improves the accuracy of the model during the inherent gradient descent step. After $M$ iterations, the final ``boosted" model can be tested out on new data.
@@ -297,11 +299,11 @@ However, despite the greater rate of training error with small values of $\nu$, 
 
 \subsection{Airline dataset overview} 
 
-Download the Airline dataset from:\newline {\href{https://github.com/h2oai/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip}{\underbar{https://github.com/h2oai/h2o/blob/master/smalldata/airlines/allyears2k\_headers.zip}} and save the .csv file to your working directory. Before running the Airline demo, review how to load data with H2O. 
+Download the Airline dataset from: {\url{https://github.com/h2oai/h2o/blob/master/smalldata/airlines/allyears2k_headers.zip}} and save the .csv file to your working directory. Before running the Airline demo, review how to load data with H2O. 
 
 \subsubsection{Loading data}  
 
-Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For this example, download the toy weather dataset from {\href{https://raw.githubusercontent.com/h2oai/h2o/master/smalldata/weather.csv}{\underbar{https://raw.githubusercontent.com/h2oai/h2o/master/smalldata/weather.csv}}.  Load the data to your current working directory in your R Console (do this for any future dataset downloads), and then run the following command.
+Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For this example, download the toy weather dataset from {\url{https://raw.githubusercontent.com/h2oai/h2o/master/smalldata/weather.csv}}.  Load the data to your current working directory in your R Console (do this for any future dataset downloads), and then run the following command.
 \begin{spverbatim}
 weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", header = TRUE, sep = ",", key = "weather.hex")
 \end{spverbatim}
@@ -433,25 +435,25 @@ Gradient boosted machines sequentially fit new models to provide a more accurate
 
 \section{References}
 
-Dietterich, Thomas G, and Eun Bae Kong. \href{http://www.iiia.csic.es/~vtorra/tr-bias.pdf}{“Machine Learning Bias, Statistical Bias, and Statistical Variance of Decision Tree Algorithms.”} ML-95 255 (1995).
+Dietterich, Thomas G, and Eun Bae Kong. {\textbf{“Machine Learning Bias, Statistical Bias, and Statistical Variance of Decision Tree Algorithms.”}} \url{http://www.iiia.csic.es/~vtorra/tr-bias.pdf} ML-95 255 (1995).
 \\
 \\
-Elith, Jane, John R Leathwick, and Trevor Hastie. \href{http://onlinelibrary.wiley.com/doi/10.1111/j.1365-2656.2008.01390.x/abstract}{“A Working Guide to Boosted Regression Trees.”} Journal of Animal Ecology 77.4 (2008): 802-813
+Elith, Jane, John R Leathwick, and Trevor Hastie. {\textbf{“A Working Guide to Boosted Regression Trees.”}} \url{http://onlinelibrary.wiley.com/doi/10.1111/j.1365-2656.2008.01390.x/abstract} Journal of Animal Ecology 77.4 (2008): 802-813
 \\
 \\
-Friedman, Jerome H. \href{http://statweb.stanford.edu/~jhf/ftp/trebst.pdf}{“Greedy Function Approximation: A Gradient Boosting Machine.”} Annals of Statistics (2001): 1189-1232.
+Friedman, Jerome H. {\textbf{“Greedy Function Approximation: A Gradient Boosting Machine.”}} \url{http://statweb.stanford.edu/~jhf/ftp/trebst.pdf} Annals of Statistics (2001): 1189-1232.
 \\
 \\
-Friedman, Jerome, Trevor Hastie, Saharon Rosset, Robert Tibshirani, and Ji Zhu. \href{http://web.stanford.edu/~hastie/Papers/boost_discussion.pdf}{“Discussion of Boosting Papers.”} Ann. Statist 32 (2004): 102-107
+Friedman, Jerome, Trevor Hastie, Saharon Rosset, Robert Tibshirani, and Ji Zhu. {\textbf{“Discussion of Boosting Papers.”}}\url{http://web.stanford.edu/~hastie/Papers/boost_discussion.pdf} Ann. Statist 32 (2004): 102-107
 \\
 \\
-Friedman, Jerome, Trevor Hastie, and Robert Tibshirani. \href{http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.aos/1016218223}{``Additive Logistic Regression: A Statistical View of Boosting (With Discussion and a Rejoinder by the Authors).”} The Annals of Statistics 28.2 (2000): 337-407
+Friedman, Jerome, Trevor Hastie, and Robert Tibshirani. {\textbf{``Additive Logistic Regression: A Statistical View of Boosting (With Discussion and a Rejoinder by the Authors).”}} \url{http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.aos/1016218223} The Annals of Statistics 28.2 (2000): 337-407
 \\
 \\
-Hastie, Trevor, Robert Tibshirani, and J Jerome H Friedman. \href{http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf}{The Elements of Statistical Learning}. Vol.1. N.p., page 339: Springer New York, 2001. 
+Hastie, Trevor, Robert Tibshirani, and J Jerome H Friedman. {\textbf{The Elements of Statistical Learning}}  \url{http://statweb.stanford.edu/~tibs/ElemStatLearn/printings/ESLII_print10.pdf}. Vol.1. N.p., page 339: Springer New York, 2001. 
 \\
 \\
-Niu, Feng, et al. \href{https://papers.nips.cc/paper/4390-hogwild-a-lock-free-approach-to-parallelizing-stochastic-gradient-descent.pdf}{“Hogwild!: A lock-free approach to parallelizing stochastic gradient descent.”} Advances in Neural Information Processing Systems 24 (2011): 693-701. (algorithm implemented is on p.5) 
+Niu, Feng, et al. {\textbf{“Hogwild!: A lock-free approach to parallelizing stochastic gradient descent.”}} {\url{https://papers.nips.cc/paper/4390-hogwild-a-lock-free-approach-to-parallelizing-stochastic-gradient-descent.pdf}}  Advances in Neural Information Processing Systems 24 (2011): 693-701. (algorithm implemented is on p.5) 
 
 
 
