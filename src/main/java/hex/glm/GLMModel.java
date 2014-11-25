@@ -495,6 +495,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       for(int i = 0; i < _xmodels.length; ++i)
         _xvals[i] = new GLMValidation(null,_xmodels[i].glm,_xmodels[i].rank(),_thresholds);
       final int nrows = chunks[0]._len;
+      long start = chunks[0]._start;
       double [] row   = MemoryManager.malloc8d(_xmodels[0]._names.length);
       float  [] preds = MemoryManager.malloc4f(_xmodels[0].glm.family == Family.binomial?3:1);
       OUTER:
@@ -505,7 +506,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
           row[j] = chunks[j].at0(i);
         }
         ++_nobs;
-        final int mid = i % _xmodels.length;
+        final int mid = (int)((i + start) % _xmodels.length);
         final GLMModel model = _xmodels[mid];
         final GLMValidation val = _xvals[mid];
         model.score0(row, preds);

@@ -10,6 +10,24 @@ import java.util.Iterator;
  * Created by tomasnykodym on 3/26/14.
  */
 public class CXDChunk extends CXIChunk {
+
+  static byte [] toBytes(double [] vals, int [] ids, int slen){
+    int ridsz = vals.length >= 65535?4:2;
+    int elemsz = ridsz + 8;
+    byte [] res = MemoryManager.malloc1(slen*elemsz+OFF);
+    for(int i = 0, off = OFF; i < slen; ++i, off += elemsz) {
+      int id = ids[i];
+      if(elemsz == 2)
+        UDP.set2(res,off,(short)id);
+      else
+        UDP.set4(res,off,id);
+      UDP.set8d(res, off + ridsz, vals[id]);
+    }
+    return res;
+  }
+  public CXDChunk(double [] vals, int [] ids, int slen){
+    super(vals.length,slen,8,toBytes(vals,ids,slen));
+  }
   protected CXDChunk(int len, int nzs, int valsz, byte [] buf){super(len,nzs,valsz,buf);}
 
   // extract fp value from an (byte)offset

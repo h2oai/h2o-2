@@ -589,7 +589,7 @@ public class Vec extends Iced {
    *  (_min, _max, _mean, etc).  Can be called repeatedly from one or all
    *  chunks.  Per-chunk row-counts will not be changing, just row contents and
    *  caches of row contents. */
-  void preWriting( ) {
+  public void preWriting( ) {
     if( _naCnt == -2 ) return; // Already set
     _naCnt = -2;
     if( !writable() ) throw new IllegalArgumentException("Vector not writable");

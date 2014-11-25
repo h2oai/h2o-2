@@ -19,6 +19,7 @@ public abstract class CustomParser extends Iced {
 
   public final static int MAX_PREVIEW_COLS  = 100;
   public final static int MAX_PREVIEW_LINES = 50;
+  public final static int STRING_DOMINANCE_RATIO = 4;
 
   public final ParserSetup _setup;
 
@@ -359,7 +360,7 @@ public abstract class CustomParser extends Iced {
           res[i]._naStr = new ValueString("0");
           res[i]._type = ParserSetup.Coltype.STR;
           res[i]._strongGuess = true;
-        } else if(_nstrings[i] >= 9*(_nnums[i]+_nzeros[i])) { // probably generic enum
+        } else if(_nstrings[i] >= STRING_DOMINANCE_RATIO*(_nnums[i]+_nzeros[i])) { // probably generic enum
           res[i]._type = ParserSetup.Coltype.STR;
         }
       }
