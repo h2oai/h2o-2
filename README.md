@@ -65,6 +65,7 @@ Amy Wang
 Max Schloemer
 Ray Peck
 Anand Avati
+Sebastian Vidrio
 ```
 
 Open Source
