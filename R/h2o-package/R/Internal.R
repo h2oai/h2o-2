@@ -173,6 +173,8 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_MissingVals = "2/InsertMissingValues.json"
 .h2o.__PAGE_SaveModel = "2/SaveModel.json"
 .h2o.__PAGE_LoadModel = "2/LoadModel.json"
+.h2o.__PAGE_RemoveVec = "2/RemoveVec.json"
+.h2o.__PAGE_Order = "2/Order.json"
 
 # client -- Connection object returned from h2o.init().
 # page   -- URL to access within the H2O server.

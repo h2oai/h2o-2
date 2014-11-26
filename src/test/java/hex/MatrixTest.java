@@ -89,20 +89,20 @@ public class MatrixTest extends TestUtil {
   public void testMultiplicationSparse() {
     Futures fs = new Futures();
     Key xParsed = Key.make("xParsed"), hParsed = Key.make("hParsed"), mParsed = Key.make("mParsed");
-    Frame X = getFrameForFile(xParsed, "smalldata/sparse_matrices/X2.svmlight");
-    X.remove(0).remove(fs);
-    Frame H = getFrameForFile(hParsed, "smalldata/sparse_matrices/H2.svmlight");
-    H.remove(0).remove(fs);
-    Frame M = getFrameForFile(mParsed, "smalldata/sparse_matrices/M2.svmlight");
-    M.remove(0).remove(fs);
-    Frame X2 = DMatrix.mmul(H,M);
-    for(int i = 0; i < X.numRows(); ++i)
-      for(int j = 0; j < X.numCols(); ++j) // we match only up to 1e-3?
-        assertEquals("@ " + i + ", " + j + " " + X.vec(j).at(i) + " != " + X2.vec(j).at(i), X.vec(j).at(i),X2.vec(j).at(i),1e-3);
-    X.delete();
-    H.delete();
-    M.delete();
-    for(Vec v:X2.vecs())
+    Frame C = getFrameForFile(xParsed, "smalldata/sparse_matrices/C.svm");
+    C.remove(0).remove(fs);
+    Frame A = getFrameForFile(hParsed, "smalldata/sparse_matrices/A.svm");
+    A.remove(0).remove(fs);
+    Frame B = getFrameForFile(mParsed, "smalldata/sparse_matrices/B.svm");
+    B.remove(0).remove(fs);
+    Frame C2 = DMatrix.mmul(A,B);
+    for(int i = 0; i < C.numRows(); ++i)
+      for(int j = 0; j < C.numCols(); ++j) // we match only up to 1e-3?
+        assertEquals("@ " + i + ", " + j + " " + C.vec(j).at(i) + " != " + C2.vec(j).at(i), C.vec(j).at(i),C2.vec(j).at(i),1e-3);
+    C.delete();
+    A.delete();
+    B.delete();
+    for(Vec v:C2.vecs())
       v.remove(fs);
     fs.blockForPending();
     checkLeakedKeys();

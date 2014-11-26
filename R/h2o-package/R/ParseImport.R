@@ -497,6 +497,15 @@ h2o.loadModel <- function(object, path="") {
     h2o.getModel(object, model_names[1])
 }
 
+h2o.removeVecs <- function(data, x) {
+  .h2o.__remoteSend(data@h2o,.h2o.__PAGE_RemoveVec, source=data@key, cols=x)
+  NULL
+}
+
+h2o.order <- function(data, x = 1:dim(data)[2]-1, n, rev) {
+  res <- .h2o.__remoteSend(data@h2o,.h2o.__PAGE_Order, source=data@key, cols=x, n = n, rev = rev)
+  h2o.getFrame(data@h2o, res$destination_key)
+}
 
 # ------------------- Load All H2O Model in a directory from Disk -----------------------------------------------
 h2o.loadAll <- function(object, dir="") {

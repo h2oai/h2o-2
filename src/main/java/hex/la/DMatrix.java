@@ -33,7 +33,7 @@ public class DMatrix  {
    * @return
    */
   public static Frame transpose(Frame src){
-    int nchunks = Math.min(src.numCols(),4*H2O.NUMCPUS*H2O.CLOUD.size());
+    int nchunks = Math.max(1,src.numCols()/10000);
     long [] espc = new long[nchunks+1];
     int rpc = (src.numCols() / nchunks);
     int rem = (src.numCols() % nchunks);
@@ -219,13 +219,15 @@ public class DMatrix  {
       }
     }
   }
+  static int cnt = 0;
   // to be invoked from R expression
   public static Frame mmul(Frame x, Frame y) {
-    MatrixMulJob mmj = new MatrixMulJob(Key.make("mmul"),Key.make("mmulProgress"),x,y);
+    MatrixMulJob mmj = new MatrixMulJob(Key.make("mmul" + ++cnt),Key.make("mmulProgress"),x,y);
     mmj.fork()._fjtask.join();
     DKV.remove(mmj._dstKey); // do not leave garbage in KV
     return mmj._z;
   }
+
 
   private static class GetNonZerosTsk extends MRTask2<GetNonZerosTsk>{
     final int _maxsz;

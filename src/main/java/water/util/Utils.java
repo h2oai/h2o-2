@@ -703,6 +703,14 @@ public class Utils {
     return tmp;
   }
 
+  public static <T> T[] select(T[] a, int [] ids) {
+    T[] res = Arrays.copyOf(a,ids.length);
+    for(int i =0 ; i < ids.length; ++i)
+      res[i] = a[ids[i]];
+    return res;
+  }
+
+
   public static <T> T[] remove(T[] a, int i) {
     T[] tmp = Arrays.copyOf(a,a.length-1);
     System.arraycopy(a,i+1,tmp,i,tmp.length-i);

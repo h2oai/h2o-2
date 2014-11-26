@@ -49,8 +49,9 @@ public class Exec2 extends Request2 {
           cols[i] = new Inspect2.ColSummary(fr._names[i],fr.vecs()[i]);
         // Now the first few rows.
         String[] fs = fr.toStringHdr(sb);
-        for( int i=0; i<Math.min(6,fr.numRows()); i++ )
-          fr.toString(sb,fs,i);
+        if(fr.numCols() < 1000)
+          for( int i=0; i<Math.min(6,fr.numRows()); i++ )
+            fr.toString(sb,fs,i);
         // Nuke the result
         env.pop();
       } else if( env.isFcn() ) {
