@@ -85,28 +85,28 @@ public class MatrixTest extends TestUtil {
     checkLeakedKeys();
   }
 
-  @Test // bigger & sparse, compare X2 <- H2 %*% M2 against R
-  public void testMultiplicationSparse() {
-    Futures fs = new Futures();
-    Key xParsed = Key.make("xParsed"), hParsed = Key.make("hParsed"), mParsed = Key.make("mParsed");
-    Frame C = getFrameForFile(xParsed, "smalldata/sparse_matrices/C.svm");
-    C.remove(0).remove(fs);
-    Frame A = getFrameForFile(hParsed, "smalldata/sparse_matrices/A.svm");
-    A.remove(0).remove(fs);
-    Frame B = getFrameForFile(mParsed, "smalldata/sparse_matrices/B.svm");
-    B.remove(0).remove(fs);
-    Frame C2 = DMatrix.mmul(A,B);
-    for(int i = 0; i < C.numRows(); ++i)
-      for(int j = 0; j < C.numCols(); ++j) // we match only up to 1e-3?
-        assertEquals("@ " + i + ", " + j + " " + C.vec(j).at(i) + " != " + C2.vec(j).at(i), C.vec(j).at(i),C2.vec(j).at(i),1e-3);
-    C.delete();
-    A.delete();
-    B.delete();
-    for(Vec v:C2.vecs())
-      v.remove(fs);
-    fs.blockForPending();
-    checkLeakedKeys();
-  }
+//  @Test // bigger & sparse, compare X2 <- H2 %*% M2 against R
+//  public void testMultiplicationSparse() {
+//    Futures fs = new Futures();
+//    Key xParsed = Key.make("xParsed"), hParsed = Key.make("hParsed"), mParsed = Key.make("mParsed");
+//    Frame C = getFrameForFile(xParsed, "smalldata/sparse_matrices/C.svm");
+//    C.remove(0).remove(fs);
+//    Frame A = getFrameForFile(hParsed, "smalldata/sparse_matrices/A.svm");
+//    A.remove(0).remove(fs);
+//    Frame B = getFrameForFile(mParsed, "smalldata/sparse_matrices/B.svm");
+//    B.remove(0).remove(fs);
+//    Frame C2 = DMatrix.mmul(A,B);
+//    for(int i = 0; i < C.numRows(); ++i)
+//      for(int j = 0; j < C.numCols(); ++j) // we match only up to 1e-3?
+//        assertEquals("@ " + i + ", " + j + " " + C.vec(j).at(i) + " != " + C2.vec(j).at(i), C.vec(j).at(i),C2.vec(j).at(i),1e-3);
+//    C.delete();
+//    A.delete();
+//    B.delete();
+//    for(Vec v:C2.vecs())
+//      v.remove(fs);
+//    fs.blockForPending();
+//    checkLeakedKeys();
+//  }
 
 
   @Test
