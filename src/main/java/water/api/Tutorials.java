@@ -14,17 +14,15 @@ public class Tutorials extends HTMLOnlyRequest {
     String buildNumber = abv.buildNumber();
     String documentationUrl = "http://s3.amazonaws.com/h2o-release/h2o/" + branchName + "/" + buildNumber + "/docs-website";
     String RPackageDocumentationUrl = documentationUrl + "/Ruser/top.html";
-    return
-    "<div class='container'>"
-      + "<div>"
-      + "<h1>Get started with H<sub>2</sub>O tutorials!</h1>"
-      + "<p class='text-center'>"
-      + "<a href='http://h2oworld.eventbrite.com/' class='btn btn-large btn-warning' type='button'>Reserve your spot!</a>"
-      + "</p>"
-      + "<p class='text-center'>"
-      + "<img src='img/banners/h2o_world_banner.png' /> "
-      + "</p>"
-      + "</div>"
+    return "<div class='container'><div class='hero-unit' style='overflow: hidden'>"
+    + "<style scoped='scoped'>"
+    + "  h2 { font-size:18px; }"
+    + "  p { font-size:16px; }"
+    + "</style>"
+    + "<h1>H<sub>2</sub>O Tutorials</h1>"
+    + "<blockquote><small>A unique way to explore H<sub>2</sub>O</small></blockquote>"
+
+    + "</div>"
     + "<div class='row'>"
 
     + "<div class='span2 col'>"
