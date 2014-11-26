@@ -19,7 +19,7 @@ public class Tutorials extends HTMLOnlyRequest {
     + "  h2 { font-size:18px; }"
     + "  p { font-size:16px; }"
     + "</style>"
-    + "<h1>H<sub>2</sub>O Tutorials</h1>"
+    + "<h1>Learn H<sub>2</sub>O at <a href='http://learn.h2o.ai'>learn.h2o.ai</a></h1>"
     + "<blockquote><small>A unique way to explore H<sub>2</sub>O</small></blockquote>"
 
     + "</div>"
