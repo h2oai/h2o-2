@@ -400,7 +400,7 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
     temp = lapply(object@xval, function(x) { cat(" ", x@key, "\n") })
   }
 
-  if (!is.null(model$train_auc)) {
+  if (!is.null(model$train_auc) && is.null(model$auc)) {
     trainOrValidation <- "train)"
     cat("\nAUC = ", model$train_auc, "(on", trainOrValidation, "\n")
   }
