@@ -23,7 +23,7 @@ A vector containing the names or indices of the predictor variables to use in bu
 The name or index of the response variable. If the data does not contain a header, this is the column index number starting at 0, and increasing from left to right. (The response must be either an integer or a categorical variable).
 }
   \item{distribution}{
-The type of GBM model to be produced: classification is "multinomial" (default), "gaussian" is used for regression.
+The type of GBM model to be produced: classification is "multinomial" (default), "gaussian" is used for regression, and "binomial" for binary outcomes.
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
