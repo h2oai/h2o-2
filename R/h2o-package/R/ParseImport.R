@@ -498,8 +498,8 @@ h2o.loadModel <- function(object, path="") {
 }
 
 h2o.removeVecs <- function(data, x) {
-  .h2o.__remoteSend(data@h2o,.h2o.__PAGE_RemoveVec, source=data@key, cols=x)
-  NULL
+  .h2o.__remoteSend(data@h2o,.h2o.__PAGE_RemoveVec, source=data@key, cols=x-1)
+  h2o.getFrame(data@h2o, data@key)  
 }
 
 h2o.order <- function(data, x = 1:dim(data)[2]-1, n, rev) {
