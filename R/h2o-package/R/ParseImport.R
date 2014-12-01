@@ -497,16 +497,6 @@ h2o.loadModel <- function(object, path="") {
     h2o.getModel(object, model_names[1])
 }
 
-h2o.removeVecs <- function(data, x) {
-  .h2o.__remoteSend(data@h2o,.h2o.__PAGE_RemoveVec, source=data@key, cols=x)
-  NULL
-}
-
-h2o.order <- function(data, x = 1:dim(data)[2]-1, n, rev) {
-  res <- .h2o.__remoteSend(data@h2o,.h2o.__PAGE_Order, source=data@key, cols=x, n = n, rev = rev)
-  h2o.getFrame(data@h2o, res$destination_key)
-}
-
 # ------------------- Load All H2O Model in a directory from Disk -----------------------------------------------
 h2o.loadAll <- function(object, dir="") {
   if(missing(object)) stop('Must specify object')
@@ -524,3 +514,29 @@ h2o.loadAll <- function(object, dir="") {
   model_objs
 }
 
+# ------------------- Remove vector from a data frame -----------------------------------------------
+
+h2o.removeVecs <- function(data, cols) {
+  if (missing(data)) stop('Must specify data object')
+  if (class(data) != 'H2OParsedData') stop('object must be of class H2OParsedData')
+  verified_cols <- .verify_datacols(data = data, cols = cols)
+  inds <- verified_cols$cols_ind - 1
+  .h2o.__remoteSend(data@h2o,.h2o.__PAGE_RemoveVec, source=data@key, cols=inds)
+  data <- h2o.getFrame(h2o = data@h2o, key = data@key)
+}
+
+# ------------- Return the indices of the top or bottom values of column(s) -----------------
+
+h2o.order <- function(data, cols, n = 5, decreasing = T) {
+  if (missing(data)) stop('Must specify data object')
+  if (class(data) != 'H2OParsedData') stop('object must be of class H2OParsedData')
+  if (!is.numeric(n)) stop('n must be a integer')
+  if (!is.logical(decreasing)) stop('decreasing must be a boolean')
+  if (missing(cols)) cols <- 1:ncol(data)
+  rev <- if (decreasing) 1 else 0
+  
+  verified_cols <- .verify_datacols(data = data, cols = cols)
+  inds <- verified_cols$cols_ind - 1
+  res <- .h2o.__remoteSend(data@h2o,.h2o.__PAGE_Order, source=data@key, cols=inds, n = n, rev = rev)
+  h2o.getFrame(data@h2o, res$destination_key)
+}
