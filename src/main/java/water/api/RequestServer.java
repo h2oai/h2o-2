@@ -154,6 +154,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help", USE_NEW_TAB);
     Request.addToNavbar(registerRequest(new AboutH2O()),            "About H2O",              "Help");
 
+
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new hex.LR2());
@@ -169,9 +170,9 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new SetLogLevel());
       registerRequest(new Debug());
       registerRequest(new UnlockKeys());
+      registerRequest(new Order());
+      registerRequest(new RemoveVec());
     } else {
-      Request.addToNavbar(registerRequest(new Order()),            "Order",               "Beta");
-      Request.addToNavbar(registerRequest(new RemoveVec()),            "RemoveVec",            "Beta");
       Request.addToNavbar(registerRequest(new MatrixMultiply()),       "Matrix Multiply",      "Beta");
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
@@ -186,6 +187,8 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new SetLogLevel()),          "Set Log Level",        "Beta");
       Request.addToNavbar(registerRequest(new Debug()),                "Debug Dump (floods log file)","Beta");
       Request.addToNavbar(registerRequest(new UnlockKeys()),           "Unlock Keys (use with caution)","Beta");
+      Request.addToNavbar(registerRequest(new Order()),                "Order",                "Beta");
+      Request.addToNavbar(registerRequest(new RemoveVec()),            "RemoveVec",            "Beta");
     }
 
     registerRequest(new Up());

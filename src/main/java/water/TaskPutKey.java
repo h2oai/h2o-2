@@ -6,7 +6,7 @@ import water.DTask;
 /**
  * Push the given key to the remote node
  *
- * @author <a href="mailto:cliffc@0xdata.com"></a>
+ * @author <a href="mailto:cliffc@h2o.ai"></a>
  * @version 1.0
  */
 

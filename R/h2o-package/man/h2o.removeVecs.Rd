@@ -15,12 +15,12 @@ h2o.removeVecs(data, cols)
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(nthreads = -1, beta = TRUE)
+localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 
 # Remove ID and GLEASON column from prostate data
-h2o.removeVecs(prostate.hex, c('ID', 'GLEASON'))
+prostate.hex = h2o.removeVecs(prostate.hex, c('ID', 'GLEASON'))
 summary(prostate.hex)
 }
 

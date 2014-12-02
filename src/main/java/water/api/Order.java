@@ -35,6 +35,9 @@ public class Order extends Request2 {
   @API(help="",filter=Default.class, required = true)
   public boolean rev = true;
 
+  @API(help="",filter=Default.class, required=false)
+  boolean add_one = true;
+
   @Override
   protected Response serve() {
     if(n > 10000) // global order not supported
@@ -43,6 +46,7 @@ public class Order extends Request2 {
     final Vec [] dst = new Vec(Vec.newKey(),espc).makeZeros(cols.length);
     H2OEmptyCompleter cmp = new H2OEmptyCompleter();
     cmp.setPendingCount(cols.length-1);
+    final int addOne = (add_one?1:0);
     for(int i = 0; i < cols.length; ++i) {
       final int fi = i;
       new OrderTsk(new H2OCallback<OrderTsk>(cmp) {
@@ -50,7 +54,7 @@ public class Order extends Request2 {
         public void callback(OrderTsk ot) {
           Vec.Writer w = dst[fi].open();
           for (int j = 0; j < ot._ids.length; ++j)
-            w.set(j, ot._ids[j]);
+            w.set(j, ot._ids[j] + addOne);
           w.close();
         }
       }, n, rev).asyncExec(source.vec(cols[i]));

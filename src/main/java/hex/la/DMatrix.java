@@ -33,6 +33,8 @@ public class DMatrix  {
    * @return
    */
   public static Frame transpose(Frame src){
+    if(src.numRows() != (int)src.numRows())
+      throw H2O.unimpl();
     int nchunks = Math.max(1,src.numCols()/10000);
     long [] espc = new long[nchunks+1];
     int rpc = (src.numCols() / nchunks);
@@ -225,6 +227,7 @@ public class DMatrix  {
     MatrixMulJob mmj = new MatrixMulJob(Key.make("mmul" + ++cnt),Key.make("mmulProgress"),x,y);
     mmj.fork()._fjtask.join();
     DKV.remove(mmj._dstKey); // do not leave garbage in KV
+    mmj._z.reloadVecs();
     return mmj._z;
   }
 
@@ -278,16 +281,13 @@ public class DMatrix  {
         final double yVal = _y[i];
         final Chunk xChunk = chks[i];
         for (int k = xChunk.nextNZ(-1); k < res.length; k = xChunk.nextNZ(k))
-          res[k] += yVal * xChunk.at0(k);
+          try { res[k] += yVal * xChunk.at0(k);} catch(Throwable t) {
+            t.printStackTrace();
+            throw new RuntimeException(t);
+          }
       }
-      int [] nzs = MemoryManager.malloc4(res.length+1);
-      int j = 0;
-      for(int i = 0; i < res.length; ++i)
-        if(res[i] != 0)
-          nzs[j++] = i;
-      // NOTE: not using NewChunk.compress here as it was 1) too slow 2) result was too big, we want to treat chunks as sparse with much smaller sparse-ratio here
-      // (maybe update NewChunk to have different min-sparsity for double chunks)?
-      Chunk modChunk = (j < (res.length >> 1))?new CXDChunk(res,nzs,j):new C8DChunk(res);
+      Chunk modChunk = new NewChunk(res).setSparseRatio(2).compress();
+//      Chunk modChunk = (j < (res.length >> 1))?new CXDChunk(res,nzs,j):new C8DChunk(res);
       new UpdateProgress(modChunk._mem.length,modChunk.frozenType()).fork(_progressKey);
       DKV.put(zChunk._vec.chunkKey(zChunk.cidx()),modChunk,_fs);
     }
@@ -295,11 +295,6 @@ public class DMatrix  {
       _y = null; // drop inputs 
       _progressKey = null;
     }
-
-    @Override public void postGlobal(){
-      _fr.lastVec().postWrite();
-    }
-
   }
 
   private static class UpdateProgress extends TAtomic<MatrixMulStats> {

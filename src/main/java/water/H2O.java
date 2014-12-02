@@ -21,7 +21,7 @@ import water.license.LicenseManager;
 /**
 * Start point for creating or joining an <code>H2O</code> Cloud.
 *
-* @author <a href="mailto:cliffc@0xdata.com"></a>
+* @author <a href="mailto:cliffc@h2o.ai"></a>
 * @version 1.0
 */
 public final class H2O {

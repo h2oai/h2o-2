@@ -29,7 +29,7 @@ The number of clusters k.
 (Optional) A logical value indicating whether the data should be normalized before running k-means.
 }
   \item{init}{
-(Optional) Method by which to select the k initial cluster centroids. Possible values are \code{"none"} for random initialization, \code{"plusplus"} for k-means++ initialization, and \code{"furthest"} for initialization at the furthest point from each successive centroid. See the \href{http://docs.0xdata.com/datascience/kmeans.html}{H2O K-means documentation} for more details.
+(Optional) Method by which to select the k initial cluster centroids. Possible values are \code{"none"} for random initialization, \code{"plusplus"} for k-means++ initialization, and \code{"furthest"} for initialization at the furthest point from each successive centroid. See the \href{http://docs.h2o.ai/datascience/kmeans.html}{H2O K-means documentation} for more details.
   }
   \item{seed}{
   (Optional) Random seed used to initialize the cluster centroids.
