@@ -9,12 +9,12 @@ import water.*;
  *  implement (possibly empty) compression schemes.  */
 
 public abstract class Chunk extends Iced implements Cloneable {
-  public long _start = -1;    // Start element; filled after AutoBuffer.read
-  public int _len;            // Number of elements in this chunk
+  public transient long _start = -1;    // Start element; filled after AutoBuffer.read
+  public transient int _len;            // Number of elements in this chunk
   public int len() { return _len; }
   public int set_len(int l) { _len = l; return _len; }
-  protected Chunk _chk2;      // Normally==null, changed if chunk is written to
-  public Vec _vec;            // Owning Vec; filled after AutoBuffer.read
+  protected transient Chunk _chk2;      // Normally==null, changed if chunk is written to
+  public transient Vec _vec;            // Owning Vec; filled after AutoBuffer.read
   public byte[] _mem; // Short-cut to the embedded memory; WARNING: holds onto a large array
 
   public final boolean readable( ) { return _vec.readable(); }
