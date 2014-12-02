@@ -34,7 +34,7 @@ public class C4SChunk extends Chunk {
     UDP.set4(_mem,(idx<<2)+OFF,(int)res);
     return true;
   }
-  @Override boolean set_impl(int i, double d) { throw H2O.unimpl(); }
+  @Override boolean set_impl(int i, double d) { return false; }
   @Override boolean set_impl(int i, float f ) { return false; }
   @Override boolean setNA_impl(int idx) { UDP.set4(_mem,(idx<<2)+OFF,(int)_NA); return true; }
   @Override boolean hasFloat() { return _scale < 1.0; }
