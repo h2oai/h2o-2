@@ -102,7 +102,8 @@ public class NewChunk extends Chunk {
     public Value(int lid, int gid){_lId = lid; _gId = gid;}
     public final int rowId0(){return _gId;}
     public void add2Chunk(NewChunk c){
-      if(_ds == null) c.addNum(_ls[_lId],_xs[_lId]);
+      if(isNA2(_lId)) c.addNA();
+      else if(_ds == null) c.addNum(_ls[_lId],_xs[_lId]);
       else {
         if( _ls != null ) c.addUUID(_ls[_lId], Double.doubleToRawLongBits(_ds[_lId]));
         else c.addNum(_ds[_lId]);
