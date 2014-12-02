@@ -23,7 +23,7 @@ import water.util.Log;
  *  passing down needed info to lower element levels, and lower levels
  *  directly returning results to the higher levels.
  *
- *  @author <a href="mailto:cliffc@0xdata.com"></a>
+ *  @author <a href="mailto:cliffc@h2o.ai"></a>
  *  @version 1.0
  */
 public class PMMLParser {

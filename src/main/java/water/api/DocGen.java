@@ -16,7 +16,7 @@ import water.util.Log;
 
 /**
  * Auto-gen doc support, for JSON and REST API docs
- * @author <a href="mailto:cliffc@0xdata.com"></a>
+ * @author <a href="mailto:cliffc@h2o.ai"></a>
  */
 public abstract class DocGen {
   public static final HTML HTML = new HTML();

@@ -21,7 +21,7 @@ import water.util.UnsafeUtils;
 * interning only happens after a successful insert in the local H2O.STORE via
 * H2O.put_if_later.
 *
-* @author <a href="mailto:cliffc@0xdata.com"></a>
+* @author <a href="mailto:cliffc@h2o.ai"></a>
 * @version 1.0
 */
 public final class Key extends Iced implements Comparable {

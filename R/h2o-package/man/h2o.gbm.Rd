@@ -23,7 +23,11 @@ A vector containing the names or indices of the predictor variables to use in bu
 The name or index of the response variable. If the data does not contain a header, this is the column index number starting at 0, and increasing from left to right. (The response must be either an integer or a categorical variable).
 }
   \item{distribution}{
+<<<<<<< Updated upstream
 The type of GBM model to be produced: classification is "multinomial" (default), "gaussian" is used for regression.
+=======
+The type of GBM model to be produced: classification is "multinomial" (default), "gaussian" is used for regression, and "bernoulli" for binary outcomes.
+>>>>>>> Stashed changes
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
@@ -85,7 +89,7 @@ http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 }
 
 \seealso{
-For more information see: http://docs.0xdata.com
+For more information see: http://docs.h2o.ai/
 }
 \examples{
 # -- CRAN examples begin --

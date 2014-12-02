@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 /**
  * Struct holding H2ONode health info.
- * @author <a href="mailto:cliffc@0xdata.com"></a>
+ * @author <a href="mailto:cliffc@h2o.ai"></a>
  */
 public class HeartBeat extends Iced {
   public int _hb_version;

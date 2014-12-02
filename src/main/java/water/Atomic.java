@@ -6,7 +6,7 @@ import water.H2O.H2OCountedCompleter;
 /**
  * Atomic update of a Key
  *
- * @author <a href="mailto:cliffc@0xdata.com"></a>
+ * @author <a href="mailto:cliffc@h2o.ai"></a>
  * @version 1.0
  */
 

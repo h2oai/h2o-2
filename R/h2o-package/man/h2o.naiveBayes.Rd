@@ -46,7 +46,7 @@ An object of class \code{\linkS4class{H2ONBModel}} with slots key, data, and mod
 }
 
 \seealso{
-For more information see: http://docs.0xdata.com
+For more information see: http://docs.h2o.ai
 }
 \examples{
 library(h2o)

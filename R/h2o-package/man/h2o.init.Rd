@@ -32,7 +32,7 @@ When initializing H2O locally, this method searches for h2o.jar in the R library
 Once connected, the method checks to see if the local H2O R package version matches the version of H2O running on the server. If there is a mismatch and the user indicates she wishes to upgrade, it will remove the local H2O R package and download/install the H2O R package from the server.
 }
 \value{
-Once the package is successfully installed, this method will load it and return a \code{H2OClient} object containing the IP address and port number of the H2O server. See the \href{http://docs.0xdata.com/userguide/topR.html}{H2O R package documentation} for more details, or type \code{??h2o} in the R console.
+Once the package is successfully installed, this method will load it and return a \code{H2OClient} object containing the IP address and port number of the H2O server. See the \href{http://docs.h2o.ai/userguide/topR.html}{H2O R package documentation} for more details, or type \code{??h2o} in the R console.
 }
 \note{ Users may wish to manually upgrade their package (rather than waiting 
 	until being prompted), which requires that they fully uninstall and reinstall 
