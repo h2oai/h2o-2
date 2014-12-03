@@ -624,7 +624,7 @@ public class Vec extends Iced {
    *  shift-and-add math.  For variable-sized chunks this is a binary search,
    *  with a sane API (JDK has an insane API).  Overridden by subclasses that
    *  compute chunks in an alternative way, such as file-backed Vecs. */
-  int elem2ChunkIdx( long i ) {
+  public int elem2ChunkIdx(long i) {
     assert 0 <= i && i < length() : "0 <= "+i+" < "+length();
     int lo=0, hi = nChunks();
     while( lo < hi-1 ) {

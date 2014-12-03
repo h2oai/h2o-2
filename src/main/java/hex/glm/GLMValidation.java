@@ -34,7 +34,7 @@ public class GLMValidation extends Iced {
   @API(help="")
   double auc = Double.NaN;
 
-  @API(help="corss validation models")
+  @API(help="cross validation models")
   Key [] xval_models;
 
   @API(help="AIC")

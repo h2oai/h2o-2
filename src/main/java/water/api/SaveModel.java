@@ -6,11 +6,11 @@ import static water.util.FSUtils.isS3N;
 import java.io.File;
 import java.io.IOException;
 
+import hex.glm.GLMModel;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import water.Func;
-import water.Model;
+import water.*;
 import water.persist.PersistHdfs;
 import water.serial.Model2FileBinarySerializer;
 import water.serial.Model2HDFSBinarySerializer;
@@ -29,6 +29,9 @@ public class SaveModel extends Func {
   @API(help="Overwrite existing files.", required = false, filter = Default.class, gridable = false)
   boolean force = false;
 
+  @API(help="Save cross-validation models.", required = false, filter = Default.class, gridable = false)
+  boolean save_cv = true;
+
   @Override
   protected void execImpl() {
     if (isHdfs(path) || isS3N(path)) saveToHdfs();
@@ -36,11 +39,22 @@ public class SaveModel extends Func {
   }
 
   private void saveToLocalFS() {
-    File f = new File(path);
-    if (!force && f.exists()) throw new IllegalArgumentException("The file " + path + " already exists!");
-
+    File parentDir = new File(path);
+    if (!force && parentDir.exists()) throw new IllegalArgumentException("The file " + path + " already exists!");
     try {
-      new Model2FileBinarySerializer().save(model, new File(path));
+      // If force is specified then delete the file f
+      if (force && parentDir.exists()) delete(parentDir);
+      // Create folder
+      parentDir.mkdirs();
+      // Save parent model
+      new Model2FileBinarySerializer().save(model, new File(parentDir, model._key.toString()));
+      if (save_cv) {
+        Model[] models = getCrossValModels(model);
+        System.out.println(models);
+        for (Model m : models) {
+          new Model2FileBinarySerializer().save(m, new File(parentDir, m._key.toString()));
+        }
+      }
     } catch( IOException e ) {
       throw new IllegalArgumentException("Cannot save file " + path, e);
     }
@@ -48,10 +62,17 @@ public class SaveModel extends Func {
 
   private void saveToHdfs() {
     if (FSUtils.isBareS3NBucketWithoutTrailingSlash(path)) { path += "/"; }
-    Path f = new Path(path);
+    Path parentDir = new Path(path);
     try {
-      FileSystem fs = FileSystem.get(f.toUri(), PersistHdfs.CONF);
-      new Model2HDFSBinarySerializer(fs, force).save(model, f);
+      FileSystem fs = FileSystem.get(parentDir.toUri(), PersistHdfs.CONF);
+      fs.mkdirs(parentDir);
+      new Model2HDFSBinarySerializer(fs, force).save(model, new Path(parentDir, model._key.toString()));
+      if (save_cv) {
+        Model[] models = getCrossValModels(model);
+        for (Model m : models ) {
+          new Model2HDFSBinarySerializer(fs, force).save(m, new Path(parentDir, m._key.toString()));
+        }
+      }
     } catch( IOException e ) {
       throw new IllegalArgumentException("Cannot save file " + path, e);
     }
@@ -65,4 +86,44 @@ public class SaveModel extends Func {
     sb.append("</div>");
     return true;
   }
+
+  private void delete(File f) {
+    if (!f.isDirectory()) {
+      f.delete();
+    } else {
+      File[] contents = f.listFiles();
+      for(File ef : contents){
+        delete(ef);
+      }
+      f.delete();
+    }
+  }
+
+  private Model[] getCrossValModels(Model m) {
+    Model[] models = null;
+    if (m instanceof GLMModel && ((GLMModel) m).xvalModels().length > 0) {
+      Key[] keys = ((GLMModel) m).xvalModels();
+      models = new Model[keys.length];
+      int i = 0;
+      for (Key k : keys) {
+        models[i++] = UKV.get(k);
+      }
+    } else {
+      if (m.hasCrossValModels()) {
+        Job.ValidatedJob j = (Job.ValidatedJob) m.get_params();
+        models = new Model[j.xval_models.length];
+        int i = 0;
+        for (Key k : j.xval_models) {
+          System.out.println(k);
+          models[i++] = UKV.get(k);
+        }
+      } else {
+        models = NO_MODELS;
+      }
+    }
+    assert models != null;
+    return models;
+  }
+
+  private static final Model[] NO_MODELS = new Model[] {};
 }
