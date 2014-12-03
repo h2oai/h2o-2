@@ -423,21 +423,23 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=TRUE, force=FALSE) {
     if(!is.logical(save_cv)) stop('save_cv must be either TRUE or FALSE')
     if(nchar(name) == 0) name = object@key
 
-    force = ifelse(force==TRUE, 1, 0)    
+    force = ifelse(force==TRUE, 1, 0)
+    save_cv = ifelse(save_cv==TRUE, 1, 0)
     # Create a model directory for each model saved that will include main model
     # any cross validation models and a meta text file with all the model names listed
     model_dir <- paste(dir, name, sep=.Platform$file.sep)
-    dir.create(model_dir,showWarnings = F)
+    #dir.create(model_dir,showWarnings = F)
     
     # Save main model
-    path <- paste(model_dir, object@key, sep=.Platform$file.sep)
-    res <- .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force)
+    path <- paste(model_dir, sep=.Platform$file.sep)
+    res <- .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force, save_cv=save_cv)
     
     # Save all cross validation models
     if (.hasSlot(object, "xval")) {
       xval_keys <- sapply(object@xval,function(model) model@key )
       if(save_cv & !(length(xval_keys)==0)) {
-        for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
+        save_cv <- TRUE
+#        for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
       } else {
         save_cv <- FALSE # do not save CV results if they do not exist
       }
@@ -453,7 +455,7 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=TRUE, force=FALSE) {
     }
     close(fileConn)
     
-    dirname(res$path)
+    res$path
 }
 
 # ------------------- Save All H2O Model to Disk --------------------------------------------------

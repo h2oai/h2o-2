@@ -233,6 +233,7 @@ function(pre, h2o, key, num_lambda, best_lambda_idx, data) {
 .h2o.get.glm<-
 function(h2o, key, return_all_lambda = TRUE) {
   pre <- .h2o.__model.preamble(h2o, key, .json.to.R.map$glm)
+  if(is.null(pre$json$glm_model)) stop('getting GLM Cross validation model is correctly unimplemented')
   if(!is.null(pre$json$glm_model$warnings))
       invisible(lapply(pre$json$glm_model$warnings, warning))
   submodels <- pre$json$glm_model$submodels
