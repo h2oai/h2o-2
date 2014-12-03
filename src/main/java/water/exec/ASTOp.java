@@ -164,6 +164,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTQtile ());
     putPrefix(new ASTCat   ());
     putPrefix(new ASTCbind ());
+    putPrefix(new ASTRbind ());
     putPrefix(new ASTTable ());
     putPrefix(new ASTReduce());
     putPrefix(new ASTIfElse());
@@ -1394,6 +1395,138 @@ class ASTCbind extends ASTOp {
     env._sp -= argcnt-1;
     Arrays.fill(env._ary,env._sp,env._sp+(argcnt-1),null);
     assert env.check_refcnt(fr.anyVec());
+  }
+}
+
+class ASTRbind extends ASTOp {
+  @Override String opStr() { return "rbind"; }
+  ASTRbind( ) { super(new String[]{"rbind","ary"},
+          new Type[]{Type.ARY,Type.varargs(Type.dblary())},
+          OPF_PREFIX,
+          OPP_PREFIX,OPA_RIGHT); }
+  @Override ASTOp make() {return new ASTRbind(); }
+
+  private String get_type(Vec v) {
+    if (v.isUUID()) return "UUID";
+    if (v.isEnum()) return "factor";
+    if (v.isTime()) return "time";
+    if (v.isFloat() || v.isInt()) return "numeric";
+    return "bad";
+  }
+
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    // quick check to make sure rbind is feasible
+    if (argcnt-1 == 1) { return; } // leave stack as is
+
+    Frame f1 = null;
+    ArrayList<long[]> espcs_al = new ArrayList<long[]>();   // the new espc for each frame
+    ArrayList<String[]> doms= new ArrayList<String[]>();      // union'd domains
+    ArrayList<String> types = new ArrayList<String>();        // types for each col
+    ArrayList<long[]> new_starts = new ArrayList<long[]>(); // list of the new starts
+    final int[/*frame*/][/*column*/][/*ints*/] new_doms = new int[argcnt][][];    // domain mappings (extending domains)
+
+    // do error checking and compute new offsets in tandem
+    for (int i = 0; i < argcnt-1; ++i) {
+      Frame t = env.ary(-(i+1));
+      if (f1 == null) {
+        f1 = t;
+        espcs_al.add(f1.vec(f1.numCols() - 1)._espc.clone());
+        for (int c = 0; c < f1.numCols(); ++c) {
+          doms.add(f1.vec(c).domain());
+          types.add(get_type(f1.vec(c)));
+        }
+        continue; // no need to go further on first frame, subsequent frames must be compatible.
+      } else {
+        long offset = espcs_al.get(i-1)[espcs_al.get(i-1).length-1]; // last long in previous espc
+        long t_espc[] = Arrays.copyOfRange(t.anyVec()._espc, 1, t.anyVec()._espc.length);
+        espcs_al.add(water.util.Utils.add(t_espc, offset));
+        new_starts.add(new long[]{offset+1});
+      }
+
+      // check columns match
+      if (t.numCols() != f1.numCols())
+        throw new IllegalArgumentException("Column mismatch! Expected " + f1.numCols() + " but frame has " + t.numCols());
+
+      // check column types
+      for (int c = 0; c < f1.numCols(); ++c) {
+        if (!get_type(f1.vec(c)).equals(get_type(t.vec(c))))
+          throw new IllegalArgumentException("Column type mismatch! Expected type " + get_type(f1.vec(c)) + " but vec has type " + get_type(t.vec(c)));
+        // try to union domains of vecs -- TODO: what happens if union > 65K ?
+        try {
+          doms.set(c, doms.get(c) == null ? null : water.util.Utils.union(doms.get(c), t.vec(c).domain(), true));
+        } catch (NullPointerException e) {
+          throw new IllegalArgumentException("The factor levels for vec "+(c+1)+" in frame "+(i+1)+" was null");
+        }
+      }
+    }
+
+    // go 'round and create mappings for all of the extended domains
+    for (int i=0; i < argcnt-1; ++i) {
+      Frame t = env.ary(-(i+1));
+      new_doms[i] = new int[t.numCols()][];
+      for (int c=0;c<t.numCols();++c)
+        if (t.vec(c).isEnum()) {
+          if (t.vec(c).domain() == null) continue;
+          new_doms[i][c] = new int[t.vec(c).domain().length];
+          for (int d=0;d<new_doms[i][c].length;++d)
+            new_doms[i][c][d] = Arrays.asList(doms.get(c)).indexOf(t.vec(c).domain()[d]);
+        }
+    }
+
+    // have all of the new espcs computed, set up new Vecs
+    assert f1 != null;
+    final Vec[] vecs = new Vec[f1.numCols()];
+    final long[][] espcs = new long[espcs_al.size()][];
+    // flatten the espcs_al into a single long[]
+    long espc_completa[] = new long[0];
+    for (int i=0;i<espcs.length;++i)
+      espc_completa = water.util.Utils.join(espc_completa, espcs[i] = espcs_al.get(i));
+    Key[] keys = Vec.VectorGroup.VG_LEN1.addVecs(f1.numCols());
+    for (int i = 0; i < vecs.length; ++i)
+      vecs[i] = new Vec(keys[i], espc_completa, doms.get(i), types.get(i).equals("UUID"), (byte)(types.get(i).equals("time") ? 1 : 0));
+
+    // loop over frames & combine
+    final Futures fs = new Futures();
+    for (int i = 0; i < argcnt-1; ++i) {
+      final long espc[] = i == 0 ? espcs[i] : water.util.Utils.join(new_starts.get(i - 1), espcs[i]);
+      final int dom[][] = new_doms[i];
+      new MRTask2() {
+        @Override public void map(Chunk[] cs) {
+          int cidx = cs[0].cidx();
+          for (int c = 0; c < cs.length; ++c) {
+            Futures f = new Futures();
+            NewChunk nc = new NewChunk(vecs[c], vecs[c].elem2ChunkIdx(espc[cidx]));
+            Key ckey = Vec.chunkKey(vecs[c]._key, vecs[c].elem2ChunkIdx(espc[cidx]));
+            if (cs[c]._vec.isEnum() && dom[c] != null) {
+              // loop over rows and update ints for new domain mapping according to vecs[c].domain()
+              for (int r=0;r < cs[c]._len;++r) {
+                if (cs[c].isNA0(r)) nc.addNA();
+                else nc.addEnum(dom[c][(int) cs[c].at0(r)]);
+              }
+            } else if (cs[c]._vec.isInt()) {
+              for (int r=0;r<cs[c]._len;++r) {
+                if (cs[c].isNA0(r)) nc.addNA();
+                else nc.addNum(cs[c].at80(r));
+              }
+            } else if (cs[c]._vec.isUUID()) {
+              for (int r=0;r<cs[c]._len;++r) nc.addUUID(cs[c], r);
+            } else {
+              for (int r=0;r<cs[c]._len;++r) {
+                if (cs[c].isNA0(r)) nc.addNA();
+                else nc.addNum(cs[c].at0(r));
+              }
+            }
+            nc.close(vecs[c].elem2ChunkIdx(espc[cidx]), f);
+            f.blockForPending();
+            DKV.put(ckey, nc.modifiedChunk(), new Futures(), true);
+          }
+        }
+      }.doAll(env.ary(-(i+1)));
+    }
+    for (Vec v : vecs) { DKV.put(v._key, v, fs); v.postWrite(); }
+    fs.blockForPending();
+    Frame res = new Frame(f1.names(), vecs);
+    env.poppush(argcnt, res, null);
   }
 }
 

@@ -1134,6 +1134,33 @@ cbind.H2OParsedData <- function(..., deparse.level = 1) {
   .h2o.exec2(res$dest_key, h2o = h2o, res$dest_key)
 }
 
+
+# Note: right now, all things must be H2OParsedData
+rbind.H2OParsedData <- function(..., deparse.level = 1) {
+  if(deparse.level != 1) stop("Unimplemented")
+
+  l <- unlist(list(...))
+  # l_dep <- sapply(substitute(placeholderFunction(...))[-1], deparse)
+  if(length(l) == 0) stop('rbind requires an H2O parsed dataset')
+
+  klass <- 'H2OParsedData'
+  h2o <- l[[1]]@h2o
+  nrows <- nrow(l[[1]])
+  m <- Map(function(elem){ inherits(elem, klass) & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem) }, l)
+  compatible <- Reduce(function(l,r) l & r, x=m, init=T)
+  if(!compatible){ stop(paste('rbind: all elements must be of type', klass, 'and in the same H2O instance'))}
+
+  # If cbind(x,x), dupe colnames will automatically be renamed by H2O
+  if(is.null(names(l)))
+    tmp <- Map(function(x) x@key, l)
+  else
+    tmp <- mapply(function(x,n) { if(is.null(n) || is.na(n) || nchar(n) == 0) x@key else paste(n, x@key, sep = "=") }, l, names(l))
+
+  exec_cmd <- sprintf("rbind(%s)", paste(as.vector(tmp), collapse = ","))
+  res <- .h2o.__exec2(h2o, exec_cmd)
+  .h2o.exec2(res$dest_key, h2o = h2o, res$dest_key)
+}
+
 #--------------------------------- Arithmetic ----------------------------------#
 setMethod("+", c("H2OParsedData", "missing"), function(e1, e2) { .h2o.__binop2("+", 0, e1) })
 setMethod("-", c("H2OParsedData", "missing"), function(e1, e2) { .h2o.__binop2("-", 0, e1) })
