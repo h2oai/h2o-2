@@ -6,9 +6,9 @@ Hadoop and H\ :sub:`2`\ O
 
 Sending YARN Logs for Hadoop Troubleshooting
 """"""""""""""""""""""""""""""""""""""""""""
-If H\ :sub:`2`\ O does not launch properly on Hadoop, send us the YARN logs.
+If H2O does not launch properly on Hadoop, send us the YARN logs.
 
-When launching H\ :sub:`2`\ O on Hadoop, the following messages display regardless of launch failure or success. If these messages do not display, the argument has not been entered correctly:
+When launching H2O on Hadoop, the following messages display regardless of launch failure or success. If these messages do not display, the argument has not been entered correctly:
 
 ::
 
@@ -37,7 +37,7 @@ To view the YARN log, execute the command specified in the next to last line in 
 
   yarn logs -applicationId application_201407040936_0030
 
-Copy and email the logs to support@0xdata.com or paste to h2ostream@googlegroups.com with a brief
+Copy and email the logs to support@h2o.ai or paste to h2ostream@googlegroups.com with a brief
 description of your Hadoop environment, including the Hadoop distribution and version.
 
 
@@ -53,17 +53,17 @@ Currently, the major versions that H2O supports are HDP 1.3 and HDP 2.1. H2O als
 
 **What's the syntax for the file path of a data set sitting in hdfs?**
 
-To locate an HDFS file, go to **Data > Import** and enter **hdfs://** in the **path** field. H\ :sub:`2`\ O automatically detects any HDFS paths. This is a good way to verify the path to your data set before importing through R or any other non-web API.
+To locate an HDFS file, go to **Data > Import** and enter **hdfs://** in the **path** field. H2O automatically detects any HDFS paths. This is a good way to verify the path to your data set before importing through R or any other non-web API.
 
 ---
 
-**When interacting with an H\ :sub:`2`\ O cluster launched on multiple Hadoop nodes, is it necessary for R to be installed on all the data nodes?**
+**When interacting with an H2O cluster launched on multiple Hadoop nodes, is it necessary for R to be installed on all the data nodes?**
 
 No - as long as the R instance can communicate with one of the nodes in the network, R can be installed on any of the nodes, or even on a local machine that will securely tunnel into the cluster.
 
 ---
 
-**Is it possible to launch the H\ :sub:`2`\ O cluster on Hadoop nodes using R’s** `h2o.init()` **command?**
+**Is it possible to launch the H2O cluster on Hadoop nodes using R’s** `h2o.init()` **command?**
 
 No - follow the instructions in :ref:`Hadoop_Tutorial` and add the IP address to the `h2o.init()` function to connect to the cluster.
 
@@ -76,7 +76,7 @@ the `-output hdfsOutputDir` argument to `-output hdfsOutputDir1` and the task sh
 
 ---
 
-**What should I do if H\ :sub:`2`\ O  starts to launch but times out in 120 seconds?**
+**What should I do if H2O  starts to launch but times out in 120 seconds?**
 
 
 1. YARN or MapReduce's configuration is not configured correctly. Enable launching for mapper tasks of specified memory sizes. If YARN only allows mapper tasks with a maximum memory size of 1g and the request requires 2g, then the request will timeout at the default of 120 seconds. Read `Configuration Setup <http://hortonworks.com/blog/how-to-plan-and-configure-yarn-in-hdp-2-0/>`_ to make sure your setup will run.
@@ -114,16 +114,16 @@ the `-output hdfsOutputDir` argument to `-output hdfsOutputDir1` and the task sh
 
 **What should I do if the H2O job launches but  terminates after 600 seconds?**
 
-The likely cause is a driver mismatch - check to make sure the Hadoop distribution matches the driver jar file used to launch H\ :sub:`2`\ O. If your distribution is not currently
-available in the package, `email us <support@0xdata>`_ for a new driver file.
+The likely cause is a driver mismatch - check to make sure the Hadoop distribution matches the driver jar file used to launch H2O. If your distribution is not currently
+available in the package, `email us <support@h2o.ai>`_ for a new driver file.
 
 ---
 
-**What should I do if I want to create a job with a bigger heap size but YARN doesn't launch and H\ :sub:`2`\ O times out?**
+**What should I do if I want to create a job with a bigger heap size but YARN doesn't launch and H2O times out?**
 
 First, try the job again but with a smaller heap size (`-mapperXmx`) and a smaller number of nodes (`-nodes`) to verify that a small launch can proceed at all.
 
-If the cluster manager settings are configured for the default maximum memory size but the memory required for the request exceeds that amount, YARN will not launch and H\ :sub:`2`\ O  will time out. 
+If the cluster manager settings are configured for the default maximum memory size but the memory required for the request exceeds that amount, YARN will not launch and H2O  will time out. 
 If you have a default configuration, change the configuration settings in your cluster manager to enable launching of mapper tasks for specific memory sizes. Use the following formula to calculate the amount of memory required: 
 
 ::
