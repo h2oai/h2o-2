@@ -33,6 +33,10 @@ check.deeplearning_missing <- function(conn) {
                         l1=1e-5,input_dropout=0.2);
     print(hh)
     errors[i] = hh@model$valid_class_error
+
+    pred <- h2o.predict(hh, test)
+    perf <- h2o.performance(pred[,3], test[,24])
+    checkTrue(hh@model$auc == perf@model$auc)
   }
 
   for(i in 1:length(missing_ratios)) {
