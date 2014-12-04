@@ -101,7 +101,10 @@ public class SaveModel extends Func {
 
   private Model[] getCrossValModels(Model m) {
     Model[] models = null;
-    if (m instanceof GLMModel && ((GLMModel) m).xvalModels().length > 0) {
+
+    if (m instanceof GLMModel && ((GLMModel) m).xvalModels() == null ) {
+      models = NO_MODELS;
+    } else if (m instanceof GLMModel && ((GLMModel) m).xvalModels().length > 0) {
       Key[] keys = ((GLMModel) m).xvalModels();
       models = new Model[keys.length];
       int i = 0;
