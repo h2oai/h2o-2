@@ -526,6 +526,11 @@ public class Utils {
     }
   }
 
+  public static long[] join(long[] a, long[] b) {
+    long[] res = Arrays.copyOf(a, a.length+b.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
   public static String join(char sep, Object[] array) {
     return join(sep, Arrays.asList(array));
   }
@@ -544,6 +549,10 @@ public class Utils {
   public static int[] or(int[] a, int[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
     return a;
+  }
+  public static long[] add(long[] nums, long a) {
+    for (int i=0;i<nums.length;i++) nums[i] += a;
+    return nums;
   }
   public static byte[] add(byte[] a, byte[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];

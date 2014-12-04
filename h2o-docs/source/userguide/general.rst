@@ -4,74 +4,44 @@ General
 H\ :sub:`2`\ O System Requirements
 ----------------------------------
 
-64-bit Java 1.6 or higher (Java 1.7 is fine, for example)
+- 64-bit `Java Runtime Environment <https://www.java.com/en/download/>`_ (version 1.6 or later) for users who only want to run H2O; for users who want to compile their own builds, we strongly recommend using `Java Development Kit 1.7 <www.oracle.com/technetwork/java/javase/downloads/>`_ or later.
 
-While a minimum of 2g ram is needed on the machine where H\ :sub:`2`\
-O will be running, the amount of memory needed for H\ :sub:`2`\ O to
-run efficiently is dependent on the size and nature of data, and the
-algorithm employed. A good heuristic is that the amount of memory
-available be at least four times the size of the data being analyzed. 
+- At least 2g of RAM is needed on the machine running H2O. However, the amount of memory needed for H2O to run efficiently depends on the size and complexity of the data and the algorithm employed. A good heuristic is that the amount of memory allocated to H2O should be at least four times the size of the data. 
 
-A reasonably modern web browser (for example, the latest version of
-Firefox, Safari or IE.)
+- A reasonably modern web browser (for example, the latest version of Firefox, Safari, or Internet Explorer.)
 
-Users who are running H\ :sub:`2`\ O on a server must ensure that the data are
-available to that server (either via their network settings, or
-because the data are on the same server.) Users who are running H\
-:sub:`2`\ O on a laptop must ensure that the data are available to
-that laptop. The specification of network settings is beyond the scope
-of this documentation. Advanced users may find additional documentation on
-running in specialized environments helpful: :ref:`Developer`. 
+- If you are running H2O on a server, enable TCP and UDP communication so that H2O can communicate with the server. For more information, refer to the `FAQ <http://h2o.ai/product/faq/#ClusterErrNoForm>`_. Advanced users may find additional documentation on running in specialized environments helpful: :ref:`Developer`. 
 
-For multinode clusters utilizing several servers, it is strongly
-recommended that all servers and nodes be symmetric and identically
-configured. For example, allocating different amounts of memory to
-nodes in the same cluster can adversely impact performance.   
+- For multinode clusters using several servers, we strongly recommend configuring all servers and nodes symmetrically. For example, allocating different amounts of memory to nodes in the same cluster can adversely impact performance.   
+
+""""""""""""""""""""""""""""""""
 
 User Interaction
 ----------------
 
-Users have several options for interacting with H\ :sub:`2`\ O. 
+There are a variety of options for accessing and running H2O. For instructions on how to get started using H2O (for example, through R, using Java, or via github), please see the `Quick Start Videos <http://docs.h2o.ai/tutorial/videos.html>`_ and `Walk-Through Tutorials <http://docs.h2o.ai/tutorial/top.html>`_. Step-by-step instructions on how to use each of the algorithms and tools can be found in tutorials. There is also a useful :ref:`glossary` available that explains H2O's computing and statistics terms. 
 
-A web browser can be used to communicate directly with the embedded
-web server inside any of the H\ :sub:`2`\ O nodes.  All H\ :sub:`2`\ O
-nodes contain an embedded web server, and they are all equivalent peers. 
+- Use a web browser to communicate directly with the embedded web server inside any of the H2O nodes.  All H2O nodes contain an embedded web server and they are all equivalent peers. 
 
-Users can also choose to interface with the H\ :sub:`2`\ O embedded web server
-via the REST API. The REST API accepts HTTP requests and returns
-JSON-formatted responses. 
+- Interface with the H2O embedded web server via the REST API. The REST API accepts HTTP requests and returns JSON-formatted responses. 
 
-H\ :sub:`2`\ O can also be used via the H\ :sub:`2`\ O for R package,
-available from 0xdata. This package uses H\ :sub:`2`\ O's REST API
-under the hood. Users can install the R package from the  H\ :sub:`2`\
-O maintained cran. The H\ :sub:`2`\ O zip file, and R+ H\ :sub:`2`\ O
-installation details are available on our `download page <http://0xdata.com/download/>`_.
+- Use the H2O for R package, available from h2o.ai. This package uses H2O's REST API under the hood. Users can install the R package from the H2O-maintained cran. The H2O zip file and R+ H2O installation details are available on our `download page <http://h2o.ai/download/>`_.
 
-Data sets are not transmitted directly through the REST API. Instead,
-the user sends a command (containing an HDFS path to the data set,
-for example) either through the browser based GUI or via the REST API to ingest
-data from disk. 
-
-The data set is assigned a KEY in H\ :sub:`2`\ O that the user may refer to in
-the future commands to the web server. 
 
 How Data is Ingested into H\ :sub:`2`\ O
 ----------------------------------------
 
-For step by step instructions on how to carry out data ingestion and
-parse, please see the **Data** section of this User Guide: :ref:`Data`. 
+Data sets are not transmitted directly through the REST API. Instead,
+the user sends a command (containing an HDFS path to the data set,
+for example) either through the browser-based GUI or the REST API to ingest
+data from the disk. 
+
+H2O assigns a Key to the data set that can be used as a reference in
+the future commands to the web server. 
+
+For step-by-step instructions on how perform data ingestion and
+parsing, please see the **Data** section of this User Guide: :ref:`Data`. 
 
 Supported input data file formats include CSV, Gzip-compressed CSV, MS
 Excel (XLS), ARFF, SVM-Light, HIVE file format, and others. 
 
-
-Using H\ :sub:`2`\ O
---------------------
-
-Step by step instructions on how to use each of the algorithms and
-tools can be found in tutorials . Users have a variety of options for
-accessing and running H\ :sub:`2`\ O. For instructions on how to get
-started using H\ :sub:`2`\ O (for example through R, using Java, or
-via git-hub), please see the Quick Start Guides, and Walk Through
-Tutorials. New users may also find the :ref:`glossary` useful for 
-familiarizing themselves with H\ :sub:`2`\ O's computing and statistics terms. 

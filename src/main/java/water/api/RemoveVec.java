@@ -1,5 +1,6 @@
 package water.api;
 
+import water.DKV;
 import water.Futures;
 import water.Request2;
 import water.fvec.*;
@@ -24,6 +25,7 @@ public class RemoveVec extends Request2 {
     Futures fs = new Futures();
     for(Vec v:source.remove(cols))
       v.remove(fs);
+    DKV.put(source._key, source,fs);
     fs.blockForPending();
     return Inspect2.redirect(this, source._key.toString());
   }

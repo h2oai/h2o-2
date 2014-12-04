@@ -1,20 +1,48 @@
 package water.exec;
 
-import static org.junit.Assert.*;
-import java.io.File;
-
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.BeforeClass;
 import org.junit.rules.ExpectedException;
-import water.*;
-import water.fvec.*;
+import water.Key;
+import water.Lockable;
+import water.TestUtil;
+import water.fvec.Frame;
+import water.fvec.NFSFileVec;
+import water.fvec.ParseDataset2;
+
+import java.io.File;
+
+import static org.junit.Assert.*;
 
 public class Expr2Test extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
+
+  @Test public void rbindTest() {
+    Key dest1 = Key.make("f1");
+
+    File file1 = TestUtil.find_test_file("smalldata/tnc3_10.csv");
+    //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
+    //File file = TestUtil.find_test_file("smalldata/cars.csv");
+    Key fkey1 = NFSFileVec.make(file1);
+    Frame fr1 = ParseDataset2.parse(dest1,new Key[]{fkey1});
+
+    Frame rbinded_frame;
+    Env ev = Exec2.exec("rbind("+fr1._key+","+fr1._key+")" );
+    try {
+      rbinded_frame = ev.popAry();
+    } finally {
+      if (ev!=null) ev.remove_and_unlock();
+    }
+    System.out.println(rbinded_frame.numRows());
+    System.out.println(fr1.numRows());
+
+    rbinded_frame.delete();
+    Lockable.delete(dest1);
+  }
 
   @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");

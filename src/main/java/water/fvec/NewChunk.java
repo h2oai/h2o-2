@@ -54,6 +54,22 @@ public class NewChunk extends Chunk {
     _ds = ds;
     _sparseLen = _len = ds.length;
   }
+
+  public NewChunk setSparseRatio(int s) {
+    _sparseRatio = s;
+    return this;
+  }
+
+  private int _sparseRatio = MIN_SPARSE_RATIO;
+  public NewChunk(double [] ds, int [] ids, int len, int sparseLen, int sparseRatio) {
+    _cidx = -1;
+    _vec = null;
+    _ds = ds;
+    _len = len;
+    _id = ids;
+    _sparseLen = sparseLen;
+    _sparseRatio = sparseRatio;
+  }
   // Constructor used when inflating a Chunk.
   public NewChunk( Chunk C ) {
     this(C._vec, C._vec.elem2ChunkIdx(C._start));
@@ -86,7 +102,8 @@ public class NewChunk extends Chunk {
     public Value(int lid, int gid){_lId = lid; _gId = gid;}
     public final int rowId0(){return _gId;}
     public void add2Chunk(NewChunk c){
-      if(_ds == null) c.addNum(_ls[_lId],_xs[_lId]);
+      if(isNA2(_lId)) c.addNA();
+      else if(_ds == null) c.addNum(_ls[_lId],_xs[_lId]);
       else {
         if( _ls != null ) c.addUUID(_ls[_lId], Double.doubleToRawLongBits(_ds[_lId]));
         else c.addNum(_ds[_lId]);
@@ -317,7 +334,7 @@ public class NewChunk extends Chunk {
       if(_id == null){ // check for sparseness
         int nzs = 0; // assume one non-zero for the element currently being stored
         for(double d:_ds)if(d != 0)++nzs;
-        if((nzs+1)*MIN_SPARSE_RATIO < _len)
+        if((nzs+1)*_sparseRatio < _len)
           set_sparse(nzs);
       } else _id = MemoryManager.arrayCopyOf(_id, _sparseLen << 1);
       _ds = MemoryManager.arrayCopyOf(_ds,_sparseLen<<1);
@@ -355,7 +372,7 @@ public class NewChunk extends Chunk {
       if(_id == null){ // check for sparseness
         int nzs = 0;
         for(int i = 0; i < _ls.length; ++i) if(_ls[i] != 0 || _xs[i] != 0)++nzs;
-        if((nzs+1)*MIN_SPARSE_RATIO < _len){
+        if((nzs+1)*_sparseRatio < _len){
           set_sparse(nzs);
           assert _sparseLen == 0 || _sparseLen  <= _ls.length:"_sparseLen = " + _sparseLen + ", _ls.length = " + _ls.length + ", nzs = " + nzs +  ", len2 = " + _len;
           assert _id.length == _ls.length;
@@ -364,7 +381,7 @@ public class NewChunk extends Chunk {
         }
       } else {
         // verify we're still sufficiently sparse
-        if((MIN_SPARSE_RATIO*(_sparseLen) >> 1) > _len)  cancel_sparse();
+        if((_sparseRatio*(_sparseLen) >> 1) > _len)  cancel_sparse();
         else _id = MemoryManager.arrayCopyOf(_id,_sparseLen<<1);
       }
       _ls = MemoryManager.arrayCopyOf(_ls,_sparseLen<<1);
@@ -538,7 +555,7 @@ public class NewChunk extends Chunk {
     if( rerun ) { _naCnt = -1;  type(); } // Re-run rollups after dropping all numbers/enums
     boolean sparse = false;
     // sparse? treat as sparse iff we have at least MIN_SPARSE_RATIOx more zeros than nonzeros
-    if(MIN_SPARSE_RATIO*(_naCnt + _nzCnt) < _len) {
+    if(_sparseRatio*(_naCnt + _nzCnt) < _len) {
       set_sparse(_naCnt + _nzCnt);
       sparse = true;
     } else if(_sparseLen != _len)
@@ -774,6 +791,26 @@ public class NewChunk extends Chunk {
     assert off==buf.length;
     return buf;
   }
+
+
+  //  static byte [] toBytes(double [] vals, int [] ids, int slen){
+//    int ridsz = vals.length >= 65535?4:2;
+//    int elemsz = ridsz + 8;
+//    byte [] res = MemoryManager.malloc1(slen*elemsz+OFF);
+//    for(int i = 0, off = OFF; i < slen; ++i, off += elemsz) {
+//      int id = ids[i];
+//      if(elemsz == 2)
+//        UDP.set2(res,off,(short)id);
+//      else
+//        UDP.set4(res,off,id);
+//      UDP.set8d(res, off + ridsz, vals[id]);
+//    }
+//    return res;
+//  }
+//  public CXDChunk(double [] vals, int [] ids, int slen){
+//    super(vals.length,slen,8,toBytes(vals,ids,slen));
+//  }
+
 
   // Compute a sparse float buffer
   private byte[] bufD(final int valsz){

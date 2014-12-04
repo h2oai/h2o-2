@@ -1,20 +1,13 @@
 Admin: Cluster Status
 =========================
 
-The status and location of a cluster can be verified by selecting
-Cluster Status from the Admin drop down menu. 
-
-
- **Table Definitions:**
-   In the provided table each node in an H\ :sub:`2`\ O cloud has a
-   row of information. 
-
+To verify the status and location of a cluster, select **Cluster Status** from the drop-down **Admin** menu. In the table that displays, the information for each node in an H2O cloud displays in a separate row. A description for each column is provided below.
 
  **Name** 
   
    The name of the node. For example, if a user establishes three
-   nodes on different servers, then Name will display the IP address
-   and port in use for talking to each of those unique nodes. 
+   nodes on different servers, then the Name column displays the IP address
+   and port used to communicate with each of those unique nodes. 
 
  **Num Keys** 
 
@@ -22,30 +15,30 @@ Cluster Status from the Admin drop down menu.
 
  **Value size bytes**  
 
-   The aggregate size in bytes of all data on that
-   node (including the set or subset of a users parsed data, but also
+   The aggregate size (in bytes) of all data on that
+   node (including the set or subset of parsed data, but also
    the size in bytes of the information stored in the keys generated
    from modeling or data manipulation.)
 
- **Free men bytes** 
+ **Free mem bytes** 
 
-    The amount of free memory in the H\ :sub:`2`\ O node.
+    The amount of free memory in the H2O node.
 
  **Tot mem bytes** 
 
-   The total amount of memory in the H\ :sub:`2`\ O node. This value may vary
+   The total amount of memory in the H2O node. This value may vary
    over time depending on use.
 
- **Max men bytes** 
+ **Max mem bytes** 
 
-    The maximum amount of memory that the H\ :sub:`2`\ O node will
+    The maximum amount of memory that the H2O node will
     attempt to use. 
 
  **Free disk bytes** 
 
    The amount of free memory in the ice root. When memory needs exceed
-   the capacity of the node, the overflow is handled by ice root, the
-   H\ :sub:`2`\ O corollary to disk memory.
+   the capacity of the node, the overflow is handled by ice root, which is the
+   H2O corollary to disk memory.
 
  **Max disk bytes** 
 
@@ -53,18 +46,18 @@ Cluster Status from the Admin drop down menu.
 
  **Num cpus** 
 
-   The number of cores being used by the node
+   The number of cores used by the node.
 
 
  **System Load** 
  
-   The amount of computational work currently being carried out by the
+   The amount of computational work currently being performed by the
    cluster. 
 
  **Node Healthy** 
 
-   Indiacates whether the node indicated by the row of the cluster
-   status table is healthy.
+   Indicates if the node indicated by the row of the cluster
+   status table is healthy or not.
 
  **PID**
 
@@ -73,11 +66,11 @@ Cluster Status from the Admin drop down menu.
  **Last contact** 
 
    The last time a specific node relayed communication about its
-   status. Last contact should read "now" or some number less than 30
-   seconds. If last contact is indicated to be more than 30 seconds
+   status. This column should read "now" or contain a number less than 30
+   (seconds). If last contact is indicated to be more than 30 seconds
    ago, the node may be experiencing a failure. 
 
 *Definitions for Fj threads hi, Fj threads low, Fj queue hi, Fj queue
 low, RCPS, and TCPS Active have been omitted.* These fields are
-primarily designed for by H\ :sub:`2`\ O programmers, and are in development. It
+primarily designed for use by H2O programmers, and are in development. It
 is likely that they will be removed in a future revision. 

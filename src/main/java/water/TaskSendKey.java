@@ -6,7 +6,7 @@ import water.nbhm.NonBlockingHashMap;
 /**
  * Send a Key from its home node to some remote node via a "push"
  *
- * @author <a href="mailto:cliffc@0xdata.com"></a>
+ * @author <a href="mailto:cliffc@h2o.ai"></a>
  * @version 1.0
  */
 

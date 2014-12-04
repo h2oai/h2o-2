@@ -3,7 +3,7 @@ package water;
 /**
  * A UDP Heartbeat packet.
  *
- * @author <a href="mailto:cliffc@0xdata.com"></a>
+ * @author <a href="mailto:cliffc@h2o.ai"></a>
  * @version 1.0
  */
 public class UDPHeartbeat extends UDP {

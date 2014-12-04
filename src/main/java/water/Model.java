@@ -202,6 +202,8 @@ public abstract class Model extends Lockable<Model> {
   /** Variable importance of individual input features measured by this model. */
   public VarImp varimp() { return null; }
 
+  public boolean hasCrossValModels() { return _have_cv_results; }
+
   /** Bulk score for given <code>fr</code> frame.
    * The frame is always adapted to this model.
    *

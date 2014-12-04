@@ -10,15 +10,33 @@ Quick Start Video
 .. raw:: html
 
 	<object width="425" height="344"><param name="movie" value="http://www.youtube.com/v/ZpTydwTWocQ&hl=en&fs=1"></param><param name="allowFullScreen" value="true"></param><embed src="http://www.youtube.com/v/ZpTydwTWocQ&hl=en&fs=1" type="application/x-shockwave-flash" allowfullscreen="true" width="425" height="344"></embed></object>
+	
+	
+"""""""""""""""""
 
+Important Notes
+""""""""""""   
+
+Java is a pre-requisite for H2O; if you do not already have Java installed, make sure to install it before installing H2O. Java is available free on the web,
+and can be installed quickly. Although Java is required to 
+run H2O, no programming is necessary.
+For users that only want to run H2O without compiling their own code, `Java Runtime Environment <https://www.java.com/en/download/>`_ (version 1.6 or later) is sufficient, but for users planning on compiling their own builds, we strongly recommend using `Java Development Kit 1.7 <www.oracle.com/technetwork/java/javase/downloads/>`_ or later. 
+
+After installation, launch H2O using the argument `-Xmx`. Xmx is the
+amount of memory given to H2O.  If your data set is large,
+allocate more memory to H2O by using `-Xmx4g` instead of the default `-Xmx1g`, which will allocate 4g instead of the default 1g to your instance. For best performance, the amount of memory allocated to H2O should be four times the size of your data, but never more than the total amount of memory on your computer.
+
+For more command line options, continue to read :ref:`Javahelp`.
+
+"""""""""""""""""
 
 
 Step-by-Step Walk-Through
 """""""""""""""""""""""""
-1. Download the latest release of H\ :sub:`2`\ O as a .zip file from the
-   H\ :sub:`2`\ O `downloads page <http://0xdata.com/download/>`_.
+1. Download the .zip file containing the latest release of H2O from the
+   H2O `downloads page <http://h2o.ai/download/>`_.
 
-2. From your terminal change your working directory to the same directory where your .zip file is saved.
+2. From your terminal, change your working directory to the same directory as the location of the .zip file.
 
 3. From your terminal, unzip the .zip file.  For example:
 
@@ -26,14 +44,14 @@ Step-by-Step Walk-Through
 
   unzip h2o-1.7.0.520.zip
 
-4. At the prompt enter the following commands. 
+4. At the prompt, enter the following commands: 
 
 ::
 
   cd h2o-1.7.0.520  #change working directory to the downloaded file
   java -Xmx1g -jar h2o.jar #run the basic java command to start h2o
 
-5. Wait a few moments and output similar to the following will appear in your terminal window:
+5. After a few moments, output similar to the following appears in your terminal window:
 
 ::
 
@@ -69,34 +87,16 @@ Step-by-Step Walk-Through
   09:54:05.475 main      INFO WATER: Log dir: '/tmp/h2o-Irene/h2ologs'
 
 
-5. Point your web-browser to:
+5. Point your web browser to:
 
 ::
 
   http://localhost:54321/ 
 
-The user interface will appear in your browser, and now H\ :sub:`2`\ O is ready to go.
+The user interface appears in your browser, and now H2O is ready to go.
 
 .. WARNING::
   On Windows systems, Internet Explorer is frequently blocked due to
-  security settings.  If you cannot reach http://localhost:54321 try a
-  different web browser such as Firefox or Chrome.
+  security settings.  If you cannot reach http://localhost:54321, try using a
+  different web browser, such as Firefox or Chrome.
 
-Useful Notes
-""""""""""""   
-
-First time users may need to download and install `Java <https://www.java.com/en/download/>`_
-in order to run H\ :sub:`2`\ O. The program is available free on the web,
-and can be quickly installed. Even though you will use Java to 
-run H\ :sub:`2`\ O, no programming is necessary.
-Java 1.6+ is supported for regular users but for developers that modify and recompile
-code Java 1.7 is recommended.
-
-The command used to launch H\ :sub:`2`\ O exercises the argument -Xmx1g. Xmx is the
-amount of memory given to H\ :sub:`2`\ O.  If your data set is large,
-give H\ :sub:`2`\ O more memory by running -Xmx4g instead of -Xmx1g which will allocate
-4g instead of 1g to your instance. For best performance the about of memory H\ :sub:`2`\ O
-is using should be four times the size size of your data but never more than the total
-amount of memory on your computer.
-
-For more command line options continue to read :ref:`Javahelp`.

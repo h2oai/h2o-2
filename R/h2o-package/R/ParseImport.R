@@ -423,21 +423,23 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=TRUE, force=FALSE) {
     if(!is.logical(save_cv)) stop('save_cv must be either TRUE or FALSE')
     if(nchar(name) == 0) name = object@key
 
-    force = ifelse(force==TRUE, 1, 0)    
+    force = ifelse(force==TRUE, 1, 0)
+    save_cv = ifelse(save_cv==TRUE, 1, 0)
     # Create a model directory for each model saved that will include main model
     # any cross validation models and a meta text file with all the model names listed
     model_dir <- paste(dir, name, sep=.Platform$file.sep)
-    dir.create(model_dir,showWarnings = F)
+    #dir.create(model_dir,showWarnings = F)
     
     # Save main model
-    path <- paste(model_dir, object@key, sep=.Platform$file.sep)
-    res <- .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force)
+    path <- paste(model_dir, sep=.Platform$file.sep)
+    res <- .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force, save_cv=save_cv)
     
     # Save all cross validation models
     if (.hasSlot(object, "xval")) {
       xval_keys <- sapply(object@xval,function(model) model@key )
       if(save_cv & !(length(xval_keys)==0)) {
-        for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
+        save_cv <- TRUE
+#        for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
       } else {
         save_cv <- FALSE # do not save CV results if they do not exist
       }
@@ -453,7 +455,7 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=TRUE, force=FALSE) {
     }
     close(fileConn)
     
-    dirname(res$path)
+    res$path
 }
 
 # ------------------- Save All H2O Model to Disk --------------------------------------------------
@@ -497,16 +499,6 @@ h2o.loadModel <- function(object, path="") {
     h2o.getModel(object, model_names[1])
 }
 
-h2o.removeVecs <- function(data, x) {
-  .h2o.__remoteSend(data@h2o,.h2o.__PAGE_RemoveVec, source=data@key, cols=x-1)
-  h2o.getFrame(data@h2o, data@key)  
-}
-
-h2o.order <- function(data, x = 1:dim(data)[2]-1, n, rev) {
-  res <- .h2o.__remoteSend(data@h2o,.h2o.__PAGE_Order, source=data@key, cols=x, n = n, rev = rev)
-  h2o.getFrame(data@h2o, res$destination_key)
-}
-
 # ------------------- Load All H2O Model in a directory from Disk -----------------------------------------------
 h2o.loadAll <- function(object, dir="") {
   if(missing(object)) stop('Must specify object')
@@ -524,3 +516,29 @@ h2o.loadAll <- function(object, dir="") {
   model_objs
 }
 
+# ------------------- Remove vector from a data frame -----------------------------------------------
+
+h2o.removeVecs <- function(data, cols) {
+  if (missing(data)) stop('Must specify data object')
+  if (class(data) != 'H2OParsedData') stop('object must be of class H2OParsedData')
+  verified_cols <- .verify_datacols(data = data, cols = cols)
+  inds <- verified_cols$cols_ind - 1
+  .h2o.__remoteSend(data@h2o,.h2o.__PAGE_RemoveVec, source=data@key, cols=inds)
+  data <- h2o.getFrame(h2o = data@h2o, key = data@key)
+}
+
+# ------------- Return the indices of the top or bottom values of column(s) -----------------
+
+h2o.order <- function(data, cols, n = 5, decreasing = T) {
+  if (missing(data)) stop('Must specify data object')
+  if (class(data) != 'H2OParsedData') stop('object must be of class H2OParsedData')
+  if (!is.numeric(n)) stop('n must be a integer')
+  if (!is.logical(decreasing)) stop('decreasing must be a boolean')
+  if (missing(cols)) cols <- 1:ncol(data)
+  rev <- if (decreasing) 1 else 0
+  
+  verified_cols <- .verify_datacols(data = data, cols = cols)
+  inds <- verified_cols$cols_ind - 1
+  res <- .h2o.__remoteSend(data@h2o,.h2o.__PAGE_Order, source=data@key, cols=inds, n = n, rev = rev)
+  h2o.getFrame(data@h2o, res$destination_key)
+}

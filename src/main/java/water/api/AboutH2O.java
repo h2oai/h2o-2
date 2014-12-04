@@ -38,7 +38,7 @@ public class AboutH2O extends HTMLOnlyRequest {
       sb.append("<div>");
         sb.append("<p class=\"lead text-center\">Join <a href=\"https://groups.google.com/forum/#!forum/h2ostream\" target=\"_blank\">h2ostream</a>, our google group community</p>");
         sb.append("<p class=\"lead text-center\">Follow us on Twitter, <a href=\"https://twitter.com/hexadata\" target=\"_blank\">@hexadata</a></p>");
-        sb.append("<p class=\"lead text-center\">Email us at <a href=\"mailto:support@0xdata.com\" target=\"_top\">support@0xdata.com</a></p>");
+        sb.append("<p class=\"lead text-center\">Email us at <a href=\"mailto:support@h2o.ai\" target=\"_top\">support@h2o.ai</a></p>");
         sb.append("</div>");
       sb.append("</div>");
 

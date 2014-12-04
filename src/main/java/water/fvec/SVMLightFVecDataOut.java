@@ -7,11 +7,13 @@ import water.parser.Enum;
 
 public class SVMLightFVecDataOut extends FVecDataOut {
   protected final VectorGroup _vg;
+  final int _vecIdStart;
   public SVMLightFVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
     super(vg,cidx,0,vg.reserveKeys(10000000),enums);
     _nvs = new NewChunk[0];
     _vg = vg;
     _col = 0;
+    _vecIdStart = vecIdStart;
   }
 
   private void addColumns(int ncols){
@@ -20,7 +22,7 @@ public class SVMLightFVecDataOut extends FVecDataOut {
       _vecs  = Arrays.copyOf(_vecs  , ncols);
       _ctypes= Arrays.copyOf(_ctypes, ncols);
       for(int i = _nCols; i < ncols; ++i) {
-        _vecs[i] = new AppendableVec(_vg.vecKey(i+1));
+        _vecs[i] = new AppendableVec(_vg.vecKey(i+1+_vecIdStart));
         _nvs[i] = new NewChunk(_vecs[i], _cidx);
         for(int j = 0; j < _nLines; ++j)
           _nvs[i].addNum(0, 0);

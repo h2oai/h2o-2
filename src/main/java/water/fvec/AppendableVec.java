@@ -164,7 +164,7 @@ public class AppendableVec extends Vec {
   @Override
   public int nChunks() { throw H2O.fail(); }
   @Override
-  int elem2ChunkIdx( long i ) { throw H2O.fail(); }
+  public int elem2ChunkIdx(long i) { throw H2O.fail(); }
   @Override
   public long chunk2StartElem( int cidx ) { throw H2O.fail(); }
 

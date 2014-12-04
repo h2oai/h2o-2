@@ -38,7 +38,7 @@ scales on big data. It is the algorithm of choice for highest predictive
 accuracy. H2O is the world’s fastest open-source in-memory platform for machine
 learning and predictive analytics on big data.
 
-This documentation presents the Deep Learning framework in H2O, as experienced through the H2O R interface. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} at http://docs.0xdata.com, especially the ``R User documentation". The datasets, R code and instructions for this document can be found at the \href{https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository} at \\https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo/. This introductory section provides instructions on getting H2O started from R, followed by a brief overview of deep learning.
+This documentation presents the Deep Learning framework in H2O, as experienced through the H2O R interface. Further documentation on H2O's system and algorithms can be found at the H2O.ai \href{http://docs.h2o.ai}{website} at http://docs.h2o.ai, especially the ``R User documentation", and fully featured tutorials are available at http://learn.h2o.ai. The datasets, R code and instructions for this document can be found at the \href{https://github.com/h2oai/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository} at \\https://github.com/h2oai/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo/. This introductory section provides instructions on getting H2O started from R, followed by a brief overview of deep learning.
 
 \subsection{Installation} \label{1.1}
 
@@ -80,7 +80,7 @@ demo(h2o.deeplearning)
 
 \subsection{Support} \label{1.2}
 
-Users of the H2O package may submit general enquiries and bug reports to the 0xdata \href{mailto:h2ostream@googlegroups.com}{support address}. Alternatively, specific bugs or issues may be filed to the 0xdata \href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{JIRA}.
+Users of the H2O package may submit general enquiries and bug reports to the H2O.ai \href{mailto:h2ostream@googlegroups.com}{support address}. Alternatively, specific bugs or issues may be filed to the H2O.ai \href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{JIRA}.
 
 \subsection{Deep learning overview} \label{1.3}
 
@@ -100,7 +100,7 @@ The basic unit in the model (shown above) is the neuron, a biologically inspired
 \end{figure}
 \\
 \noindent
-Multi-layer, feedforward neural networks consist of many layers of interconnected neuron units: beginning with an input layer to match the feature space; followed by multiple layers of nonlinearity; and terminating with a linear regression or classification layer to match the output space. The inputs and outputs of the model's units follow the basic logic of the single neuron described above. Bias units are included in each non-output layer of the network. The weights linking neurons and biases with other neurons fully determine the output of the entire network, and learning occurs when these weights are adapted to minimize the error on labeled training data. More specificially, for each training example $j$ the objective is to minimize a loss function 
+Multi-layer, feedforward neural networks consist of many layers of interconnected neuron units: beginning with an input layer to match the feature space; followed by multiple layers of nonlinearity; and terminating with a linear regression or classification layer to match the output space. The inputs and outputs of the model's units follow the basic logic of the single neuron described above. Bias units are included in each non-output layer of the network. The weights linking neurons and biases with other neurons fully determine the output of the entire network, and learning occurs when these weights are adapted to minimize the error on labeled training data. More specifically, for each training example $j$ the objective is to minimize a loss function 
 \begin{center}
 $L(W,B$ $|$ $j)$.
 \end{center}
@@ -151,7 +151,7 @@ The training protocol described below follows many of the ideas and advances in 
 \noindent
 Various deep learning architectures employ a combination of unsupervised pretraining followed by supervised training, but H2O uses a purely supervised training protocol. The default initialization scheme is the uniform adaptive option, which is an optimized initialization based on the size of the network. Alternatively, you may select a random initialization to be drawn from either a uniform or normal distribution, for which a scaling parameter may be specified as well.
 \subsubsection{Activation and loss functions} \label{2.2.2}
-In the introduction we introduced the nonlinear activation function $f$, for which the choices are summarized in Table 1. Note here that $x_i$ and $w_i$ denonote the firing neuron's input values and their weights, respectively; $\alpha$ denotes the weighted combination $\alpha = \sum_i w_i x_i+b$.
+In the introduction we introduced the nonlinear activation function $f$, for which the choices are summarized in Table 1. Note here that $x_i$ and $w_i$ denote the firing neuron's input values and their weights, respectively; $\alpha$ denotes the weighted combination $\alpha = \sum_i w_i x_i+b$.
 \\
 \begin{table}[ht] 
 \caption{Activation functions }
@@ -219,7 +219,7 @@ Iterate until convergence criterion reached
 \line(1,0){275}
 \\
 \\
-Stochastic gradient descent is known to be fast and memory-efficient, but not easily parallelizable without becoming slow. We utilize \textsc{Hogwild!}, the recently developed lock-free parallelization scheme from \href{http://i.stanford.edu/hazy/papers/hogwild-nips.pdf}{Niu et al, 2011}. \textsc{Hogwild!} follows a shared memory model where multiple cores, each handling separate subsets (or all) of the training data, are able to make independent contributions to the gradient updates $\nabla L(W,B$ $ |$ $j)$ asynchronously. In a multi-node system this parallelization scheme works on top of H2O's distributed setup, where the training data is distributed across the cluster. Each node operates in parallel on its local data until the final parameters $W,b$ are obtained by averaging. Below is a rough summmary.
+Stochastic gradient descent is known to be fast and memory-efficient, but not easily parallelizable without becoming slow. We utilize \textsc{Hogwild!}, the recently developed lock-free parallelization scheme from \href{http://i.stanford.edu/hazy/papers/hogwild-nips.pdf}{Niu et al, 2011}. \textsc{Hogwild!} follows a shared memory model where multiple cores, each handling separate subsets (or all) of the training data, are able to make independent contributions to the gradient updates $\nabla L(W,B$ $ |$ $j)$ asynchronously. In a multi-node system this parallelization scheme works on top of H2O's distributed setup, where the training data is distributed across the cluster. Each node operates in parallel on its local data until the final parameters $W,b$ are obtained by averaging. Below is a rough summary.
 \\
 \\
 \noindent
@@ -316,7 +316,8 @@ Typical values are between $10^{-10}$ and $10^{-4}$.
 \\
 \subsection{Loading data} \label{2.5}
 
-Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For an example, we use a toy weather dataset included in the \href{https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository for the H2O Deep Learning documentation} at \\https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo/. First load the data to your current working directory in your R Console (do this henceforth for dataset downloads), and then run the following command.
+Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For an example, we use a toy weather dataset included in the \href{https://github.com/h2oai/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository for the H2O Deep Learning documentation} at \\https://github.com/h2oai/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo/. First load the data to your current working directory in your R Console (do this henceforth for dataset downloads), and then run the following command.
+
 \begin{spverbatim}
 weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", header = TRUE, sep = ",", key = "weather.hex")
 \end{spverbatim}
@@ -336,7 +337,7 @@ Along with categorical encoding, H2O preprocesses data to be standardized for co
 This section has reviewed some background on the various parameter configurations in H2O's Deep Learning architecture. H2O Deep Learning models may seem daunting since there are dozens of possible parameter arguments when creating models. However, most parameters do not need to be tuned or experimented with; the default settings are safe and recommended. Those parameters for which experimentation is possible and perhaps necessary have mostly been discussed here but there a couple more which deserve mention.
 \\
 \\
-There is no default for both hidden layer size/number as well as epochs. Practice building deep learning models with different network topologies and different datasets will lead to intuition for these parameters but two general rules of thumb should be applied. First, choose larger network sizes, as they can perform higher-level feature extraction, and techniques like dropout may train only subsets of the network at once. Second, use more epochs for greater predictive accuracy, but only when able to afford the computational cost. Many example tests can be found in the H2O \href{https://github.com/0xdata/h2o/}{GitHub} repository for pointers on specific values and results for these (and other) parameters.
+There is no default for both hidden layer size/number as well as epochs. Practice building deep learning models with different network topologies and different datasets will lead to intuition for these parameters but two general rules of thumb should be applied. First, choose larger network sizes, as they can perform higher-level feature extraction, and techniques like dropout may train only subsets of the network at once. Second, use more epochs for greater predictive accuracy, but only when able to afford the computational cost. Many example tests can be found in the H2O \href{https://github.com/h2oai/h2o/}{GitHub} repository for pointers on specific values and results for these (and other) parameters.
 \\
 \\
 For a full list of H2O Deep Learning model parameters and default values, see Appendix A. 
@@ -346,7 +347,7 @@ For a full list of H2O Deep Learning model parameters and default values, see Ap
 
 \subsection{MNIST overview} \label{3.1}
 
-The \href{http://yann.lecun.com/exdb/mnist/}{MNIST database} is a famous academic dataset used to benchmark classification performance. The data consists of 60,000 training images and 10,000 test images, each a standardized $28^2$ pixel greyscale image of a single handwritten digit. You can download the datasets from the \href{https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository for the H2O Deep Learning documentation} at \\https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo/. Remember to save these .csv files to your working directory. Following the weather data example, we begin by loading these datasets into R as \texttt{H2OParsedData} objects. 
+The \href{http://yann.lecun.com/exdb/mnist/}{MNIST database} is a famous academic dataset used to benchmark classification performance. The data consists of 60,000 training images and 10,000 test images, each a standardized $28^2$ pixel greyscale image of a single handwritten digit. You can download the datasets from the \href{https://github.com/h2oai/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository for the H2O Deep Learning documentation} at \\https://github.com/h2oai/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo/. Remember to save these .csv files to your working directory. Following the weather data example, we begin by loading these datasets into R as \texttt{H2OParsedData} objects. 
 
 \begin{spverbatim}
 train_images.hex = h2o.uploadFile(h2o_server, path = "mnist_train.csv", header = FALSE, sep = ",", key = "train_images.hex")
@@ -401,7 +402,7 @@ pred = as.data.frame(prediction)
 
 \subsection{Web interface} \label{3.3}
 
-H2O R users have access to a slick web interface to mirror the model building process in R. After loading data or training a model in R, point your browser to your IP address+port number (e.g., localhost:12345) to launch the web interface. From here you can click on \textsc{Admin} $>$ \textsc{Jobs} to view your specific model details. You can also click on \textsc{Data} $>$ \textsc{View All} to view and keep track of your datasets in current use. 
+H2O R users have access to a slick web interface to mirror the model building process in R. After loading data or training a model in R, point your browser to your IP address and port number (e.g., localhost:12345) to launch the web interface. From here you can click on \textsc{Admin} $>$ \textsc{Jobs} to view your specific model details. You can also click on \textsc{Data} $>$ \textsc{View All} to view and keep track of your datasets in current use. 
 
 \subsubsection{Variable importances} \label{3.3.1}
 
@@ -410,7 +411,7 @@ importances on the web interface.
 
 \subsubsection{Java model} \label{3.3.2}
 
-Another important feature of the web interface is the Java (POJO) model, accessible from the \textsc{Java model} button in the top right of a model summary page. This button allows access to Java code which, when called from a main method in a Java program, builds the model at hand. Instructions for downloading and running this Java code are available from the web interface, and example production scoring  code is available as well.
+Another important feature of the web interface is the Java (POJO) model, accessible from the \textsc{Java model} button in the top right of a model summary page. This button allows access to Java code which, when called from a main method in a Java program, builds the model. Instructions for downloading and running this Java code are available from the web interface, and example production scoring code is available as well.
 
 \subsection{Grid search for model comparison} \label{3.4}
 
@@ -497,7 +498,7 @@ The parallel scalability of H2O for the MNIST dataset on 1 to 63 compute nodes i
 \section{Deep autoencoders} \label{4}
 
 \subsection{Nonlinear dimensionality reduction} \label{4.1}
-So far we have discussed purely supervised deep learning tasks. However, deep learning can also be used for unsupervised feature learning or, more specficially, nonlinear dimensionality reduction  (\href{http://www.cs.toronto.edu/~hinton/science.pdf}{Hinton et al, 2006}). Consider the diagram on the following page of a three-layer neural network with one hidden layer. If we treat our input data as labeled with the same input values, then the network is forced to learn the identity via a nonlinear, reduced representation of the original data. Such an algorithm is called a deep autoencoder; these models have been used extensively for unsupervised, layer-wise pretraining of supervised deep learning tasks, but here we consider the autoencoder's application for discovering anomalies in data. 
+So far we have discussed purely supervised deep learning tasks. However, deep learning can also be used for unsupervised feature learning or, more specifically, nonlinear dimensionality reduction  (\href{http://www.cs.toronto.edu/~hinton/science.pdf}{Hinton et al, 2006}). Consider the diagram on the following page of a three-layer neural network with one hidden layer. If we treat our input data as labeled with the same input values, then the network is forced to learn the identity via a nonlinear, reduced representation of the original data. Such an algorithm is called a deep autoencoder; these models have been used extensively for unsupervised, layer-wise pretraining of supervised deep learning tasks, but here we consider the autoencoder's application for discovering anomalies in data. 
 \\
 \begin{figure}[h!]
 \centering
@@ -549,7 +550,7 @@ head(test_recon.hex)
 \item \texttt{nfolds}: Number of folds for cross-validation. If the number of folds is more than 1, then validation must remain empty. Default is false.
 \item \texttt{validation}: An \texttt{H2OParsedData} object indicating the validation dataset used to construct confusion matrix. If left blank, default is the training data.
 \item \texttt{activation}: The choice of nonlinear, differentiable activation function used throughout the network. Options are \texttt{Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout, MaxoutWithDropout}, and the default is \texttt{Rectifier}. See section \ref{2.2.2} for more details.
-\item \texttt{hidden}: The number and size of each hidden layer in the model. For example, if c(100,200,100) is specified, a model with 3 hidden layers will be produced, and the middle hidden layer wil have 200 neurons. The default is c(200,200). For grid search, use list(c(10,10), c(20,20)) etc. See section \ref{3.2} for more details. .
+\item \texttt{hidden}: The number and size of each hidden layer in the model. For example, if c(100,200,100) is specified, a model with 3 hidden layers will be produced, and the middle hidden layer will have 200 neurons. The default is c(200,200). For grid search, use list(c(10,10), c(20,20)) etc. See section \ref{3.2} for more details. .
 \item \texttt{autoencoder}: Default is false. See section \ref{4} for more details.
 \item \texttt{use\_all\_factor\_levels}: Use all factor levels of categorical variables. Otherwise, the first factor level is omitted (without loss of accuracy). Useful for variable importances and auto-enabled for autoencoder.
 \item \texttt{epochs}: The number of passes over the training dataset to be carried out. It is recommended to start with lower values for initial grid searches. The value can be modified during checkpoint restarts and allows continuation of selected models. Default is 10.
@@ -601,8 +602,8 @@ head(test_recon.hex)
 
 \section{Appendix B: References}
 \href{http://h2o.ai/}{H2O website}
-\\\href{http://docs.0xdata.com}{H2O documentation} 
-\\\href{https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository}
+\\\href{http://docs.h2oai.com}{H2O documentation} 
+\\\href{https://github.com/h2oai/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository}
 \\\href{mailto:h2ostream@googlegroups.com}{H2O support}
 \\\href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{H2O JIRA}
 \\\href{http://www.iro.umontreal.ca/~lisa/pointeurs/TR1312.pdf}{(Bengio, 2009}
@@ -612,7 +613,7 @@ head(test_recon.hex)
 \\\href{http://arxiv.org/pdf/1207.0580.pdf}{Hinton et al., 2012}
 \\\href{http://www.cs.toronto.edu/~fritz/absps/momentum.pdf}{Sutskever et al, 2014}
 \\\href{http://arxiv.org/pdf/1212.5701v1.pdf}{Zeiler, 2012}
-\\\href{https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository for the H2O Deep Learning documentation}
+\\\href{https://github.com/h2oai/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O GitHub repository for the H2O Deep Learning documentation}
 \\\href{http://yann.lecun.com/exdb/mnist/}{MNIST database}
 \\\href{http://www.cs.toronto.edu/~hinton/science.pdf}{Hinton et al, 2006}
 

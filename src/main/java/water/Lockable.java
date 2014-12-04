@@ -17,7 +17,7 @@ import java.util.Arrays;
  *   lock-and-delete                (for removing old Keys)
  *   unlock
  *
- * @author <a href="mailto:cliffc@0xdata.com"></a>
+ * @author <a href="mailto:cliffc@h2o.ai"></a>
  * @version 1.0
  */
 public abstract class Lockable<T extends Lockable<T>> extends Iced {

@@ -3,13 +3,10 @@
 \usepackage{amsmath,amsthm,amsfonts,amssymb,epsfig}
 \usepackage[left=1.1in,top=1in,right=1.1in]{geometry}
 \usepackage{url}
-\usepackage{array}
 \usepackage{datetime}
 \usepackage{lipsum}
-\usepackage[hyphens]{url}
 \usepackage{spverbatim}
 \usepackage[parfill]{parskip}
-\usepackage[all,defaultlines]{nowidow}
 \usepackage{underscore}
 \usepackage{hyperref}
 \hypersetup{colorlinks, urlcolor={blue}}
@@ -26,7 +23,6 @@
 \author{Jessica Lanford}
 \date{11/14/14}
 \maketitle
-
 
 
 \section{What is H2O?}
@@ -97,7 +93,7 @@ To download R Studio:
 
 Note: Our push to CRAN will be behind the bleeding edge version and due to resource constraints, may be behind the published version. However, there is a best-effort to keep the versions the same. 
 
-To get the latest build, download it from \url{http://h2o.ai/download} and make sure to run the following (replacing the asterisks [*] with the version number): 
+\item To get the latest build, download it from \url{http://h2o.ai/download} and make sure to run the following (replacing the asterisks [*] with the version number): 
 \begin{spverbatim}
 > if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 > if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
@@ -111,7 +107,7 @@ demo(glm)
 \end{spverbatim}
 \end{enumerate}
 
-\subsection{Making a build from Source Code} 
+\subsection{Making a build from the Source Code}
 If you are a developer who wants to make changes to the R package before building and installing it, pull the source code from Git (\url{https://github.com/h2oai/h2o}) and follow the instructions in From Source Code (Github) at \url{http://docs.h2o.ai/developuser/quickstart\_git.html}.
 
 After making the build, navigate to the Rcran folder with the R package in the build’s directory, then run and install.
@@ -145,14 +141,15 @@ For best performance, the allocated memory should be 4x the size of your data, b
 
 To launch H2O from R, run the following in R:
 \begin{spverbatim}
-> library(h2o) ##Loads required files for H2O
-localH2O <- h2o.init(ip = 'localhost', port = 54321, nthreads= -1, max_mem_size = ‘4g') ##Starts H2O on the localhost, port 54321, with 4g of memory using all CPUs on the host  \end{spverbatim} 
+> library(h2o)
+# Start H2O on localhost, port 54321, with 4g of memory using all CPUs
+> localH2O <- h2o.init(ip = 'localhost', port = 54321, nthreads= -1, max_mem_size = '��4g') \end{spverbatim} 
 \\
 
 R displays the following output: 
 \begin{spverbatim}
 Successfully connected to http://localhost:54321
-       R is connected to H2O cluster:
+R is connected to H2O cluster:
    H2O cluster uptime:         11 minutes 35 seconds
    H2O cluster version:        2.7.0.1497
    H2O cluster name:           H2O_started_from_R
@@ -163,17 +160,17 @@ Successfully connected to http://localhost:54321
    H2O cluster healthy:        TRUE
 \end{spverbatim}
 
-If you are operating on a single node, initialize H2O using \begin{spverbatim} h2o_server = h2o.init()\end{spverbatim}\\
+If you are operating on a single node, initialize H2O using: \begin{spverbatim} h2o_server = h2o.init()\end{spverbatim}\\
 
 To connect with an existing H2O cluster node other than the default localhost:54321, specify the IP address and port number in the parentheses. For example: \begin{spverbatim}h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345)\end{spverbatim}
 
 
 \subsection{Launching from the Command Line}
 
-After launching the H2O instance, initialize the connection by running {\texttt{h2o.init( )}} with the IP address and port number of a node in the cluster. In the following example, change 192.168.1.161 to your local host. 
+After launching the H2O instance, initialize the connection by running {\texttt{h2o.init()}} with the IP address and port number of a node in the cluster. In the following example, change 192.168.1.161 to your machine's local host. 
 \begin{spverbatim}
 > library(h2o)
-> localH2O <- h2o.init(ip = '192.168.1.161', port =54321)
+> localH2O <- h2o.init(ip = '192.168.1.161', port = 54321)
 \end{spverbatim}
 
 \subsection{Launching on Hadoop}
@@ -194,7 +191,7 @@ $ hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -ma
 
 \subsection{Launching on an EC2}
 
-Launch the EC2 instances using the H2O AMI by running {\texttt{h2o-cluster-launch-instances.py}.
+Launch the EC2 instances using the H2O AMI by running {\texttt{h2o-cluster-launch-instances.py} which is available on our github, \url{https://github.com/h2oai/h2o/tree/master/ec2}.
 
 \begin{spverbatim}
 $ python h2o-cluster-launch-instances.py
@@ -318,25 +315,25 @@ After creating a model, use it to make predictions. For more information about p
 The following demo demonstrates how to import a file, define significant data, view data, create testing and training sets using sampling, define the model, and display the results.
 
 \begin{spverbatim}
-## Import dataset and display summary
+# Import dataset and display summary
 > airlinesURL = "https://s3.amazonaws.com/h2o-airlines-unpacked/allyears2k.csv"
 > airlines.hex = h2o.importFile(localH2O, path = airlinesURL, key = "airlines.hex")
 > summary(airlines.hex)
 
-## Define columns to ignore, quantiles and histograms
+# Define columns to ignore, quantiles and histograms
 > high_na_columns = h2o.ignoreColumns(data = airlines.hex)
 > delay_quantiles = quantile(x = airlines.hex$ArrDelay, na.rm = TRUE)
 > hist(airlines.hex$ArrDelay)
 
-## Find number of flights by airport
+# Find number of flights by airport
 > originFlights = h2o.ddply(airlines.hex, 'Origin', nrow)
 > originFlights.R = as.data.frame(originFlights)
 
-## Find number of cancellations per month
+# Find number of cancellations per month
 > flightsByMonth = h2o.ddply(airlines.hex,"Month", nrow)
 > flightsByMonth.R = as.data.frame(originFlights)
 
-## Find months with the highest cancellation ratio
+# Find months with the highest cancellation ratio
 > fun = function(df) {sum(df$Cancelled)}
 > h2o.addFunction(h, fun)
 > cancellationsByMonth = h2o.ddply(airlines.hex,"Month", fun)
@@ -376,37 +373,29 @@ For additional help within R's Help tab, precede the command with a question mar
 
 The H2O package consolidates all of the various supported import functions using {\texttt{h2o.importFile( )}}. Although {\texttt{h2o.importFolder}} and {\texttt{h2o.importHDFS}} will still work, these functions are deprecated and should be updated to {\texttt{h2o.importFile( )}}. There are a few ways to import files: 
 
-\begin{itemize}
-\item {\texttt{h2o.importFile( )}}: Import and parse a file from a local directory. 
-\item {\texttt{h2o.importFile(remoteH2O, path = “Path/On/Remote/Server/To/Data”, …)}: Import and parse a file from a remote directory. 
-\end{itemize}
-
 \begin{spverbatim}
 
-## To import small iris data file from H2O's package:
+# To import small iris data file from H2O's package:
 > irisPath = system.file("extdata", "iris.csv", package="h2o")
 > iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
-      |=================================================| 100%
+|=================================================| 100%
 
-## To import an entire folder of files as one data object:
+# To import an entire folder of files as one data object:
 > pathToFolder = "/Users/Amy/data/airlines/"
 > airlines.hex = h2o.importFile(localH2O, path = pathToFolder, key = "airlines.hex")
-      |=================================================| 100%
+|=================================================| 100%
 
-## To import from HDFS, connect to your Hadoop cluster and start an H2O instance in R using the IP that was specified by Hadoop:
+# To import from HDFS, connect to your Hadoop cluster and start an H2O instance in R using the IP that was specified by Hadoop:
 > remoteH2O = h2o.init(ip= <IPAddress>, port =54321)
 > pathToData = "hdfs://mr-0xd6.h2oai.loc/datasets/airlines_all.csv"
 > airlines.hex = h2o.importFile(remoteH2O, path = pathToData, key = "airlines.hex")
-      |=================================================| 100%
-
-
-
+|=================================================| 100%
 \end{spverbatim}
 
 
 \subsection{Uploading Files}
 
-To upload a file from your local disk, we recommend {\texttt{h2o.importFile}}. However, uploadFile will still work. In the parentheses, specify the H2O reference object in R and the complete URL or normalized file path for the file.
+To upload a file in a directory local to your H2O instance, we recommend {\texttt{h2o.importFile()}}. The alternative is to use {\texttt{h2o.uploadFile()}} which can also upload data local to your H2O instance in addition to uploading data local to your R session. In the parentheses, specify the H2O reference object in R and the complete URL or normalized file path for the file.
 \begin{spverbatim}
 > irisPath = system.file("extdata", "iris.csv", package="h2o")
 > iris.hex = h2o.uploadFile(localH2O, path = irisPath, key = "iris.hex")
@@ -433,7 +422,7 @@ To convert an integer into a non-ordered factor (also called an enum or categori
 > prosPath <- system.file("extdata", "prostate.csv", package="h2o")
 > prostate.hex <- h2o.importFile(localH2O, path = prosPath)
 |===================================================| 100%
-## Converts column 4 (RACE) to an enum
+# Converts column 4 (RACE) to an enum
 > is.factor(prostate.hex[,4])
 [1] FALSE
 > prostate.hex[,4]<-as.factor(prostate.hex[,4]) 
@@ -455,15 +444,15 @@ To convert an H2O parsed data object into an R data frame that can be manipulate
 Caution: While this can be very useful, be careful using this command when converting H2O parsed data objects. H2O can easily handle data sets that are often too large to be handled equivalently well in R. 
 
 \begin{spverbatim}
-> prosPath <- system.file("extdata", "prostate.csv", package=“h2o")
-##Creates object that defines path
- > prostate.hex = h2o.importFile(localH2O, path = prosPath)
-##Imports data set
-  |===================================================| 100%
-
- > prostate.data.frame <- as.data.frame(prostate.hex)
-##Converts current data frame (prostate data set) to an R data frame
- > summary(prostate.data.frame) ##Displays summary of data frame
+# Creates object that defines path
+> prosPath <- system.file("extdata", "prostate.csv", package="h2o")
+# Imports data set
+> prostate.hex = h2o.importFile(localH2O, path = prosPath)
+|===================================================| 100%
+# Converts current data frame (prostate data set) to an R data frame
+> prostate.R <- as.data.frame(prostate.hex)
+# Displays a summary of data frame where the summary was executed in R
+> summary(prostate.data.frame) 
        ID            CAPSULE            AGE             RACE
 Min.   :  1.00   Min.   :0.0000   Min.   :43.00   Min.   :0.000
 1st Qu.: 95.75   1st Qu.:0.0000   1st Qu.:62.00   1st Qu.:1.000
@@ -471,7 +460,7 @@ Min.   :  1.00   Min.   :0.0000   Min.   :43.00   Min.   :0.000
 \end{spverbatim}
 
 
-\subsection{Transferring Data Frames} 
+\subsection{Transferring Data Frames}
 To transfer a data frame from the R environment to the H2O instance, use  {\texttt{as.h2o( )}}. In the parentheses, specify the name of the h2o.init object that communicates with R and H2O and the object in the R environment to be converted to an H2O object. Optionally, you can include the reference to the H2O instance (the key). Precede the key with {\texttt{key=}} and enclose the key in quotes as in the following example. 
 
 \begin{spverbatim}
@@ -486,7 +475,7 @@ To transfer a data frame from the R environment to the H2O instance, use  {\text
 5            5.0         3.6          1.4         0.2     setosa
 6            5.4         3.9          1.7         0.4     setosa
 
-##Converts R object "iris" into H2O object “iris.hex"
+# Converts R object "iris" into H2O object “iris.hex"
 > iris.hex = as.h2o(localH2O, iris, key= "iris.hex")
   |=============================================================| 100%
 IP Address: localhost 
@@ -664,12 +653,12 @@ To append a column of random numbers to an H2O data frame for facilitating creat
 To generate two subsets (according to specified ratios) from an existing H2O data set for testing/training, use {\texttt{h2o.splitFrame()}}.  This method is preferred over {\texttt{h2o.runif}} because it is faster and more stable. 
 
 \begin{spverbatim}
-prostate.split <- h2o.splitFrame(data = prostate.hex , ratios = 0.75)
-##Splits data in prostate data frame with a ratio of 0.75
-prostate.train <- prostate.split[[1]] 
-##Creates training set from 1st data set in split
-prostate.test <- prostate.split[[2]]
-##Creates training set from 1st data set in split
+# Splits data in prostate data frame with a ratio of 0.75
+> prostate.split <- h2o.splitFrame(data = prostate.hex , ratios = 0.75)
+# Creates training set from 1st data set in split
+> prostate.train <- prostate.split[[1]] 
+# Creates testing set from 2st data set in split
+> prostate.test <- prostate.split[[2]]
 \end{spverbatim}
 
 
@@ -744,7 +733,7 @@ For more information, use {\texttt{help(h2o.gbm)}}.
 > iris.hex <- as.h2o(localH2O, object = iris, headers = T, key = "iris.hex")
 > iris.gbm <- h2o.gbm(y = 1, x = 2:5, data = iris.hex, n.trees = 10,
 interaction.depth = 3, n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
-     |===================================================| 100%
+|===================================================| 100%
 # To onbtain the Mean-squared Error by tree from the model object:
 > iris.gbm@model[,"err"]
  [1] 0.68112220 0.47215388 0.33393673 0.24465574 0.18596269 0.14500129
@@ -791,10 +780,10 @@ For more information, use {\texttt{help(h2o.glm)}}.
 > prostate.hex <- h2o.importFile(localH2O, path =
 "https://raw.github.com/h2oai/h2o/master/smalldata/logreg/prostate.csv",
 key = "prostate.hex")
- |===================================================| 100%
+|===================================================| 100%
 > h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data =
 prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
- |==========================================================| 100%
+|===================================================| 100%
     Coefficients:
     AGE          RACE     DCAPS       PSA   Intercept
     -0.01104  -0.63136   1.31888   0.04713  -1.10896
@@ -835,7 +824,7 @@ prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 To generate a K-Means model for data characterization, use {\texttt{h2o.kmeans()}}. This algorithm does not rely on a dependent variable. For more information, use {\texttt{help(h2o.kmeans)}}.
 \begin{spverbatim}
 > iris.km = h2o.kmeans(data = iris.hex, centers = 3, cols = 1:4)
-  |=========================================================| 100%
+|===================================================| 100%
 > print(iris.km)
 IP Address: localhost 
 Port      : 54321 
@@ -849,7 +838,7 @@ Cluster means:
 2 6.850000 3.073684 5.742105 2.071053
 3 5.901613 2.748387 4.393548 1.433871
   ....
-> \end{spverbatim}
+\end{spverbatim}
 
 \subsection{Principal Components Analysis (PCA)}
 
@@ -857,9 +846,9 @@ To map a set of variables onto a subspace using linear transformations, use {\te
 \begin{spverbatim}
 > ausPath = system.file("extdata", "australia.csv", package="h2o")
 > australia.hex = h2o.importFile(localH2O, path = ausPath)
-  |=========================================================| 100%
+|===================================================| 100%
 > australia.pca <- h2o.prcomp(data = australia.hex, standardize = TRUE)
-  |=========================================================| 100%
+|===================================================| 100%
       ....
 PCA Model Key: PCA_8fbc38e360de5b3c1ae6b7cc754b499c
 Standard deviations:
@@ -867,19 +856,18 @@ Standard deviations:
       ....
 
 > summary(australia.pca)
-Importance of components:
-                             PC1       PC2       PC3        PC4        PC5        PC6        PC7         PC8
-Standard deviation     1.7507032 1.5121421 1.0311814 0.82831266 0.60837860 0.54813639 0.41816208 0.231495292
-Proportion of Variance 0.3831202 0.2858217 0.1329169 0.08576273 0.04626556 0.03755669 0.02185744 0.006698759
-Cumulative Proportion  0.3831202 0.6689419 0.8018588 0.88762155 0.93388711 0.97144380 0.99330124 1.000000000
+Importance of components: PC1       PC2       PC3        PC4        PC5        PC6
+Standard deviation     1.7507032 1.5121421 1.0311814 0.82831266 0.60837860 0.54813639 
+Proportion of Variance 0.3831202 0.2858217 0.1329169 0.08576273 0.04626556 0.03755669
+Cumulative Proportion  0.3831202 0.6689419 0.8018588 0.88762155 0.93388711 0.97144380
 \end{spverbatim}
 
 \subsection{Principal Components Regression (PCR)}
 
 To map a set of variables to a set of linearly independent variables, use {\texttt{h2o.pcr()}}. The variables in the new set are linearly independent linear combinations of the original variables and exist in a lower-dimension subspace. This transformation is prepended to the regression model to improve results. For more information, use {\texttt{help(h2o.pcr)}}.
 \begin{spverbatim}
-> prostate.pcr <- h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", 
-  nfolds = 0, alpha = 0.5, ncomp = 2)
+> prostate.pcr <- h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE",
+data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5, ncomp = 2)
       ....
 GLM2 Model Key: GLMModel__a71b8209871c4a70d037f113d99d4a89
 

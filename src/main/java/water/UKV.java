@@ -8,7 +8,7 @@ import water.fvec.Vec;
  * This class handles user-view keys, and hides ArrayLets from the end user.
  *
  *
- * @author <a href="mailto:cliffc@0xdata.com"></a>
+ * @author <a href="mailto:cliffc@h2o.ai"></a>
  * @version 1.0
  */
 public abstract class UKV {

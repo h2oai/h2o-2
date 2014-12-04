@@ -5,11 +5,11 @@ From Source Code (Github)
 
 These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
 
-1. Create a git clone of the H\ :sub:`2`\ O repository.
+1. Create a git clone of the H2O repository.
 
  ::
   
-  git clone https://github.com/0xdata/h2o.git
+  git clone https://github.com/h2oai/h2o.git
 
 2. Install necessary dependencies.
 
@@ -18,7 +18,7 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
   pip install -r requirements.txt [--user]
 
                                                                              
-3. Build H\ :sub:`2`\ O from source.  You must have Java JDK 1.6 or higher, Sbt 0.13.1 or higher. If pdflatex is installed on your system, you must have inconsolata latex package and ptmr8t font for latex. R packages ‘RCurl’, ‘rjson’ and ‘statmod.’
+3. Build H2O from source.  You must have Java JDK 1.6 or higher, Sbt 0.13.1 or higher. If pdflatex is installed on your system, you must have the inconsolata latex package and ptmr8t font for latex, as well as R packages ‘RCurl’, ‘rjson’ and ‘statmod.’
    After the build finishes, some JUnit tests will run automatically.
 
  ::
@@ -155,10 +155,9 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
 
 
 
-4.  The build produces target/h2o.jar.  Now run h2o.jar from the
-    command line.  Note that Xmx is the amount of memory given to
-    H2O. If your data set is large, increase the number immediately
-    following Xmx from the default of 2. As a rule, the amount of
+4.  The build produces target/h2o.jar.  Now, run h2o.jar from the
+    command line.  Xmx is the amount of memory given to
+    H2O. If your data set is large, increase the  Xmx from the default of 2. As a rule, the amount of
     memory given should be about 4 times the size of your data, but no
     larger than the total memory of your computer. 
 
