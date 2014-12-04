@@ -111,15 +111,6 @@ public class SaveModel extends Func {
       for (Key k : keys) {
         models[i++] = UKV.get(k);
       }
-//    if (m instanceof GLMModel && ((GLMModel) m).xvalModels().length > 0) {
-//      Key[] keys = ((GLMModel) m).xvalModels();
-//      models = new Model[keys.length];
-//      int i = 0;
-//      for (Key k : keys) {
-//        models[i++] = UKV.get(k);
-//      }
-//    } else if (m instanceof GLMModel && ((GLMModel) m).xvalModels() == null ) {
-//      models = NO_MODELS;
     } else {
       if (m.hasCrossValModels()) {
         Job.ValidatedJob j = (Job.ValidatedJob) m.get_params();
