@@ -499,7 +499,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             if(_lbs[i] > 0) throw new IllegalArgumentException("lower bounds must be non-positive");
           if(_srcDinfo._normMul != null) {
             for (int i = numoff; i < _srcDinfo.fullN(); ++i) {
-              if (Double.isInfinite(_ubs[i])) continue;
+              if (Double.isInfinite(_lbs[i])) continue;
               _lbs[i] /= _srcDinfo._normMul[i - numoff];
             }
           }
