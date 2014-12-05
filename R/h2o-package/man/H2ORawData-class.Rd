@@ -20,7 +20,7 @@ Objects can be created by calls of the form \code{new("H2ORawData", ...)}.
 }
 \section{Methods}{
   \describe{
-  \item{h2o.parseRaw}{\code{signature(data = "H2OParsedData", key = "character", header = "logical" sep = "character", col.names = "H2OParsedData")}: ... }
+  \item{h2o.parseRaw}{\code{signature(data = "H2OParsedData", key = "character", header = "logical", header_with_hash = "logical", sep = "character", col.names = "H2OParsedData")}: ... }
     \item{show}{\code{signature(object = "H2ORawData")}: ... }
     }
 }
