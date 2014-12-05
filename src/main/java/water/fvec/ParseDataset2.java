@@ -533,7 +533,7 @@ public final class ParseDataset2 extends Job {
       // Allow dup headers, if they are equals-ignoring-case
       boolean has_hdr = _setup._header && localSetup._header;
       if( has_hdr ) {           // Both have headers?
-        for( int i = 0; i < localSetup._columnNames.length; ++i )
+        for( int i = 0; has_hdr && i < localSetup._columnNames.length; ++i )
           has_hdr = localSetup._columnNames[i].equalsIgnoreCase(_setup._columnNames[i]);
         if( !has_hdr )          // Headers not compatible?
           // Then treat as no-headers, i.e., parse it as a normal row
