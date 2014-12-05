@@ -7,8 +7,8 @@ Import Local Directory of Data Files
   Imports all the files in the local directory and parses them, concatenating the data into a single H2O data matrix and returning an object containing the identifying hex key.
 }
 \usage{
-h2o.importFolder(object, path, pattern = "", key = "", parse = TRUE, header, header_with_hash, 
-  sep = "", col.names, parser_type="AUTO")
+h2o.importFolder(object, path, pattern = "", key = "", parse = TRUE, header,
+  header_with_hash, sep = "", col.names, parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

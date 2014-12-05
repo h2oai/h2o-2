@@ -28,7 +28,7 @@ The complete URL or normalized file path of the file to be imported. Each row of
   \item{header}{
 (Optional) A logical value indicating whether the first line of the file contains column headers. If left empty, the parser will try to automatically detect this.
   }
-   \item{header_with_header}{
+   \item{header_with_hash}{
 (Optional) A logical value indicating whether the first line of the file contain a column header that begins with a hash character. If left empty, the parser will try to automatically detect this.
   }
   \item{sep}{

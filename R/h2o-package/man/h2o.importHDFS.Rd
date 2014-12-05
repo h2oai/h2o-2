@@ -7,8 +7,8 @@
   Imports a HDFS file or set of files in a directory and parses them, returning a object containing the identifying hex key.
 }
 \usage{
-h2o.importHDFS(object, path, pattern = "", key = "", parse = TRUE, header, header_with_hash, 
-  sep = "", col.names, parser_type="AUTO")
+h2o.importHDFS(object, path, pattern = "", key = "", parse = TRUE, header,
+  header_with_hash, sep = "", col.names, parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

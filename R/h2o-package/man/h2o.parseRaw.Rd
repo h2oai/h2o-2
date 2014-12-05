@@ -7,7 +7,8 @@ Parse Raw Data File
 Parses a raw data file, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.parseRaw(data, key = "", header, header_with_hash, sep = "", col.names,parser_type="AUTO")
+h2o.parseRaw(data, key = "", header, header_with_hash, sep = "", col.names,
+             parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

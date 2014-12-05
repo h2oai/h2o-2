@@ -7,8 +7,8 @@ Import Local Data File
 Imports a file from the local path and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.importFile(object, path, key = "", parse = TRUE, header, header_with_hash, sep = "", col.names,
-               parser_type="AUTO")
+h2o.importFile(object, path, key = "", parse = TRUE, header, header_with_hash, sep = "",
+               col.names, parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
