@@ -473,6 +473,8 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=TRUE, force=FALSE) {
 h2o.saveAll <- function(object, dir="", save_cv=TRUE, force=FALSE) {
   if(missing(object)) stop('Must specify object')
   if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
+  if(!is.logical(save_cv)) stop('save_cv needs to be a boolean')
+  if(!is.logical(force)) stop('force needs to be a boolean')
   
   ## Grab all the model keys in H2O
   res = .h2o.__remoteSend(client = object, page = .h2o.__PAGE_ALLMODELS)
@@ -483,7 +485,7 @@ h2o.saveAll <- function(object, dir="", save_cv=TRUE, force=FALSE) {
   for(key in keys) { dups = grep(pattern = paste(key, "_", sep = ""), x = keys)
     duplicates = append(x = duplicates, values = dups)
   }
-  keys = keys[-duplicates]
+  keys = if(length(duplicates) > 0) keys[-duplicates] else keys
   
   ## Create H2OModel objects in R (To grab the cross validation models)
   models = lapply(keys, function(model_key) h2o.getModel(h2o = object, key = model_key))

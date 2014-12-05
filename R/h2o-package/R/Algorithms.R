@@ -451,7 +451,7 @@ h2o.glm <- function(x, y, data, key = "",
   else if (family == "tweedie")
     params <- c(params, list(tweedie_variance_power = tweedie.p))
 
-  if (!is.null(beta_constraints)) params <- c(params, list(beta_constraints@key))
+  if (!is.null(beta_constraints)) params <- c(params, list(beta_constraints = beta_constraints@key))
 
   res <- do.call(.h2o.__remoteSend, params)
   .h2o.__waitOnJob(data@h2o, res$job_key)
