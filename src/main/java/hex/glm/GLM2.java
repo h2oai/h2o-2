@@ -478,7 +478,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         v = beta_constraints.vec("names");
         // for now only enums allowed here
         String [] dom = v.domain();
-        String [] names = _srcDinfo.coefNames();
+        String [] names = Utils.append(_srcDinfo.coefNames(), "Intercept");
         int [] map = Utils.asInts(v);
         if(!Arrays.deepEquals(dom,names)) { // need mapping
           HashMap<String,Integer> m = new HashMap<String, Integer>();
@@ -491,25 +491,43 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           }
           map = newMap;
         }
+        final int numoff = _srcDinfo.numStart();
         if((v = beta_constraints.vec("lower_bounds")) != null) {
           _lbs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.NEGATIVE_INFINITY), map);
           System.out.println("lower bounds = " + Arrays.toString(_lbs));
-          for(int i = 0; i < _lbs.length; ++i) {
+          for(int i = 0; i < _lbs.length; ++i)
             if(_lbs[i] > 0) throw new IllegalArgumentException("lower bounds must be non-positive");
-            if(_srcDinfo._normMul != null)
-              _lbs[i] /= _srcDinfo._normMul[i];
+          if(_srcDinfo._normMul != null) {
+            for (int i = numoff; i < _srcDinfo.fullN(); ++i) {
+              if (Double.isInfinite(_lbs[i])) continue;
+              _lbs[i] /= _srcDinfo._normMul[i - numoff];
+            }
           }
+
         }
         if((v = beta_constraints.vec("upper_bounds")) != null) {
           _ubs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.POSITIVE_INFINITY), map);
           System.out.println("upper bounds = " + Arrays.toString(_ubs));
-          for(int i = 0; i < _ubs.length; ++i) {
+          for(int i = 0; i < _ubs.length; ++i)
             if (_ubs[i] < 0) throw new IllegalArgumentException("lower bounds must be non-positive");
-            if (_srcDinfo._normMul != null)
-              _ubs[i] /= _srcDinfo._normMul[i];
+          if(_srcDinfo._normMul != null)
+            for(int i = numoff; i < _srcDinfo.fullN(); ++i) {
+              if(Double.isInfinite(_ubs[i]))continue;
+              _ubs[i] /= _srcDinfo._normMul[i - numoff];
+            }
+        }
+        if((v =  beta_constraints.vec("beta_given")) != null) {
+          _bgs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, 0), map);
+          if(_srcDinfo._normMul != null) {
+            double norm = 0;
+            for (int i = numoff; i < _srcDinfo.fullN(); ++i) {
+              norm += _bgs[i] * _srcDinfo._normMul[i-numoff];
+              _bgs[i] /= _srcDinfo._normMul[i-numoff];
+            }
+            if(_intercept == 1)
+              _bgs[_bgs.length-1] += norm;
           }
-        } if((v =  beta_constraints.vec("beta_given")) != null)
-          _bgs = map == null?Utils.asDoubles(v):mapVec(Utils.asDoubles(v),makeAry(names.length,0),map);
+        }
         if((v = beta_constraints.vec("rho")) != null)
           _rho = map == null?Utils.asDoubles(v):mapVec(Utils.asDoubles(v),makeAry(names.length,0),map);
       }

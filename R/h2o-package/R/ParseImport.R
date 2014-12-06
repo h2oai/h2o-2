@@ -206,7 +206,7 @@ h2o.insertMissingValues <- function(data, fraction = 0.01, seed = -1) {
 # ----------------------------------- File Import Operations --------------------------------- #
 # WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
 # ----------------------------------- Import Folder --------------------------------- #  
-h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, parser_type = "AUTO") {
+h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE, header, header_with_hash, sep = "", col.names, parser_type = "AUTO") {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -235,7 +235,7 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
       } else {regPath <- paste(path, pattern, sep = .Platform$file.sep)}
       srcKey  <- ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData <- new("H2ORawData", h2o=object, key=srcKey)
-      h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names, parser_type = parser_type)
+      h2o.parseRaw(data=rawData, key=key, header=header, header_with_hash=header_with_hash, sep=sep, col.names=col.names, parser_type = parser_type)
     } else {
       myData <- lapply(res$keys, function(x) { new("H2ORawData", h2o=object, key=x) })
       if(length(res$keys) == 1) myData[[1]] else myData
@@ -244,24 +244,24 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
 }
 
 # ----------------------------------- Import File --------------------------------- #
-h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, parser_type = "AUTO") {
-  h2o.importFolder(object, path, pattern = "", key, parse, header, sep, col.names, parser_type = parser_type)
+h2o.importFile <- function(object, path, key = "", parse = TRUE, header, header_with_hash, sep = "", col.names, parser_type = "AUTO") {
+  h2o.importFolder(object, path, pattern = "", key, parse, header, header_with_hash, sep, col.names, parser_type = parser_type)
 }
 
 # ----------------------------------- Import URL --------------------------------- #
-h2o.importURL <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, parser_type = "AUTO") {
+h2o.importURL <- function(object, path, key = "", parse = TRUE, header, header_with_hash, sep = "", col.names, parser_type = "AUTO") {
   print("This function has been deprecated. In the future, please use h2o.importFile with a http:// prefix instead.")
-  h2o.importFile(object, path, key, parse, header, sep, col.names, parser_type = parser_type)
+  h2o.importFile(object, path, key, parse, header, header_with_hash, sep, col.names, parser_type = parser_type)
 }
 
 # ----------------------------------- Import HDFS --------------------------------- #
-h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names, parser_type = "AUTO") {
+h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, header_with_hash, sep = "", col.names, parser_type = "AUTO") {
   print("This function has been deprecated. In the future, please use h2o.importFolder with a hdfs:// prefix instead.")
-  h2o.importFolder(object, path, pattern, key, parse, header, sep, col.names, parser_type = parser_type)
+  h2o.importFolder(object, path, pattern, key, parse, header, header_with_hash, sep, col.names, parser_type = parser_type)
 }
 
 # ----------------------------------- Upload File --------------------------------- #
-h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names, silent = TRUE, parser_type = "AUTO") {
+h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, header_with_hash, sep = "", col.names, silent = TRUE, parser_type = "AUTO") {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(path)) stop("path must be of class character")
   if(nchar(path) == 0) stop("path must be a non-empty string")
@@ -279,32 +279,42 @@ h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, sep = "
   else
     temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = curlOptions(verbose = TRUE, useragent=R.version.string))
   rawData = new("H2ORawData", h2o=object, key=path)
-  if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names, parser_type = parser_type) else rawData
+  if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, header_with_hash=header_with_hash, sep=sep, col.names=col.names, parser_type = parser_type) else rawData
 }
 
 # ----------------------------------- File Parse Operations --------------------------------- #
-h2o.parseRaw <- function(data, key = "", header, sep = "", col.names, parser_type = "AUTO") {
+h2o.parseRaw <- function(data, key = "", header, header_with_hash, sep = "", col.names, parser_type = "AUTO") {
   if(class(data) != "H2ORawData") stop("data must be of class H2ORawData")
   if(!is.character(key)) stop("key must be of class character")
   if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
     stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!(missing(header) || is.logical(header))) stop(paste("header cannot be of class", class(header)))
+  if(!(missing(header_with_hash) || is.logical(header_with_hash))) stop(paste("header_with_hash cannot be of class", class(header_with_hash)))
   if(!is.character(sep)) stop("sep must be of class character")
   if(!(missing(col.names) || class(col.names) == "H2OParsedData")) stop(paste("col.names cannot be of class", class(col.names)))
   
   # If both header and column names missing, then let H2O guess if header exists
   sepAscii <- ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
-  if(missing(header) && missing(col.names))
+  if(missing(header) && missing(header_with_hash) && missing(col.names))
     res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, parser_type=parser_type)
-  else if(missing(header) && !missing(col.names))
+  else if(missing(header) && !missing(header_with_hash) && missing(col.names))
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header_with_hash=as.numeric(header_with_hash), parser_type=parser_type)
+  else if(missing(header) && missing(header_with_hash) && !missing(col.names))
     res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=1, header_from_file=col.names@key, parser_type=parser_type)
-  else if(!missing(header) && missing(col.names))
+  else if(missing(header) && !missing(header_with_hash) && !missing(col.names))
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header_with_hash=as.numeric(header_with_hash), header_from_file=col.names@key, parser_type=parser_type)
+  else if(!missing(header) && missing(header_with_hash) && missing(col.names))
     res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), parser_type=parser_type)
-  else
+  else if(!missing(header) && !missing(header_with_hash) && missing(col.names))
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_with_hash=as.numeric(header_with_hash), parser_type=parser_type)
+  else if(!missing(header) && missing(header_with_hash) && !missing(col.names))
     res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_from_file=col.names@key, parser_type=parser_type)
+  else  #(!missing(header) && !missing(header_with_hash) && !missing(col.names))
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, separator=sepAscii, header=as.numeric(header), header_with_hash=as.numeric(header_with_hash), header_from_file=col.names@key, parser_type=parser_type)
   
   # on.exit(.h2o.__cancelJob(data@h2o, res$job_key))
   .h2o.__waitOnJob(data@h2o, res$job_key)
+  Sys.sleep(3)
   .h2o.exec2(expr = res$destination_key, h2o = data@h2o, dest_key = res$destination_key)
 #  parsedData <- new("H2OParsedData", h2o=data@h2o, key=res$destination_key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res))
 }
@@ -423,21 +433,23 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=TRUE, force=FALSE) {
     if(!is.logical(save_cv)) stop('save_cv must be either TRUE or FALSE')
     if(nchar(name) == 0) name = object@key
 
-    force = ifelse(force==TRUE, 1, 0)    
+    force = ifelse(force==TRUE, 1, 0)
+    save_cv = ifelse(save_cv==TRUE, 1, 0)
     # Create a model directory for each model saved that will include main model
     # any cross validation models and a meta text file with all the model names listed
     model_dir <- paste(dir, name, sep=.Platform$file.sep)
-    dir.create(model_dir,showWarnings = F)
+    #dir.create(model_dir,showWarnings = F)
     
     # Save main model
-    path <- paste(model_dir, object@key, sep=.Platform$file.sep)
-    res <- .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force)
+    path <- paste(model_dir, sep=.Platform$file.sep)
+    res <- .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force, save_cv=save_cv)
     
     # Save all cross validation models
     if (.hasSlot(object, "xval")) {
       xval_keys <- sapply(object@xval,function(model) model@key )
       if(save_cv & !(length(xval_keys)==0)) {
-        for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
+        save_cv <- TRUE
+#        for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
       } else {
         save_cv <- FALSE # do not save CV results if they do not exist
       }
@@ -453,7 +465,7 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=TRUE, force=FALSE) {
     }
     close(fileConn)
     
-    dirname(res$path)
+    res$path
 }
 
 # ------------------- Save All H2O Model to Disk --------------------------------------------------
@@ -461,6 +473,8 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=TRUE, force=FALSE) {
 h2o.saveAll <- function(object, dir="", save_cv=TRUE, force=FALSE) {
   if(missing(object)) stop('Must specify object')
   if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
+  if(!is.logical(save_cv)) stop('save_cv needs to be a boolean')
+  if(!is.logical(force)) stop('force needs to be a boolean')
   
   ## Grab all the model keys in H2O
   res = .h2o.__remoteSend(client = object, page = .h2o.__PAGE_ALLMODELS)
@@ -471,7 +485,7 @@ h2o.saveAll <- function(object, dir="", save_cv=TRUE, force=FALSE) {
   for(key in keys) { dups = grep(pattern = paste(key, "_", sep = ""), x = keys)
     duplicates = append(x = duplicates, values = dups)
   }
-  keys = keys[-duplicates]
+  keys = if(length(duplicates) > 0) keys[-duplicates] else keys
   
   ## Create H2OModel objects in R (To grab the cross validation models)
   models = lapply(keys, function(model_key) h2o.getModel(h2o = object, key = model_key))

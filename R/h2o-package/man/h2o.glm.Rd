@@ -16,7 +16,7 @@ h2o.glm(x, y, data, key = "", offset = NULL, family, link,
         strong_rules = TRUE, standardize = TRUE, intercept = TRUE,
         non_negative = FALSE, use_all_factor_levels = FALSE,
         variable_importances = FALSE, epsilon = 1e-4, iter.max = 100,
-        higher_accuracy = FALSE)
+        higher_accuracy = FALSE, beta_constraints=NULL)
 }
 \arguments{
   \item{x}{A character vector containing the column names of the predictors in
@@ -95,6 +95,11 @@ h2o.glm(x, y, data, key = "", offset = NULL, family, link,
     iterations.}
   \item{higher_accuracy}{A logical value indicating whether to use line search
     to produce more accurate estimates.}
+  \item{beta_constraints}{
+    A data.frame or H2OParsedData object with the columns ["names", "lower_bounds", "upper_bounds", "beta_given"],
+    where each row corresponds to a predictor in the GLM. "names" contains the predictor names, "lower"/"upper_bounds",
+    are the lower and upper bounds of beta, and "beta_given" is some supplied starting values for the coefficients.
+  }
 }
 \value{
   An object of class \code{\linkS4class{H2OGLMModel}} with slots \code{key},

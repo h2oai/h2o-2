@@ -29,6 +29,8 @@ h2o.addNewFeatures <- function(frame, timecol, intcols, factorcols, key) {
   dow <- day %% 7
   colnames(dow) <- "dayofweek"
   frame <- cbind(frame[,-match(timecol,colnames(frame))], day, dow, hour, as.factor(day), as.factor(dow), as.factor(hour))
+  frame <- h2o.assign(frame, key)
+  h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
   
   cat("\nFeature engineering for integer columns.")
   newfactors <- c()
@@ -37,6 +39,8 @@ h2o.addNewFeatures <- function(frame, timecol, intcols, factorcols, key) {
     trim_integer_levels <- h2o.interaction(as.factor(frame[,int]), factors = 1, pairwise = FALSE, max_factors = 100, min_occurrence = 1)
     newfactors <- c(newfactors, colnames(trim_integer_levels))
     frame <- cbind(frame, trim_integer_levels)
+    frame <- h2o.assign(frame, key)
+    h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
   }
   
   cat("\nFeature engineering for factor columns.")
@@ -96,9 +100,9 @@ h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value 
 cat("\nTraining H2O model on training/validation splits days <30/30")
 ## Note: This could be grid search models, after which you would obtain the best model with model <- cvmodel@model[[1]]
 #cvmodel <- h2o.randomForest(data=train, validation=valid, x=c(3:ncol(train)), y=2,
-#                            type="BigData", ntree=50, depth=20, seed=myseed)
+#                           type="BigData", ntree=50, depth=20, seed=myseed)
 cvmodel <- h2o.gbm(data=train, validation=valid, x=c(3:ncol(train)), y=2,
-                            n.tree=100, interaction.depth=10)
+                   distribution="bernoulli", n.tree=100, interaction.depth=10)
 #cvmodel <- h2o.deeplearning(data=train, validation=valid, x=c(3:ncol(train)), y=2,
 #                            hidden=c(50,50), max_categorical_features=100000, train_samples_per_iteration=10000, score_validation_samples=10000)
 
@@ -113,14 +117,14 @@ cat("\nLogLoss on validation data:", h2o.logLoss(valid_preds, valid_resp))
 usefullmodel = T #Set to TRUE for higher accuracy 
 if (usefullmodel) {
   cat("\nTraining H2O model on all the training data.")
-#   fullmodel <- h2o.randomForest(data=train_hex, x=c(3:ncol(train)), y=2,
-#                                 type=cvmodel@model$params$type,
-#                                 ntree=cvmodel@model$params$ntree,
-#                                 depth=cvmodel@model$params$depth,
-#                                 seed=cvmodel@model$params$seed)
+#  fullmodel <- h2o.randomForest(data=train_hex, x=c(3:ncol(train)), y=2,
+#                                type=cvmodel@model$params$type,
+#                                ntree=cvmodel@model$params$ntree,
+#                                depth=cvmodel@model$params$depth,
+#                                seed=cvmodel@model$params$seed)
   fullmodel <- h2o.gbm(data=train_hex, x=c(3:ncol(train)), y=2,
-                                n.tree=cvmodel@model$params$n.tree,
-                                interaction.depth=cvmodel@model$params$interaction.depth)
+                       distribution=cvmodel@model$params$distribution,n.tree=cvmodel@model$params$n.tree,
+                       interaction.depth=cvmodel@model$params$interaction.depth)
 #  fullmodel <- h2o.deeplearning(data=train_hex, x=c(3:ncol(train)), y=2,
 #                                hidden=cvmodel@model$params$hidden,
 #                                max_categorical_features=cvmodel@model$params$max_categorical_features,

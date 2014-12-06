@@ -8,7 +8,7 @@ Upload Local Data File
 Uploads a file from the local drive and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.uploadFile(object, path, key = "", parse = TRUE, header, 
+h2o.uploadFile(object, path, key = "", parse = TRUE, header, header_with_hash, 
   sep = "", col.names, silent = TRUE, parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
@@ -27,6 +27,9 @@ The complete URL or normalized file path of the file to be imported. Each row of
 }
   \item{header}{
 (Optional) A logical value indicating whether the first line of the file contains column headers. If left empty, the parser will try to automatically detect this.
+  }
+   \item{header_with_hash}{
+(Optional) A logical value indicating whether the first line of the file contain a column header that begins with a hash character. If left empty, the parser will try to automatically detect this.
   }
   \item{sep}{
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.

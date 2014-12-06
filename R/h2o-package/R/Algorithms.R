@@ -280,7 +280,8 @@ h2o.glm <- function(x, y, data, key = "",
                     variable_importances = FALSE,
                     epsilon = 1e-4,
                     iter.max = 100,
-                    higher_accuracy = FALSE)
+                    higher_accuracy = FALSE,
+                    beta_constraints = NULL)
 {
   args <- .verify_dataxy(data, x, y)
 
@@ -413,6 +414,13 @@ h2o.glm <- function(x, y, data, key = "",
   if (!is.logical(higher_accuracy) || length(higher_accuracy) != 1L || is.na(higher_accuracy))
     stop("'higher_accuracy' must be TRUE / FALSE")
 
+  if (!is.null(beta_constraints)) {
+    if (!inherits(beta_constraints, "data.frame") && !inherits(beta_constraints, "H2OParsedData"))
+      stop(paste("`beta_constraints` must be an H2OParsedData or R data.frame. Got: ", class(beta_constraints)))
+    if (inherits(beta_constraints, "data.frame"))
+      beta_constraints <- as.h2o(data@h2o, beta_constraints)
+  }
+
   params <- list(data@h2o, .h2o.__PAGE_GLM2,
                  destination_key       = key,
                  source                = data@key,
@@ -442,6 +450,8 @@ h2o.glm <- function(x, y, data, key = "",
     params <- c(params, list(prior = prior))
   else if (family == "tweedie")
     params <- c(params, list(tweedie_variance_power = tweedie.p))
+
+  if (!is.null(beta_constraints)) params <- c(params, list(beta_constraints = beta_constraints@key))
 
   res <- do.call(.h2o.__remoteSend, params)
   .h2o.__waitOnJob(data@h2o, res$job_key)
