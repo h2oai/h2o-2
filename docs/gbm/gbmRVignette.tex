@@ -257,23 +257,24 @@ Gradient boosting is a machine learning technique that combines two powerful too
 \\
 \line(1,0){500}
 \\ 
-Initialize $f_{k0} = 0, k = 1,2,\dots,K$ 
+1. Initialize $f_{k0} = 0, k = 1,2,\dots,K$ 
 \\
-For $m=1$ to $M$
+2. For $m=1$ to $M$
 \\
-\indent Set $p_k(x) = \frac{e^{f_k(x)}}{\sum_{l=1}^K e^{f_l(x)}}$ for all $k$
+\indent a. Set $p_k(x) = \frac{e^{f_k(x)}}{\sum_{l=1}^K e^{f_l(x)}}$ for all $k = 1,2\dots, K$
 \\
-\indent For $k=1$ to $K$
+\indent b. For $k=1$ to $K$
 \\
-\indent  Compute $r_{ikm} = y_{ik} - p_k(x_i), \hspace{5pc} i = 1,2,\dots,N$
+\indent \indent i. Compute $r_{ikm} = y_{ik} - p_k(x_i),  i = 1,2,\dots,N$
 \\
-\indent \indent Fit a regression tree to the targets $r_{ikm}, \hspace{5pc} i = 1,2,\dots,N$, giving terminal regions $R_{jim}, \hspace{5pc} 1,2,\dots,J_m$
+\indent \indent ii. Fit a regression tree to the targets $r_{ikm}, i = 1,2,\dots,N$, 
+\par \hspace{3em} giving terminal regions $R_{jim}, 1,2,\dots,J_m$
 \\
-\indent \indent Compute $\gamma_{jkm} = \frac{K-1}{K} \frac{\sum_{x_i \in R_{jkm}} (r_{ikm}}{\sum_{x_i \in R_{jkm}} |r_{ikm}| (1 - |r_{ikm}|)} , \hspace{5pc} j=1,2,\dots,J_m$
+\indent \indent iii. Compute $$\gamma_{jkm} = \frac{K-1}{K} \frac{\sum_{x_i \in R_{jkm}} (r_{ikm}}{\sum_{x_i \in R_{jkm}} |r_{ikm}| (1 - |r_{ikm}|)} , j=1,2,\dots,J_m$$
 \\
-\indent \indent Update $f_{km}(x) = f_{k,m-1}(x) + \sum_{j=1}^{J_m} \gamma_{jkm} I(x \in R_{jkm})$
+\indent \indent iv. Update $f_{km}(x) = f_{k,m-1}(x) + \sum_{j=1}^{J_m} \gamma_{jkm} I(x \in R_{jkm})$
 \\
-Output $f_k^{\hat{}}(x) = f_{kM}(x), \hspace{5pc} k=1,2,\dots,K$
+3. Output $f_k^{\hat{}}(x) = f_{kM}(x),  k=1,2,\dots,K$
 \\
 \line(1,0){500}
 \\
