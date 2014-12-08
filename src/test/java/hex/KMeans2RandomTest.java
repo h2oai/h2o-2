@@ -72,8 +72,7 @@ public class KMeans2RandomTest extends TestUtil {
                     score = m.score(frame);
                     ref = UKV.get(m._clustersKey);
                     for (long j = 0; j < score.numRows(); ++j) {
-                      org.junit.Assert.assertTrue(score.anyVec().at8(j) >= 0 && score.anyVec().at8(j) < clusters); //check sanity first
-//                      org.junit.Assert.assertTrue(score.anyVec().at8(j) == ref.anyVec().at8(j)); //check actual cluster assignment PUB-992
+                      org.junit.Assert.assertTrue(score.anyVec().at8(j) >= 0 && score.anyVec().at8(j) < clusters); //check sanity
                     }
 
                     Log.info("Parameters combination " + count + ": PASS");

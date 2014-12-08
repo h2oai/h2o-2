@@ -17,6 +17,7 @@ abstract public class Parse extends Request {
   private   final ParserType     _parserType= new ParserType(PARSER_TYPE);
   private   final Separator      _separator = new Separator(SEPARATOR);
   private   final Bool           _header    = new Bool(HEADER,false,"Use first line as a header");
+  private   final Bool           _hashHeader= new Bool("header_with_hash",false,"Header begins with #"); // for Informatica output
   protected final Bool           _sQuotes   = new Bool("single_quotes",false,"Enable single quotes as field quotation character");
   protected final HeaderKey      _hdrFrom   = new HeaderKey("header_from_file",false);
   protected final Str            _excludeExpression    = new Str("exclude","");
@@ -29,6 +30,7 @@ abstract public class Parse extends Request {
   public Parse() {
     _excludeExpression.setRefreshOnChange();
     _header.setRefreshOnChange();
+    _hashHeader.setRefreshOnChange();
     _blocking._hideInQuery = true;
   }
 
@@ -74,6 +76,8 @@ abstract public class Parse extends Request {
       final Pattern exclude;
       if(_hdrFrom.specified())
         _header.setValue(true);
+      if(_hashHeader.value())
+        _header.setValue(true);
       exclude = _excludeExpression.specified()?makePattern(_excludeExpression.value()):null;
 
       // boolean badkeys = false;
@@ -95,12 +99,10 @@ abstract public class Parse extends Request {
         hKey = _hdrFrom.value()._key;
         _header.setValue(true);
       }
-      boolean checkHeader = !_header.specified();
-      boolean hasHeader = _header.value();
-      CustomParser.ParserSetup userSetup =  new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader, _sQuotes.value());
+      CustomParser.ParserSetup userSetup =  new CustomParser.ParserSetup(_parserType.value(),_separator.value(),_header.value(), _hashHeader.value(), _sQuotes.value());
       CustomParser.PSetupGuess setup = null;
       try {
-       setup = GuessSetup.guessSetup(keys, hKey, userSetup,checkHeader);
+       setup = GuessSetup.guessSetup(keys, hKey, userSetup,!_header.specified());
       }catch(GuessSetup.ParseSetupGuessException e){
         throw new IllegalArgumentException(e.getMessage());
       }

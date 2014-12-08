@@ -675,7 +675,7 @@ NEXT_CHAR:
       int lineEnd = offset;
       ++offset;
       if ((offset < bits.length) && (bits[offset] == CHAR_LF)) ++offset;
-      if (bits[lineStart] == '#') continue; // Ignore      comment lines
+      if (bits[lineStart] == '#' && !setup._hashHeader) continue; // Ignore comment lines unless header set to start with a hash character
       if (bits[lineStart] == '@') continue; // Ignore ARFF comment lines
       if (lineEnd>lineStart){
         String str = new String(bits, lineStart,lineEnd-lineStart).trim();

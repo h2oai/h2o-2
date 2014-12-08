@@ -7,8 +7,8 @@ Import Local Data File
 Imports a file from the local path and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.importFile(object, path, key = "", parse = TRUE, header, sep = "", col.names,
-               parser_type="AUTO")
+h2o.importFile(object, path, key = "", parse = TRUE, header, header_with_hash, sep = "",
+               col.names, parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -26,6 +26,9 @@ The path of the file to be imported. Each row of data appears as one line of the
 }
   \item{header}{
 (Optional) A logical value indicating whether the first row is the column header. If missing, H2O will automatically try to detect the presence of a header.
+  }
+   \item{header_with_hash}{
+(Optional) A logical value indicating whether the first row is a column header that starts with a hash character. If missing, H2O will automatically try to detect the presence of a header.
   }
   \item{sep}{
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.

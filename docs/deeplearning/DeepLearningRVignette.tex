@@ -484,9 +484,9 @@ model = h2o.getModel(h2o_server, key)
 \noindent
 to retrieve a model from its H2O key. This command is useful, for example, if you have created an H2O model using the web interface and wish to proceed with the modeling process in R.
 
-\subsection{Achieving state-of-the-art performance} \label{3.6}
+\subsection{Achieving world-record performance} \label{3.6}
 
-Without distortions, convolutions, or other advanced image processing techniques, the best-ever published test set error for the MNIST dataset is $0.83$\% by Microsoft. After training for $2,000$ epochs (took about 4 hours) on 4 compute nodes (with \texttt{l1}=1e-5 and \texttt{input\_dropout=0.2}) we obtain $0.87\%$ test set error, which is a world-record-level result (within the statistical noise of $\approx 0.1$\% with 10,000 test points), notably achieved using a distributed configuration. Accuracies around $1\%$ test set errors are typically achieved within 1 hour when running on 1 node.
+Without distortions, convolutions, or other advanced image processing techniques, the best-ever published test set error for the MNIST dataset is $0.83$\% by Microsoft. After training for $2,000$ epochs (took about 4 hours) on 4 compute nodes, we obtain $0.87\%$ test set error and after training for $7,600$ epochs (took about 9 hours) on 10 nodes, we obtain $0.83\%$ test set error, which is the current world-record, notably achieved using a distributed configuration and with a simple 1-liner from R. Details can be found in our \href{http://learn.h2o.ai/content/hands-on_training/deep_learning.html}{hands-on tutorial}. Accuracies around $1\%$ test set errors are typically achieved within 1 hour when running on 1 node.
 The parallel scalability of H2O for the MNIST dataset on 1 to 63 compute nodes is shown in the figure below.
 \begin{figure}[h!]
 \centering

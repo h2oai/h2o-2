@@ -69,6 +69,7 @@ public abstract class CustomParser extends Iced {
     public final ParserType _pType;
     public final byte _separator;
     public boolean _header;
+    public boolean _hashHeader;
     public boolean _singleQuotes;
     public String [] _columnNames;
     public final int _ncols;
@@ -107,6 +108,7 @@ public abstract class CustomParser extends Iced {
       _pType = ParserType.AUTO;
       _separator = CsvParser.AUTO_SEP;
       _header = false;
+      _hashHeader = false;
       _ncols = 0;
       _columnNames = null;
     }
@@ -117,13 +119,15 @@ public abstract class CustomParser extends Iced {
       _pType = t;
       _separator = sep;
       _header = header;
+      _hashHeader = false;
       _columnNames = null;
       _ncols = 0;
     }
-    public ParserSetup(ParserType t, byte sep, boolean header, boolean singleQuotes) {
+    public ParserSetup(ParserType t, byte sep, boolean header, boolean hashHeader, boolean singleQuotes) {
       _pType = t;
       _separator = sep;
-      _header = header;
+      _header = header || hashHeader;
+      _hashHeader = hashHeader;
       _columnNames = null;
       _ncols = 0;
       _singleQuotes = singleQuotes;
@@ -133,6 +137,7 @@ public abstract class CustomParser extends Iced {
       _separator = sep;
       _ncols = ncolumns;
       _header = header;
+      _hashHeader = false;
       _columnNames = columnNames;
       _singleQuotes = singleQuotes;
     }
