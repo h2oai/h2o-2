@@ -227,6 +227,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PutValue());
     registerRequest(new Remove());
     registerRequest(new RemoveAll());
+    registerRequest(new DeleteHDFSDir());
     registerRequest(new RemoveAck());
     registerRequest(new SpeeDRFModelView());
     registerRequest(new SpeeDRFProgressPage());

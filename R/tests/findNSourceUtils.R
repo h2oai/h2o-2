@@ -195,3 +195,16 @@ if (exists("TEST_ROOT_DIR")) {
 options(echo=.origEchoValue)
 rm(list=c(".origEchoValue"))
 
+# -------------------- Remove directory from HDFS - meant to be used for testing --------------------
+
+#Internal.R Extensions:
+.h2o.__page_DeleteHDFSDir = "2/DeleteHDFSDir.json"
+
+h2o.deleteHDFSDir <- function(client, path) {
+  hdfsPath = ifelse(grep("hdfs://", path) == 1, TRUE, FALSE)
+  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+  if (!is.character(path) || !hdfsPath) stop('path must be a hdfs path')
+  
+  res = .h2o.__remoteSend(client, .h2o.__page_DeleteHDFSDir, path = path)
+  res
+}

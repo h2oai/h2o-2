@@ -1,5 +1,15 @@
 package water.api;
 
+import java.io.*;
+import java.util.*;
+import java.net.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.util.*;
+
+
 import static water.util.FSUtils.isHdfs;
 import static water.util.FSUtils.isS3N;
 
@@ -48,13 +58,24 @@ public class SaveModel extends Func {
       parentDir.mkdirs();
       // Save parent model
       new Model2FileBinarySerializer().save(model, new File(parentDir, model._key.toString()));
+      // Write to model_names
+      File model_names = new File(parentDir, "model_names");
+      FileOutputStream is = new FileOutputStream(model_names);
+      OutputStreamWriter osw = new OutputStreamWriter(is);
+      BufferedWriter br = new BufferedWriter(osw);
+      br.write(model._key.toString());
+      br.newLine();
+      // Save cross validation models
       if (save_cv) {
         Model[] models = getCrossValModels(model);
         System.out.println(models);
         for (Model m : models) {
           new Model2FileBinarySerializer().save(m, new File(parentDir, m._key.toString()));
+          br.write(m._key.toString());
+          br.newLine();
         }
       }
+      br.close();
     } catch( IOException e ) {
       throw new IllegalArgumentException("Cannot save file " + path, e);
     }
@@ -65,14 +86,24 @@ public class SaveModel extends Func {
     Path parentDir = new Path(path);
     try {
       FileSystem fs = FileSystem.get(parentDir.toUri(), PersistHdfs.CONF);
+      if (force && fs.exists(parentDir)) fs.delete(parentDir);
       fs.mkdirs(parentDir);
+      // Save parent model
       new Model2HDFSBinarySerializer(fs, force).save(model, new Path(parentDir, model._key.toString()));
+      // Save parent model key to model_names file
+      Path model_names = new Path(parentDir, "model_names");
+      BufferedWriter br = new BufferedWriter(new OutputStreamWriter(fs.create(model_names,true)));
+      br.write(model._key.toString());
+      br.newLine();
       if (save_cv) {
         Model[] models = getCrossValModels(model);
         for (Model m : models ) {
           new Model2HDFSBinarySerializer(fs, force).save(m, new Path(parentDir, m._key.toString()));
+          br.write(m._key.toString());
+          br.newLine();
         }
       }
+      br.close();
     } catch( IOException e ) {
       throw new IllegalArgumentException("Cannot save file " + path, e);
     }
