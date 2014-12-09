@@ -157,9 +157,7 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
 
 4.  The build produces target/h2o.jar.  Now, run h2o.jar from the
     command line.  Xmx is the amount of memory given to
-    H2O. If your data set is large, increase the  Xmx from the default of 2. As a rule, the amount of
-    memory given should be about 4 times the size of your data, but no
-    larger than the total memory of your computer. 
+    H2O. If your data set is large, increase the  Xmx from the default of 2. As a rule, the amount of memory given should be about 4 times the size of your data, but no larger than the total memory of your computer. 
 
  ::
 

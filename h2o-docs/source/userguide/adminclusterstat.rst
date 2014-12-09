@@ -1,4 +1,4 @@
-Admin: Cluster Status
+Admin: Cluster Status 
 =========================
 
 To verify the status and location of a cluster, select **Cluster Status** from the drop-down **Admin** menu. In the table that displays, the information for each node in an H2O cloud displays in a separate row. A description for each column is provided below.

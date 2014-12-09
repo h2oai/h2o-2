@@ -2,9 +2,9 @@
 Score: Hit Ratio
 =================
 
-Hit Ratio is the number of times that a correct prediciton was made in
-ratio to the number of total prediciton names. For example if 20
-predidtions were made correctly out of 35 predictions, the hit ratio
+Hit Ratio is the number of times that a correct prediction was made in
+ratio to the number of total prediction names. For example if 20
+predictions were made correctly out of 35 predictions, the hit ratio
 is 20:35 or .57. 
 
 

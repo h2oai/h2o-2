@@ -33,10 +33,10 @@ parsed) are displayed across the top of the page.
 
 **Type** 
   Specifies the type of data contained in a column. 
-  *Int*: Integer; discrete numeric data (1, 2, 3, 4, ...)
-  *Real*: Continuous real data (1, 1.01, 1.1, 1.3, 1.55, ...)
-  *Enum*: Enumerative, Factor or Categorical data. (Red, Green, Blue,
-  ...)
+  
+  - *Int*: Integer; discrete numeric data (1, 2, 3, 4, ...)
+  - *Real*: Continuous real data (1, 1.01, 1.1, 1.3, 1.55, ...)
+  - *Enum*: Enumerative, Factor or Categorical data. (Red, Green, Blue,...)
 
 **Min**
   The minimum value in a column of numeric data. 
