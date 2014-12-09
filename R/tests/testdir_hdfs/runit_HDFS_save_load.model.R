@@ -51,11 +51,16 @@ covtype.glm
 # covtype.glm.path <- h2o.saveModel(covtype.glm, dir = model_path)
 myName <- paste(Sys.info()["user"], "GLM_model", sep = "_")
 covtype.glm.path <- h2o.saveModel(covtype.glm, dir = model_path, name = myName, force = TRUE)
+
+# All keys removed to test that cross validation models are actually being loaded
+h2o.removeAll(object = conn)
+
 covtype.glm2 <- h2o.loadModel(conn, covtype.glm.path)
 
+invisible(h2o.deleteHDFSDir(conn, covtype.glm.path))
+
 expect_equal(class(covtype.glm), class(covtype.glm2))
-expect_equal(covtype.glm@data, covtype.glm2@data)
 expect_equal(covtype.glm@model, covtype.glm2@model)
-expect_equal(covtype.glm@xval, covtype.glm2@xval)
+expect_equal(length(covtype.glm@xval), length(covtype.glm2@xval))
 
 PASS_BANNER()

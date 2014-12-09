@@ -29,11 +29,10 @@ Data: Quantiles (Request)
 **Multiple Pass**
   
   Only 3 possible entries: 
-  *0*: Calculate the best approximation of the requested quantile in
-  one pass. 
-  *1*: Return the exact result (with a maximum iteration of 16 passes)
-  *2*: Return both a single pass approximation and multi-pass exact
-  answer. 
+  
+  - *0*: Calculate the best approximation of the requested quantile in one pass. 
+  - *1*: Return the exact result (with a maximum iteration of 16 passes)
+  - *2*: Return both a single pass approximation and multi-pass exact answer. 
 
 **Interpolation Type**
 
@@ -41,8 +40,8 @@ Data: Quantiles (Request)
   to interpolate the true value of the quantile. This can be done by
   mean interpolation, or linear interpolation. 
 
-  *2*: Mean interpolation
-  *7*: Linear interpolation
+  - *2*: Mean interpolation
+  - *7*: Linear interpolation
 
 
   

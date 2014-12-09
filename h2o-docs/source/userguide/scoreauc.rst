@@ -28,9 +28,10 @@ Score: Area Under Curve
 
   The criterion to be used in calculating the AUC. 
   Current options include: 
-  maxixmum F1 
-  maximum Accuracy
-  maximum Precision
-  maximum Recall
-  maximum Specificity
-  minimization of Per Class Error
+  
+  - maximum F1 
+  - maximum Accuracy
+  - maximum Precision
+  - maximum Recall
+  - maximum Specificity
+  - minimization of Per Class Error
