@@ -60,10 +60,11 @@ public class DeepLearningSpiralsTest extends TestUtil {
           p.score_training_samples = 1000;
           p.score_validation_samples = 10000;
           p.shuffle_training_data = false;
-          p.force_load_balance = true; //multi-threaded
+          p.force_load_balance = false;
           p.replicate_training_data = false;
           p.destination_key = dest;
           p.adaptive_rate = true;
+          p.reproducible = true;
           p.rho = 0.99;
           p.epsilon = 5e-3;
           p.invoke();
@@ -71,22 +72,11 @@ public class DeepLearningSpiralsTest extends TestUtil {
 
         // score and check result
         {
-          DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
-          Frame pred = mymodel.score(frame);
-          water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
-          CM.actual = frame;
-          CM.vactual = frame.lastVec();
-          CM.predict = pred;
-          CM.vpredict = pred.vecs()[0];
-          CM.invoke();
-          StringBuilder sb = new StringBuilder();
-          CM.toASCII(sb);
-          double error = new ConfusionMatrix(CM.cm).err();
-          Log.info(sb);
+          DeepLearningModel mymodel = UKV.get(dest);
+          double error = mymodel.error();
           if (error >= 0.025) {
             Assert.fail("Classification error is not less than 0.025, but " + error + ".");
           }
-          pred.delete();
           mymodel.delete();
           mymodel.delete_best_model();
         }
