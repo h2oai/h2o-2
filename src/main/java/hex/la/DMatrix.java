@@ -12,6 +12,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.NewChunk.Value;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.ArrayList;
@@ -110,19 +111,19 @@ public class DMatrix  {
                 v.add2Chunk(t);
               }
             }
-            addToPendingCount(tgtChunks.length - 1);
+//            addToPendingCount(tgtChunks.length - 1);
             for (int j = 0; j < tgtChunks.length; ++j) { // finalize the target chunks and close them
               final int fj = j;
-              new CountedCompleter(this) {
-                @Override
-                public void compute() {
+//              new CountedCompleter(this) {
+//                @Override
+//                public void compute() {
                   tgtChunks[fj].addZeros((int) (espc[fi + 1] - espc[fi]) - tgtChunks[fj]._len);
                   tgtChunks[fj].close(_fs);
                   tgtChunks[fj] = null;
-                  tryComplete();
+//                  tryComplete();
                 }
-              }.fork();
-            }
+//              }.fork();
+//            }
 //          }
 //        }.fork();
       }
@@ -215,18 +216,19 @@ public class DMatrix  {
       _z = new Frame(_x.anyVec().makeZeros(_y.numCols()));
       int total_cores = H2O.CLOUD.size()*H2O.NUMCPUS;
       int chunksPerCol = _y.anyVec().nChunks();
-      int maxP = 128*total_cores/chunksPerCol;
+      int maxP = 256*total_cores/chunksPerCol;
+      Log.info("maxP = " + maxP);
       _cntr = new AtomicInteger(maxP-1);
       addToPendingCount(2*_y.numCols()-1);
       for(int i = 0; i < Math.min(_y.numCols(),maxP); ++i)
-       forkVecTask(i);
+        forkVecTask(i);
     }
 
     private void forkVecTask(final int i) {
       new GetNonZerosTsk(new H2OCallback<GetNonZerosTsk>(this) {
         @Override
         public void callback(GetNonZerosTsk gnz) {
-          new VecTsk(new Callback(), _progressKey, gnz._vals).exec(Utils.append(_x.vecs(gnz._idxs), _z.vec(i)));
+          new VecTsk(new Callback(), _progressKey, gnz._vals).asyncExec(Utils.append(_x.vecs(gnz._idxs), _z.vec(i)));
         }
       }).asyncExec(_y.vec(i));
     }
