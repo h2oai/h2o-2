@@ -585,6 +585,28 @@ as.Date.H2OParsedData <- function(x, format, ...) {
   return(res)
 }
 
+h2o.setTimezone <- function(client, tz) {
+  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+  if (!is.character(tz)) stop('tz must be a string')
+
+  res = .h2o.__remoteSend(client, .h2o.__PAGE_SETTIMEZONE, tz = tz)
+  res$tz
+}
+
+h2o.getTimezone <- function(client) {
+  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+
+  res = .h2o.__remoteSend(client, .h2o.__PAGE_GETTIMEZONE)
+  res$tz
+}
+
+h2o.listTimezones <- function(client) {
+  if(class(client) != "H2OClient") stop("client must be a H2OClient object")
+
+  res = .h2o.__remoteSend(client, .h2o.__PAGE_LISTTIMEZONES)
+  cat(res$tzlist)
+}
+
 diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
   if(!is.numeric(lag)) stop("lag must be numeric")
   if(!is.numeric(differences)) stop("differences must be numeric")

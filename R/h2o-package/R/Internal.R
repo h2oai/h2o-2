@@ -133,6 +133,9 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_INSPECTOR = "2/Inspector.json"
 .h2o.__PAGE_ANOMALY = "2/Anomaly.json"
 .h2o.__PAGE_DEEPFEATURES = "2/DeepFeatures.json"
+.h2o.__PAGE_SETTIMEZONE = "2/SetTimezone.json"
+.h2o.__PAGE_GETTIMEZONE = "2/GetTimezone.json"
+.h2o.__PAGE_LISTTIMEZONES = "2/ListTimezones.json"
 
 .h2o.__PAGE_CoxPH = "2/CoxPH.json"
 .h2o.__PAGE_CoxPHProgress = "2/CoxPHProgressPage.json"
