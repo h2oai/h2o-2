@@ -494,7 +494,7 @@ h2o.loadModel <- function(object, path="") {
     # Read models from model_names meta file
     if(length(grep("hdfs://", path)) == 1) {
       fileConn = paste(path, "model_names", sep = "/")
-      model_names.hex = h2o.importFile(object = conn, path = fileConn)
+      model_names.hex = h2o.importFile(object = object, path = fileConn)
       model_names = as.matrix(model_names.hex)
       h2o.rm(object, model_names.hex@key)
     } else {
