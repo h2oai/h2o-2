@@ -391,8 +391,9 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
           final VectorGroup vg = vecs[0].group();
           _appendables = new AppendableVec[_noutputs];
           appendableChunks = new NewChunk[_noutputs];
+          AppendableVec.Espc espc = new AppendableVec.Espc(new long[4]);
           for(int i = 0; i < _appendables.length; ++i){
-            _appendables[i] = new AppendableVec(vg.vecKey(_vid+i));
+            _appendables[i] = new AppendableVec(vg.vecKey(_vid+i),espc,0);
             appendableChunks[i] = (NewChunk)_appendables[i].chunkForChunkIdx(_lo);
           }
         }
