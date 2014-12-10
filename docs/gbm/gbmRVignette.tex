@@ -345,7 +345,7 @@ Since it is meant just as a trial run, the model contains only 100 trees. In thi
 
 \subsubsection{Extracting and handling the results}  
 
-Now, extract the parameters of the model, examine the scoring process, and make predictions on new data.
+Now, extract the parameters of the model, examine the scoring process, and make predictions on the new data.
 
 \begin{spverbatim}
 #View the specified parameters of your GBM model
@@ -359,7 +359,7 @@ air.model
 The second command ({\texttt{air.model}}) returns the trained model's training and validation errors. 
 \\
 \\
-After generating a satisfactory model, use the \texttt{h2o.predict()} command to compute and store predictions on new data, which can then be used for further tasks in the interactive modeling process.
+After generating a satisfactory model, use the \texttt{h2o.predict()} command to compute and store predictions on the new data, which can then be used for further tasks in the interactive modeling process.
 \begin{spverbatim}
 #Perform classification on the held out data
 prediction = h2o.predict(air.model, newdata=air_test.hex)
@@ -383,7 +383,7 @@ importances on the web interface.
 
 \subsubsection{Java model}  
 
-To access Java (POJO) code to use to build the current model in Java, click \textsc{Java model} button in the top right of a model summary page. If the model is small enough, the code for the model displays within the GUI; larger models can be inspected after downloading the model.
+To access Java (POJO) code to use to build the current model in Java, click the \textsc{Java model} button in the top right of a model summary page. If the model is small enough, the code for the model displays within the GUI; larger models can be inspected after downloading the model.
 \\
 \\
 To download the model: 
