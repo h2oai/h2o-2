@@ -2,15 +2,21 @@ package water.fvec;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.Future;
 import java.util.zip.*;
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinTask;
+import jsr166y.ForkJoinWorkerThread;
+import jsr166y.RecursiveAction;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingSetInt;
 import water.parser.*;
+import water.parser.CustomParser.DataOut;
 import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
 import water.parser.CustomParser.StreamDataOut;
@@ -300,28 +306,36 @@ public final class ParseDataset2 extends Job {
     private SVFTask( Frame f ) { _f = f; }
     @Override public void map(Key key) {
       Vec v0 = _f.anyVec();
+      ArrayList<RecursiveAction> rs = new ArrayList<RecursiveAction>();
       for( int i = 0; i < v0.nChunks(); ++i ) {
         if( !v0.chunkKey(i).home() ) continue;
-        // First find the nrows as the # rows of non-missing chunks; done on
-        // locally-homed chunks only - to keep the data distribution.
-        int nlines = 0;
-        for( Vec vec : _f.vecs() ) {
-          Value val = H2O.get(vec.chunkKey(i)); // Local-get only
-          if( val != null ) {
-            nlines = ((Chunk)val.get())._len;
-            break;
+        final int fi = i;
+        rs.add(new RecursiveAction() {
+          @Override
+          protected void compute() {
+            // First find the nrows as the # rows of non-missing chunks; done on
+            // locally-homed chunks only - to keep the data distribution.
+            int nlines = 0;
+            for( Vec vec : _f.vecs() ) {
+              Value val = H2O.get(vec.chunkKey(fi)); // Local-get only
+              if( val != null ) {
+                nlines = ((Chunk)val.get())._len;
+                break;
+              }
+            }
+            final int fnlines = nlines;
+            // Now fill in appropriate-sized zero chunks
+            for(int j = 0; j < _f.numCols(); ++j) {
+              Vec vec = _f.vec(j);
+              Key k = vec.chunkKey(fi);
+              Value val = H2O.get(k);   // Local-get only
+              if( val == null )         // Missing?  Fill in w/zero chunk
+                H2O.putIfMatch(k, new Value(k, new C0DChunk(0, fnlines)), null);
+            }
           }
-        }
-
-        // Now fill in appropriate-sized zero chunks
-        for( Vec vec : _f.vecs() ) {
-          Key k = vec.chunkKey(i);
-          if( !k.home() ) continue; // Local keys only
-          Value val = H2O.get(k);   // Local-get only
-          if( val == null )         // Missing?  Fill in w/zero chunk
-            H2O.putIfMatch(k, new Value(k,new C0DChunk(0, nlines)), null);
-        }
+        });
       }
+      ForkJoinTask.invokeAll(rs);
     }
     @Override public void reduce( SVFTask drt ) {}
   }
@@ -573,7 +587,7 @@ public final class ParseDataset2 extends Job {
         assert false:"encountered empty file during multifile parse? should've been filtered already";
         return; // should not really get here
       }
-      final int chunkStartIdx = _fileChunkOffsets.get(key)._val;
+      final int chunkOff = _fileChunkOffsets.get(key)._val;
       Compression cpr = Utils.guessCompressionMethod(bits);
       CustomParser.ParserSetup localSetup = GuessSetup.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
       // Local setup: nearly the same as the global all-files setup, but maybe
@@ -616,22 +630,24 @@ public final class ParseDataset2 extends Job {
           ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
           ZipInputStream zis = new ZipInputStream(vec.openStream(pmon));
           ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
+          // SVMLightFVecDataOut(VectorGroup vg, int cidx, AppendableVec [] avs, int vecIdStart, int chunkOff,  Enum [] enums)
+
           // There is at least one entry in zip file and it is not a directory.
           if( ze != null && !ze.isDirectory() ) 
-            _dout = streamParse(zis,localSetup, _vecIdStart, chunkStartIdx, pmon);
+            _dout[_lo] = streamParse(zis, localSetup, makeDout(localSetup,chunkOff,vec.nChunks()), pmon);
           else zis.close();       // Confused: which zipped file to decompress
           // set this node as the one which rpocessed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
-            _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
+            _chunk2Enum[chunkOff + i] = H2O.SELF.index();
           break;
         }
         case GZIP:
           // Zipped file; no parallel decompression;
           ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
-          _dout = streamParse(new GZIPInputStream(vec.openStream(pmon)),localSetup,_vecIdStart, chunkStartIdx, pmon);
+          _dout[_lo] = streamParse(new GZIPInputStream(vec.openStream(pmon)),localSetup,makeDout(localSetup,chunkOff,vec.nChunks()), pmon);
           // set this node as the one which processed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
-            _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
+            _chunk2Enum[chunkOff + i] = H2O.SELF.index();
           break;
         }
       } catch( IOException ioe ) {
@@ -691,7 +707,7 @@ public final class ParseDataset2 extends Job {
     private static class DParse extends MRTask2<DParse> {
       private final CustomParser.ParserSetup _setup;
       private final int _vecIdStart;
-      private final int _startChunkIdx; // for multifile parse, offset of the first chunk in the final dataset
+      private final int _chunkOff; // for multifile parse, offset of the first chunk in the final dataset
       private final VectorGroup _vg;
       private transient AppendableVec [] _appendables;
       private FVecDataOut _dout;
@@ -707,7 +723,7 @@ public final class ParseDataset2 extends Job {
         _vg = vg;
         _setup = setup;
         _vecIdStart = vecIdstart;
-        _startChunkIdx = startChunkIdx;
+        _chunkOff = startChunkIdx;
         _outerMFPT = mfpt;
         _eKey = mfpt._eKey;
         _progress = mfpt._progress;

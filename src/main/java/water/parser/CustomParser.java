@@ -286,6 +286,7 @@ public abstract class CustomParser extends Iced {
     StreamDataOut reduce(StreamDataOut dout);
     StreamDataOut close();
     StreamDataOut close(Futures fs);
+    int nChunks();
   }
 
   public static class StreamData implements CustomParser.DataIn {

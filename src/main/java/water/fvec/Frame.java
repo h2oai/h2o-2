@@ -1,6 +1,9 @@
 package water.fvec;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinTask;
+import jsr166y.ForkJoinWorkerThread;
+import jsr166y.RecursiveAction;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.exec.Flow;
@@ -231,6 +234,7 @@ public class Frame extends Lockable<Frame> {
         return i;
     return -1;
   }
+
 
   // Return Frame 'f' if 'f' is compatible with 'this'.
   // Return a new Frame compatible with 'this' and a copy of 'f's data otherwise.
