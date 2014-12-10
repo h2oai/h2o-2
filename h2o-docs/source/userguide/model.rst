@@ -3,9 +3,8 @@ Model
 =====
 
 
-For detailed information on the specifications of each model, please
-see :ref:`Data_Science`. Tutorials for each algorithm, and model
-specification through R, are available in the `Tutorial
+For detailed information on the specifications of each model, refer to :ref:`Data_Science`. Tutorials for each algorithm and model
+specifications through R are available in the `Tutorial
 Documentation <http://docs.h2o.ai/tutorial/top.html>`_. 
 
 Specify a model by making a selection from the list of algorithms at the top of the **Inspect** page when data are parsed or by selecting the appropriate model from the drop-down **Model** menu. 
@@ -46,6 +45,6 @@ are returned.
 The grid search results display in a table, showing the combination of tuning
 parameters used for each model and basic model evaluation information,
 as well as a link to each model. To access the details of each
-model, click on the model links in the table.
+model, click the model links in the table.
 
 

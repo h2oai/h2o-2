@@ -4,16 +4,15 @@ Data: Import Files
 ====================
 
 In the path field specify an absolute path to the
-file. For example: Users/UserName/Work/dataset.csv. Press submit. 
+file(for example: *Users/UserName/Work/dataset.csv*) and click **Submit**. 
 
-On the resulting screen the specified path will appear as a
-highlighted link. Clicking on the path automatically parses the 
-data. 
+The path can be to a local file, a URL, or S3 object.
 
-Import files also enables users to import data from S3 and URL.
+On the page that displays after clicking **Submit**, the specified path appears as a
+highlighted link. To automatically parse the data, click the link. 
 
+To refresh the page and keep the current data, click **Refresh**. To remove the current data, click **Reset**. 
 
 **Path**
 
-  The file path to S3, HDFS, NFS, or URL where the data are to be
-  imported from. 
+  The file path location of the S3, HDFS, NFS, or URL where the data is stored. 

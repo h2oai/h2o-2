@@ -1,12 +1,12 @@
 General
 =======
 
-H\ :sub:`2`\ O System Requirements
+H\ :sub:`2`\ O System Requirements 
 ----------------------------------
 
 - 64-bit `Java Runtime Environment <https://www.java.com/en/download/>`_ (version 1.6 or later) for users who only want to run H2O; for users who want to compile their own builds, we strongly recommend using `Java Development Kit 1.7 <www.oracle.com/technetwork/java/javase/downloads/>`_ or later.
 
-- At least 2g of RAM is needed on the machine running H2O. However, the amount of memory needed for H2O to run efficiently depends on the size and complexity of the data and the algorithm employed. A good heuristic is that the amount of memory allocated to H2O should be at least four times the size of the data. 
+- At least 2g of RAM is needed to run H2O. However, the amount of memory needed for H2O to run efficiently depends on the size and complexity of the data and the algorithm employed. A good heuristic is that the amount of memory allocated to H2O should be at least four times the size of the data. 
 
 - A reasonably modern web browser (for example, the latest version of Firefox, Safari, or Internet Explorer.)
 

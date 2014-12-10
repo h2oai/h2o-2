@@ -3,55 +3,51 @@
 Data: Inspect (Return)
 ========================
 
-The Data Inspect page is accessed by going to the **Data** drop down
-menu, selecting **Inspect** and specifying the key associated with the
-data to be examined. 
+To view the Data Inspect page, go to the drop-down **Data**
+menu, select **Inspect**, and specify the key associated with the
+data. 
 
-Data Indices or Header (if included when data were imported and
-parsed) are displayed across the top of the page. 
+The Data Indices or Header (if included when data were imported and
+parsed) display at the top of the page. 
 
 **Jump to Row**
-  Users can automatically move to a specified point in the data by
-  entering an row index number and pressing the **Jump to Row**
+  To automatically move to a specified point in the data, 
+  enter an row index number and click the **Jump to Row**
   button. 
 
 **Info and Scrolling Buttons**
-  Selecting Info returns the front page and summary
-  information. Selecting any one of integer numbers displayed across
-  the top will take the user to that page in the data.
+ To display the front page and summary information, click **info**. Select any of the numbers displayed to jump to that page in the data.
 
 **Change Type** 
-  Users may wish to specify whether the data in a particular column
-  should be treated as numeric or as factors. Where the default
-  assumption about the data does not reflect the correct specification
-  users can change data type by clicking the button **As Factor** in
+  To specify how the data in a particular column
+  should be treated (as numeric or as factors), click the buttons below the headers. If the data type that was automatically selected during data parsing is not the correct specification, change data type by clicking the button **As Factor** for
   integer columns, or reverse this change by clicking **As Integer**. 
-  Alpha-numeric or alpha data are automatically classified as factor
-  data, and cannot be treated as numeric, and continuous real data
+  Alphanumeric or alphabetical data are automatically classified as factor
+  data and cannot be treated as numeric, and continuous real data
   cannot be converted to factor data because the number of possible
   factor levels is infinite. 
 
 **Type** 
   Specifies the type of data contained in a column. 
   
-  - *Int*: Integer; discrete numeric data (1, 2, 3, 4, ...)
-  - *Real*: Continuous real data (1, 1.01, 1.1, 1.3, 1.55, ...)
-  - *Enum*: Enumerative, Factor or Categorical data. (Red, Green, Blue,...)
+   - *Int*: Integer; discrete numeric data (1, 2, 3, 4, ...)
+   - *Real*: Continuous real data (1, 1.01, 1.1, 1.3, 1.55, ...)
+   - *Enum*: Enumerative, Factor or Categorical data. (Red, Green, Blue,...)
 
 **Min**
-  The minimum value in a column of numeric data. 
+  Specifies the minimum value in a column of numeric data. 
 
 **Max**
-  The maximum value in a column of numeric data. 
+  Specifies the maximum value in a column of numeric data. 
 
 **Mean** 
-  The average value of the data in a numeric column. 
+  Specifies the average value of the data in a numeric column. 
 
 **Cardinality** 
-  The number of unique levels in a column of factor data. 
+  Specifies the number of unique levels in a column of factor data. 
 
 **Missing**
-  The number of missing values in a column of data. 
+  Specifies the number of missing values in a column of data. 
 
 
 .. image:: inspect.png
