@@ -3,19 +3,17 @@
 Data: Export Files
 ====================
 
-Data files can be exported to S3, HDFS or NFS. 
+Data files can be exported as S3, HDFS or NFS. 
 
 **Src key** 
 
-  The key associated with the data to be exported. 
+  Enter the key associated with the data. 
 
 
 **Path**
 
-  The file path to S3, HDFS, NFS, or URL where the data are to be
-  exported to. 
+  Enter the file path to S3, HDFS, NFS, or URL for the location of the data. 
 
 **Force** 
 
-  A checkbox option that, when checked, will overwrite existing
-  files. 
+  To overwrite existing files, check this checkbox. 

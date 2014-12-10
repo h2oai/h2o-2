@@ -1,7 +1,7 @@
 .. _GettingStartedFromaZipFile: 
 
-Getting Started From a Downloaded Zip File
-==========================================
+Getting Started From a Downloaded Zip File 
+============================================
 
 
 Quick Start Video
@@ -15,7 +15,7 @@ Quick Start Video
 """""""""""""""""
 
 Important Notes
-""""""""""""   
+""""""""""""""""""   
 
 Java is a pre-requisite for H2O; if you do not already have Java installed, make sure to install it before installing H2O. Java is available free on the web,
 and can be installed quickly. Although Java is required to 
@@ -32,7 +32,7 @@ For more command line options, continue to read :ref:`Javahelp`.
 
 
 Step-by-Step Walk-Through
-"""""""""""""""""""""""""
+"""""""""""""""""""""""""""
 1. Download the .zip file containing the latest release of H2O from the
    H2O `downloads page <http://h2o.ai/download/>`_.
 
