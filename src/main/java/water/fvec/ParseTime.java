@@ -1,10 +1,14 @@
 package water.fvec;
 
+import java.util.Set;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.Iterator;
 import org.joda.time.DateTime;
-import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
+import org.joda.time.DateTimeZone;
 import water.parser.ValueString;
 import water.util.Log;
 
@@ -79,7 +83,7 @@ public abstract class ParseTime {
     dd = digit(dd,buf[i++]);
     if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
     if( i==end )
-      return encodeTimePat(new DateTime(yy,MM,dd,0,0,0).getMillis(),0);
+      return encodeTimePat(new DateTime(yy,MM,dd,0,0,0,getTimezone()).getMillis(),0);
     if( buf[i++] != ' ' ) return Long.MIN_VALUE;
     HH = digit(HH,buf[i++]);
     HH = digit(HH,buf[i++]);
@@ -101,7 +105,7 @@ public abstract class ParseTime {
     }
     if( i<end && buf[i] == '"' ) i++;
     if( i<end ) return Long.MIN_VALUE;
-    return encodeTimePat(new DateTime(yy,MM,dd,HH,mm,ss).getMillis()+SS,1);
+    return encodeTimePat(new DateTime(yy,MM,dd,HH,mm,ss,getTimezone()).getMillis()+SS,1);
   }
 
   // DD-MMM-YY
@@ -146,7 +150,7 @@ public abstract class ParseTime {
     }
     if( i<end && buf[i] == '"' ) i++;
     if( i<end ) return Long.MIN_VALUE;
-    return encodeTimePat(new DateTime(yy,MM,dd,0,0,0).getMillis(),2);
+    return encodeTimePat(new DateTime(yy,MM,dd,0,0,0,getTimezone()).getMillis(),2);
   }
 
 
@@ -222,6 +226,54 @@ public abstract class ParseTime {
   public static long badUUID( ValueString str ) {
     str.setOff(-1);
     return Long.MIN_VALUE; 
+  }
+
+  private static DateTimeZone _timezone;
+
+  public static void setTimezone(String tz) {
+    Set<String> idSet = DateTimeZone.getAvailableIDs();
+    if(idSet.contains(tz))
+      _timezone = DateTimeZone.forID(tz);
+    else
+      Log.err("Attempted to set unrecognized timezone: "+ tz);
+  }
+
+  public static DateTimeZone getTimezone() {
+    return _timezone == null ? DateTimeZone.getDefault() : _timezone;
+  }
+
+  public static String listTimezones() {
+    DateTimeFormatter offsetFormatter = new DateTimeFormatterBuilder().appendTimeZoneOffset(null, true, 2, 4).toFormatter();
+    Set<String> idSet = DateTimeZone.getAvailableIDs();
+    Map<String, String> tzMap = new TreeMap();
+    Iterator<String>  it = idSet.iterator();
+    String id, cid, offset, key, output;
+    DateTimeZone tz;
+    int i = 0;
+    long millis = System.currentTimeMillis();
+
+
+    // collect canonical and alias IDs into a map
+    while (it.hasNext()) {
+      id = it.next();
+      tz = DateTimeZone.forID(id);
+      cid = tz.getID();
+      offset = offsetFormatter.withZone(tz).print(tz.getStandardOffset(millis));
+      key = offset + " " + cid;
+      if (id == cid) { // Canonical ID
+        if (!tzMap.containsKey(key)) tzMap.put(key, "");
+      }  else {// alias ID
+        if (!tzMap.containsKey(key)) tzMap.put(key, id);
+        else tzMap.put(key,  tzMap.get(key) + ", " + id);
+      }
+    }
+
+    // assemble result
+    output = "StandardOffset CanonicalID, Aliases\n";
+    for (Map.Entry<String, String> e : tzMap.entrySet())
+      output += e.getKey() + e.getValue()+"\n";
+
+    return output;
   }
 
   /**
