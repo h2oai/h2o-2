@@ -21,6 +21,7 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
   }
 
   @Override public void init() {
+    _fs = new Futures();
     _lo = 0;
     _hi = _keys.length;
     long reqMem = (log2(_hi - _lo)+2)*memOverheadPerChunk();

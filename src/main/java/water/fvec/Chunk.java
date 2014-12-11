@@ -159,9 +159,11 @@ public abstract class Chunk extends Iced implements Cloneable {
 
   /** After writing we must call close() to register the bulk changes */
   public void close( int cidx, Futures fs ) {
+    int len = _len;
     if( this  instanceof NewChunk ) _chk2 = this;
     if( _chk2 == null ) return;          // No change?
     if( _chk2 instanceof NewChunk ) _chk2 = ((NewChunk)_chk2).new_close();
+    assert _chk2._len == len:"incompatible length after compression, " +  len + " != " +  _chk2._len + ", " + ", chunk = " + _chk2.getClass().getSimpleName();
     DKV.put(_vec.chunkKey(cidx),_chk2,fs,true); // Write updated chunk back into K/V
     if( _vec._cache == this ) _vec._cache = null;
   }

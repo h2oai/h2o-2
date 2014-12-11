@@ -718,6 +718,7 @@ public final class H2O {
     public boolean md5skip = false;
     public boolean ga_opt_out = false;
     public String ga_hadoop_ver = null;
+    public boolean no_ice = false;
   }
 
   public static void printHelp() {
@@ -1569,7 +1570,7 @@ public final class H2O {
     }
 
     static boolean lazyPersist(){ // free disk > our DRAM?
-      return H2O.SELF._heartbeat.get_free_disk() > MemoryManager.MEM_MAX;
+      return !H2O.OPT_ARGS.no_ice && H2O.SELF._heartbeat.get_free_disk() > MemoryManager.MEM_MAX;
     }
     static boolean isDiskFull(){ // free disk space < 5K?
       long space = Persist.getIce().getUsableSpace();
