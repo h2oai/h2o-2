@@ -16,7 +16,7 @@ import java.util.Arrays;
  * Vec type.  NEW Vectors do NOT support reads!
  */
 public class AppendableVec extends Vec {
-  Espc _espc;
+  long [] _espc;
   public static final byte NA     = 1;
   public static final byte ENUM   = 2;
   public static final byte NUMBER = 4;
@@ -29,14 +29,11 @@ public class AppendableVec extends Vec {
   long _totalCnt;
   int _chunkOff;
 
-  public static class Espc extends Iced {
-    long [] _ary;
-    public Espc(long [] ary) {_ary = ary;}
-  }
+  
   public AppendableVec( Key key){
-    this(key, new Espc(new long[4]),0);
+    this(key, new long[4],0);
   }
-  public AppendableVec( Key key, Espc espc, int chunkOff) {
+  public AppendableVec( Key key, long [] espc, int chunkOff) {
     super(key, (long[])null);
     _espc = espc;
     _chunkTypes = new byte[4];
@@ -49,13 +46,13 @@ public class AppendableVec extends Vec {
   // not called distributed.
   synchronized void closeChunk( NewChunk chk) {
     final int cidx = chk._cidx - _chunkOff;
-    if( cidx >= _espc._ary.length ) {
-      int newlen = Math.max(_espc._ary.length * 2, cidx + 1);
-      _espc._ary   = Arrays.copyOf(_espc._ary,newlen);
+    if( cidx >= _espc.length ) {
+      int newlen = Math.max(_espc.length * 2, cidx + 1);
+      _espc = Arrays.copyOf(_espc,newlen);
     }
-    if(_chunkTypes.length < _espc._ary.length)
-      _chunkTypes = Arrays.copyOf(_chunkTypes,_espc._ary.length);
-    _espc._ary[cidx] = chk._len;
+    if(_chunkTypes.length < _espc.length)
+      _chunkTypes = Arrays.copyOf(_chunkTypes,_espc.length);
+    _espc[cidx] = chk._len;
     _chunkTypes[cidx] = chk.type();
     _naCnt += chk._naCnt;
     _strCnt += chk._strCnt;
@@ -87,18 +84,18 @@ public class AppendableVec extends Vec {
     if( this == nv ) return;    // Trivially done
 
     // Combine arrays of elements-per-chunk
-    long e1[] = nv._espc._ary;       // Shorter array of longs?
+    long e1[] = nv._espc;       // Shorter array of longs?
     byte t1[] = nv._chunkTypes;
-    if( e1.length > _espc._ary.length ) {
-      e1 = _espc._ary;               // Keep the shorter one in e1
+    if( e1.length > _espc.length ) {
+      e1 = _espc;               // Keep the shorter one in e1
       t1 = _chunkTypes;
       _espc = nv._espc;         // Keep longer in the object
       _chunkTypes = nv._chunkTypes;
     }
     for( int i=0; i<e1.length; i++ ){ // Copy non-zero elements over
       assert _chunkTypes[i] == 0 || t1[i] == 0;
-      if( e1[i] != 0 && _espc._ary[i]==0 )
-        _espc._ary[i] = e1[i];
+      if( e1[i] != 0 && _espc[i]==0 )
+        _espc[i] = e1[i];
       _chunkTypes[i] |= t1[i];
     }
     _naCnt += nv._naCnt;
@@ -112,9 +109,9 @@ public class AppendableVec extends Vec {
   // reads, plus computes rows-per-chunk, min/max/mean, etc.
   public Vec close(Futures fs) {
     // Compute #chunks
-    int nchunk = _espc._ary.length;
+    int nchunk = _espc.length;
     DKV.remove(chunkKey(nchunk),fs); // remove potential trailing key
-    while( nchunk > 0 && _espc._ary[nchunk-1] == 0 ) {
+    while( nchunk > 0 && _espc[nchunk-1] == 0 ) {
       nchunk--;
       DKV.remove(chunkKey(nchunk),fs); // remove potential trailing key
     }
@@ -130,14 +127,14 @@ public class AppendableVec extends Vec {
     if( hasNumber && hasEnum ) {
       for(int i = 0; i < nchunk; ++i)
         if(_chunkTypes[i] == ENUM)
-          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc._ary[i]),fs);
+          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
     }
     // UUID wins over enum & number
     if( hasUUID && (hasEnum || hasNumber) ) {
       hasEnum=hasNumber=false;
       for(int i = 0; i < nchunk; ++i)
         if((_chunkTypes[i] & UUID)==0)
-          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc._ary[i]),fs);
+          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
     }
 
     // Make sure time is consistent
@@ -151,7 +148,7 @@ public class AppendableVec extends Vec {
       if( t < 0 )               // blow off time parse
         for(int i = 0; i < nchunk; ++i)
           if(_chunkTypes[i] == TIME)
-            DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc._ary[i]),fs);
+            DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
 
     }
     assert t<0 || _domain == null;
@@ -162,7 +159,7 @@ public class AppendableVec extends Vec {
     long x=0;                   // Total row count so far
     for( int i=0; i<nchunk; i++ ) {
       espc[i] = x;              // Start elem# for chunk i
-      x += _espc._ary[i];            // Raise total elem count
+      x += _espc[i];            // Raise total elem count
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.

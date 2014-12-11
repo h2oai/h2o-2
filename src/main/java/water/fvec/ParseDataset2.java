@@ -521,14 +521,14 @@ public final class ParseDataset2 extends Job {
       int nchunks = 0;
       for(FVecDataOut dout:_dout)
         nchunks += dout.nChunks();
-      AppendableVec.Espc espc = new AppendableVec.Espc(MemoryManager.malloc8(nchunks));
+      long [] espc = MemoryManager.malloc8(nchunks);
       for(int i = 0; i < res.length; ++i) {
         res[i] = new AppendableVec(_vg.vecKey(_vecIdStart + i), espc, 0);
         res[i]._chunkTypes = MemoryManager.malloc1(nchunks);
       }
       for(int i = 0; i < _dout.length; ++i) {
 
-        System.arraycopy(_dout[i]._vecs[0]._espc._ary, 0, espc._ary, _dout[i]._vecs[0]._chunkOff, _dout[i].nChunks());
+        System.arraycopy(_dout[i]._vecs[0]._espc, 0, espc, _dout[i]._vecs[0]._chunkOff, _dout[i].nChunks());
         for(int j = 0; j < _dout[i]._vecs.length; ++j) {
           assert res[j]._key.equals(_dout[i]._vecs[j]._key):"mismatched keys " + res[j]._key + ", " + _dout[i]._vecs[j]._key;
           System.arraycopy(_dout[i]._vecs[j]._chunkTypes, 0, res[j]._chunkTypes, _dout[i]._vecs[0]._chunkOff, _dout[i].nChunks());
@@ -570,7 +570,7 @@ public final class ParseDataset2 extends Job {
 
     private FVecDataOut makeDout(ParserSetup localSetup, int chunkOff, int nchunks) {
       AppendableVec [] avs = new AppendableVec[localSetup._ncols];
-      AppendableVec.Espc espc = new AppendableVec.Espc(MemoryManager.malloc8(nchunks));
+      long [] espc = MemoryManager.malloc8(nchunks);
       for(int i = 0; i < avs.length; ++i)
         avs[i] = new AppendableVec(_vg.vecKey(i + _vecIdStart),espc, chunkOff);
       return localSetup._pType == ParserType.SVMLight
@@ -732,7 +732,7 @@ public final class ParseDataset2 extends Job {
       @Override public void setupLocal(){
         super.setupLocal();
         _appendables = new AppendableVec[_setup._ncols];
-        AppendableVec.Espc espc = new AppendableVec.Espc(new long[_nchunks]);
+        long [] espc = MemoryManager.malloc8(_nchunks);
         for(int i = 0; i < _setup._ncols; ++i)
           _appendables[i] = new AppendableVec(_vg.vecKey(_vecIdStart + i), espc, _chunkOff);
         _visited = new NonBlockingSetInt();
