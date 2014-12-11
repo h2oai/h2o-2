@@ -16,13 +16,14 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parse_with_cancel(self):
+        mustWait = 10
         importFolderPath = 'standard'
         timeoutSecs = 500
         csvFilenameList = [
             ("standard", "covtype.data", 54),
             ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
             ("standard", "covtype20x.data", 54),
-            ("manyfiles-nflx-gz", "file_[1-9].dat.gz", 378),
+            ("manyfiles-nflx-gz", "file_[100-109].dat.gz", 378),
             ]
 
         # just loop on the same file. If remnants exist and are locked, we will blow up? 
@@ -48,7 +49,7 @@ class Basic(unittest.TestCase):
             print "Cancelled parse completed in", elapsed, "seconds."
 
             h2o.check_sandbox_for_errors()
-            # get a list of keys from storeview. 20 is fine..shouldn't be many, since we putfile, not import folder
+            # get a list of keys from storview. 20 is fine..shouldn't be many, since we putfile, not import folder
             # there maybe a lot since we import the whole "standard" folder
             # find the ones that pattern match the csvFilename, and inspect them. Might be none
             storeViewResult = h2o_cmd.runStoreView(timeoutSecs=timeoutSecs, view=100)
@@ -63,6 +64,12 @@ class Basic(unittest.TestCase):
             # This will tell h2o to delete using the key name from the import file, whatever pattern matches to csvFilename
             # we shouldn't have to do this..the import/parse should be able to overwrite without deleting.
             # h2i.delete_keys_from_import_result(pattern=csvFilename, importResult=importResult)
+
+            # If you cancel a parse, you aren't allowed to reparse the same file or import a directory with that file,
+            # or cause the key name that the parse would have used, for 5 seconds after the cancel request gets a json
+            # response
+            print "Waiting", mustWait, "seconds before next reparse-cancel."
+            time.sleep(mustWait)
 
 if __name__ == '__main__':
     h2o.unit_main()
