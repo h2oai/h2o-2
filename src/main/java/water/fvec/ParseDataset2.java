@@ -516,7 +516,6 @@ public final class ParseDataset2 extends Job {
       int nCols = 0;
       for(FVecDataOut dout:_dout)
         nCols = Math.max(dout._vecs.length,nCols);
-
       AppendableVec [] res = new AppendableVec[nCols];
       int nchunks = 0;
       for(FVecDataOut dout:_dout)
@@ -526,18 +525,9 @@ public final class ParseDataset2 extends Job {
         res[i] = new AppendableVec(_vg.vecKey(_vecIdStart + i), espc, 0);
         res[i]._chunkTypes = MemoryManager.malloc1(nchunks);
       }
-      for(int i = 0; i < _dout.length; ++i) {
-
-        System.arraycopy(_dout[i]._vecs[0]._espc, 0, espc, _dout[i]._vecs[0]._chunkOff, _dout[i].nChunks());
-        for(int j = 0; j < _dout[i]._vecs.length; ++j) {
-          assert res[j]._key.equals(_dout[i]._vecs[j]._key):"mismatched keys " + res[j]._key + ", " + _dout[i]._vecs[j]._key;
-          System.arraycopy(_dout[i]._vecs[j]._chunkTypes, 0, res[j]._chunkTypes, _dout[i]._vecs[0]._chunkOff, _dout[i].nChunks());
-          res[j]._strCnt += _dout[i]._vecs[j]._strCnt;
-          res[j]._naCnt += _dout[i]._vecs[j]._naCnt;
-          Utils.add(res[j]._timCnt,_dout[i]._vecs[j]._timCnt);
-          res[j]._totalCnt += _dout[i]._vecs[j]._totalCnt;
-        }
-      }
+      for(int i = 0; i < _dout.length; ++i)
+        for(int j = 0; j < _dout[i]._vecs.length; ++j)
+          res[j].setSubRange(_dout[i]._vecs[j]);
       return res;
     }
     public String _parserr;              // NULL if parse is OK, else an error string
@@ -709,7 +699,7 @@ public final class ParseDataset2 extends Job {
       private final int _vecIdStart;
       private final int _chunkOff; // for multifile parse, offset of the first chunk in the final dataset
       private final VectorGroup _vg;
-      private transient AppendableVec [] _appendables;
+
       private FVecDataOut _dout;
       private final Key _eKey;
       final Key _progress;
@@ -717,6 +707,7 @@ public final class ParseDataset2 extends Job {
       private transient final MultiFileParseTask _outerMFPT;
       final int _nchunks;
       private transient NonBlockingSetInt _visited;
+      private transient long [] _espc;
 
       DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt, int nchunks) {
         super(mfpt);
@@ -731,16 +722,13 @@ public final class ParseDataset2 extends Job {
       }
       @Override public void setupLocal(){
         super.setupLocal();
-        _appendables = new AppendableVec[_setup._ncols];
-        long [] espc = MemoryManager.malloc8(_nchunks);
-        for(int i = 0; i < _setup._ncols; ++i)
-          _appendables[i] = new AppendableVec(_vg.vecKey(_vecIdStart + i), espc, _chunkOff);
+        _espc = MemoryManager.malloc8(_nchunks);
         _visited = new NonBlockingSetInt();
       }
       @Override public void map( Chunk in) {
-        _appendables = _appendables.clone();
-        for(int i = 0; i < _appendables.length; ++i)
-          _appendables[i] = (AppendableVec)_appendables[i].clone();
+        AppendableVec [] avs = new AppendableVec[_setup._ncols];
+        for(int i = 0; i < avs.length; ++i)
+          avs[i] = new AppendableVec(_vg.vecKey(_vecIdStart + i), _espc, _chunkOff);
         Enum [] enums = enums(_eKey,_setup._ncols);
         // Break out the input & output vectors before the parse loop
         // The Parser
@@ -750,11 +738,11 @@ public final class ParseDataset2 extends Job {
         switch(_setup._pType) {
         case CSV:
           p = new CsvParser(_setup);
-          dout = new FVecDataOut(_vg,_chunkOff, _chunkOff + in.cidx(),enums,_appendables);
+          dout = new FVecDataOut(_vg,_chunkOff, _chunkOff + in.cidx(),enums,avs);
           break;
         case SVMLight:
           p = new SVMLightParser(_setup);
-          dout = new SVMLightFVecDataOut(_vg, _chunkOff + in.cidx(), _appendables, _vecIdStart, _chunkOff, enums);
+          dout = new SVMLightFVecDataOut(_vg, _chunkOff + in.cidx(), avs, _vecIdStart, _chunkOff, enums);
           break;
         default:
           throw H2O.unimpl();

@@ -36,7 +36,7 @@ public class AppendableVec extends Vec {
   public AppendableVec( Key key, long [] espc, int chunkOff) {
     super(key, (long[])null);
     _espc = espc;
-    _chunkTypes = new byte[4];
+    _chunkTypes = MemoryManager.malloc1(espc.length);
     _chunkOff = chunkOff;
   }
 
@@ -64,6 +64,20 @@ public class AppendableVec extends Vec {
   boolean shouldBeEnum() {
     // We declare column to be string/enum only if it does not have ANY numbers in it.
     return _strCnt > 0 && (_strCnt + _naCnt) == _totalCnt;
+  }
+
+  /**
+   * Add AV build over sub-range of this vec (used e.g. by multifile parse where each file produces its own AV which represents sub-range of the resulting vec)
+   * @param av
+   */
+  public void setSubRange(AppendableVec av) {
+    assert _key.equals(av._key):"mismatched keys " + _key + ", " + av._key;
+    System.arraycopy(av._espc, 0, _espc, av._chunkOff, av._espc.length);
+    System.arraycopy(av._chunkTypes, 0, _chunkTypes, av._chunkOff, av._chunkTypes.length);
+    _strCnt += av._strCnt;
+    _naCnt += av._naCnt;
+    Utils.add(_timCnt, av._timCnt);
+    _totalCnt += av._totalCnt;
   }
 
   public static Vec[] closeAll(AppendableVec [] avs) {
