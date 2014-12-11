@@ -8,21 +8,21 @@ K-Means falls in the general category of clustering algorithms.
 When to use K-Means
 """""""""""""""""""
 
-Data are a set of attributes on which the members of the population
-likely differ. The objective is classification.
+Use K-Means when data are a set of attributes on which the members of the population
+likely differ and the objective is classification.
 Here are some examples:
 
-  "How do competitors differ from one another on critical dimensions?"
+  - How do competitors differ from one another on critical dimensions?
 
-  "How is a particular market segmented?"
+  - How is a particular market segmented?
 
-  "Which dimensions are most important to differentiating between
-  members of a population of interest?"
+  - Which dimensions are most important to differentiating between members of a population of interest?
    
-
+""""
 
 Defining a K-Means model
 """"""""""""""""""""""""
+
 **Source:**
   
   The .hex key associated with the data set for use in clustering.
@@ -48,12 +48,12 @@ Defining a K-Means model
   chosen, at which point the algorithm proceeds as usual.
 
   *Furthest* 
-   A modification to the k-means algorithm that impacts the assignment
-   of K initial cluster centroids. Furthest first initialization
-   attempts to improve K-means results by selecting the first center,
-   and then calculating the distance from that point to all other
-   possible points. The second initial center is chosen to the point
-   furthest from the first center in terms of Euclidean distance. 
+  A modification to the k-means algorithm that impacts the assignment
+  of K initial cluster centroids. Furthest first initialization
+  attempts to improve K-means results by selecting the first center,
+  and then calculating the distance from that point to all other
+  possible points. The second initial center is chosen to the point
+  furthest from the first center in terms of Euclidean distance. 
 
 **K**
 
@@ -67,17 +67,17 @@ Defining a K-Means model
   The maximum number of iterations the algorithm is to go
   through if no stopping point is reached before then.
  
-**Normalize:** 
+**Normalize** 
 
    Specifies that each attribute be transformed such that it has a mean
    of 0 and standard deviation of 1, and that this transformation be
    carried out before the algorithm is applied.
 
-**Seed:**
+**Seed**
 
   A means for specifying the algorithm components
   dependent on randomization. Note that the seed stays the same for
-  each instance of H\ :sub:`2`\ O, allowing the user to create models with the
+  each instance of H2O, allowing the user to create models with the
   same starting conditions in alternative configurations.
 
 
@@ -86,10 +86,10 @@ Defining a K-Means model
 Interpreting a Model
 """"""""""""""""""""
 
-    Output from K-Means is a table with one more column than the
-    number of attributes used to cluster. The the names of attributes,
-    and "cluster" appear in the header row. The column cluster gives
-    an arbitrary number to each cluster built, and the attributes give
+    The output from K-Means is a table with one more column than the
+    number of attributes used in the cluster. The names of the attributes,
+    and "Clusters" appear in the header row. The "Clusters" column assigns
+    an arbitrary number to each cluster, and the attribute columns list
     the coordinates of the center of that cluster. 
 
 +--------+-----------+-----------+
@@ -99,13 +99,7 @@ Interpreting a Model
 |        |  value    |  value    |
 +--------+-----------+-----------+
 
-
-References
-""""""""""
-
-Xiong, Hui, Junjie Wu, and Jian Chen. "K-means Clustering Versus
-Validation Measures: A Data- distribution Perspective." Systems, Man,
-and Cybernetics, Part B: Cybernetics, IEEE Transactions on 39.2 (2009): 318-331.
+""""
 
 K-Means Algorithm
 """"""""""""""""""
@@ -180,7 +174,7 @@ Repeat until :math:`K` centers have been chosen.
    of max iterations is reached or cluster assignments of the
    :math:`x_{i}` are stable.
 
-
+""""
  
 References
 """"""""""

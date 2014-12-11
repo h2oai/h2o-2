@@ -4,14 +4,14 @@
 K Means Tutorial
 ================
 
-The purpose of this tutorial is to walk through a K-Means analysis
-beginning to end. By the end of this tutorial the user should know how
-to specify, run, and interpret a K-means model in  H2O.
+This tutorial walks through a K-Means analysis and describes how to specify, run, and interpret a K-means model in  H2O.
 
-Those who have never used H2O before should see the quick start guide
-for additional instructions on how to run H2O. 
+If you have never used H2O before, refer to the quick start guide
+for additional instructions on how to run H2O: :ref:`GettingStartedFromaZipFile`. 
 
 Interested users can find details on the math behind K Means at: :ref:`KMmath`.
+
+""""
 
 Quick Start Video
 """""""""""""""""
@@ -19,6 +19,8 @@ Quick Start Video
 .. raw:: html
 
   <object width="420" height="315"><param name="movie" value="http://www.youtube.com/v/KVeKfoMRMyQ?version=3&amp;hl=en_US"></param><param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param><embed src="http://www.youtube.com/v/KVeKfoMRMyQ?version=3&amp;hl=en_US" type="application/x-shockwave-flash" width="420" height="315" allowscriptaccess="always" allowfullscreen="true"></embed></object>
+  
+""""""""""""""  
 
 Getting Started
 """""""""""""""
@@ -28,22 +30,22 @@ This tutorial uses a publicly available data set that can be found at http://arc
 
 The data are composed of 210 observations, 7 attributes, and an priori
 grouping assignment. All data are positively valued and
-continuous. Before modeling, parse data into H2O as follows:
+continuous. Before modeling, parse data into H2O:
 
 
 #. From the drop-down **Data** menu, select **Upload** and use the helper to
    upload data.
 
  
-#. On the "Request Parse" page that displays, select whether the first row of the data set is a header or not. All other settings can be left in default. Press Submit.
+#. On the  "Request Parse" page that appears, check the "header" checkbox if the first row of the data set is a header. No other changes are required. 
 
 
-#. Parsing data into H2O generates a .hex key ("data name.hex").
+#. Click **Submit**. Parsing data into H2O generates a .hex key of the form  "data name.hex"
 
 .. image:: KMparse.png
    :width: 90%
 
-
+""""""
 
 Building a Model
 """"""""""""""""
@@ -54,83 +56,79 @@ Building a Model
    select K-Means.
 
 
-#. In the Source Key field, enter the .hex key associated with the
+#. In the "source" field, enter the .hex key associated with the
    data set. 
 
 
-#. Choose K. For this dataset, K is chosen to be 3.  
+#. Specify a value for "k." For this dataset, use 3.  
 
 
-#. Data can be normalized, though it is not done for this
+#. Check the "normalize" checkbox to normalize data, but this is not required for this
    example. 
 
-#. Specify Initialization. Plus Plus initialization chooses one
-   initial center and random, and weights the random selection of
-   subsequent centers so that points furthest from the first center
-   are more likely to be chosen. Furthest initialization chooses one
-   initial center at random, and then chooses the next center to be the 
-   point furthest away in terms of Euclidean distance. The default 
-   results in K initial centers being chosen independently at random.  
+#. Select an option from the "Initialization" drop-down list. 
+	
+   - Plus Plus initialization chooses one initial center at random and weights the random selection of subsequent centers so that points furthest from the first center are more likely to be chosen. 
+   - Furthest initialization chooses one initial center at random, and then chooses the next center to be the  point furthest away in terms of Euclidean distance. 
+   - The default ("None") results in K initial centers being chosen independently at random.  
 
-#. Specify Max Iter (short for maximum iterations), which allows the
-   user to specify the maximum number of iterations the algorithm processes.
+#. Enter a "Max Iter" (short for maximum iterations) value to specify the maximum number of iterations the algorithm processes.
 
-#. Cols is a list of the columns of attributes that should be used 
-   in defining the clusters. Here we select all but column 7 (the 
-   a priori known clusters for this particular set). 
+#. Select the columns of attributes that should be used 
+   in defining the clusters in the "Cols" section. In this example, all columns except column 7 (the a priori known clusters for this particular set) are selected. 
 
 
-#. Press submit.
+#. Click **Submit**.
 
 .. image:: KMrequest.png
    :width: 90%
 
-
+""""""
 
 K-Means Output
 """"""""""""""
 
-Output is a matrix of the cluster assignments, and the
-coordinates of the cluster centers in terms of the originally 
-chosen attributes. Your cluster centers may differ slightly. 
+The output is a matrix of the cluster assignments and the
+coordinates of the cluster centers (in terms of the originally 
+selected attributes). Your cluster centers may differ slightly. 
 K-Means randomly chooses starting points and converges on 
-optimal centroids. The cluster number is arbitrary, and should
+optimal centroids. The cluster number is arbitrary and should
 be thought of as a factor. 
 
 .. image:: KMinspect.png 
    :width: 100%
 
+""""""
 
 K-means Next Steps
 """""""""""""""""""
 
-For further information on the model, select K-Means from the
-drop down **Score** menu. Specify the K-Means model key and the 
-.hex key for the data set originally used. 
+For more information about the model, select *K-Means* from the
+drop-down **Score** menu. Specify the K-Means model key and the 
+.hex key for the original data set. 
 
-When you click **Submit**, the output that displays is the number of rows 
+The output that displays when you click **Submit** is the number of rows 
 assigned to each cluster and the squared error per cluster. 
 
 .. image:: KMscore.png
    :width: 90%
 
+""""""
 
 K-means Apply
 """""""""""""
 
 To generate a prediction (assign the observations in a data set
 to a cluster), select **K-means Apply** from the drop-down **Score** menu.
-Specify the model to be applied and the  .hex for the data 
-you would like to apply it to, and press submit. 
+Specify the model and the  .hex key for the data, then click **Submit**. 
 
-Here cluster assignments have been generated
+In the following example, cluster assignments have been generated
 for the original data. Because the data have been sufficiently well 
 researched, the ideal cluster assignments were known in
-advance. Comparing known cluster with predicted cluster demonstrated
+advance. Comparing known clusters with predicted clusters demonstrated
 that this K-Means model classifies with a less than 10% error rate. 
 
 .. image:: KMapply.png
    :width: 90%
 
-
-THE END.  
+""""""

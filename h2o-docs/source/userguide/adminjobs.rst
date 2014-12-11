@@ -4,48 +4,42 @@ Admin: Jobs
 =============
 
 
-Users can access information on each action undertaken in an instance
-of H\ :sub:`2`\ O by accessing Jobs under the Admin drop down menu. From here it
-is possible to find .hex keys associated with models and parsed
-data. If a an action was cancelled, that information will be displayed here as 
-well.
+To access information on each action performed in an instance
+of H2O, select **Jobs** from the drop-down **Admin** menu. Use the Jobs page to find .hex keys associated with models and parsed data, as well as information about current, recent, and cancelled jobs. 
 
 **Table Definitions:**
 
  **Key** 
 
-   Table field appears with an "X" button for those keys
-   that can be removed from current set of H\ :sub:`2`\ O objects. 
-   For instance, if a user ran several different GLM models, but
-   wishes to keep only one of these, other models can be removed by
-   clicking on the "X" button. 
-
+   Contains an "X" button for keys that can be removed from current set of H2O objects. 
+   To remove a key, click the "X" button.
+    
  **Description** 
 
-   A description of the activity associated with a particular key. For
+   Displays a description of the activity associated with a particular key. For
    instance, a data set that has been parsed into .hex format will
    have "Parse" in the description field. 
 
  **Destination key**
 
-   The actual key associated with an H\ :sub:`2`\ O object. This can be thought
-   of like a corollary to a file path on a users local computer. 
+   Displays the actual key associated with an H2O object. This unique identifier is used as a reference to the H2O object. 
 
  **Start Time** 
 
-   Time when a job was started. 
+   Displays the start time of a job. 
 
  **End Time** 
 
-   Time when a job completed.
+   Displays the completion time of a job.
 
  **Progress**
   
-   A status bar providing a visual indicator of job status and
-   progress. Green and filling means that job is proceeding, but
-   hasn't completed, green and full means that job completed
-   successfully, and red means that the job was unable to complete or
-   cancelled by user. 
+   Displays a status bar to indicate job status and
+   progress. 
+   
+   - Green but not full: The job is in progress but hasn't completed. 
+   - Green and full: The job completed successfully.  
+   - Red: The job was unable to complete or was cancelled. 
 
 .. image:: AdminJobs.png
    :width: 100%
@@ -53,8 +47,8 @@ well.
 
 **Cancelled** 
 
-  A column indiciating whether the job was cancelled. 
+  Displays "true" if the job was cancelled or "false" if the job was not cancelled. 
 
 **Result**
 
-  A column indicating the status of the job.
+  Displays the status of the job (for example, "OK" or "FAILED").

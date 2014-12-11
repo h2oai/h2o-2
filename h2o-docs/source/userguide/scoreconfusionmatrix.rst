@@ -20,6 +20,4 @@ Score: Confusion Matrix
 
 **VPredict**
 
-  Specify the column in the data set specified in the **Predict** entry field containing the
-  predicted value. This value need not be 0/1, but should be a
-  probability and not log-likelihood. 
+  Specify the column in the data set entered in the **Predict** entry field that contains the predicted value. H2O does not require this value to be 0/1, but it should be a probability and not log-likelihood. 
