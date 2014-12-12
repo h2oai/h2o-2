@@ -9,7 +9,7 @@ instance of H2O, change the default values for the options during launch.
 
 There are two different argument types: JVM arguments and H2O arguments. These argument types use the following format: *java* **[JVM OPTIONS]** *-jar h2o.jar* **[H2O OPTIONS]**
 
----
+""""""
 
 JVM Options
 -----------
@@ -19,23 +19,20 @@ For standard and advanced JVM options not included here, refer to the available
 Typically, there are only two commonly-used options for H2O:
 
     **-version**
-        Display java version info and exit. To make sure the versions of Java and H2O are compatible, use this command to run a check on the Java version. H2O requires at least Java 1.6+.
+        Display Java version info. To make sure the versions of Java and H2O are compatible, use this command to run a check on the Java version. H2O requires at least Java 1.6+.
 
     -**Xmx<Heap Size>**
           To set the total heap size for an H2O node, configure the  memory allocation option Xmx. By default, this option is set to 1 Gb (-Xmx1g). We recommend launching nodes with a total of four times the memory than your data. *Note: Do not try to launch with more memory than you have available.*
           
----
+""""
 
 H\ :sub:`2`\ O Options
 ----------------------
 
 To access the following list from the command line, use `-h` or `-help`.
 
-    -h | -help
+    -h or -help
           Display this help.
-
-    -version
-          Display version info and exit.
 
     -name <h2oCloudName>
           Cloud name used for discovery of other nodes.
@@ -75,7 +72,10 @@ To access the following list from the command line, use `-h` or `-help`.
     -license <licenseFilePath>
           Path to license file on local filesystem.
           
----          
+    \-version
+    	Display version info.       
+          
+""""          
 
 Cloud formation behavior
 ------------------------

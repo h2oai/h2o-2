@@ -26,7 +26,7 @@ Before modeling, parse data into H2O:
 
 #. On the  "Request Parse" page that appears, check the "header" checkbox if the first row of the data set is a header. No other changes are required. 
 
-#. Click Submit. Parsing data into H2O generates a .hex key of the form  "data name.hex"
+#. Click **Submit**. Parsing data into H2O generates a .hex key with the format  "data name.hex"
    Parsing data should look similar to this:
 
 .. image:: PCAparse.png

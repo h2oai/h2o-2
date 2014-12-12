@@ -6,14 +6,14 @@ Launch scripts are available on our Github repository :ref:`QuickstartGit`
 
 **Step 1**
 
-Prerequisite - Install boto python library. In order to run the scripts you must have the boto library installed, references available are available on boto and amazon's website.
+Prerequisite: Install boto python library. In order to run the scripts, you must have the boto library installed. References are available on boto and amazon's website:
 
    - `Python Boto Documentation <http://boto.readthedocs.org/en/latest/>`_
    - `Amazon AWS Text <http://www.amazon.com/Python-and-AWS-Cookbook-ebook/dp/B005ZTO0UW/ref=sr_1_1?ie=UTF8&qid=1379879111&sr=8-1&keywords=python+aws>`_
 
 **Step 2**
 
-First edit *h2o-cluster-launch-instances.py* launch script for parameter changes, refer to :ref:`ec2_glossary` for help.
+ Edit the `h2o-cluster-launch-instances.py` launch script for parameter changes; refer to :ref:`ec2_glossary` for help.
 
 ::
 
@@ -43,7 +43,7 @@ First edit *h2o-cluster-launch-instances.py* launch script for parameter changes
 
 **Step 3**
 
-Launch the EC2 instances using the H\ :sub:`2`\ O AMI by running *h2o-cluster-launch-instances.py*.
+Launch the EC2 instances using the H2O AMI by running `h2o-cluster-launch-instances.py`.
 
 ::
 
@@ -76,7 +76,12 @@ Launch the EC2 instances using the H\ :sub:`2`\ O AMI by running *h2o-cluster-la
 
 **Step 4**
 
-Download the latest build of H\ :sub:`2`\ O onto each of the instances using *./h2o-cluster-distribute-h2o.sh*  --OR--  *./h2o-cluster-download-h2o.sh*. Download will typically be faster than distribute since the file is being downloaded from S3.
+Download the latest build of H2O onto each instance using:
+ - `./h2o-cluster-distribute-h2o.sh` 
+  --OR--  
+ - `./h2o-cluster-download-h2o.sh`. 
+ 
+ Download is typically faster than distribute since the file is downloaded from S3.
 
 ::
 
@@ -98,7 +103,7 @@ Download the latest build of H\ :sub:`2`\ O onto each of the instances using *./
 
 **Step 5**
 
-Distribute a flatfile.txt of all the private node IP address.
+Distribute a flatfile.txt with all the private node IP addresses.
 
 ::
 
@@ -111,7 +116,7 @@ Distribute a flatfile.txt of all the private node IP address.
 
 **Step 6**
 
-[Optional] For users that want to import data from a private S3 bucket, permission must be given to each launched node. If the cluster was launched without an IAM profile and policy, then AWS credentials would have to be distributed to each node as a aws_credentials.properties file using *./h2o-cluster-distribute-aws-credentials.sh*. If cluster was launched with IAM profile H2O will detect the temporary credentials on the cluster.
+(Optional) To import data from a private S3 bucket, give permission to each launched node. If the cluster was launched without an IAM profile and policy, then AWS credentials have to be distributed to each node as an aws_credentials.properties file using `./h2o-cluster-distribute-aws-credentials.sh`. If the cluster was launched with IAM profile, H2O detects the temporary credentials on the cluster.
 
 ::
 
@@ -126,7 +131,7 @@ Distribute a flatfile.txt of all the private node IP address.
 
 **Step 7**
 
-Start H\ :sub:`2`\ O by executing *./h2o-cluster-start-h2o.sh*.
+Start H2O by executing `./h2o-cluster-start-h2o.sh`.
 
 ::
 
@@ -168,3 +173,5 @@ Start H\ :sub:`2`\ O by executing *./h2o-cluster-start-h2o.sh*.
   01:55:22.084 main      INFO WATER: OS   version: Linux 2.6.32-358.14.1.el6.x86_64 (amd64)
   01:55:22.695 main      INFO WATER: Machine physical memory: 0.58 gb
   Success.
+  
+""""  

@@ -6,29 +6,31 @@ Cox Proportional Hazards Model
 
 Cox proportional hazards models are the most widely used approach for modeling
 time to event data. As the name suggests, the *hazard function*, which
-computes the instantaneous rate of an event occurrence and expressed
+computes the instantaneous rate of an event occurrence and is expressed
 mathematically as
 
 :math:`h(t) = \lim_{\Delta t \downarrow 0} \frac{Pr[t \le T < t + \Delta t \mid T \ge t]}{\Delta t},`
 
 is assumed to be the product of a *baseline hazard function* and a
-*risk score*. Thus the hazard function for observation :math:`i` in a Cox
-proportional hazards model is defined to be
+*risk score*. Consequently, the hazard function for observation :math:`i` in a Cox
+proportional hazards model is defined as
 
 :math:`h_i(t) = \lambda(t)\exp(\mathbf{x}_i^T\beta)`
 
 where :math:`\lambda(t)` is the baseline hazard function shared by all
-observations, :math:`\exp(\mathbf{x}_i^T\beta)` is the risk score for
+observations and :math:`\exp(\mathbf{x}_i^T\beta)` is the risk score for
 observation :math:`i`, which is computed as the exponentiated linear
 combination of the covariate vector :math:`\mathbf{x}_i^T` using a coefficient
 vector :math:`\beta` common to all observations.
 
 This combination of a non-parametric baseline hazard function and a parametric
 risk score results in Cox proportional hazards models being described as
-*semi-parametric*. In addition a simple rearrangement of terms shows that
-unlike in generalized linear models, an intercept (constant) term in the risk
-score would add no value to the model fit due to the inclusion of a baseline
+*semi-parametric*. In addition, a simple rearrangement of terms shows that
+unlike generalized linear models, an intercept (constant) term in the risk
+score adds no value to the model fit, due to the inclusion of a baseline
 hazard function.
+
+""""""
 
 
 Defining a Cox Proportional Hazards Model
@@ -72,13 +74,13 @@ Defining a Cox Proportional Hazards Model
 
 **offset columns**
 
-  (Optional) The name of a numeric columns in the **source** data set
-  representing offset terms in the model.
+  (Optional) The name of a numeric column in the **source** data set
+  representing the offset terms in the model.
 
 **ties**
 
-  The approximation method for handling ties in the partial likelihood; one of
-  either efron or breslow. See the Cox Proportional Hazards Model Details
+  The approximation method for handling ties in the partial likelihood 
+  (either efron or breslow). See the Cox Proportional Hazards Model Details
   section below for more information.
 
 **init**
@@ -95,11 +97,12 @@ Defining a Cox Proportional Hazards Model
 
 **iter max**
 
-  A positive integer denoting the maximum number of iterations to make during
+  A positive integer defining the maximum number of iterations during
   model training. The role this parameter plays in the stopping criteria of the
-  model fitting algorithm is explained in the Cox Proportional Hazards Model
+  model-fitting algorithm is explained in the Cox Proportional Hazards Model
   Algorithm section below.
 
+""""""
 
 Cox Proportional Hazards Model Results
 --------------------------------------
@@ -107,7 +110,7 @@ Cox Proportional Hazards Model Results
 Data
 ~~~~
 Number of Complete Cases
-  The number of observations with no missing values in any of the input
+  The number of observations without missing values in any of the input
   columns.
 Number of Non Complete Cases
   The number of observations with at least one missing value in any of
@@ -173,6 +176,7 @@ where
 
   :math:`I(\beta) = - H(\beta)` is the observed information matrix
 
+""""""
 
 Cox Proportional Hazards Model Details
 --------------------------------------
@@ -195,7 +199,7 @@ the same time, the exact partial likelihood is given by
 where :math:`R_m` is the risk set and :math:`D_m` is the set of observations
 of size :math:`d_m` with an observed event at time :math:`t_m` respectively.
 Due to the combinatorial nature of the denominator, this exact partial
-likelihood becomes prohibitively expensive to calculate leading to the common
+likelihood becomes prohibitively expensive to calculate, leading to the common
 use of Efron's and Breslow's approximations.
 
 **Efron's Approximation**
@@ -217,15 +221,17 @@ likelihood are defined as
 
 :math:`pl(\beta) = \sum_{m=1}^M \big[\sum_{j \in D_m} w_j\mathbf{x}_j^T\beta - (\sum_{j \in D_m} w_j)\log(\sum_{j \in R_m} w_j \exp(\mathbf{x}_j^T\beta))\big]`
 
+""""
 
 Cox Proportional Hazards Model Algorithm
 ----------------------------------------
 
-H\ :sub:`2`\ O uses the Newton-Raphson algorithm to maximize the partial
+H2O uses the Newton-Raphson algorithm to maximize the partial
 log-likelihood, an iterative procedure defined by the steps:
 
-0. To add numeric stability to the model fitting calculations, the numeric
+To add numeric stability to the model fitting calculations, the numeric
    predictors and offsets are demeaned during the model fitting process.
+
 1. Set an initial value, :math:`\beta^{(0)}`, for the coefficient vector and
    assume an initial log partial likelihood of :math:`- \infty`.
 2. Increment iteration counter, :math:`n`, by 1.
@@ -252,6 +258,7 @@ log-likelihood, an iterative procedure defined by the steps:
 
      :math:`LRE(x, y) = - \log_{10}(\mid x \mid)`, if :math:`y = 0`
 
+""""""
 
 References
 ----------
@@ -266,3 +273,5 @@ Springer-Verlag, 2001.
 
 Therneau, T., Grambsch, P., Modeling Survival Data: Extending the Cox Model.
 Springer-Verlag, 2000.
+
+""""

@@ -9,6 +9,8 @@ If you have never used H2O before, refer to
 :ref:`GettingStartedFromaZipFile` for additional instructions on how
 to run H2O.
 
+""""
+
 Quick Start Video
 """""""""""""""""
 

@@ -9,6 +9,7 @@ data set. The Summary page can be accessed after parsing your data
 into .hex format by going to the drop down menu **Data** and
 selecting **Summary**. 
 
+""""
 
 Inputs
 """"""
@@ -33,22 +34,23 @@ Inputs
    displayed, and all others will be omitted regardless of the subset of
    columns selected in the X field. 
 
+""""
 
 Output
 """"""
 
 **Column Name** 
 
-   The variable name as it was provided in the header when the data
-   were parsed, or as assigned by H\ :sub:`2`\ O if no header was included. 
+
+   The variable name provided in the header during data parsing, or the default assigned by H2O if no header was included. 
 
 **Base Stats** for *Numerical Data*
 
   *NAs*
-   Displays a count of the number of elements in the column that are
-   interpreted as NA by H\ :sub:`2`\ O, either because the original element was
-   given as NA, or because the original element was uninterpretable
-   when the data were parsed
+   Displays a count of the number of elements in the column 
+   interpreted as NA by H2O, either because the original element was
+   given as NA or because the original element was uninterpretable
+   when the data were parsed.
 
   *Average*: Abbreviated **avg** 
    The arithmetic mean of the data in the column, defined
@@ -62,9 +64,9 @@ Output
    The standard deviation of the data in the column, defined as the
    square root of the sum of the deviance of observed values from the
    mean divided by the number of elements in the column less one.
-   For some columns of data a standard deviation of -0 may be produced. 
-   This outcome is the special case where the standard deviation is a very, 
-   very small negative number. The exact value has not been rounded, but the 
+   For some columns of data where the standard deviation is a very, 
+   very small negative numbe, a standard deviation of -0 may be produced. 
+   The exact value has not been rounded, but the 
    number of digits displayed have been truncated. 
 
 
@@ -82,21 +84,21 @@ Output
    listed as 0,1 and the maximum as 1,0. 
 
 **Percentiles** 
-  a table displayed only for *Numeric Data* 
-  A percentile of value X at P threshold is interpreted as 
+  A table displayed only for *Numeric Data*. 
+  A percentile of value X at P threshold that is interpreted as 
   "X is greater than or equal to P percent of the values 
-  in this column." For example, if 83 is given as the 
+  in this column." For example, if 83 is the 
   value at threshold .75, we would say that 83 is greater 
   than 75% of the other elements in the column.
    
 
   *Threshold*
-   Displays the percentile levels. For example .25 corresponds to the
-   25th percentile, .5 corresponds to the median and .75 corresponds to
+   Displays the percentile levels. For example, .25 corresponds to the
+   25th percentile, .5 corresponds to the median, and .75 corresponds to
    the 75th percentile. 
 
   *Value*
-   In H\ :sub:`2`\ O the values presented relative to thresholds as percentiles are 
+   In H2O, the values presented relative to thresholds as percentiles are 
    obtained through approximation relying on information derived from the 
    histogram.   
 
@@ -104,9 +106,9 @@ Output
 **Base Stats** for *Categorical Data*
 
   *NAs* 
-   Displays a count of the number of elements in the column that are
-   interpreted as NA by H\ :sub:`2`\ O, either because the original element was
-   given as NA, or because the original element was uninterpretable
+   Displays a count of the number of elements in the column 
+   interpreted as NA by H2O, either because the original element was
+   given as NA or because the original element was uninterpretable
    when the data were parsed. 
 
   *Cardinality* 
@@ -137,7 +139,7 @@ Output
 
 
   
-
+""""
   
   
 

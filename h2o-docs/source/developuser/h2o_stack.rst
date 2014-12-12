@@ -16,6 +16,14 @@ JVM process.
 The color scheme in the diagram shows each layer in a consistent color
 but always shows user-added code as purple.
 
+|
+
+.. image:: PngGen/pictures/h2o_stack.png
+   :width: 90 %
+
+|
+
+""""
 
 REST API Clients
 ----------------
@@ -42,6 +50,7 @@ All REST API clients communicate with H2O over a socket connection.
 **Tableau**
   Users can pull results from H2O for visualization in Tableau.
 
+""""
 
 JVM Components
 --------------
@@ -91,15 +100,9 @@ CPU Management
 
 **MRTask**
   MRTask stands for MapReduce Task.  This is an H2O in-memory MapReduce
-  Task, and not to be confused with a Hadoop MapReduce task.
+  Task, not to be confused with a Hadoop MapReduce task.
 
 **Fork/Join**
   A modified JSR166y lightweight task execution framework.
 
-|
-
-.. image:: PngGen/pictures/h2o_stack.png
-   :width: 90 %
-
-|
-
+""""

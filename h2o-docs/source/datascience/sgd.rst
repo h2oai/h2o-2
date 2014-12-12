@@ -6,14 +6,14 @@ Stochastic Gradient Descent
 Models that optimize over a manifold obtain the gradient 
 using stochastic gradient descent (SGD). 
 
-The SGD method implemented by  H\ :sub:`2`\ O is:
+The SGD method implemented by  H2O is:
 
 
 
 .. image:: hogwild.png
    :width: 90%
 
-
+""""
 
 References
 """"""""""
@@ -22,7 +22,7 @@ stochastic gradient descent." Advances in Neural Information
 Processing Systems 24 (2011): 693-701.*implemented algorithm on p.5
 http://www.eecs.berkeley.edu/~brecht/papers/hogwildTR.pdf
 
-
+""""
 
 
 

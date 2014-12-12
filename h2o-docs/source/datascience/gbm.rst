@@ -7,12 +7,14 @@ Gradient Boosted Regression and Gradient Boosted Classification are
 forward learning ensemble methods. The guiding heuristic is that good
 predictive results can be obtained through increasingly refined approximations. 
 
+""""
+
 Defining a GBM Model
 """"""""""""""""""""
 
 **Destination Key:**
 
-  A user defined name for the model. 
+  A user-defined name for the model. 
 
 **Source:**
 
@@ -20,21 +22,19 @@ Defining a GBM Model
 
 **Response:**
 
-  The dependent variable to be modeled. Dependent variables can be
-  binomial indicators, multinomial classes (if the classes are 
+  The dependent variable to use for the model. Dependent variables can be
+  binomial indicators or multinomial classes.
 
 **Ignored Columns:**
 
-  By default all of the information submitted in a data set will be
-  used in building the GBM model. Users specify those attributes
-  that should be omitted from analysis by highlighting them. 
-
+  By default, all of the information submitted in a data set is
+  used to build the GBM model. To omit attributes from analysis, highlight them.
+  
 **Classification:**
 
-  An option that treats the outcome variable as categorical, and when 
-  unchecked treats the outcome variable as continuous. If a
-  continuous real variable has been defined for the response, H\
-  :sub:`2`\ O will return an error if a classification model is requested. 
+  Check this checkbox to treat the outcome variable as categorical, or 
+  uncheck it to treat the outcome variable as continuous. If a
+  continuous real variable is defined for the response, H2O returns an error if a classification model is requested. 
 
 **Validation:** 
 
@@ -43,91 +43,91 @@ Defining a GBM Model
 
 **NTrees:**
 
-  The number of trees to be built. Models with different total numbers
-  of trees can be specified by entering the different values as a
-  comma separated list. For example,to specify different models with
-  200, 100 and 50 trees respectively enter "200, 100, 50".
+  The number of trees to build. To specify models with different total numbers
+  of trees, enter the values as a
+  comma-separated list. For example, to specify different models with
+  200, 100 and 50 trees respectively, enter "200, 100, 50".
 
 
 **Max Depth:** 
 
-  The maximum number of edges to be generated between the first node
+  The maximum number of edges to generate between the first node
   and the terminal node. To test different depths, values can be
-  specified in a comma separated list.  
+  specified in a comma-separated list.  
 
 **Min Rows:** 
 
-  The minimum number of observations to be included in a terminal
-  leaf. If any classification must consist of no fewer than five
-  elements, min rows should be set to five. 
+  The minimum number of observations to include in a terminal
+  leaf. For example, to ensure a classification consists of no fewer than five
+  elements, set the min rows value to five. 
 
 **NBins:**
 
-  The number of bins data are partitioned into before the best split
-  point is determined. A high number of bins relative to a low number
-  of observations will have a small number of observations in each
+  The number of bins used for data partitioning before the best split
+  point is determined. A high number of bins for a low number
+  of observations has a small number of observations in each
   bin. As the number of bins approaches the number of unique values in
   a column, the analysis approaches evaluation of all possible split
-  points 
+  points. 
 
 **Score Each Iteration:** 
 
-  An option that returns error rate information after each tree in the
+  Return error rate information after each tree in the
   requested set is built. This option allows users to evaluate the
-  marginal gain in fit from building that tree, allowing for
-  interruption of the model when the gain for building the next tree isn't
-  substantial enough to continue building. Users should be aware that
-  this option can slow the model building process, depending on the
+  marginal gain in fit from building that tree so they can interrupt the model when the gain for building the next tree isn't
+  substantial enough to continue building. 
+  This option can slow the model building process, depending on the
   size and shape of both the training data and the testing data. 
 
 **Importance:**
 
-  An option that returns information about each variable's importance
+  Return information about each variable's importance
   in training the specified model. 
 
 **Learn Rate:**
 
   A number between 0 and 1 that specifies the rate at which the
   algorithm should converge. Learning rate is inversely related to the
-  number of iterations taken for the algorithm to complete. 
+  number of iterations required for the algorithm to complete. 
 
 **Grid Parallelism:** 
 
-  When multiple models are called for through the grid search options
+  When multiple models are requested through the grid search options,
   such as specification of multiple learning rates, selecting this
-  option will build the set of models in parallel rather than
+  option will build the set of models in parallel, rather than
   sequentially.
+  
+""""  
 
 Treatment of Factors
 """""""""""""""""""""
 
   When the specified GBM model includes factors, those factors are
-  analyzed by assigning each distinct factor level an integer, and
-  then binning the ordered integers according to the user specified
-  number of bins (N Bins). Split points are determined by considering
-  as the end points of each bin, and the one versus many split for
-  each bin. 
+  analyzed by assigning an integer to each distinct factor level, and
+  then binning the ordered integers according to the user-specified
+  number of bins (N Bins). Split points are determined by considering the end points of each bin and the one versus many split for each bin. 
 
   For example, if the factor is split into 5 bins, H2O orders the bins by 
-  bin number, and then the split between the first and second bin, the
-  second and third, the third and fourth, and the fourth and fifth are 
-  considered. Additionally the split that comes of splitting the first
-  bin from the other four, and all analogous splits for the other four
-  bins are considered. If users wish to specify a model such that all
-  factors are considered individually, they can do so by setting N
-  Bins equal to the number of factor levels. This can be done even in
-  excess of 1024 levels (the maximum number of levels that can be
-  handled in R), though this will increase the time it takes for a
-  model to be fully generated. 
+  bin number, then considers the split between the first and second bin, then the 
+  second and third, then the third and fourth, and the fourth and fifth. 
+  Additionally the split that results from splitting the first
+  bin from the other four and all analogous splits for the other four
+  bins are considered. To specify a model that considers all
+  factors individually, set the value for N
+  Bins equal to the number of factor levels. This can be done for over 1024 levels (the maximum number of levels that can be
+  handled in R), though this increases the time to fully generate a
+  model. 
+
+""""
 
 Interpreting Results
 """""""""""""""""""""
 
-GBM results for classification models are comprised of a confusion
-matrix and the mean squared error of each tree. Note that when MSE for 
+The GBM results for classification models are comprised of a confusion
+matrix and the mean squared error of each tree. When the MSE for 
 each tree is returned, the first and second MSE values are the same. 
 The initial MSE is calculated for the dependent variable, and is given 
-as a baseline against which to evaluate the predictive performance of 
+as a baseline for evaluating the predictive performance of 
 each next basis function. The first MSE value given is the MSE for the 
 data set before any trees are built. 
 
@@ -141,8 +141,8 @@ the proportion of incorrect predictions overall.
 .. Image:: GBMmatrix.png
    :width: 70 %
 
+|
 
-For regression models, returned results 
 **MSE**
 
   Mean squared error is an indicator of goodness of fit. It measures
@@ -154,12 +154,12 @@ For regression models, returned results
 
   :math:`Cost = bins\times (2^{leaves}) \times columns \times classes`
 
-
+""""
 
 GBM Algorithm
 """"""""""""""
 
-H\ :sub:`2`\ O's Gradient Boosting Algorithms follow the algorithm specified by Hastie et
+H2O's Gradient Boosting Algorithms follow the algorithm specified by Hastie et
 al (2001):
 
 
@@ -189,20 +189,23 @@ Output :math:`\:\hat{f_{k}}(x)=f_{kM}(x),\:k=1,2,…,K.`
 
 **BETA: Standalone Scoring:**
 
-  As a beta feature still undergoing testing, GBM models now offer
-  users an option to download a generated GBM model in java code. This
-  new feature can be accessed by clicking **Java Model** in the upper
-  right corner. When the model is small enough, the java code for the
-  model will be made available to inspect from within the GUI, larger
-  models can be inspected after users have downloaded the model. 
+  To download a generated GBM model in Java code format, click the **Java Model** button in the upper
+  right corner. If the model is small enough, the Java code for the
+  model can be inspected in the GUI; larger
+  models can be inspected after downloading the model. 
 
-  To download the model open the terminal window, create a directory
-  where the model will be saved, set the new directory as the working
-  directory and follow the curl and java compile commands displayed in
-  the instructions at the top of the java model.  
+  To download the model:
+  
+  #. Open the terminal window.
+  #. Create a directory location for the model.
+  #. Set the new directory as the working directory. 
+  #. Follow the curl and java compile commands displayed in the instructions at the top of the Java model.  
+
 
 .. Image:: GBMjavaout.png
    :width: 70 %  
+   
+""""""""   
 
 Reference
 """""""""
@@ -237,7 +240,7 @@ stochastic gradient descent." Advances in Neural Information
 Processing Systems 24 (2011): 693-701. (algorithm implemented is on p.5)
 https://papers.nips.cc/paper/4390-hogwild-a-lock-free-approach-to-parallelizing-stochastic-gradient-descent.pdf
 
-
+""""""
 
 
 

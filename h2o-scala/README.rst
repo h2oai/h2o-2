@@ -7,7 +7,7 @@ Overview
 Shalala is a Scala library providing access to H2O API via a dedicated DSL
 and also a REPL integrated into H2O.
 
-Currently the library supports following expressions abstracting H2O API.
+Currently, the library supports the following expressions abstracting H2O API.
 
 *R-like commands*
 
@@ -138,3 +138,4 @@ FAQs
   
   - In Idea open the project located in ``h2o-scala`` directory
 
+""""

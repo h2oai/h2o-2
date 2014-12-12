@@ -34,8 +34,7 @@ Defining a K-Means model
 
 **Initialization**
 
- *Plus Plus*
-  A modification to the k-means algorithm that impacts the assignment
+ *Plus Plus*: A modification to the k-means algorithm that impacts the assignment
   of K initial cluster centroids. Because of the random process
   inherent to K-means, it's possible for the algorithm to converge on
   centroids that are not the optimal cluster centers purely by chance
@@ -47,8 +46,7 @@ Defining a K-Means model
   chosen at random. The process repeats until all centers have been
   chosen, at which point the algorithm proceeds as usual.
 
-  *Furthest* 
-  A modification to the k-means algorithm that impacts the assignment
+  *Furthest*: A modification to the k-means algorithm that impacts the assignment
   of K initial cluster centroids. Furthest first initialization
   attempts to improve K-means results by selecting the first center,
   and then calculating the distance from that point to all other
@@ -80,7 +78,7 @@ Defining a K-Means model
   each instance of H2O, allowing the user to create models with the
   same starting conditions in alternative configurations.
 
-
+""""
 
 
 Interpreting a Model
@@ -109,45 +107,32 @@ The number of clusters :math:`K` is user defined and determined a priori.
 1. Choose :math:`K` initial cluster centers :math:`m_{k}` according to one of
    the following:
 
-**Randomization** 
+    - **Randomization**: Choose :math:`K` clusters from the set of :math:`N` observations at random so that each observation has an equal chance of being chosen.
 
-Choose :math:`K` clusters from the set of :math:`N` observations at random so that
-each observation has an equal chance of being chosen.
+    - **Plus Plus**  
 
-**Plus Plus**  
+       i. Choose one center :math:`m_{1}` at random. 
 
-i. Choose one center :math:`m_{1}` at random. 
+       ii. Calculate the difference between :math:`m_{1}` and each of the remaining :math:`N-1` observations :math:`x_{i}`. 
+         :math:`d(x_{i}, m_{1})` = :math:`||(x_{i}-m_{1})||^2`
 
-ii. Calculate the difference between :math:`m_{1}` and each of the
-    remaining :math:`N-1` observations :math:`x_{i}`. 
+       iii. Let :math:`P(i)` be the probability of choosing :math:`x_{i}` as :math:`m_{2}`. Weight :math:`P(i)` by :math:`d(x_{i}, m_{1})` so that those :math:`x_{i}` furthest from :math:`m_{2}` have  a higher probability of being selected than those :math:`x_{i}` close to :math:`m_{1}`.
 
-    :math:`d(x_{i}, m_{1})` = :math:`||(x_{i}-m_{1})||^2`
+       iv. Choose the next center :math:`m_{2}` by drawing at random according to the weighted probability distribution. 
 
-iii. Let :math:`P(i)` be the probability of choosing :math:`x_{i}` as
-     :math:`m_{2}`. Weight :math:`P(i)` by :math:`d(x_{i}, m_{1})` so that
-     those :math:`x_{i}` furthest from :math:`m_{2}` have  a
-     higher probability of being selected than those :math:`x_{i}` 
-     close to :math:`m_{1}`.
+       v.  Repeat until :math:`K` centers have been chosen.
 
-iv. Choose the next center :math:`m_{2}` by drawing at random
-    according to the weighted probability distribution. 
+    - **Furthest**
 
-Repeat until :math:`K` centers have been chosen.
+        i. Choose one center :math:`m_{1}` at random. 
 
+        ii. Calculate the difference between :math:`m_{1}` and each of the remaining :math:`N-1` observations :math:`x_{i}`. 
+       :math:`d(x_{i}, m_{1})` = :math:`||(x_{i}-m_{1})||^2`
 
-**Furthest**
+        iii. Choose :math:`m_{2}` to be the :math:`x_{i}` that maximizes
+       :math:`d(x_{i}, m_{1})`.
 
-i. Choose one center :math:`m_{1}` at random. 
-
-ii. Calculate the difference between :math:`m_{1}` and each of the
-    remaining :math:`N-1` observations :math:`x_{i}`. 
-
-    :math:`d(x_{i}, m_{1})` = :math:`||(x_{i}-m_{1})||^2`
-
-iii. Choose :math:`m_{2}` to be the :math:`x_{i}` that maximizes
-     :math:`d(x_{i}, m_{1})`.
-
-Repeat until :math:`K` centers have been chosen. 
+        iv. Repeat until :math:`K` centers have been chosen. 
 
 2. Once :math:`K` initial centers have been chosen calculate the difference
    between each observation :math:`x_{i}` and each of the centers
