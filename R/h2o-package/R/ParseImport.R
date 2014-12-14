@@ -314,7 +314,6 @@ h2o.parseRaw <- function(data, key = "", header, header_with_hash, sep = "", col
   
   # on.exit(.h2o.__cancelJob(data@h2o, res$job_key))
   .h2o.__waitOnJob(data@h2o, res$job_key)
-  Sys.sleep(3)
   .h2o.exec2(expr = res$destination_key, h2o = data@h2o, dest_key = res$destination_key)
 #  parsedData <- new("H2OParsedData", h2o=data@h2o, key=res$destination_key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res))
 }
