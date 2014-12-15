@@ -565,7 +565,7 @@ public final class ParseDataset2 extends Job {
         avs[i] = new AppendableVec(_vg.vecKey(i + _vecIdStart),espc, chunkOff);
       return localSetup._pType == ParserType.SVMLight
         ?new SVMLightFVecDataOut(_vg,0,avs,_vecIdStart,chunkOff,enums(_eKey,localSetup._ncols))
-        :new FVecDataOut(_vg, chunkOff, 0, enums(_eKey,localSetup._ncols), avs);
+        :new FVecDataOut(_vg, chunkOff, chunkOff, enums(_eKey,localSetup._ncols), avs);
     }
 
     // Called once per file
@@ -833,6 +833,7 @@ public final class ParseDataset2 extends Job {
 //    }
 
     public FVecDataOut(VectorGroup vg, int chunkOff, int cidx, Enum [] enums, AppendableVec [] appendables){
+      assert cidx - chunkOff >= 0:"incompatible cidx/chunkOff " + chunkOff + ", " + cidx;
       _vecs = appendables;
       _chunkOff = chunkOff;
       _enums = enums;
@@ -842,6 +843,7 @@ public final class ParseDataset2 extends Job {
       _nvs = new NewChunk[appendables.length];
       for(int i = 0; i < appendables.length; ++i)
         _nvs[i] = (NewChunk)_vecs[i].chunkForChunkIdx(_cidx);
+
     }
 
     @Override public FVecDataOut reduce(StreamDataOut sdout){
