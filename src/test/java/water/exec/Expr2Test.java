@@ -52,7 +52,7 @@ public class Expr2Test extends TestUtil {
       if (s != null) s.delete();
   }
 
- /* @Test */ public void testBasicExpr1() {
+  @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
     try {
       File file = TestUtil.find_test_file("smalldata/tnc3_10.csv");
