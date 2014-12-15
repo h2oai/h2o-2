@@ -4,7 +4,6 @@ source('../findNSourceUtils.R')
 test.h2o.nfold <- function(conn) {
   tolerance <- 1e-4
 
-  conn = h2o.init()
   hex <- h2o.importFile(conn, normalizePath(locate("smalldata/logreg/prostate.csv")))
   predictors = c(3:9)
   response = 2

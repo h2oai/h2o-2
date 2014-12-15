@@ -8,7 +8,6 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 #setwd("/Users/Amy/Documents/h2o/R/tests/testdir_jira")
 
 source('../findNSourceUtils.R')
-conn = h2o.init()
 
 test.hex_1775 <- function(conn) {
   temp_dir = tempdir()
