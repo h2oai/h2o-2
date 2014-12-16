@@ -333,7 +333,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return sb.toString();
   }
 
-  public float [] thresholds = ModelUtils.DEFAULT_THRESHOLDS;
+  public transient float [] thresholds = ModelUtils.DEFAULT_THRESHOLDS;
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
