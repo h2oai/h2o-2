@@ -929,11 +929,11 @@ h2o.getModel <- function(h2o, key) {
   if(!is.null(response$"_dataKey")) train_fr <- h2o.getFrame(h2o, response$"_dataKey")
   params$importance <- !is.null(params$varimp)
   if(!is.null(params$family) && model.type == "gbm_model") {
-    params$distribution <- "multinomial"
-    if(params$family == "AUTO") {
-      if(!is.null(json[[model.type]]$validAUC)) params$distribution <- "bernoulli"
+    if(params$classification == "false") {params$distribution <- "gaussian"
+      } else {
+        if(length(params$'_distribution') > 2) params$distribution <- "multinomial" else params$distribution <- "bernoulli"
+      }
     }
-  }
   if(algo == "model") {
     newModel <- new(model_obj, key = dest_key, data = train_fr, model = results_fun(json[[model.type]], train_fr, params))
     return(newModel)
