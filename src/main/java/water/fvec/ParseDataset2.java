@@ -564,7 +564,7 @@ public final class ParseDataset2 extends Job {
       for(int i = 0; i < avs.length; ++i)
         avs[i] = new AppendableVec(_vg.vecKey(i + _vecIdStart),espc, chunkOff);
       return localSetup._pType == ParserType.SVMLight
-        ?new SVMLightFVecDataOut(_vg,0,avs,_vecIdStart,chunkOff,enums(_eKey,localSetup._ncols))
+        ?new SVMLightFVecDataOut(_vg,chunkOff,avs,_vecIdStart,chunkOff,enums(_eKey,localSetup._ncols))
         :new FVecDataOut(_vg, chunkOff, chunkOff, enums(_eKey,localSetup._ncols), avs);
     }
 
