@@ -3,7 +3,7 @@ import random, jenkinsapi, getpass, re, os, argparse, shutil, json, logging, sys
 import string
 from jenkinsapi.jenkins import Jenkins 
 # only used when we wanted to see what objects were available (below)
-from see import see
+# from see import see
 
 DO_LAST_GOOD = True
 
