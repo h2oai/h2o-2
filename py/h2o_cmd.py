@@ -350,12 +350,15 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
     if 1==0 and numCols and (len(summaries)!=numCols):
         raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(summaries)))
 
+    coltypeList = []
     for column in summaries:
         colname = column['colname']
+        # is this always None? unused?
         coltype = column['type']
         nacnt = column['nacnt']
         stats = column['stats']
         stattype = stats['type']
+        coltypeList.append(stattype)
         h2o_exec.checkForBadFP(nacnt, 'nacnt for colname: %s stattype: %s' % (colname, stattype))
 
         if stattype == 'Enum':
@@ -418,6 +421,8 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
             print "hstep:", hstep
             print "hbrk:", hbrk
             print "hcnt:", hcnt
+
+    return coltypeList
 
 def dot():
     sys.stdout.write('.')
