@@ -96,14 +96,22 @@ def handleRemoveError(func, path, exc):
 LOG_DIR = get_sandbox_name()
 
 def clean_sandbox():
-    IS_THIS_FASTER = True
+    IS_THIS_FASTER = False
     if os.path.exists(LOG_DIR):
 
         # shutil.rmtree hangs if symlinks in the dir? (in syn_datasets for multifile parse)
         # use os.remove() first
-        for f in glob.glob(LOG_DIR + '/syn_datasets/*'):
-            verboseprint("cleaning", f)
-            os.remove(f)
+        # save_model creates a directory now. So delete anything 2 levels down
+
+        # can't figure out how to deal with the model dir. going back to shutil.rmtree
+        if 1==0:
+            for f in glob.glob(LOG_DIR + '/syn_datasets/*/*'):
+                verboseprint("cleaning", f)
+                os.remove(f)
+     
+            for f in glob.glob(LOG_DIR + '/syn_datasets/*'):
+                verboseprint("cleaning", f)
+                os.remove(f)
 
         # shutil.rmtree fails to delete very long filenames on Windoze
         ### shutil.rmtree(LOG_DIR)

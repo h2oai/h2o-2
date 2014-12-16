@@ -18,7 +18,8 @@ def showIptables():
 
 def allAcceptIptables():
     print "Stopping firewall and allowing everyone..."
-    cmds = ["iptables -F"]
+    cmds = []
+    cmds.append("iptables -F")
     cmds.append("iptables -X")
     cmds.append("iptables -t nat -F")
     cmds.append("iptables -t nat -X")
@@ -32,7 +33,8 @@ def allAcceptIptables():
 # not used right now
 def allAcceptIptablesMethod2():
     print "Stopping firewall and allowing everyone..."
-    cmds = ["iptables -flush"]
+    cmds = []
+    cmds.append("iptables -flush")
     cmds.append("iptables -delete-chain")
     cmds.append("iptables -table filter -flush")
     cmds.append("iptables -table nat -delete-chain")
@@ -42,28 +44,30 @@ def allAcceptIptablesMethod2():
 
 def multicastAcceptIptables():
     print "Enabling Multicast (only), send and receive"
-    cmds = ["iptables -A INPUT  -m pkttype --pkt-type multicast -j ACCEPT"]
-    cmds.append("iptables -A OUTPUT -m pkttype --pkt-type multicast -j ACCEPT")
+    cmds = []
+    cmds.append("iptables -A INPUT  -m pkttype --pkt-type multicast -j ACCEPT")
     cmds.append("iptables -A INPUT  --protocol igmp -j ACCEPT")
-    cmds.append("iptables -A OUTPUT --protocol igmp -j ACCEPT")
     cmds.append("iptables -A INPUT  --dst '224.0.0.0/4' -j ACCEPT")
+    cmds.append("iptables -A OUTPUT -m pkttype --pkt-type multicast -j ACCEPT")
+    cmds.append("iptables -A OUTPUT --protocol igmp -j ACCEPT")
     cmds.append("iptables -A OUTPUT --dst '224.0.0.0/4' -j ACCEPT")
     runLinuxCmds(cmds)
 
 def multicastDropReceiveIptables():
-    print "Disabling Multicast (only), send and receive"
-    cmds = ["iptables -A INPUT  -m pkttype --pkt-type multicast -j DROP"]
+    print "Disabling Multicast (only), receive only"
+    cmds = []
+    cmds.append("iptables -A INPUT  -m pkttype --pkt-type multicast -j DROP")
     cmds.append("iptables -A INPUT  --protocol igmp -j DROP")
     cmds.append("iptables -A INPUT  --dst '224.0.0.0/4' -j DROP")
-    cmds.append( "iptables -A OUTPUT --dst '224.0.0.0/4' -j DROP")
     runLinuxCmds(cmds)
 
 def multicastBlockSendIptables():
     # I guess this doesn't cause IOexception to java, since the block is invisible to java?
-    print "Disabling Multicast (only), send and receive"
-    cmds = ["iptables -A OUTPUT -m pkttype --pkt-type multicast -j DROP"]
+    print "Disabling Multicast (only), send only"
+    cmds = []
+    cmds.append("iptables -A OUTPUT -m pkttype --pkt-type multicast -j DROP")
     cmds.append("iptables -A OUTPUT --protocol igmp -j DROP")
-    cmds.append( "iptables -A OUTPUT --dst '224.0.0.0/4' -j DROP")
+    cmds.append("iptables -A OUTPUT --dst '224.0.0.0/4' -j DROP")
     runLinuxCmds(cmds)
 
 class Basic(unittest.TestCase):
