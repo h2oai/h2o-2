@@ -390,8 +390,8 @@ PRINTALL = False
 # keep count of status counts
 
 # 2014-03-19 07:26:15+00:00
-# buildtimestampe is a datetime object
-see(buildtimestamp)
+# buildtimestamp is a datetime object
+## see(buildtimestamp)
 t = buildtimestamp
 # hour minute
 hm = "%s_%s" % (t.hour, t.minute)
