@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.zip.*;
 import jsr166y.CountedCompleter;
@@ -430,8 +431,10 @@ public final class ParseDataset2 extends Job {
     // Calculate enum domain
     int n = 0;
     AppendableVec [] avs = mfpt.vecs();
-    if(avs.length < reserveKeys)
-      vg.tryReturnKeys(vecIdStart+reserveKeys,vecIdStart + avs.length);
+    if((avs.length + vecIdStart) < reserveKeys) {
+      Future f = vg.tryReturnKeys(vecIdStart + reserveKeys, vecIdStart + avs.length);
+      if (f != null) try { f.get(); } catch (InterruptedException e) { } catch (ExecutionException e) {}
+    }
     int [] ecols = new int[avs.length];
     for( int i = 0; i < ecols.length; ++i )
       if(avs[i].shouldBeEnum())
@@ -583,7 +586,7 @@ public final class ParseDataset2 extends Job {
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
       if(!localSetup.isCompatible(_setup)) {
-        _parserr = "Conflicting file layouts, expecting: " + _setup + " but found "+localSetup;
+        _parserr = "Conflicting file layouts, expecting: " + _setup + " but found " + localSetup;
         return;
       }
 

@@ -7,6 +7,7 @@ import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.Future;
 
 import static water.util.Utils.seq;
 
@@ -984,7 +985,7 @@ public class Vec extends Iced {
         return (old._len == _oldCnt)? new VectorGroup(_key, _newCnt):old;
       }
     }
-    public void tryReturnKeys(final int oldCnt, int newCnt) { new ReturnKeysTsk(_key,oldCnt,newCnt).fork(_key);}
+    public Future tryReturnKeys(final int oldCnt, int newCnt) { return new ReturnKeysTsk(_key,oldCnt,newCnt).fork(_key);}
     // reserve range of keys and return index of first new available key
     public int reserveKeys(final int n){
       AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);

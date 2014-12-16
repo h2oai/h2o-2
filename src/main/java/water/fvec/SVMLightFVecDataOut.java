@@ -33,7 +33,7 @@ public class SVMLightFVecDataOut extends FVecDataOut {
       _ctypes= Arrays.copyOf(_ctypes, ncols);
 
       for(int i = _nCols; i < ncols; ++i) {
-        _vecs[i] = new AppendableVec(_vg.vecKey(i+1+_vecIdStart),_vecs[0]._espc, _chunkOff);
+        _vecs[i] = new AppendableVec(_vg.vecKey(i+_vecIdStart),_vecs[0]._espc, _chunkOff);
         _nvs[i] = new NewChunk(_vecs[i], _cidx, true);
       }
     }
