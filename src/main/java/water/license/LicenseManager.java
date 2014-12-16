@@ -82,6 +82,11 @@ public class LicenseManager {
   }
 
   public boolean isFeatureAllowed(String featureName, boolean silent) {
+    return true;
+  }
+
+  /*
+  public boolean isFeatureAllowed(String featureName, boolean silent) {
     if (_license == null) {
       if (! silent) {
         Log.info("isFeatureAllowed(" + featureName + ") is false (no valid license found)");
@@ -113,4 +118,5 @@ public class LicenseManager {
 
     return false;
   }
+  */
 }
