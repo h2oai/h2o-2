@@ -5,7 +5,6 @@
 
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 # setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_jira")
-setwd("/Users/amy/h2o/R/tests/testdir_jira")
 
 source('../findNSourceUtils.R')
 
