@@ -931,7 +931,10 @@ h2o.getModel <- function(h2o, key) {
   dest_key   <- key #params$destination_key
 
   train_fr   <- new("H2OParsedData", key = "NA")
-  if(!is.null(response$"_dataKey") && .check.exists(h2o, response$"_dataKey")) train_fr <- h2o.getFrame(h2o, response$"_dataKey")
+  if(!is.null(response$"_dataKey") && .check.exists(h2o, response$"_dataKey")) {
+    train_fr <- h2o.getFrame(h2o, response$"_dataKey") } else {
+      train_fr@h2o <- h2o
+    }
   params$importance <- !is.null(params$varimp)
   if(!is.null(params$family) && model.type == "gbm_model") {
     if(params$classification == "false") {params$distribution <- "gaussian"
