@@ -539,9 +539,11 @@ public class Frame extends Lockable<Frame> {
     // Also check each chunk has same rows
     for( int i=0; i<nchunks; i++ ) {
       long es = v0.chunk2StartElem(i);
-      for( Vec vec : vecs() )
-        if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
-          throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
+      for(int j = 1; j < numCols(); ++j) {
+        Vec vec = vec(j);
+        if (!(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es)
+          throw new IllegalArgumentException("Vector chunks have different numbers of rows, " + es + " and " + vec.chunk2StartElem(i) + " at vec " + j + " and chunk " + i);
+      }
     }
     // For larger Frames, verify that the layout is compatible - else we'll be
     // endlessly cache-missing the data around the cluster, pulling copies

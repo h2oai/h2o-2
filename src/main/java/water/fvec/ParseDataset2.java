@@ -431,6 +431,7 @@ public final class ParseDataset2 extends Job {
     // Calculate enum domain
     int n = 0;
     AppendableVec [] avs = mfpt.vecs();
+
     if((avs.length + vecIdStart) < reserveKeys) {
       Future f = vg.tryReturnKeys(vecIdStart + reserveKeys, vecIdStart + avs.length);
       if (f != null) try { f.get(); } catch (InterruptedException e) { } catch (ExecutionException e) {}
@@ -856,6 +857,8 @@ public final class ParseDataset2 extends Job {
         if(dout._vecs.length > _vecs.length){
           AppendableVec [] v = _vecs;
           _vecs = dout._vecs;
+          for(int i = 1; i < _vecs.length; ++i)
+            _vecs[i]._espc = _vecs[0]._espc;
           dout._vecs = v;
         }
         for(int i = 0; i < dout._vecs.length; ++i)
