@@ -8,13 +8,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # aws_credentials='~/.ec2/AwsCredentials.properties',
+        # hdfs_config="~/.ec2/core-site.xml",
+        # java_extra_args='-XX:+PrintGCDetails')
+        # use_hdfs=True, 
         # Uses your username specific json: pytest_config-<username>.json
         h2o.init (1, 
-            use_hdfs=True, 
-            aws_credentials='~/.ec2/AwsCredentials.properties',
-            hdfs_config="~/.ec2/core-site.xml",
-            java_heap_GB=12, 
-            java_extra_args='-XX:+PrintGCDetails')
+            java_heap_GB=12)
 
     @classmethod
     def tearDownClass(cls):
