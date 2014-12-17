@@ -110,7 +110,7 @@ demo(glm)
 \subsection{Making a build from the Source Code}
 If you are a developer who wants to make changes to the R package before building and installing it, pull the source code from Git (\url{https://github.com/h2oai/h2o}) and follow the instructions in From Source Code (Github) at \url{http://docs.h2o.ai/developuser/quickstart\_git.html}.
 
-After making the build, navigate to the Rcran folder with the R package in the build’s directory, then run and install.
+After making the build, navigate to the Rcran folder with the R package in the build directory, then run and install.
 \begin{spverbatim}
 $ make clean
 $ make build
@@ -162,7 +162,7 @@ R is connected to H2O cluster:
 
 If you are operating on a single node, initialize H2O using: \begin{spverbatim} h2o_server = h2o.init()\end{spverbatim}\\
 
-To connect with an existing H2O cluster node other than the default localhost:54321, specify the IP address and port number in the parentheses. For example: \begin{spverbatim}h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345)\end{spverbatim}
+To connect with an existing H2O cluster node other than the default localhost:54321, specify the IP address and port number in the parentheses. For example:\begin{spverbatim}h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345)\end{spverbatim}
 
 
 \subsection{Launching from the Command Line}

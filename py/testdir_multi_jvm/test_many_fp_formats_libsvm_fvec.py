@@ -44,7 +44,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
 
         valFormatted = h2o_util.fp_format(val, sel)
 
-        if val == 0:
+        if val==0:
             return None
         else:
             rowData.append(str(colNumber) + ":" + valFormatted) # f should always return string
@@ -62,19 +62,19 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
         # we need at least one with a value, otherwise h2o will parse as normal csv and not get "Target" etc col names
         # it will look like single col! hopefully rand is low enough to get at least one
         if d!=0:
-            if distribution == 'sparse':
+            if distribution=='sparse':
                 # only one value per row!
                 # is it okay to specify col 0 in svm? where does the output data go? (col 0)
                 colNumber = random.randint(1, colCount)
                 val = addRandValToRowStuff(colNumber, rowData, synColSumDict)
                 if val:
-                    colNumberMax = max(colNumberMax,colNumber)
-            elif distribution == 'sparse50':
-                # then some number of values per row constraine by max # of cols .. 50% or so?
+                    colNumberMax = max(colNumberMax, colNumber)
+            elif distribution=='sparse50':
+                # then some number of values per row constrained by max # of cols .. 50% or so?
                 for colNumber in range(1, colCount+1):
                     val = addRandValToRowStuff(colNumber, rowData, synColSumDict)
                     if val:
-                        colNumberMax = max(colNumberMax,colNumber)
+                        colNumberMax = max(colNumberMax, colNumber)
             else:
                 raise(Exception, "Don't understand what you want here %s" % distribution)
 
@@ -157,13 +157,11 @@ class Basic(unittest.TestCase):
                 # we might have added some zeros at the end, that our colNumberMax won't include
                 print synColSumDict.keys(), colNumberMax
                 self.assertEqual(colNumberMax+1, numCols, 
-                    msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, numCols))
+                    msg="generated %s cols (including output). parsed to %s cols" % (colNumberMax+1, numCols))
 
                 # Exec (column sums)*************************************************
                 h2e.exec_zero_list(zeroList)
                 # how do we know the max dimension (synthetic may not generate anything for the last col)
-                # use numCols?. numCols should be <= colCount. 
-
                 colSumList = h2e.exec_expr_list_across_cols(None, exprList, selKey2, maxCol=colNumberMax+1,
                     timeoutSecs=timeoutSecs)
 
@@ -179,7 +177,8 @@ class Basic(unittest.TestCase):
                         continue
 
                     # k should be integers that match the number of cols
-                    self.assertTrue(k>=0 and k<len(colSumList), msg="k: %s len(colSumList): %s numCols: %s" % (k, len(colSumList), numCols))
+                    self.assertTrue(k>=0 and k<len(colSumList), msg="k: %s len(colSumList): %s numCols: %s" % \
+                        (k, len(colSumList), numCols))
 
                     syn = {}
                     if k==0: 

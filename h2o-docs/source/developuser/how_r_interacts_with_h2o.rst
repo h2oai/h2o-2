@@ -47,6 +47,8 @@ and H2O interactions for the same GLM request and the resulting model.
 |
 |
 
+""""
+
 How R Expressions are Sent to H\ :sub:`2`\ O for Evaluation
 ===========================================================
 

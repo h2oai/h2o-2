@@ -142,7 +142,7 @@ class Basic(unittest.TestCase):
                 execExpr = "a1 = ddply(r.hex, c(1,2), " + PHRASE + ")"
                 start = time.time()
                 (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
-                groups = execResult['numRows']
+                groups = execResult['num_rows']
                 # this is a coarse comparision, statistically not valid for small rows, and certain ranges?
                 h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
                     msg="groups %s isn't close to expected amount %s, minInt: %s maxInt: %s" % (groups, maxExpectedGroups, minInt, maxInt))
@@ -161,7 +161,7 @@ class Basic(unittest.TestCase):
                 execExpr = "a2 = ddply(r.hex, c(1,2), " + PHRASE + ")"
                 start = time.time()
                 (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
-                groups = execResult['numRows']
+                groups = execResult['num_rows']
                 # this is a coarse comparision, statistically not valid for small rows, and certain ranges?
                 h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
                     msg="groups %s isn't close to expected amount %s, minInt: %s maxInt: %s" % (groups, maxExpectedGroups, minInt, maxInt))

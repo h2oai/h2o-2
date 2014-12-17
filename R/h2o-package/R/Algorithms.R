@@ -535,11 +535,11 @@ h2o.kmeans <- function(data, centers, cols = '', key = "", iter.max = 10, normal
   params$centers = res$parameters$k
   params$iter.max = res$parameters$max_iter
   result$params = params
-  
-  result$cluster = .h2o.exec2(clusters_key, h2o = data@h2o, clusters_key)
-  feat = res$'_names'
-  result$centers = t(matrix(unlist(res$centers), ncol = res$parameters$k))
-  dimnames(result$centers) = list(seq(1,res$parameters$k), feat)
+
+  result$cluster <- if( .check.exists(data@h2o, clusters_key) ) NULL else .h2o.exec2(clusters_key, h2o = data@h2o, clusters_key)
+  feat <- res$'_names'
+  result$centers <- t(matrix(unlist(res$centers), ncol = res$parameters$k))
+  dimnames(result$centers) <- list(seq(1,res$parameters$k), feat)
   #result$totss <- res$total_SS
   result$withinss <- res$within_cluster_variances ## FIXME: sum of squares != variances (bad name of the latter)
   result$tot.withinss <- res$total_within_SS

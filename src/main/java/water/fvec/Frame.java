@@ -1,6 +1,9 @@
 package water.fvec;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinTask;
+import jsr166y.ForkJoinWorkerThread;
+import jsr166y.RecursiveAction;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.exec.Flow;
@@ -46,13 +49,8 @@ public class Frame extends Lockable<Frame> {
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
-    Futures fs = new Futures();
-    for( int i=0; i<vecs.length; i++ ) {
-      Key k = _keys[i] = vecs[i]._key;
-      if( DKV.get(k)==null )    // If not already in KV, put it there
-        DKV.put(k,vecs[i], fs);
-    }
-    fs.blockForPending();
+    for( int i=0; i<vecs.length; i++ )
+      _keys[i] = vecs[i]._key;
     assert checkCompatible();
   }
 
@@ -236,6 +234,7 @@ public class Frame extends Lockable<Frame> {
         return i;
     return -1;
   }
+
 
   // Return Frame 'f' if 'f' is compatible with 'this'.
   // Return a new Frame compatible with 'this' and a copy of 'f's data otherwise.
@@ -540,9 +539,11 @@ public class Frame extends Lockable<Frame> {
     // Also check each chunk has same rows
     for( int i=0; i<nchunks; i++ ) {
       long es = v0.chunk2StartElem(i);
-      for( Vec vec : vecs() )
-        if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
-          throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
+      for(int j = 1; j < numCols(); ++j) {
+        Vec vec = vec(j);
+        if (!(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es)
+          throw new IllegalArgumentException("Vector chunks have different numbers of rows, " + es + " and " + vec.chunk2StartElem(i) + " at vec " + j + " and chunk " + i);
+      }
     }
     // For larger Frames, verify that the layout is compatible - else we'll be
     // endlessly cache-missing the data around the cluster, pulling copies

@@ -1,6 +1,8 @@
 package hex.la;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinTask;
+import jsr166y.RecursiveAction;
 import water.*;
 import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
@@ -10,8 +12,10 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.NewChunk.Value;
+import water.util.Log;
 import water.util.Utils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -84,28 +88,44 @@ public class DMatrix  {
   public static class TransposeTsk extends MRTask2<TransposeTsk> {
     final Frame _tgt; // Target dataset, should be created up front, e.g. via Vec.makeZeros(n) call.
     public TransposeTsk(Frame tgt){ _tgt = tgt;}
-    public void map(Chunk [] chks) {
+    public void map(final Chunk [] chks) {
       final Frame tgt = _tgt;
-      long [] espc = tgt.anyVec()._espc;
-      NewChunk [] tgtChunks = new NewChunk[chks[0]._len];
-      int colStart = (int)chks[0]._start;
-      for(int i = 0; i < espc.length-1; ++i) {
-        for(int j = 0; j < tgtChunks.length; ++j)
-          tgtChunks[j] = new NewChunk(tgt.vec(j + colStart), i);
-        for (int c = ((int) espc[i]); c < (int) espc[i + 1]; ++c) {
-          NewChunk nc = chks[c].inflate();
-          Iterator<Value> it = nc.values();
-          while (it.hasNext()) {
-            Value v = it.next();
-            NewChunk t  = tgtChunks[v.rowId0()];
-            t.addZeros(c-(int)espc[i] - t.len());
-            v.add2Chunk(t);
-          }
-        }
-        for(NewChunk t:tgtChunks) { // finalize the target chunks and close them
-          t.addZeros((int)(espc[i+1] - espc[i]) - t.len());
-          t.close(_fs);
-        }
+      final long [] espc = tgt.anyVec()._espc;
+      final int colStart = (int)chks[0]._start;
+//      addToPendingCount(espc.length - 2);
+      for (int i = 0; i < espc.length - 1; ++i) {
+        final int fi = i;
+//        new CountedCompleter(this) {
+//          @Override
+//          public void compute() {
+            final NewChunk[] tgtChunks = new NewChunk[chks[0]._len];
+            for (int j = 0; j < tgtChunks.length; ++j)
+              tgtChunks[j] = new NewChunk(tgt.vec(j + colStart), fi);
+            for (int c = ((int) espc[fi]); c < (int) espc[fi + 1]; ++c) {
+              NewChunk nc = chks[c].inflate();
+              Iterator<Value> it = nc.values();
+              while (it.hasNext()) {
+                Value v = it.next();
+                NewChunk t = tgtChunks[v.rowId0()];
+                t.addZeros(c - (int) espc[fi] - t.len());
+                v.add2Chunk(t);
+              }
+            }
+//            addToPendingCount(tgtChunks.length - 1);
+            for (int j = 0; j < tgtChunks.length; ++j) { // finalize the target chunks and close them
+              final int fj = j;
+//              new CountedCompleter(this) {
+//                @Override
+//                public void compute() {
+                  tgtChunks[fj].addZeros((int) (espc[fi + 1] - espc[fi]) - tgtChunks[fj]._len);
+                  tgtChunks[fj].close(_fs);
+                  tgtChunks[fj] = null;
+//                  tryComplete();
+                }
+//              }.fork();
+//            }
+//          }
+//        }.fork();
       }
     }
   }
@@ -196,11 +216,12 @@ public class DMatrix  {
       _z = new Frame(_x.anyVec().makeZeros(_y.numCols()));
       int total_cores = H2O.CLOUD.size()*H2O.NUMCPUS;
       int chunksPerCol = _y.anyVec().nChunks();
-      int maxP = 8*total_cores/chunksPerCol;
+      int maxP = 256*total_cores/chunksPerCol;
+      Log.info("maxP = " + maxP);
       _cntr = new AtomicInteger(maxP-1);
       addToPendingCount(2*_y.numCols()-1);
       for(int i = 0; i < Math.min(_y.numCols(),maxP); ++i)
-       forkVecTask(i);
+        forkVecTask(i);
     }
 
     private void forkVecTask(final int i) {
@@ -236,7 +257,7 @@ public class DMatrix  {
     final int _maxsz;
     int     [] _idxs;
     double  [] _vals;
-    public GetNonZerosTsk(H2OCountedCompleter cmp){super(cmp);_maxsz = 100000;}
+    public GetNonZerosTsk(H2OCountedCompleter cmp){super(cmp);_maxsz = 10000000;}
     public GetNonZerosTsk(H2OCountedCompleter cmp, int maxsz){super(cmp); _maxsz = maxsz;}
     @Override public void map(Chunk c){
       int istart = (int)c._start;
@@ -255,7 +276,7 @@ public class DMatrix  {
     }
     @Override public void reduce(GetNonZerosTsk gnz){
       if(_idxs.length + gnz._idxs.length > _maxsz)
-        throw new RuntimeException("too many nonzeros! found at least " + (_idxs.length + gnz._idxs.length > _maxsz) + " nonzeros.");
+        throw new RuntimeException("too many nonzeros! found at least " + (_idxs.length + gnz._idxs.length) + " nonzeros.");
       int [] idxs = MemoryManager.malloc4(_idxs.length + gnz._idxs.length);
       double [] vals = MemoryManager.malloc8d(_vals.length + gnz._vals.length);
       Utils.sortedMerge(_idxs,_vals,gnz._idxs,gnz._vals,idxs,vals);

@@ -4,27 +4,27 @@
 Generalized Linear Model
 ==============================
 
-Generalized Linear Models (GLM) estimates regression models for
-outcomes following exponential distributions in general. In addition
+Generalized Linear Models (GLM) estimate regression models for
+outcomes following exponential distributions. In addition
 to the Gaussian (i.e. normal) distribution, these include Poisson, binomial, gamma
 and Tweedie distributions. Each serves a different purpose, and
-depending on distribution and link function choice, it can be used 
+depending on distribution and link function choice, can be used 
 either for prediction or classification.
  
 
 **The GLM suite includes**
 
-Gaussian regression
+- Gaussian regression
   
-Poisson regression
+- Poisson regression
   
-binomial regression
+- binomial regression
   
-gamma regression
+- gamma regression
   
-Tweedie regression
+- Tweedie regression
 
-  
+""""""  
   
 Defining a GLM Model
 """"""""""""""""""""
@@ -34,54 +34,43 @@ Defining a GLM Model
   The specific features of a dependent variable should be considered
   when choosing the appropriate distribution for estimating a model. 
 
-  *Gaussian* 
-  Y variables must be continuous and real valued.
+  	*Gaussian*: Y variables must be continuous and real valued.
 
-  *Binomial*
-  Y variables are discrete and valued only at 0 or 1. 
+  	*Binomial*: Y variables are discrete and valued only at 0 or 1. 
 
-  *Poisson*
-  Y variables are discrete and valued strictly greater than 0. Poisson
-  models are used to model count data.   
+  	*Poisson*: Y variables are discrete and valued strictly greater than 0. Poisson models are used to model count data.   
 
-  *Gamma*
-  Y variables are discrete and valued strictly greater than 0.
+  	*Gamma*: Y variables are discrete and valued strictly greater than 0.
 
-  *Tweedie*
-  Y variables follow a Poisson-Gamma mixed compound distribution. This
-  is often also called a zero-inflated Poisson, and is used when Y
-  variables follow a distribution with a large mass at 0, and integer valued
-  counts for all non-zero observations. 
+  	*Tweedie*: Y variables follow a Poisson-Gamma mixed compound distribution. This is often also called a zero-inflated Poisson, and is used when Y variables follow a distribution with a large mass at 0, and integer-valued counts for all non-zero observations. 
     
   	
 **Ignored Columns:** 
      
-     This field will auto populate a list of the columns from the data
-     set in use. The user selected set of columns will be omitted from
-     the modeling process. H\ :sub:`2`\ O omits the dependent
+     This field auto-populates a list of the columns from the current data
+     set. The user selected set of columns will be omitted from
+     the modeling process. H2O omits the dependent
      variable specified in Y, as well as any columns with a
      constant value. Constant columns are omitted because the variances
-     of such columns are 0. In this case Y is independent of X, and X
+     are 0. In this case, Y is independent of X and X
      is not an explanatory variable.
    
-     H\ :sub:`2`\ O factors (also called categorical variables or
+     H2O factors (also called categorical variables or
      enumerators) as if they are collapsed columns of binomial
-     variables at each  factor level. When a factor is encountered, H\
-     :sub:`2`\ O determines the  cardinality of the variable, and
+     variables at each  factor level. When a factor is encountered, 
+     H2O determines the cardinality of the variable, and
      generates a unique regression coefficient for all but one of the
      factor levels. The omitted  factor level becomes the reference
-     level. H\ :sub:`2`\ O omits the first level in the ordered
-     set. For instance, if factor levels are A, B, and C, level A will
-     be omitted. 
+     level. H2O omits the first level in the ordered
+     set. For instance, if factor levels are A, B, and C, level A is omitted. 
 
-     Please note that H\ :sub:`2`\ O does not currently return a warning when
-     users predict on data outside of the range on which the model was
-     originally specified. For example, H\ :sub:`2`\ O allows a model
+     H2O does not currently return a warning for predictions
+     on data outside of the range of the original model specifications.
+     For example, H2O allows a model
      to be  trained on data with X between (-1, 10), and then applied
-     to predicting  on data where the range of X is (-10, 10) without
+     to predicting on data where the range of X is (-10, 10) without
      warning. This is also true in the analogous case for predicting and
-     training on factors. It is the user's responsibility to ensure
-     that out of data prediction is undertaken with caution, as the
+     training on factors. Use out-of-data prediction with caution, as the
      veracity of the original results are often constrained to the
      data range used in the original model.  
 
@@ -89,94 +78,93 @@ Defining a GLM Model
 **Max Iter:**
 
      The maximum number of iterations to be performed for training the
-     model via gradient descent. . If Max Iter is set to 100, the
-     algorithm will repeat the gradient descent 100 times, or until
-     the model converges, whichever comes first. If the model will not
-     converge after 100 cycles, modeling will stop. 
+     model via gradient descent. If Max Iter is set to 100, the
+     algorithm repeats the gradient descent 100 times or until
+     the model converges, whichever comes first. If the model does not
+     converge after 100 cycles, modeling stops. 
 
 **Standardize:** 
 
-     An option that transforms variables into
-     standardized variables, each with mean 0 and unit
+     Transform variables into
+     standardized variables, each with a mean of 0 and unit
      variance. Variables and coefficients are now expressed in terms
-     of their relative position to 0, and in standard units. 
+     of their relative position to 0 and in standard units. 
 
 **N Folds:** 
 
-     N folds specifies the number of cross validation models to be
-     generated simultaneously to training a model on the full data
-     set. If N folds is sent to 10, additional models will be generated
+     Specify the number of cross-validation models to 
+     generate simultaneously for training a model on the full data
+     set. If N folds is set to 10, additional models are generated
      with 1/10 of the data used to train each. The purpose of N folds
-     is to evaluate the stability of the parameter estimates produced.
+     is to evaluate the stability of the parameter estimates.
      
   
 
 **Family and Link:**  
    
      Each of the given options differs in the
-     assumptions made about the Y variable - the target of
-     prediction. Each family is associated with a default link function,
+     assumptions made about the Y variable (the target of
+     prediction). Each family is associated with a default link function,
      which defines the specialized transformation on the set of X
      variables chosen to  predict Y. 	
 
   *Gaussian (identity):* 
      
-     Y are quantitative, continuous (or discrete
-     predicted values can be meaningfully interpreted as approximately
-     continuos).  
+     Y are quantitative, continuous, or discrete
+     predicted values that can be meaningfully interpreted as approximately
+     continous.  
 
   *Binomial (logit):* 
 
-     Dependent variables take on two values, coded as 0 and 1, and
+     Dependent variables take on two values (0 and 1) and
      follow a binomial distribution.  Binomial dependent variables 
-     can be understood as a categorical Y with two possible outcomes
+     can be understood as a categorical Y with two possible outcomes.
 
   *Poisson (log):* 
 
-     Dependent variable is a count - a quantitative,
-     discrete value that expresses the number of times some event 
-     occurred. 
+     Dependent variable is a quantitative
+     discrete value that expresses the number of times an event 
+     occurred (count). 
 
   *Gamma (inverse):* 
 
-     Dependent variable is a survival measure, or is distributed as
-     Poisson where variance is greater than the mean of the distribution. 
+     Dependent variable is a survival measure or is distributed as
+     Poisson, where variance is greater than the mean of the distribution. 
 
 **Tweedie Variance Power:** 
       
     Tweedie distributions are distributions of the dependent variable Y where
     :math:`var(Y)=a[E(Y)]^{p}`
-
-    where a and p are constants, and p is determined on the basis of
-    the distribution of Y. Guidelines for selecting Tweedie power are
-    given below.   
-
+    and where a and p are constants and p is determined on the basis of
+    the distribution of Y.  
     Tweedie power is chosen based on the distribution of the dependent variable. 
 
+    =======    =====================================================    
     *p*	        *Response distribution*
-
+    =======    =====================================================    
     0	        Normal
     1	        Poisson
-    (1, 2)	Compound Poisson, non-negative with mass at zero
+    (1, 2)	    Compound Poisson, non-negative with mass at zero
     2	        Gamma
     3	        Inverse-Gaussian
     > 2	        Stable, with support on the positive reals 
+    =======    =====================================================    
 
 
 **Alpha:**
 
-      A user defined tuning regularization parameter.  H\ :sub:`2`\ O sets Alpha
+      A user-defined tuning regularization parameter.  H2O sets Alpha
       to 0.5 by default, but the parameter can take any value between
-      0 and 1, inclusive. It functions such that there is an added
+      0 and 1, inclusive. If you enable Alpha, there is an added
       penalty taken against the estimated fit of the model as the
       number of parameters increases. An Alpha of 1 is the lasso
-      penalty, and an alpha of 0 is the ridge penalty.
+      penalty, and an Alpha of 0 is the ridge penalty.
 
 
 **Lambda:**
 
-      H\ :sub:`2`\ O provides a default value, but this can also be user
-      defined. Lambda is a regularization parameter that is designed to
+      H2O provides a default value, but this can also be user
+      -defined. Lambda is a regularization parameter designed to
       prevent overfitting. The best value(s) of lambda depends on the
       desired level of agreement. 
 
@@ -185,7 +173,7 @@ Defining a GLM Model
 
      Precision of the vector of coefficients. Computation
      stops when the maximum difference between two beta vectors is
-     below than beta epsilon.
+     below the beta epsilon threshold.
 
 **Higher Accuracy:**
 
@@ -205,6 +193,9 @@ Defining a GLM Model
      lambda are estimated. These values are successively smaller, and
      are log scaled. Models for each are returned, along with the
      ratio of the explained deviance to nonzero parameter estimates. 
+     
+""""""     
+     
 
 GLMgrid Models
 """""""""""""""
@@ -215,7 +206,7 @@ GLMgrid Models
      evaluate a model for alpha=(0, .5, 1), entering 0, .5, 1 or
      0:1:.5 will achieve the desired outcome. 
 
-
+""""""
 
 Interpreting a Model
 """"""""""""""""""""
@@ -238,7 +229,7 @@ Interpreting a Model
      for each example or observation in the data. Deviance is
      a function of the specific model in question. Even when the same
      data set is used between two models, deviance statistics will
-     change, because the predicted values of Y are model dependent. 
+     change, because the predicted values of Y are model-dependent. 
 	
 **Null Deviance:** 
 
@@ -257,7 +248,7 @@ Interpreting a Model
      A model selection criterion that penalizes models having large
      numbers of predictors. AIC stands for Akiaike Information
      Criterion. It is defined as 
-     :math:`AIC = 2k + n Log(\frac{RSS}{n}`
+     :math:`AIC = 2k + n Log(\frac{RSS}{n})`
 
      Where :math:`k` is the number of model parameters, :math:`n` is
      the number of observations, and :math:`RSS` is the residual sum
@@ -265,72 +256,57 @@ Interpreting a Model
 
 **AUC:** 
  
-     Area Under Curve. The curve in question is the
-     receiver operating characteristic curve. The criteria is a 
-     commonly  used metric for evaluating the performance of
+     Area Under Curve (the receiver operating characteristic curve). The criteria is a 
+     commonly-used metric for evaluating the performance of
      classifier models. It  gives the probability that a randomly
      chosen positive observation is correctly ranked greater than a
      randomly chosen negative observation. In machine learning, AUC is
-     usually seen as the preferred evaluative criteria for a model
-     (over accuracy) for classification models. AUC is not an output
-     for Gaussian regression, but is output for classification models
+     usually seen as the preferred evaluative criteria (over accuracy) for a model
+      for classification models. AUC is not an output
+     for Gaussian regression but for classification models,
      like binomial. 
 
 **Confusion Matrix:** 
 
      The accuracy of the classifier can be evaluated
      from the confusion matrix, which reports actual versus predicted
-     classifications, and the error rates of both.
+     classifications and the error rates of both.
 
-
+""""""
 
 Validate GLM 
 """""""""""""
+For information on validation, refer to the :ref:`GLM_tutorial`_. 
 
-  After running the GLM Model, a .hex key associated with the model is
-  generated.
-
-#.  Select the "Validate on Another Dataset" option in the horizontal
-    menu at the top of your results page. You can also access this at
-    a later time by going to the drop down menu **Score** and
-    selecting **GLM**.
-
-
-#.  In the validation generation page enter the .hex key for the model
-    you wish to validate in the Model Key field.
-
-#.  In the key field enter the .hex for a testing data set matching
-    the structure of your training data set. 
-
-#.  Push the **Submit** button. 
-
+""""""
 
 Cross Validation
 """"""""""""""""
 
-     The model resulting from a GLM analysis in H\ :sub:`2`\ O can be
-     presented with cross validated models at the user's request. The
-     coefficients presented in the result model are independent of
-     those in  any of the cross validated models, and are generated
+     The model resulting from a GLM analysis in H2O can be
+     presented with cross-validated models. The
+     coefficients presented in the model are independent of
+     those in the cross validated models, and are generated
      via least squares on the full data set. Cross validated models
      are generated by taking a 90% random subsample of the data,
      training a model, and testing that model on the remaining
-     10%. This process is repeated as many times as the  user
-     specifies in the Nfolds field during model specification. 
+     10%. This process is repeated the number of time specified in the Nfolds field during model specification. 
+     
+""""""     
 
 
 Cost of Computation
 """""""""""""""""""
 
-H\ :sub:`2`\ O is able to process large data sets because it relies on
-paralleled processes. Large data sets are divided into smaller
-data sets and processed simultaneously, with results being
+H2O can process large data sets because it relies on
+parallel processes. Large data sets are divided into smaller
+data sets and processed simultaneously and the results are
 communicated between computers as needed throughout the process. 
 
-In GLM data are split by rows, but not by columns because the
+In GLM, data are split by rows but not by columns, because the
 predicted Y values depend on information in each of the predictor
-variable vectors. If we let O be a complexity function, N be the
-number of observations (or rows), and P be the number of
+variable vectors. If O is a complexity function, N is the
+number of observations (or rows), and P is the number of
 predictors (or columns) then 
 
 .. math::
@@ -349,12 +325,14 @@ greater than (N/CPUs), O is dominated by p.
 
    Complexity = O(p^3 + N*p^2) 
 
+""""""
+
 GLM Algorithm
 """""""""""""
 
 Following the definitive text by P. McCullagh and J.A. Nelder (1989)
 on the generalization of linear models to non-linear distributions of
-the response variable Y, H\ :sub:`2`\ O fits GLM models based on the maximum 
+the response variable Y, H2O fits GLM models based on the maximum 
 likelihood estimation via iteratively reweighed least squares. 
 
 Let :math:`y_{1},…,y_{n}` be n observations of the independent, random
@@ -387,7 +365,7 @@ When inverted:
 
 **Maximum Likelihood Estimation**
 
-Suppose some initial rough estimate of the parameters :math:`\hat{\beta}`.
+For an initial rough estimate of the parameters :math:`\hat{\beta}`.
 Use the estimate to generate fitted values: 
 :math:`\mu_{i}=g^{-1}(\hat{\eta_{i}})`
 
@@ -417,9 +395,9 @@ Where :math:`\mathbf{X}` is the model matrix, :math:`\mathbf{W}` is a
 diagonal matrix of :math:`w_{i}`, and :math:`\mathbf{z}` is a vector of
 the working response variable :math:`z_{i}`.
 
-This process is repeated until the estimates :math:`\hat{\beta}` change by less than a specified amount. 
+This process is repeated until the estimates :math:`\hat{\beta}` change by less than the specified amount. 
 
- 
+"""" 
 
 References
 """"""""""

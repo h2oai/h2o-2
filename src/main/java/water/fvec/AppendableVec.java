@@ -16,7 +16,7 @@ import java.util.Arrays;
  * Vec type.  NEW Vectors do NOT support reads!
  */
 public class AppendableVec extends Vec {
-  long _espc[];
+  long [] _espc;
   public static final byte NA     = 1;
   public static final byte ENUM   = 2;
   public static final byte NUMBER = 4;
@@ -27,11 +27,17 @@ public class AppendableVec extends Vec {
   long _strCnt;
   final long _timCnt[] = new long[ParseTime.TIME_PARSE.length];
   long _totalCnt;
+  int _chunkOff;
 
-  public AppendableVec( Key key) {
+  
+  public AppendableVec( Key key){
+    this(key, new long[4],0);
+  }
+  public AppendableVec( Key key, long [] espc, int chunkOff) {
     super(key, (long[])null);
-    _espc = new long[4];
-    _chunkTypes = new byte[4];
+    _espc = espc;
+    _chunkTypes = MemoryManager.malloc1(espc.length);
+    _chunkOff = chunkOff;
   }
 
 
@@ -39,11 +45,13 @@ public class AppendableVec extends Vec {
   // This call is made in parallel across all node-local created chunks, but is
   // not called distributed.
   synchronized void closeChunk( NewChunk chk) {
-    final int cidx = chk._cidx;
-    while( cidx >= _espc.length ) {
-      _espc   = Arrays.copyOf(_espc,_espc.length<<1);
-      _chunkTypes = Arrays.copyOf(_chunkTypes,_chunkTypes.length<<1);
+    final int cidx = chk._cidx - _chunkOff;
+    if( cidx >= _espc.length ) {
+      int newlen = Math.max(_espc.length * 2, cidx + 1);
+      _espc = Arrays.copyOf(_espc,newlen);
     }
+    if(_chunkTypes.length < _espc.length)
+      _chunkTypes = Arrays.copyOf(_chunkTypes,_espc.length);
     _espc[cidx] = chk._len;
     _chunkTypes[cidx] = chk.type();
     _naCnt += chk._naCnt;
@@ -58,6 +66,32 @@ public class AppendableVec extends Vec {
     return _strCnt > 0 && (_strCnt + _naCnt) == _totalCnt;
   }
 
+  /**
+   * Add AV build over sub-range of this vec (used e.g. by multifile parse where each file produces its own AV which represents sub-range of the resulting vec)
+   * @param av
+   */
+  public void setSubRange(AppendableVec av) {
+    assert _key.equals(av._key):"mismatched keys " + _key + ", " + av._key;
+    System.arraycopy(av._espc, 0, _espc, av._chunkOff, av._espc.length);
+    System.arraycopy(av._chunkTypes, 0, _chunkTypes, av._chunkOff, av._chunkTypes.length);
+    _strCnt += av._strCnt;
+    _naCnt += av._naCnt;
+    Utils.add(_timCnt, av._timCnt);
+    _totalCnt += av._totalCnt;
+  }
+
+  public static Vec[] closeAll(AppendableVec [] avs) {
+    Futures fs = new Futures();
+    Vec [] res = closeAll(avs,fs);
+    fs.blockForPending();
+    return res;
+  }
+  public static Vec[] closeAll(AppendableVec [] avs, Futures fs) {
+    Vec [] res = new Vec[avs.length];
+    for(int i = 0; i < avs.length; ++i)
+      res[i] = avs[i].close(fs);
+    return res;
+  }
   // Class 'reduce' call on new vectors; to combine the roll-up info.
   // Called single-threaded from the M/R framework.
   public void reduce( AppendableVec nv ) {

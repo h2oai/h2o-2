@@ -192,7 +192,7 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
         print "Trial #", trial, "completed\n"
 
 def exec_expr_list_across_cols(lenNodes, exprList, keyX, 
-    minCol=0, maxCol=54, timeoutSecs=10, incrementingResult=True):
+    minCol=0, maxCol=55, timeoutSecs=10, incrementingResult=True):
     colResultList = []
     for colX in range(minCol, maxCol):
         for i, exprTemplate in enumerate(exprList):

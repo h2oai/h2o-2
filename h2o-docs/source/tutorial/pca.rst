@@ -4,16 +4,18 @@
 PCA Tutorial
 ===============
 
-The purpose of this tutorial is to walk the new user through 
-a PCA analysis beginning to end in H\ :sub:`2`\ O. 
+This tutorial describes how to perform a PCA analysis in H2O. 
 
-Those who have never used H\ :sub:`2`\ O before should see the quick start guide
-for additional instructions on how to run H\ :sub:`2`\ O.
+If you have never used H2O before, refer to the quick start guide
+for additional instructions on how to run H2O: :ref:`GettingStartedFromaZipFile`.
 
+""""
 
 When to Use PCA
 """""""""""""""
-PCA is used to reduce dimensions and solve issues of multicollinearity in high dimension data. 
+Use PCA to reduce dimensions and solve issues of multicollinearity in high dimension data. 
+
+""""""
 
 Getting Started
 """""""""""""""
@@ -25,55 +27,50 @@ The original data are the Arrhythmia data set made available by UCI
 Machine Learning Repository. They are composed of 452 observations and
 279 attributes. 
 
-Before modeling, parse data into H\ :sub:`2`\ O as follows:
+Before modeling, parse data into H2O:
 
-#. Under the drop down menu **Data** select *Upload* and use the helper to
+#. From the drop-down **Data** menu, select *Upload* and use the uploader to
    upload data.  
 
 
-#. User will be redirected to a page with the header "Request
-   Parse". Select whether the first row of the data set is a
-   header. All other settings can be left in default. Press Submit. 
+#. On the  "Request Parse" page that appears, check the "header" checkbox if the first row of the data set is a header. No other changes are required. 
 
 
-#. Parsing data into H\ :sub:`2`\ O generates a .hex key ("data name.hex")
- 
+#. Click **Submit**. Parsing data into H2O generates a .hex key of the form  "data name.hex" 
 
 .. image:: PCAparse.png
    :width: 70%
 
+""""""
 
 
 Building a Model
 """"""""""""""""
 
-#. Once  data are parsed a horizontal menu will appear at the top
+#. Once data are parsed, a horizontal menu displays at the top
    of the screen reading "Build model using ... ". Select 
-   PCA here, or go to the drop down menu Model and
+   PCA here, or go to the drop-down **Model** menu and
    select PCA. 
 
 
-#. In the Key field enter the .hex key for the Arrhythmia data set. 
+#. In the "source" field, enter the .hex key for the Arrhythmia data set. 
  
 
-#. In the Ignored Columns field select the set of columns to be
-   omitted from the analysis.  Note that PCA ignores categorical variables
-   and constant columns. Categoricals can be included by expanding the
-   categorical into a set of binomial indicators.  
+#. In the "Ignored Columns" field, select the set of columns to 
+   omit from the analysis.  
+   
+   **Note**: PCA ignores categorical variables and constant columns. Categoricals can be included by expanding the categorical into a set of binomial indicators.  
 
 
-#. Specify MaxPC to be the maximum number of principal components to
-   be returned. In this case the maximum number of components is 100.  
+#. To specify the maximum number of principal components to
+   be returned, enter a value in the "max pc" field. In this example, the maximum number of components is 100.  
 
 
-#. Specify Tolerance so that components exhibiting low standard
-   deviation (which indicates a lack of contribution to the overall
-   variance observed in the data) are omitted. In this example we set
-   Tolerance to .5.
+#. To omit components exhibiting low standard deviation (which indicates a lack of contribution to the overall variance observed in the data), enter a value in the "tolerance" field. In this example, set Tolerance to .5.
 
 
-#. Choose whether or not to standardize. Standardizing is highly
-   recommended, as choosing to not standardize can produce components
+#. To standardize, check the "standardize" checkbox. Standardizing is highly
+   recommended; if you do not use standardization, the results can include components
    that are dominated by variables that appear to have larger
    variances relative to other attributes purely as a matter of scale,
    rather than true contribution. 
@@ -83,34 +80,31 @@ Building a Model
 .. image:: PCArequest.png
    :width: 70%
 
-
+""""
 
 
 
 PCA Results
 """""""""""
 
-PCA output returns a table displaying the number of components
-indicated by whichever criteria was more restrictive in this
-particular case. In this example, a maximum of 100 components were
-requested, and a tolerance set to .5.  
+The PCA output displays a table with the number of components
+indicated by the most restrictive criteria for this
+particular case. In this example, a maximum of 100 components are
+requested and tolerance is .5.  
 
-Scree and cumulative variance plots for the components are returned as
-well. Users can access them by clicking on the black button labeled
+The output also include scree and cumulative variance plots for the components.  To view this information, click the black button labeled
 "Scree and Variance Plots" at the top left of the results page. A
 scree plot shows the variance of each component, while the cumulative
 variance plot shows the total variance accounted for by the set of 
 components. 
 
-Users should note that if they wish to replicate results between H\ :sub:`2`\ O
-and R, it is recommended that standardization and cross validation
-either be turned off in H\ :sub:`2`\ O, or specified in R. 
+**Note**: To replicate results between H2O and R, we recommend disabling standardization and cross validation in H2O, or specifying the values in R. 
 
 
 .. image:: PCAoutput.png
    :width: 100%
 
-
+""""
 
 
 

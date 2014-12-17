@@ -1,17 +1,17 @@
 .. _Multinode:
 
 
-H\ :sub:`2`\ O on a Multi-Node Cluster
+H2O on a Multi-Node Cluster
 ======================================
 
 The purpose of this walk-through is to show users how to set up 
-an H\ :sub:`2`\ O multi-node cluster. Begin by locating a set of hosts to make up our cluster (a host could be a server, an EC2 instance, or your laptop.)
+an H2O multi-node cluster. Begin by locating a set of hosts to make up our cluster (a host could be a server, an EC2 instance, or your laptop.)
 
 
 **STEP 1**
 
-To download H\ :sub:`2`\ O, including the .jar, go to
-the H\ :sub:`2`\ O `downloads page <http://0xdata.com/download/>`_ and choose the version that is right for your environment.
+To download H2O, including the .jar, go to
+the H2O `downloads page <http://h2o.ai/download/>`_ and choose the appropriate version for your environment.
 
 
 **STEP 2**
@@ -21,10 +21,10 @@ Make sure the same h2o.jar file is available on every host.
 
 **STEP 3**
 
-The best way to get multiple H\ :sub:`2`\ O nodes to find each other is to
-provide a flat file which lists the set of nodes.
+The best way to get multiple H2O nodes to find each other is to
+provide a flat file that lists the set of nodes.
 
-Create a flatfile.txt with the IP and port for each H\ :sub:`2`\ O instance.
+Create a flatfile.txt with the IP and port for each H2O instance.
 Put one entry per line.  For example:
 
 ::
@@ -32,7 +32,7 @@ Put one entry per line.  For example:
   192.168.1.163:54321
   192.168.1.164:54321
 
-(Note that the -flatfile option tells one H\ :sub:`2`\ O node where to find the
+(Note that the -flatfile option tells one H2O node where to find the
 others.  It is not a substitute for the -ip and -port specification.)
 
 
@@ -45,22 +45,22 @@ Copy the flatfile.txt to each node in your cluster.
 
 
 The Xmx option in the java command line specifies the amount of memory
-allocated to one H\ :sub:`2`\ O node.  The cluster's memory capacity is the sum
-across all H\ :sub:`2`\ O nodes in the cluster.
+allocated to one H2O node.  The cluster's memory capacity is the sum
+across all H2O nodes in the cluster.
 
 For example, if a user creates a cluster with four 20g nodes (by
-specifying Xmx20g), H\ :sub:`2`\ O will have available a total of 80 gigs of
+specifying Xmx20g), H2O will have available a total of 80 gigs of
 memory.
 
 For best performance, we recommend you size your cluster to be about
 four times the size of your data (but to avoid swapping, Xmx must not
 be larger than physical memory on any given node).  Giving all nodes
-the same amount of memory is strongly recommended (H\ :sub:`2`\ O
+the same amount of memory is strongly recommended (H2O
 works best with symmetric nodes).
 
 Note the optional -ip (not shown in the example below) and -port
-options tell this H\ :sub:`2`\ O node what IP address and ports (port and port+1
-are used) to bind to.  The -ip option is especially helpful for hosts
+options tell this H2O node what IP address and ports (port and port+1
+are used) to use.  The -ip option is especially helpful for hosts
 that have multiple network interfaces.
 
 ::
@@ -92,7 +92,7 @@ You will see output similar to the following:
   08:35:33.747 main      INFO WATER: Log dir: '/tmp/h2o-tomk/h2ologs'
 
 
-As you add more nodes to your cluster, the H\ :sub:`2`\ O output will inform you:
+As you add more nodes to your cluster, the H2O output will inform you:
 
 ::
 
@@ -101,7 +101,7 @@ As you add more nodes to your cluster, the H\ :sub:`2`\ O output will inform you
 
 **STEP 6**
 
-Access the H\ :sub:`2`\ O Web UI with your browser.  Point your browser to the HTTP link given by **"Listening for HTTP and REST traffic on..."** in the H\ :sub:`2`\ O output.
+Access the H2O Web UI with your browser.  Point your browser to the HTTP link given by **"Listening for HTTP and REST traffic on..."** in the H2O output.
 
 
 **STEP 7**

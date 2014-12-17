@@ -7,32 +7,34 @@ Tableau 8.1
 Have H\ :sub:`2`\ O Installed
 """""""""""""""""""""""""""""
 
-Perquisites :
+Pre-requisites :
 
     - 64-bit Oracle Java 1.6+
     - Tableau 8.1 installed
-    - H\ :sub:`2`\ O installed in R (follow download guide :ref:`R_Installation`)
+    - H2O installed in R (follow the download guide :ref:`R_Installation`)
+    
+""""""    
 
 Metadata
 """"""""
 
-Tableau requires a data input of some sort in order to run but when dealing with immensely big data as a H2O user would
-typically do, it is impractical and unnecessarily time consuming to feed all the data into Tableau. So the solution is to
-create a small metadata file that can be easily loaded from disk.
+Tableau requires  some sort of data input to run, but when dealing with immensely big data as a H2O user would
+typically do, it is impractical and unnecessarily time-consuming to feed all the data into Tableau. So the solution is to
+create a small metadata file that can be easily loaded from the disk.
 
-Note: in particular, geo attributes like cities and latitude/longitude coordinates need to be imported into Tableau.
-Aggregates and calculated fields cannot be converted so even if you have a vector of cities (New York City, San Francisco,
-Houston, Austin, Seattle) as a output from R into Tableau as a new measure the user cannot convert the measure into
+Note: In particular, geographic attributes like cities and latitude/longitude coordinates need to be imported into Tableau.
+Aggregates and calculated fields cannot be converted, so even if you have a vector of cities (New York City, San Francisco,
+Houston, Austin, Seattle) as a output from R into Tableau as a new measure, you cannot convert the measure into
 geographical points.
 
-The metadata is just a file with factor levels of the data frame that’ll give a quick overview of the unique input values
-and cardinality of each column. This format will also allow the user to calculate across the table making it easier actually
-visualize some of the data coming from H2O. Example: if a column has a 352 categorical values and a binomial GLM is ran with
-352 coefficients in the output, Tableau will allow the plotting of the coefficients against the column.
+The metadata is a file with factor levels of the data frame that give a quick overview of the unique input values
+and cardinality of each column. This format will also allow the user to calculate across the table, making it easier to actually
+visualize some of the data coming from H2O. For example, if a column has a 352 categorical values and a binomial GLM is run with
+352 coefficients in the output, Tableau allows plotting of the coefficients against the column.
 
-The following data is a truncated metadata file for 116 million rows airline `data set <https://github.com/0xdata/h2o/wiki/Hacking-Airline-DataSet-with-H2O>`_.
-This metadata file in particular is only about 352 rows big. A extra column was prepend to the data file to grab the column
-names of the actual data set, this column will help populate certain parameters in the workbook.
+The following data is a truncated metadata file for 116 million rows airline `data set <https://github.com/h2oai/h2o/wiki/Hacking-Airline-DataSet-with-H2O>`_.
+This particular metadata file is only about 352 rows. A extra column was prepended to the data file to grab the column
+names of the actual data set. This column helps populate certain parameters in the workbook.
 
 ::
 
@@ -57,12 +59,14 @@ names of the actual data set, this column will help populate certain parameters 
   Dest                  	    	        18		            EV	        SEA     Seattle
   Distance              	    	        19		            DH	        SJC     San Jose
 
+""""
+
 Create R, Tableau, and Data Connections
 """""""""""""""""""""""""""""""""""""""
 
 **Step 1**
 
-Install Rserve which is the package built to create R servers, and once installed load up the Rserve library and run Rserve or run.Rserve with your desired port.
+Install Rserve (the package built to create Rserve), load the Rserve library, and run Rserve or run Rserve with your desired port.
 
 ::
 
@@ -73,40 +77,51 @@ Install Rserve which is the package built to create R servers, and once installe
 
 **Step 2**
 
-Open Demo_Template_8.1.twb which should have all the calculated fields containing R script already in the sidebar. Navigate to
-"Help > Settings and Performance > Manage R Connection" to establish a connection to the R serve.
+Open Demo_Template_8.1.twb, which should have all the calculated fields containing R scripts already in the sidebar. Navigate to
+"Help > Settings and Performance > Manage R Connection" to establish a connection to the Rserve.
 
 .. image:: tableau_r_connection1.png
    :width: 50%
+|
 
 Input the server ip address and port:
 
 .. image:: tableau_r_connection2.png
    :width: 50%
 
+|
 
 **Step 3**
 
-Set the workbook's connection to the airlines_meta.csv data by navigating to the data section on the left sidebar, right clicking
-on the airlines_meta and choosing to "Edit Connection."
+Set the workbook's connection to the airlines_meta.csv data by navigating to the data section on the left sidebar, right-clicking
+on the airlines_meta, and choosing "Edit Connection."
+
+|
 
 .. image:: tableau_data_connection1.png
    :width: 40%
+|
 
-Simply provide the location of the airlines_meta.csv file and submit the new path.
+Provide the location of the airlines_meta.csv file and submit the new path.
+
+|
 
 .. image:: tableau_data_connection2.png
    :width: 40%
 
+|
 
 **Step 4**
 
-Configure the IP Address and Port that H\ :sub:`2`\ O will launch at as well as the path to the full airlines data file.
-Fill in the parameters to creating a new GLM model, for documentation on what the parameters represent visit our GLM documentation page
+Configure the IP Address and Port that H2O uses to launch, as well as the path to the full airlines data file.
+Fill in the parameters to create a new GLM model. For documentation about the parameters,  refer to our GLM documentation page
 :ref:`GLMmath`.
 
+|
 .. image:: tableau_h2o_parameters.png
    :width: 40%
+   
+""""   
 
 Execute Scripts
 """""""""""""""
@@ -114,7 +129,7 @@ Execute Scripts
 .. image:: tableau_execute.png
    :width: 40%
 
-Double click on the calculated fields under Dimensions in the order they are listed:
+Double-click the calculated fields under "Dimensions" in the order in which they are listed:
 
 #. Execute "00 Load H2O and Tableau functions" to run library(h2o) and define other R functions to be used in Tableau.
 
@@ -124,8 +139,12 @@ Double click on the calculated fields under Dimensions in the order they are lis
 
 #. Execute "03 Run GLM" to build a GLM model in H2O and grab back coefficient values that will be plotted in multiple worksheets.
 
+""""
+
 Navigate through the worksheets and dashboard
 """""""""""""""""""""""""""""""""""""""""""""
 
 .. image:: tableau_dashboard.png
    :width: 100%
+   
+""""   

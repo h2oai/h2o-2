@@ -22,6 +22,9 @@ mapr2.1.3_JARS=$(mapr2.1.3_JAR_DIR)/hadoop-0.20.2-dev-core.jar
 mapr3.1.1_JAR_DIR=../lib/hadoop/mapr3.1.1
 mapr3.1.1_JARS=$(mapr3.1.1_JAR_DIR)/hadoop-0.20.2-dev-core.jar
 
+mapr4.0.1_JAR_DIR=../lib/hadoop/mapr4.0.1
+mapr4.0.1_JARS=$(mapr4.0.1_JAR_DIR)/hadoop-annotations-2.4.1-mapr-1408.jar${SEP}$(mapr4.0.1_JAR_DIR)/hadoop-common-2.4.1-mapr-1408.jar${SEP}${mapr4.0.1_JAR_DIR}/hadoop-mapreduce-client-core-2.4.1-mapr-1408.jar
+
 hdp1.3.2_JAR_DIR=../lib/hadoop/hdp1.3.2
 hdp1.3.2_JARS=$(hdp1.3.2_JAR_DIR)/hadoop-core-1.2.0.1.3.2.0-111.jar
 
@@ -79,6 +82,7 @@ build: clean
 	mkdir target
 	$(MAKE) build_inner HADOOP_VERSION=mapr2.1.3 YARN=false L4JOVR=false
 	$(MAKE) build_inner HADOOP_VERSION=mapr3.1.1 YARN=false L4JOVR=true
+	$(MAKE) build_inner HADOOP_VERSION=mapr4.0.1 YARN=false L4JOVR=true
 	$(MAKE) build_inner HADOOP_VERSION=cdh3      YARN=false L4JOVR=false
 	$(MAKE) build_inner HADOOP_VERSION=cdh4      YARN=false L4JOVR=false
 	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn YARN=true  L4JOVR=false

@@ -5,7 +5,7 @@ Install H\ :sub:`2`\ O package in R
 
 Currently, there are two different ways to install the H2O package in R. If you are using R 2.13.0 or later, the following instructions describe how to download from CRAN, how to download the build from the h2o.ai website, and how to install from the most recent source code.
 
-- The h2o.ai `website <http://h2o.ai/download/>`_ has the most recent stable releases of H2O as well as the bleeding edge nightly build.
+- The h2o.ai `website <http://h2o.ai/download/>`_ has the most recent stable releases of H2O as well as the bleeding edge nightly build. 
 - CRAN has a policy of updating packages every few weeks to months so the most recent or the last stable release would be available
 - `GitHub <http://github.com/h2oai>`_ has most recent changes committed and a build will be made nightly from the source code; however, stability is not guaranteed.
 

@@ -99,10 +99,13 @@ public class ASTddply extends ASTOp {
       Vec[] data = fr.vecs();    // Full data columns
       Vec[] gvecs = new Vec[data.length];
       Key[] keys = rows.group().addVecs(data.length);
+      Futures f = new Futures();
       for( int c=0; c<data.length; c++ ) {
         gvecs[c] = new SubsetVec(rows._key, data[c]._key, keys[c], rows._espc);
         gvecs[c]._domain = data[c]._domain;
+        DKV.put(gvecs[c]._key,gvecs[c],f);
       }
+      f.blockForPending();
       Key grpkey = Key.make("ddply_grpkey_"+(grpnum-1));
       Frame fg = new Frame(grpkey, fr._names,gvecs);
       Futures gfs = new Futures(); DKV.put(grpkey, fg, gfs); gfs.blockForPending();

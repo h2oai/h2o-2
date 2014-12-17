@@ -18,7 +18,7 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
   pip install -r requirements.txt [--user]
 
                                                                              
-3. Build H2O from source.  You must have Java JDK 1.6 or higher, Sbt 0.13.1 or higher. If pdflatex is installed on your system, you must have the inconsolata latex package and ptmr8t font for latex, as well as R packages ‘RCurl’, ‘rjson’ and ‘statmod.’
+3. Build H2O from the source.  You must have Java JDK 1.6 or higher, Sbt 0.13.1 or higher. If pdflatex is installed on your system, you must have the inconsolata latex package and ptmr8t font for latex, as well as R packages ‘RCurl’, ‘rjson’ and ‘statmod.’
    After the build finishes, some JUnit tests will run automatically.
 
  ::
@@ -190,11 +190,12 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
 
 5. Point your web browser to the HTTP URL (``http://your-ip-address:54321``); H2O will run from there.  
 
+""""
 
-Updating H\ :sub:`2`\ O from Github
+Updating H2O from Github
 -------------------------------------
 
-1. Change directory to H\ :sub:`2`\ O directory created when the git repository was originally cloned. 
+1. Change directory to H2O directory created when the git repository was originally cloned. 
 
 2. Pull the latest code, and update 
 
@@ -203,3 +204,4 @@ Updating H\ :sub:`2`\ O from Github
   $ git pull
   $ make
   
+""""

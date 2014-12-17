@@ -6,14 +6,14 @@ H2O has the ability to code in any front-end API and export the model as
 a POJO (Plain Old Java Object). This provide the flexibility to use the model outside of H2O, either to run as a standalone or by integrating the Java Object into a platform like Hadoop's Storm. The following walkthrough describes
 the steps required to export a model object via the command line and to score it using a sample class object.
 
-The working example or unit test for scoring using the Java code is available on `github <https://github.com/h2oai/h2o/blob/1516535e6c9358667369074a17a4f25821b281e2/R/tests/Utils/shared_javapredict_GBM.R>`_.
+The working example or unit test for scoring using the Java code is available on `github <https://github.com/h2oai/h2o/blob/1516535e6c9358667369074a17a4f25821b281e2/R/tests/Utils/shared_javapredict_GBM.R>`_. 
 
 Walk-through
 """"""""""""
 
 **Step 1**
 
-To export an H2O instance sitting on localhost:54321 by default and a GBM model with 50 trees, run the following commands to grab the h2o-model jar file as well as the Java code for the example model GBM_a2647515ded07d5b710c82015a6842a9.
+To export an H2O instance sitting on localhost:54321 by default and a GBM model with 50 trees, run the following commands to grab the h2o-model jar file and the Java code for the example model GBM_a2647515ded07d5b710c82015a6842a9.
 We recommend creating a new directory for each model.
 
 ::
@@ -55,7 +55,7 @@ Next, set up a Java instance to compile the model object using PredictCSV.java, 
 
 **Step 4**
 
-Finally, feed in the testing data to be scored by running the following command:
+Finally, submit the testing data for scoring by running the following command:
 
     ::
 

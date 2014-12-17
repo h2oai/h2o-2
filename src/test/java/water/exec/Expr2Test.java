@@ -1,9 +1,11 @@
 package water.exec;
 
+import hex.FrameSplitter;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import water.H2O;
 import water.Key;
 import water.Lockable;
 import water.TestUtil;
@@ -23,25 +25,31 @@ public class Expr2Test extends TestUtil {
 
   @Test public void rbindTest() {
     Key dest1 = Key.make("f1");
+    float[] ratios  = arf(0.5f);
+    Frame[] splits  = null;
 
     File file1 = TestUtil.find_test_file("smalldata/tnc3_10.csv");
     //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
     //File file = TestUtil.find_test_file("smalldata/cars.csv");
     Key fkey1 = NFSFileVec.make(file1);
-    Frame fr1 = ParseDataset2.parse(dest1,new Key[]{fkey1});
+    Frame f = ParseDataset2.parse(dest1,new Key[]{fkey1});
+    FrameSplitter fs = new FrameSplitter(f, ratios);
+    H2O.submitTask(fs).join();
+    splits = fs.getResult();
 
     Frame rbinded_frame;
-    Env ev = Exec2.exec("rbind("+fr1._key+","+fr1._key+")" );
+    Env ev = Exec2.exec("rbind("+splits[0]._key+","+splits[1]._key+")" );
     try {
       rbinded_frame = ev.popAry();
     } finally {
       if (ev!=null) ev.remove_and_unlock();
     }
-    System.out.println(rbinded_frame.numRows());
-    System.out.println(fr1.numRows());
+    assertEquals(rbinded_frame.numRows(),f.numRows());
 
     rbinded_frame.delete();
     Lockable.delete(dest1);
+    for (Frame s : splits)
+      if (s != null) s.delete();
   }
 
   @Test public void testBasicExpr1() {

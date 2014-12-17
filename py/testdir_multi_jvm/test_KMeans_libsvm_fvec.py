@@ -2,7 +2,6 @@ import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_kmeans
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -16,10 +15,41 @@ class Basic(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # wait while I inspect things
-        # time.sleep(1500)
+        # h2o.sleep(1500)
         h2o.tear_down_cloud()
 
     def test_KMeans_libsvm_fvec(self):
+
+        # hack this into a function so we can call it before and after kmeans
+        # kmeans is changing the last col to enum?? (and changing the data)
+        def do_summary_and_inspect():
+            # SUMMARY******************************************
+            summaryResult = h2o_cmd.runSummary(key=hex_key)
+            coltypeList = h2o_cmd.infoFromSummary(summaryResult)
+
+            # INSPECT******************************************
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+            h2o_cmd.infoFromInspect(inspect, csvFilename)
+
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
+
+            # Now check both inspect and summary
+            if csvFilename=='covtype.binary.svm':
+                for k in range(55):
+                    naCnt = inspect['cols'][k]['naCnt']
+                    self.assertEqual(0, naCnt, msg='col %s naCnt %d should be %s' % (k, naCnt, 0))
+                    stype = inspect['cols'][k]['type']
+                    print k, stype
+                    self.assertEqual('Int', stype, msg='col %s type %s should be %s' % (k, stype, 'Int'))
+
+                # summary may report type differently than inspect..check it too!
+                # we could check na here too
+                for i,c in enumerate(coltypeList):
+                    print "column index: %s  column type: %s" % (i, c)
+                    # inspect says 'int?"
+                    assert c=='Numeric', "All cols in covtype.binary.svm should be parsed as Numeric! %s %s" % (i,c)
+
         # just do the import folder once
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
@@ -42,8 +72,12 @@ class Basic(unittest.TestCase):
             ("syn_0_100_1000.svm", "cL", 30, 1),
         ]
 
+        csvFilenameList = [
+            ("covtype.binary.svm", "cC", 30, 1),
+        ]
+
         ### csvFilenameList = random.sample(csvFilenameAll,1)
-        # h2b.browseTheCloud()
+        h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
         firstDone = False
@@ -55,16 +89,9 @@ class Basic(unittest.TestCase):
             # PARSE******************************************
             # creates csvFilename.hex from file in importFolder dir 
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
-                hex_key=hex_key, timeoutSecs=2000)
-            print "Parse result['destination_key']:", parseResult['destination_key']
+                hex_key=hex_key, timeoutSecs=2000, doSummary=False)
 
-            # INSPECT******************************************
-            start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
-            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
-            h2o_cmd.infoFromInspect(inspect, csvFilename)
-            numRows = inspect['numRows']
-            numCols = inspect['numCols']
+            do_summary_and_inspect()
 
             # KMEANS******************************************
             for trial in range(1):
@@ -87,12 +114,16 @@ class Basic(unittest.TestCase):
                 elapsed = time.time() - start
                 print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                     "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+
+                do_summary_and_inspect()
+
                 # this does an inspect of the model and prints the clusters
                 h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
+                print "hello"
                 (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
-
+                do_summary_and_inspect()
 
 if __name__ == '__main__':
     h2o.unit_main()

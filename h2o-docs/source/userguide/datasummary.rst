@@ -3,28 +3,27 @@
 Data: Summary (Request from Menu)
 ===================================
 
-Summary returns a column by column detailed summary of parsed
-data. For more information on the returned information see Summary. 
+The Summary page displays a detailed column-by-column summary of the parsed
+data.  
 
 **Source**
   
-  The .hex key associated with the data to be summarized. 
+  The .hex key associated with the summarized data. 
   
 **Cols** 
   
-  If a subset of columns is desired, specify that subset
-  here. Default is to return a summary for all columns. 
+  To specify a subset of columns for summarization, select them from the list. By default, the summary displays all columns. 
 
 **Max Ncols**
 
-  The maximum number of columns to be summarized. 
+  Specify the maximum number of columns to summarize. 
 
 **Max Qbins**
 
   The number of bins for quantiles. When large data are parsed, they
   are also binned and distributed across a cluster. When data are
-  multimodal (or otherwise distinctly shaped), increasing the number
-  of bins will allocate fewer data points to each bin and thus
-  increase the accuracy of the quantiles returned. Increasing the
-  number of bins for extremely large data can slow results depending
-  on the memory allocated to computational tasks.   
+  multimodal (or otherwise uniquely shaped), increasing the number
+  of bins allocates fewer data points to each bin and 
+  increases the accuracy of the displayed quantiles. Increasing the
+  number of bins for extremely large data can result in slower speeds, depending
+  on the amount of memory allocated to computational tasks.   

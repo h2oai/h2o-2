@@ -7,6 +7,7 @@ import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.Future;
 
 import static water.util.Utils.seq;
 
@@ -971,6 +972,20 @@ public class Vec extends Iced {
         return new VectorGroup(_key, n+_n);
       }
     }
+
+    /**
+     * Task to atomically add vectors into existing group.
+     * @author tomasnykodym
+     */
+    private static class ReturnKeysTsk extends TAtomic<VectorGroup>{
+      final int _newCnt;          // INPUT: Keys to allocate; OUTPUT: start of run of keys
+      final int _oldCnt;
+      private ReturnKeysTsk(Key key, int oldCnt, int newCnt){_newCnt = newCnt; _oldCnt = oldCnt;}
+      @Override public VectorGroup atomic(VectorGroup old) {
+        return (old._len == _oldCnt)? new VectorGroup(_key, _newCnt):old;
+      }
+    }
+    public Future tryReturnKeys(final int oldCnt, int newCnt) { return new ReturnKeysTsk(_key,oldCnt,newCnt).fork(_key);}
     // reserve range of keys and return index of first new available key
     public int reserveKeys(final int n){
       AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);

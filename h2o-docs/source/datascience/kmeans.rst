@@ -8,21 +8,21 @@ K-Means falls in the general category of clustering algorithms.
 When to use K-Means
 """""""""""""""""""
 
-Data are a set of attributes on which the members of the population
-likely differ. The objective is classification.
+Use K-Means when data are a set of attributes on which the members of the population
+likely differ and the objective is classification.
 Here are some examples:
 
-  "How do competitors differ from one another on critical dimensions?"
+  - How do competitors differ from one another on critical dimensions?
 
-  "How is a particular market segmented?"
+  - How is a particular market segmented?
 
-  "Which dimensions are most important to differentiating between
-  members of a population of interest?"
+  - Which dimensions are most important to differentiating between members of a population of interest?
    
-
+""""
 
 Defining a K-Means model
 """"""""""""""""""""""""
+
 **Source:**
   
   The .hex key associated with the data set for use in clustering.
@@ -34,8 +34,7 @@ Defining a K-Means model
 
 **Initialization**
 
- *Plus Plus*
-  A modification to the k-means algorithm that impacts the assignment
+ *Plus Plus*: A modification to the k-means algorithm that impacts the assignment
   of K initial cluster centroids. Because of the random process
   inherent to K-means, it's possible for the algorithm to converge on
   centroids that are not the optimal cluster centers purely by chance
@@ -47,13 +46,12 @@ Defining a K-Means model
   chosen at random. The process repeats until all centers have been
   chosen, at which point the algorithm proceeds as usual.
 
-  *Furthest* 
-   A modification to the k-means algorithm that impacts the assignment
-   of K initial cluster centroids. Furthest first initialization
-   attempts to improve K-means results by selecting the first center,
-   and then calculating the distance from that point to all other
-   possible points. The second initial center is chosen to the point
-   furthest from the first center in terms of Euclidean distance. 
+  *Furthest*: A modification to the k-means algorithm that impacts the assignment
+  of K initial cluster centroids. Furthest first initialization
+  attempts to improve K-means results by selecting the first center,
+  and then calculating the distance from that point to all other
+  possible points. The second initial center is chosen to the point
+  furthest from the first center in terms of Euclidean distance. 
 
 **K**
 
@@ -67,29 +65,29 @@ Defining a K-Means model
   The maximum number of iterations the algorithm is to go
   through if no stopping point is reached before then.
  
-**Normalize:** 
+**Normalize** 
 
    Specifies that each attribute be transformed such that it has a mean
    of 0 and standard deviation of 1, and that this transformation be
    carried out before the algorithm is applied.
 
-**Seed:**
+**Seed**
 
   A means for specifying the algorithm components
   dependent on randomization. Note that the seed stays the same for
-  each instance of H\ :sub:`2`\ O, allowing the user to create models with the
+  each instance of H2O, allowing the user to create models with the
   same starting conditions in alternative configurations.
 
-
+""""
 
 
 Interpreting a Model
 """"""""""""""""""""
 
-    Output from K-Means is a table with one more column than the
-    number of attributes used to cluster. The the names of attributes,
-    and "cluster" appear in the header row. The column cluster gives
-    an arbitrary number to each cluster built, and the attributes give
+    The output from K-Means is a table with one more column than the
+    number of attributes used in the cluster. The names of the attributes,
+    and "Clusters" appear in the header row. The "Clusters" column assigns
+    an arbitrary number to each cluster, and the attribute columns list
     the coordinates of the center of that cluster. 
 
 +--------+-----------+-----------+
@@ -99,13 +97,7 @@ Interpreting a Model
 |        |  value    |  value    |
 +--------+-----------+-----------+
 
-
-References
-""""""""""
-
-Xiong, Hui, Junjie Wu, and Jian Chen. "K-means Clustering Versus
-Validation Measures: A Data- distribution Perspective." Systems, Man,
-and Cybernetics, Part B: Cybernetics, IEEE Transactions on 39.2 (2009): 318-331.
+""""
 
 K-Means Algorithm
 """"""""""""""""""
@@ -115,45 +107,32 @@ The number of clusters :math:`K` is user defined and determined a priori.
 1. Choose :math:`K` initial cluster centers :math:`m_{k}` according to one of
    the following:
 
-**Randomization** 
+    - **Randomization**: Choose :math:`K` clusters from the set of :math:`N` observations at random so that each observation has an equal chance of being chosen.
 
-Choose :math:`K` clusters from the set of :math:`N` observations at random so that
-each observation has an equal chance of being chosen.
+    - **Plus Plus**  
 
-**Plus Plus**  
+       i. Choose one center :math:`m_{1}` at random. 
 
-i. Choose one center :math:`m_{1}` at random. 
+       ii. Calculate the difference between :math:`m_{1}` and each of the remaining :math:`N-1` observations :math:`x_{i}`. 
+         :math:`d(x_{i}, m_{1})` = :math:`||(x_{i}-m_{1})||^2`
 
-ii. Calculate the difference between :math:`m_{1}` and each of the
-    remaining :math:`N-1` observations :math:`x_{i}`. 
+       iii. Let :math:`P(i)` be the probability of choosing :math:`x_{i}` as :math:`m_{2}`. Weight :math:`P(i)` by :math:`d(x_{i}, m_{1})` so that those :math:`x_{i}` furthest from :math:`m_{2}` have  a higher probability of being selected than those :math:`x_{i}` close to :math:`m_{1}`.
 
-    :math:`d(x_{i}, m_{1})` = :math:`||(x_{i}-m_{1})||^2`
+       iv. Choose the next center :math:`m_{2}` by drawing at random according to the weighted probability distribution. 
 
-iii. Let :math:`P(i)` be the probability of choosing :math:`x_{i}` as
-     :math:`m_{2}`. Weight :math:`P(i)` by :math:`d(x_{i}, m_{1})` so that
-     those :math:`x_{i}` furthest from :math:`m_{2}` have  a
-     higher probability of being selected than those :math:`x_{i}` 
-     close to :math:`m_{1}`.
+       v.  Repeat until :math:`K` centers have been chosen.
 
-iv. Choose the next center :math:`m_{2}` by drawing at random
-    according to the weighted probability distribution. 
+    - **Furthest**
 
-Repeat until :math:`K` centers have been chosen.
+        i. Choose one center :math:`m_{1}` at random. 
 
+        ii. Calculate the difference between :math:`m_{1}` and each of the remaining :math:`N-1` observations :math:`x_{i}`. 
+       :math:`d(x_{i}, m_{1})` = :math:`||(x_{i}-m_{1})||^2`
 
-**Furthest**
+        iii. Choose :math:`m_{2}` to be the :math:`x_{i}` that maximizes
+       :math:`d(x_{i}, m_{1})`.
 
-i. Choose one center :math:`m_{1}` at random. 
-
-ii. Calculate the difference between :math:`m_{1}` and each of the
-    remaining :math:`N-1` observations :math:`x_{i}`. 
-
-    :math:`d(x_{i}, m_{1})` = :math:`||(x_{i}-m_{1})||^2`
-
-iii. Choose :math:`m_{2}` to be the :math:`x_{i}` that maximizes
-     :math:`d(x_{i}, m_{1})`.
-
-Repeat until :math:`K` centers have been chosen. 
+        iv. Repeat until :math:`K` centers have been chosen. 
 
 2. Once :math:`K` initial centers have been chosen calculate the difference
    between each observation :math:`x_{i}` and each of the centers
@@ -180,7 +159,7 @@ Repeat until :math:`K` centers have been chosen.
    of max iterations is reached or cluster assignments of the
    :math:`x_{i}` are stable.
 
-
+""""
  
 References
 """"""""""

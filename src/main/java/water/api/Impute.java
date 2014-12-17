@@ -128,6 +128,7 @@ public class Impute extends Request2 {
         Env env = water.exec.Exec2.exec(mykey.toString() + " = ddply(" + source._key.toString() + ", " + toAryString(_cols) + ", anonymous)");
         final Frame grp_replacement = new Frame(env.peekAry());
         env.remove_and_unlock();
+        Log.info("GROUP TASK NUM COLS: "+ grp_replacement.numCols());
         final GroupTask grp2val = new GroupTask(grp_replacement.numCols() - 1).doAll(grp_replacement);
 
         new MRTask2() {
@@ -170,10 +171,16 @@ public class Impute extends Request2 {
   private static class GroupTask extends MRTask2<GroupTask> {
     protected NonBlockingHashMap<Group, Double> _grp2val = new NonBlockingHashMap<Group, Double>();
     int[] _cols;
+    int _ncols;
 
-    GroupTask(int ncols) { _cols = new int[ncols]; for (int i = 0; i < _cols.length; ++i) _cols[i] = i;}
+    GroupTask(int ncols) { _cols = new int[_ncols=ncols]; for (int i = 0; i < _cols.length; ++i) _cols[i] = i;}
 
     @Override public void map(Chunk[] cs) {
+      if (_grp2val == null) _grp2val = new NonBlockingHashMap<Group, Double>();
+      if (_cols == null) {
+        _cols = new int[cs.length-1];
+        for (int i = 0; i < _cols.length; ++i) _cols[i] = i;
+      }
       int rows = cs[0].len();
       Chunk vals = cs[cs.length-1];
       for (int row = 0; row < rows; ++row) {
@@ -213,7 +220,8 @@ public class Impute extends Request2 {
     @Override public void copyOver( Freezable dt ) {
       GroupTask that = (GroupTask)dt;
       super.copyOver(that);
-      this._cols   = that._cols;
+      this._ncols = that._ncols;
+      this._cols = that._cols;
       this._grp2val = that._grp2val;
     }
   }

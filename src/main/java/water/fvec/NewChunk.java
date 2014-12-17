@@ -48,6 +48,15 @@ public class NewChunk extends Chunk {
 
   public NewChunk( Vec vec, int cidx ) { _vec = vec; _cidx = cidx; }
 
+  public NewChunk( Vec vec, int cidx, boolean sparse ) {
+    _vec = vec; _cidx = cidx;
+    if(sparse) {
+      _ls = new long[128];
+      _xs = new int[128];
+      _id = new int[128];
+    }
+  }
+
   public NewChunk(double [] ds) {
     _cidx = -1;
     _vec = null;

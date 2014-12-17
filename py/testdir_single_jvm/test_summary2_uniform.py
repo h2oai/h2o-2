@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
             (ROWS, 1, 'x.hex', 0.0, 20000.0,        ['C1',  0, 5000.0, 10000.0, 15000.0, 20000.0]),
-            (ROWS, 1, 'x.hex', -5000.0, 0.0,        ['C1',  -5000.0, -3750.0, -2550.0, -1250.0, 0.0]),
+            (ROWS, 1, 'x.hex', -5000.0, 0.0,        ['C1',  -5000.0, -3750.0, -2500.0, -1250.0, 0.0]),
             (ROWS, 1, 'x.hex', -100000.0, 100000.0, ['C1',  -100000.0, -50000.0, 0.0, 50000.0, 100000.0]),
             (ROWS, 1, 'x.hex', -1.0, 1.0,           ['C1',  -1.0, -0.50, 0.0, 0.50, 1.0]),
 
@@ -91,7 +91,7 @@ class Basic(unittest.TestCase):
             # because of floor and ceil effects due we potentially lose 2 bins (worst case)
             # the extra bin for the max value, is an extra bin..ignore
             expectedBin = expectedRange/(MAX_QBINS-2)
-            maxDelta = 0.5 * expectedBin
+            maxDelta = 1 * expectedBin
 
             # how much error do we get in the random distribution gen? pain. It's a probability issue
             # smaller error likely with larger # of values.

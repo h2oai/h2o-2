@@ -3,7 +3,7 @@ import random, jenkinsapi, getpass, re, os, argparse, shutil, json, logging, sys
 import string
 from jenkinsapi.jenkins import Jenkins 
 # only used when we wanted to see what objects were available (below)
-from see import see
+# from see import see
 
 DO_LAST_GOOD = True
 
@@ -390,8 +390,8 @@ PRINTALL = False
 # keep count of status counts
 
 # 2014-03-19 07:26:15+00:00
-# buildtimestampe is a datetime object
-see(buildtimestamp)
+# buildtimestamp is a datetime object
+## see(buildtimestamp)
 t = buildtimestamp
 # hour minute
 hm = "%s_%s" % (t.hour, t.minute)

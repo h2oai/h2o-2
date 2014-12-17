@@ -3,23 +3,25 @@
 R Tutorial
 ==========
 
-This tutorial provides a sample workflow for new users of H\ :sub:`2`\ O's R API.
-Readers will learn the basic syntax of H\ :sub:`2`\ O, including importing and parsing files,
+This tutorial provides a sample workflow for new users of H2O's R API.
+Readers will learn the basic syntax of H2O, including importing and parsing files,
 specifying a model, and obtaining model output.
 
-New H\ :sub:`2`\ O users should refer to the `quick start guide <http://s3.amazonaws.com/h2o-release/h2o/master/1532/docs-website/newuser/top.html>`_ for additional
-instructions on how to run H\ :sub:`2`\ O. The following tutorial assumes that H\ :sub:`2`\ O is installed in R.
+New H2O users should refer to the `quick start guide <http://s3.amazonaws.com/h2o-release/h2o/master/1532/docs-website/newuser/top.html>`_ for additional
+instructions on how to run H2O. The following tutorial assumes that H2O is installed in R.
+
+""""
 
 Getting Started
 """""""""""""""
 
-R uses an REST API to send functions to H\ :sub:`2`\ O, so a reference object  in R to the H\ :sub:`2`\ O instance is required.
-You can start H\ :sub:`2`\ O outside of R and connect to it. You can also launch directly from R, but if you close the R session, the H\ :sub:`2`\ O instance is closed as well. The client object is used to direct R to datasets and models located in
-H\ :sub:`2`\ O.
+R uses an REST API to send functions to H2O, so a reference object  in R to the H2O instance is required.
+You can start H2O outside of R and connect to it. You can also launch directly from R, but if you close the R session, the H2O instance is closed as well. The client object is used to direct R to datasets and models located in
+H2O.
 
 **Launch From R**
 
-By default, if the argument **max_mem_size** is not specified when running **h2o.init()**, the heap size of the H\ :sub:`2`\ O running on 32-bit Java is
+By default, if the argument **max_mem_size** is not specified when running **h2o.init()**, the heap size of the H2O running on 32-bit Java is
 1g. On 64-bit Java, the heap size is 1/4 of the total memory available on the machine. For a 32-bit version, the function  runs a check
 and suggests an upgrade.
 
@@ -47,7 +49,7 @@ Follow one of the `deployment tutorials <http://docs.0xdata.com/index.html?highl
 	* on your desktop
 	* on ec2 instances
 	* on Hadoop servers
-After launching the H\ :sub:`2`\ O cluster, initialize the connection by taking one node in the cluster and run **h2o.init** with the node's 
+After launching the H2O cluster, initialize the connection by taking one node in the cluster and run **h2o.init** with the node's 
 IP Address and port in the parentheses.
 Note that the IP Address must be on your local machine. For the following example, change **192.168.1.161** to your local host. 
 ::
@@ -56,9 +58,9 @@ Note that the IP Address must be on your local machine. For the following exampl
  > localH2O <- h2o.init(ip = '192.168.1.161', port =54321)
 
 .. WARNING::
-  If the version of the current H\ :sub:`2`\ O instance is not the same as the package version loaded in R,
+  If the version of the current H2O instance is not the same as the package version loaded in R,
   a "version mismatch" warning message displays. To fix this issue, update the R package
-  or launch an H\ :sub:`2`\ O instance using the jar file from the installed package.
+  or launch an H2O instance using the jar file from the installed package.
 
 ::
 
@@ -69,7 +71,7 @@ Note that the IP Address must be on your local machine. For the following exampl
 
 **Cluster Info**
 
-To check the status and health of the H\ :sub:`2`\ O cluster, use **h2o.clusterInfo()** to display an easy-to-read
+To check the status and health of the H2O cluster, use **h2o.clusterInfo()** to display an easy-to-read
 summary of information about the cluster.
 
 ::
@@ -87,6 +89,7 @@ summary of information about the cluster.
     H2O cluster allowed cores:  8 
     H2O cluster healthy:        TRUE 
 
+""""
 
 
 Importing Data
@@ -94,11 +97,11 @@ Importing Data
 
 **Import File**
 
-The H\ :sub:`2`\ O package consolidates all of the various supported import functions. Although **h2o.importFolder** and **h2o.importHDFS** will still work, these functions are deprecated and should be updated to **h2o.importFile**.
+The H2O package consolidates all of the various supported import functions. Although **h2o.importFolder** and **h2o.importHDFS** will still work, these functions are deprecated and should be updated to **h2o.importFile**.
 
 ::
 
-  ## To import small iris data file from H\ :sub:`2`\ O's package 
+  ## To import small iris data file from H2O's package 
   > irisPath = system.file("extdata", "iris.csv", package="h2o")
   > iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 	|=================================================| 100%
@@ -125,6 +128,7 @@ To upload a file from your local disk, **importFile** is recommended. However, y
   |====================================================| 100%
 
 
+""""
 
 Data Manipulation and Description
 """""""""""""""""""""""""""""""""
@@ -143,10 +147,10 @@ Data Manipulation and Description
 
 **As Data Frame**
 
-  Convert an H\ :sub:`2`\ O parsed data object into an R data frame
+  Convert an H2O parsed data object into an R data frame
   that can be manipulated using R calls. While this can be very useful, be careful with **as.data.frame** when
-  converting H\ :sub:`2`\ O Parsed Data objects. Data sets that are easily and
-  quickly handled by H\ :sub:`2`\ O are often too large to be treated
+  converting H2O Parsed Data objects. Data sets that are easily and
+  quickly handled by H2O are often too large to be treated
   equivalently well in R. 
 
 ::
@@ -189,7 +193,7 @@ Data Manipulation and Description
 
 **As H2O** 
 
-  Pass a data frame from inside the R environment to the H\ :sub:`2`\ O instance.
+  Pass a data frame from inside the R environment to the H2O instance.
 
 ::
 
@@ -211,11 +215,11 @@ Data Manipulation and Description
 
 **Assign H2O**
 
-  Create a hex key on the server running H\ :sub:`2`\ O for data sets manipulated in R. 
+  Create a hex key on the server running H2O for data sets manipulated in R. 
   For instance, in the example below, the prostate data set was
-  uploaded to the H\ :sub:`2`\ O instance and manipulated to remove
-  outliers. To save the new data set on the H\ :sub:`2`\ O server so that it can
-  be subsequently be analyzed with H\ :sub:`2`\ O without overwriting the original
+  uploaded to the H2O instance and manipulated to remove
+  outliers. To save the new data set on the H2O server so that it can
+  be subsequently be analyzed with H2O without overwriting the original
   data set, use **h2o.assign**.
 
 ::
@@ -263,7 +267,7 @@ Data Manipulation and Description
 
 **Quantile**
 
-  Request quantiles for an H\ :sub:`2`\ O parsed data set. To request a quantile for a single numeric column, use the column name (for example, **$AGE**). When you request
+  Request quantiles for an H2O parsed data set. To request a quantile for a single numeric column, use the column name (for example, **$AGE**). When you request
   for a full parsed data set, **quantile()** returns a matrix that displays
   quantile information for all numeric columns in the data set.
  
@@ -314,7 +318,7 @@ Data Manipulation and Description
 
 **H2O Table**
 
-  Summarize information in data. Because H\ :sub:`2`\ O handles such large data sets, 
+  Summarize information in data. Because H2O handles such large data sets, 
   it is possible to generate tables that are larger than R's
   capacity. To minimize this risk and enable uninterrupted work,
   **h2o.table** is called inside of a call for **head()** or **tail()**. Within
@@ -344,9 +348,9 @@ Data Manipulation and Description
 
 **Generate Random Uniformly Distributed Numbers**
 
-  **h2o.runif()** appends a column of random numbers to an H\ :sub:`2`\ O data
+  **h2o.runif()** appends a column of random numbers to an H2O data
   frame and facilitates creating testing/training data splits for
-  analysis and validation in H\ :sub:`2`\ O. 
+  analysis and validation in H2O. 
 
 ::
 
@@ -392,6 +396,7 @@ Data Manipulation and Description
     Length Class         Mode
 	[1,] 9      H2OParsedData S4  
 
+""""
 
 Running Models
 """"""""""""""
@@ -657,14 +662,14 @@ To generate a classification model that uses labels, use a **multinomial** distr
   	3.76219   1.26824  -1.35455  -0.36271 
   	....
 
-
+""""
   
 Obtaining Predictions
 """""""""""""""""""""
 
 **Predict**
 
-  Apply an H\ :sub:`2`\ O model to a holdout set to obtain predictions
+  Apply an H2O model to a holdout set to obtain predictions
   based on model results. 
   In the examples below, models are generated first, and then the
   predictions for that model are displayed. 
@@ -695,13 +700,15 @@ Obtaining Predictions
 	6       1 0.4331880 0.5668120
 
 
+""""
+
 Other Useful Functions
 """"""""""""""""""""""
 
 **Get Frame**
 
-  For users that alternate between using the web interface and the R API, or for multiple users accessing the same H\ :sub:`2`\ O,
-  this function gives the user the option to create a reference object for a data frame sitting in H\ :sub:`2`\ O  (assuming there's a
+  For users that alternate between using the web interface and the R API, or for multiple users accessing the same H2O,
+  this function gives the user the option to create a reference object for a data frame sitting in H2O  (assuming there's a
   **prostate.hex** in the KV store).
 
 ::
@@ -713,7 +720,7 @@ Other Useful Functions
 **Get Model**
 
   For users that alternate between using the web interface and the R API, this function gives the user the option to create a reference object
-  for a data frame sitting in H\ :sub:`2`\ O (assuming there's a **GLMModel__ba724fe4f6d6d5b8b6370f776df94e47** model in the KV store).
+  for a data frame sitting in H2O (assuming there's a **GLMModel__ba724fe4f6d6d5b8b6370f776df94e47** model in the KV store).
 
 ::
 
@@ -723,7 +730,7 @@ Other Useful Functions
 
 **List all H2O Objects**
 
-  Generate a list of all H\ :sub:`2`\ O objects generated
+  Generate a list of all H2O objects generated
   during a work session, along with each object's byte size. 
 
 ::
@@ -741,7 +748,7 @@ Other Useful Functions
 
 **Remove an H2O object from the server where H2O is running**
   
-  To remove an H\ :sub:`2`\ O object on the server 
+  To remove an H2O object on the server 
   associated with an object in the R environment, we recommend also removing the object from the R environment.
 
 ::
@@ -764,5 +771,5 @@ Other Useful Functions
  4 prostate_part0.hex     4028
  5 prostate_part1.hex     1432
 
-  
+""""  
 

@@ -4,7 +4,6 @@ import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
@@ -48,6 +47,7 @@ public class DeepLearningAutoEncoderCategoricalTest extends TestUtil {
     p.force_load_balance = true;
     p.score_training_samples = 0;
     p.score_validation_samples = 0;
+//    p.reproducible = true;
     p.invoke();
 
     // Verification of results
