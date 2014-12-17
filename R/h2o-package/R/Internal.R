@@ -889,6 +889,11 @@ function(h2o, key) {
   .fetchJSON(h2o, key)
 }
 
+.check.exists <- function(h2o, key) {
+  keys <- as.data.frame(h2o.ls(h2o))[,1]
+  key %in% keys
+}
+
 #'
 #' Fetch the model from the key
 h2o.getModel <- function(h2o, key) {
@@ -926,7 +931,7 @@ h2o.getModel <- function(h2o, key) {
   dest_key   <- key #params$destination_key
 
   train_fr   <- new("H2OParsedData", key = "NA")
-  if(!is.null(response$"_dataKey")) train_fr <- h2o.getFrame(h2o, response$"_dataKey")
+  if(!is.null(response$"_dataKey") && .check.exists(h2o, response$"_dataKey")) train_fr <- h2o.getFrame(h2o, response$"_dataKey")
   params$importance <- !is.null(params$varimp)
   if(!is.null(params$family) && model.type == "gbm_model") {
     if(params$classification == "false") {params$distribution <- "gaussian"

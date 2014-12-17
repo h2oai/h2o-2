@@ -49,7 +49,7 @@ setClass("H2OGLMModelList", representation(models="list", best_model="numeric", 
 # setMethod("initialize", "H2OParsedData", function(.Object, h2o = new("H2OClient"), key = "") {
 #   .Object@h2o = h2o
 #   .Object@key = key
-#   .Object@env = new.env()
+#   .Object@env = new.env()ASTSS
 #
 #   assign("h2o", .Object@h2o, envir = .Object@env)
 #   assign("key", .Object@key, envir = .Object@env)
@@ -270,11 +270,10 @@ setMethod("show", "H2OKMeansModel", function(object) {
     print(object@data@h2o)
     cat("Parsed Data Key:", object@data@key, "\n\n")
     cat("K-Means Model Key:", object@key)
-    
     model = object@model
     cat("\n\nK-means clustering with", length(model$size), "clusters of sizes "); cat(model$size, sep=", ")
     cat("\n\nCluster means:\n"); print(model$centers)
-    cat("\nClustering vector:\n"); print(summary(model$cluster))
+    if (!is.null(model$cluster)) { cat("\nClustering vector:\n"); print(summary(model$cluster)) }
     cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
 #    cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
     cat("\nAvailable components:\n\n"); print(names(model))
