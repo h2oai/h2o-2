@@ -489,23 +489,11 @@ h2o.loadModel <- function(object, path="") {
     if(missing(object)) stop('Must specify object')
     if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
     if(!is.character(path)) stop('path must be of class character')
-    
-    # Read models from model_names meta file
-    if(length(grep("hdfs://", path)) == 1) {
-      fileConn = paste(path, "model_names", sep = "/")
-      model_names.hex = h2o.importFile(object = object, path = fileConn)
-      model_names = as.matrix(model_names.hex)
-      h2o.rm(object, model_names.hex@key)
-    } else {
-      fileConn = file(paste(path, "model_names", sep = .Platform$file.sep))
-      model_names = readLines(con = fileConn)
-      close(fileConn)      
-    }
 
     # Load all model_names into H2O
-    if(length(model_names)==0) stop('No models names specified in meta file, check model_names')
-    if(length(model_names)>0) for (key in model_names) .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = paste(path, key, sep=.Platform$file.sep) )
-    h2o.getModel(object, model_names[1])
+    res = .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = path)
+    modelKey = res$model$"_key"
+    h2o.getModel(object, modelKey)
 }
 
 # ------------------- Load All H2O Model in a directory from Disk -----------------------------------------------

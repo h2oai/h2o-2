@@ -5,7 +5,7 @@
 
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 # setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_jira")
-#setwd("/Users/Amy/Documents/h2o/R/tests/testdir_jira")
+setwd("/Users/amy/h2o/R/tests/testdir_jira")
 
 source('../findNSourceUtils.R')
 
@@ -92,7 +92,7 @@ test.hex_1775 <- function(conn) {
   
   Log.info("Running Predictions for Loaded Models")
   glm2 = reloaded_models[[1]]
-  gbm2 = reloaded_models[[2]]
+  gbm1_2 = reloaded_models[[2]]
   gbm2_2 = reloaded_models[[3]]
   speedrf2 = reloaded_models[[4]]
   rf2 = reloaded_models[[5]]
@@ -100,7 +100,7 @@ test.hex_1775 <- function(conn) {
   dl2 = reloaded_models[[7]]
   
   glm.pred2 = pred_df(object = glm2, newdata = prostate.hex)
-  gbm.pred2 = pred_df(object = gbm2, newdata = prostate.hex)
+  gbm.pred2 = pred_df(object = gbm1_2, newdata = prostate.hex)
   gbm.pred2_2 = pred_df(object = gbm2_2, newdata = prostate.hex)
   speedrf.pred2 = pred_df(object = speedrf2, newdata = iris.hex)
   rf.pred2 = pred_df(object = rf2, newdata = iris.hex) 

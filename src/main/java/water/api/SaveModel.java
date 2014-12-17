@@ -1,15 +1,6 @@
 package water.api;
 
 import java.io.*;
-import java.util.*;
-import java.net.*;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.util.*;
-
-
 import static water.util.FSUtils.isHdfs;
 import static water.util.FSUtils.isS3N;
 
@@ -33,7 +24,7 @@ public class SaveModel extends Func {
   @API(help = "Model to save.", required=true, filter=Default.class)
   Model model;
 
-  @API(help = "Name of file to save the model.", required = true, filter = Default.class, json=true, gridable = false)
+  @API(help = "Path of directory to save model(s)", required = true, filter = Default.class, json=true, gridable = false)
   String path;
 
   @API(help="Overwrite existing files.", required = false, filter = Default.class, gridable = false)
@@ -63,7 +54,7 @@ public class SaveModel extends Func {
       FileOutputStream is = new FileOutputStream(model_names);
       OutputStreamWriter osw = new OutputStreamWriter(is);
       BufferedWriter br = new BufferedWriter(osw);
-      br.write(model._key.toString());
+      br.write("main model : " + model._key.toString());
       br.newLine();
       // Save cross validation models
       if (save_cv) {
@@ -93,7 +84,7 @@ public class SaveModel extends Func {
       // Save parent model key to model_names file
       Path model_names = new Path(parentDir, "model_names");
       BufferedWriter br = new BufferedWriter(new OutputStreamWriter(fs.create(model_names,true)));
-      br.write(model._key.toString());
+      br.write("main model : " + model._key.toString());
       br.newLine();
       if (save_cv) {
         Model[] models = getCrossValModels(model);
