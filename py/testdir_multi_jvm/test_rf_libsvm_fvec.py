@@ -24,9 +24,9 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
-            ("gisette_scale.svm",  "cF", 30, 1, 0),
-            ("covtype.binary.svm", "cC", 30, 1, 1),
             ("mnist_train.svm", "cM", 30, 1, 1),
+            ("covtype.binary.svm", "cC", 30, 1, 1),
+            ("gisette_scale.svm",  "cF", 30, 1, 0),
             # FIX! fails KMeansScore
             # not integer output
             # ("colon-cancer.svm",   "cA", 30, 1, 1),
