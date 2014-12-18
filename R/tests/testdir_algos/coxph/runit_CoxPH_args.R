@@ -3,10 +3,12 @@ source('../../findNSourceUtils.R')
 
 test.CoxPH.args <- function(conn) {
   bladder.h2o <- as.h2o(conn, bladder, key = "bladder.h2o")
+  bladder0.h2o <- as.h2o(conn, bladder[bladder$event == 0, ], key = "bladder0.h2o")
 
   Log.info("H2O Cox PH x Argument\n")
   checkException(h2o.coxph(x = "foo",              y = c("stop", "event"), data = bladder.h2o), silent = TRUE)
   checkException(h2o.coxph(x = c("number", "foo"), y = c("stop", "event"), data = bladder.h2o), silent = TRUE)
+  checkException(h2o.coxph(x = "number", y = c("stop", "event"), data = bladder0.h2o), silent = TRUE)
 
   Log.info("H2O Cox PH y Argument\n")
   checkException(h2o.coxph(x = "foo",    y = c("foo", "event"), data = bladder.h2o), silent = TRUE)
