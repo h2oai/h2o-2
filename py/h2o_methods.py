@@ -557,7 +557,7 @@ def import_files(self, path, timeoutSecs=180):
     return a
 
 # 'destination_key', 'escape_nan' 'expression'
-def exec_query(self, timeoutSecs=20, ignoreH2oError=False, print_params=True, **kwargs):
+def exec_query(self, timeoutSecs=20, ignoreH2oError=False, print_params=False, **kwargs):
     # only v2 now
     params_dict = {
         'str': None,

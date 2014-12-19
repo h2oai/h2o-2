@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
             'max_w2'                       : 15,
             'initial_weight_distribution'  : 'UniformAdaptive',
             #'initial_weight_scale'         : 0.01,
-            'epochs'                       : 20.0,
+            'epochs'                       : 30.0,
             'destination_key'              : model_key,
             'validation'                   : validation_key,
         }
@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
 
         #### Now score using the model, and check the validation error
         expectedErr = 0.046
-        relTol = 0.35 # allow 35% tolerance. kbn
+        relTol = 0.40 # allow 40% tolerance. kbn
         predict_key = 'Predict.hex'
 
         kwargs = {

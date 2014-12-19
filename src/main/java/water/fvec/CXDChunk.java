@@ -44,7 +44,7 @@ public class CXDChunk extends CXIChunk {
     return (long)d;
   }
   @Override protected double atd_impl(int idx) {
-    int off = _offCache;
+/*    int off = _offCache;
     int prevIdx = getId(off);
     if(prevIdx == idx)
       return getFValue(off);
@@ -55,8 +55,8 @@ public class CXDChunk extends CXIChunk {
         _offCache = (off += _ridsz + _valsz);
         return getFValue(off);
       }
-    }
-    off = findOffset(idx);
+    }*/
+    int off = findOffset(idx);
     if(getId(off) != idx)return 0;
     return getFValue(off);
   }
