@@ -103,7 +103,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_many_fp_formats_libsvm_2_fvec(self):
-        h2b.browseTheCloud()
+        #h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 10000, 'cA', 300, 'sparse50'),
