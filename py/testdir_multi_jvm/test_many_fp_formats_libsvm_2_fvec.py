@@ -2,17 +2,19 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_glm
 import h2o_util
+from collections import OrderedDict
 
 zeroList = [
         'Result0 = 0',
 ]
 # the first column should use this
 exprList = [
-        'Result<n> = sum(<keyX>[<col1>])',
+        'Result<n> = sum(<keyX>[,<col1>])',
     ]
 
 DO_SUMMARY = False
-DO_COMPARE_SUM = False
+DO_COMPARE_SUM = False 
+DO_BAD_SEED = False
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution):
     # we can do all sorts of methods off the r object
@@ -41,6 +43,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
     classMin = -36
     classMax = 36
     dsf = open(csvPathname, "w+")
+    # ordinary dict
     synColSumDict = {0: 0} # guaranteed to have col 0 for output
     # even though we try to get a max colCount with random, we might fall short
     # track what max we really got
@@ -88,15 +91,19 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global SEED
-        SEED = h2o.setup_random_seed()
+        if DO_BAD_SEED:
+            SEED = h2o.setup_random_seed(seed=5605820711843900818)
+        else:
+            SEED = h2o.setup_random_seed()
         h2o.init(2,java_heap_GB=5)
 
     @classmethod
     def tearDownClass(cls):
+        # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_many_fp_formats_libsvm_2_fvec(self):
-        # h2b.browseTheCloud()
+        #h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 10000, 'cA', 300, 'sparse50'),
@@ -146,18 +153,20 @@ class Basic(unittest.TestCase):
                 if DO_COMPARE_SUM:
                     h2e.exec_zero_list(zeroList)
                     colResultList = h2e.exec_expr_list_across_cols(None, exprList, selKey2, maxCol=colNumberMax+1,
-                        timeoutSecs=timeoutSecs)
-                    print "\n*************"
-                    print "colResultList", colResultList
-                    print "*************"
+                        timeoutSecs=timeoutSecs, print_params=False)
+                    #print "\n*************"
+                    #print "colResultList", colResultList
+                    #print "*************"
 
                 self.assertEqual(rowCount, numRows, msg="generated %s rows, parsed to %s rows" % (rowCount, numRows))
                 # need to fix this for compare to expected
                 # we should be able to keep the list of fp sums per col above
                 # when we generate the dataset
-                ### print "\nsynColSumDict:", synColSumDict
 
-                for k,v in synColSumDict.iteritems():
+                sortedColSumDict = OrderedDict(sorted(synColSumDict.items()))
+                print sortedColSumDict
+                for k,v in sortedColSumDict.iteritems():
+                    print k
                     if DO_COMPARE_SUM:
                         # k should be integers that match the number of cols
                         self.assertTrue(k>=0 and k<len(colResultList))
@@ -172,8 +181,15 @@ class Basic(unittest.TestCase):
                     # enums don't have mean, but we're not enums
                     mean = float(inspect['cols'][k]['mean'])
                     # our fp formats in the syn generation sometimes only have two places?
-                    self.assertAlmostEqual(mean, synMean, places=0,
-                        msg='col %s mean %0.6f is not equal to generated mean %0.6f' % (k, mean, synMean))
+                    if not h2o_util.approxEqual(mean, synMean, tol=1e-3):
+                        execExpr = 'sum(%s[,%s])' % (selKey2, k+1)
+                        resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=300) 
+                        print "Result of exec sum on failing col:..:", k, h2o.dump_json(resultExec)
+                        print "Result of remembered sum on failing col:..:", k, v
+                        print "Result of inspect mean * rowCount on failing col..:", mean * rowCount
+                        print "k: ",k , "mean: ", mean, "remembered sum/rowCount : ", synMean
+                        sys.stdout.flush()
+                        raise Exception('col %s mean %0.6f is not equal to generated mean %0.6f' % (k, mean, synMean))
 
                     naCnt = inspect['cols'][k]['naCnt']
                     self.assertEqual(0, naCnt,

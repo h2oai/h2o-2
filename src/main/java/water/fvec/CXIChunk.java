@@ -18,7 +18,7 @@ public class CXIChunk extends Chunk {
   protected transient int _ridsz; // byte size of stored (chunk-relative) row nums
   protected static final int OFF = 6;
   protected transient int _lastOff = OFF;
-
+  protected transient volatile int _offCache = OFF;
 
   private static final long [] NAS = {C1Chunk._NA,C2Chunk._NA,C4Chunk._NA,C8Chunk._NA};
 
@@ -57,7 +57,7 @@ public class CXIChunk extends Chunk {
   @Override boolean setNA_impl(int idx)         { return false; }
 
   @Override protected long at8_impl(int idx) {
-    int off = _offCache;
+/*    int off = _offCache;
     int prevIdx = getId(off);
     if(prevIdx == idx)
       return getIValue(off);
@@ -68,10 +68,10 @@ public class CXIChunk extends Chunk {
         _offCache = (off += _ridsz + _valsz);
         return getIValue(off);
       }
-    }
-    off = findOffset(idx);
+    } */
+    int off = findOffset(idx);
     if(getId(off) != idx)return 0;
-    _offCache = off;
+//    _offCache = off;
     long v = getIValue(off);
     if( v== NAS[_valsz_log])
       throw new IllegalArgumentException("at8 but value is missing");
@@ -186,18 +186,19 @@ public class CXIChunk extends Chunk {
     return this;
   }
 
-  protected transient volatile int _offCache = OFF;
+
   @Override public final int nextNZ(int rid){
-    if(rid == -1) {
+    final int off = rid == -1?OFF:findOffset(rid);
+/*    if(rid == -1) {
       _offCache = OFF;
       return getId(OFF);
     }
-    int off = _offCache;
+    int off = _offCache; */
     int x = getId(off);
-    if(x != rid) {
+/*    if(x != rid) {
       off = _offCache = rid == -1 ? OFF : findOffset(rid);
       x = getId(off);
-    }
+    }*/
     if(x > rid)return x;
     if(off < _mem.length - _ridsz - _valsz)
       return getId(off + _ridsz + _valsz);

@@ -569,6 +569,10 @@ public class CoxPH extends Job {
     if (!event_column.isInt() && !event_column.isEnum())
       throw new IllegalArgumentException("event must be of type integer or factor");
 
+    if ((event_column.isInt()  && (event_column.min() == event_column.max())) ||
+        (event_column.isEnum() && (event_column.cardinality() < 2)))
+      throw new IllegalArgumentException("event column contains less than two distinct values");
+
     if (Double.isNaN(lre_min) || lre_min <= 0)
       throw new IllegalArgumentException("lre_min must be a positive number");
 

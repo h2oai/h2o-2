@@ -78,7 +78,7 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, 
     # just a string? 
     execExpr = exprTemplate
     if colX is not None:
-        print "Assume colX %s is zero-based..added 1 for R based exec2" % colX
+        ### print "Assume colX %s is zero-based..added 1 for R based exec2" % colX
         execExpr = re.sub('<col1>', str(colX+1), execExpr)
         # this is just another value
         execExpr = re.sub('<col2>', str(colX+2), execExpr)
@@ -93,11 +93,11 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, 
         execExpr = re.sub('<m>', str(m), execExpr)
         execExpr = re.sub('<m-1>', str(m-1), execExpr)
     ### verboseprint("\nexecExpr:", execExpr)
-    print "execExpr:", execExpr
+    ### print "execExpr:", execExpr
     return execExpr
 
 
-def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2oError=False):
+def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2oError=False, **kwargs):
     if not node:
         node = h2o_nodes.nodes[0]
     start = time.time()
@@ -129,7 +129,7 @@ def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2
             print "function return"
             result = resultExec['funstr']
         else:
-            print "scalar return"
+            ### print "scalar return"
             result = resultExec['scalar']
             
     return resultExec, result
@@ -192,7 +192,7 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
         print "Trial #", trial, "completed\n"
 
 def exec_expr_list_across_cols(lenNodes, exprList, keyX, 
-    minCol=0, maxCol=55, timeoutSecs=10, incrementingResult=True):
+    minCol=0, maxCol=55, timeoutSecs=10, incrementingResult=True, **kwargs):
     colResultList = []
     for colX in range(minCol, maxCol):
         for i, exprTemplate in enumerate(exprList):
@@ -215,8 +215,8 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
                 resultKey = keyX
 
             # v2
-            (resultExec, result) = exec_expr(h2o_nodes.nodes[execNode], execExpr, None, timeoutSecs)
-            print "\nexecResult:", dump_json(resultExec)
+            (resultExec, result) = exec_expr(h2o_nodes.nodes[execNode], execExpr, None, timeoutSecs, **kwargs)
+            # print "\nexecResult:", dump_json(resultExec)
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             # slows things down to check every iteration, but good for isolation
@@ -224,7 +224,7 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
                 raise Exception(
                     "Found errors in sandbox stdout or stderr, on trial #%s." % trial)
 
-        print "Column #", colX, "completed\n"
+        ### print "Column #", colX, "completed\n"
         colResultList.append(result)
 
     return colResultList
