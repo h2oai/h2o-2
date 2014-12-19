@@ -14,7 +14,7 @@ exprList = [
 
 DO_SUMMARY = False
 DO_COMPARE_SUM = False 
-DO_BAD_SEED = True
+DO_BAD_SEED = False
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution):
     # we can do all sorts of methods off the r object
@@ -181,7 +181,7 @@ class Basic(unittest.TestCase):
                     # enums don't have mean, but we're not enums
                     mean = float(inspect['cols'][k]['mean'])
                     # our fp formats in the syn generation sometimes only have two places?
-                    if not h2o_util.approxEqual(mean, synMean, tol=1e-4):
+                    if not h2o_util.approxEqual(mean, synMean, tol=1e-3):
                         execExpr = 'sum(%s[,%s])' % (selKey2, k+1)
                         resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=300) 
                         print "Result of exec sum on failing col:..:", k, h2o.dump_json(resultExec)
