@@ -42,6 +42,7 @@ will be used to compile the model object. You can write your own script; the one
     *- -output*
         |   the resulting output csv file with all the s scores for each entry of the input data
 
+**Note**: Make sure that both the PredictCSV.java object and the original dataset are located in the directory you created in step 1. 
 
 **Step 3**
 
