@@ -10,12 +10,12 @@ All mappers must be able to communicate with each other and need to run at the s
 
 0. Log in to the Hadoop cluster: 
 
-	`ssh <username>@<HadoopClusterName>`
+	`ssh <username>@<HadoopNodeAddress>`
 
 	If you are asked if you want to continue connecting, enter `yes`.
 0. Enter the following: 
 
-	`wget http://h2o-release.s3.amazonaws.com/h2o/master/1624/h2o-2.9.0.1624.zip`
+	`wget http://h2o-release.s3.amazonaws.com/h2o/SUBST_RELEASE_NAME/SUBST_BUILD_NUMBER/h2o-SUBST_PROJECT_VERSION.zip`
 	
 0. Wait while H2O downloads - the progress bar indicates completion. 
 
@@ -23,12 +23,12 @@ All mappers must be able to communicate with each other and need to run at the s
 	
 0. 	Enter the following: 
 
-	`unzip h2o-2.9.0.1624.zip`
+	`unzip h2o-SUBST_PROJECT_VERSION.zip`
 	
 0. Wait while the H2O package unzips. 
 0. On the Hadoop node, change the current directory to the location of the Hadoop and H2O driver jar files: 
 
-	`cd h2o-2.9.0.1624/hadoop`
+	`cd h2o-SUBST_PROJECT_VERSION/hadoop`
 	
 0. Enter the following: 
 
