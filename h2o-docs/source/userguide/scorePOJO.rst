@@ -59,14 +59,14 @@ Finally, submit the testing data for scoring by running the following command:
 
     ::
 
-      $ java -ea -cp h2o-model.jar -Xmx4g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m
-      PredictCSV.java --header --model GBM_a2647515ded07d5b710c82015a6842a9 --input iris_test.csv
+      $ java -ea -cp .:./h2o-model.jar -Xmx4g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m
+      PredictCSV --header --model GBM_a2647515ded07d5b710c82015a6842a9 --input iris_test.csv
       --output out_pojo.csv
 
  Generic command example:
 
     ::
 
-      $ java -ea -cp h2o-model.jar -Xmx4g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m
-      PredictCSV.java --header --model <model key> --input <path to input data>
+      $ java -ea -cp .:./h2o-model.jar -Xmx4g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m
+      PredictCSV --header --model <model key> --input <path to input data>
       --output <path to output csv>
