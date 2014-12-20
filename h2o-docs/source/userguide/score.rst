@@ -12,6 +12,7 @@ Score
    scoreconfusionmatrix
    scorehitratio
    scorepredict
+   scoregainslift
    
 """"""""" 
 
