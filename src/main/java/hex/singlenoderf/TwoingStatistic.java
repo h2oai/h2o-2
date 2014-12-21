@@ -4,9 +4,6 @@ import water.util.Utils;
 
 import java.util.Random;
 
-import org.junit.Test;
-import org.junit.Assert;
-
 /** Computes the twoing split statistic.
  *
  * The decrease in (twoing) impurity as the result of a given split is
