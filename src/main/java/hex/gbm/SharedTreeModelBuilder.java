@@ -63,7 +63,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   public boolean score_each_iteration = false;
 
   @API(help = "Compute variable importance (true/false).", filter = Default.class )
-  protected boolean importance = false; // compute variable importance
+  protected boolean importance = true; // compute variable importance
 
   /**
    * For imbalanced data, balance training data class counts via
