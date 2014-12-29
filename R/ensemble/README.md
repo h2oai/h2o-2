@@ -7,13 +7,13 @@ The `h2oEnsemble` R package provides functionality to create ensembles from the 
 The `h2oEnsemble` package can be installed using either of the following methods.
 - Clone the main h2o repository and install the package:
 ```
-git clone https://github.com/0xdata/h2o.git
+git clone https://github.com/h2oai/h2o.git
 R CMD INSTALL h2o/R/ensemble/h2oEnsemble-package
 ```
 - Install in R using `devtools::install_github`:
 ```
 library(devtools)
-install_github("0xdata/h2o/R/ensemble/h2oEnsemble-package")
+install_github("h2oai/h2o/R/ensemble/h2oEnsemble-package")
 ```
 
 ## Create Ensembles

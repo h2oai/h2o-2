@@ -1,6 +1,11 @@
 # News for the h2oEnsemble package. #
 
 
+h2oEnsemble 0.0.3 (2014-12-28)
+----------------
+* Fixed bug in `h2o.ensemble` that occurred when the number of observations is not divisible by the number of internal CV folds.
+
+
 h2oEnsemble 0.0.2 (2014-11-17)
 ----------------
 * Removed rounding in `h2o.ensemble.predict`.
