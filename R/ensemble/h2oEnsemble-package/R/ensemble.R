@@ -47,7 +47,7 @@ function(x, y, data, family = "binomial",
     
   # Begin ensemble code
   if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
-  folds <- sample(rep(seq(V), N/V))  # Cross-validation folds (stratified folds not yet supported)
+  folds <- sample(rep(seq(V), ceiling(N/V)))[1:N]  # Cross-validation folds (stratified folds not yet supported)
   data$fold_id <- folds  # Add a fold_id column for each observation so we can subset by row later
   
   # Create the Z matrix of cross-validated predictions
