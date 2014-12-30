@@ -1,5 +1,6 @@
 package water;
 
+import hex.FrameSplitter;
 import static water.util.Utils.difference;
 import static water.util.Utils.isEmpty;
 
@@ -808,6 +809,9 @@ public abstract class Job extends Func {
     @API(help = "Number of folds for cross-validation (if no validation data is specified)", filter = Default.class, json = true)
     public int n_folds = 0;
 
+    @API(help = "Fraction of training data (from end) to hold out for validation (if no validation data is specified)", filter = Default.class, json = true)
+    public float holdout_fraction = 0;
+
     @API(help = "Keep cross-validation dataset splits", filter = Default.class, json = true)
     public boolean keep_cross_validation_splits = false;
 
@@ -917,6 +921,23 @@ public abstract class Job extends Func {
           break;
         }
       _responseName = source._names != null && rIndex >= 0 ? source._names[rIndex] : "response";
+
+      if (holdout_fraction > 0) {
+        if (validation != null)
+          throw new IllegalArgumentException("Cannot specify both a holdout fraction and a validation frame.");
+        if (n_folds != 0)
+          throw new IllegalArgumentException("Cannot specify both a holdout fraction and a n-fold cross-validation.");
+
+        Log.info("Holding out last " + Utils.formatPct(holdout_fraction) + " of training data.");
+        FrameSplitter fs = new FrameSplitter(source, new float[]{1 - holdout_fraction});
+        H2O.submitTask(fs).join();
+        Frame[] splits = fs.getResult();
+        source = splits[0];
+        response = source.vecs()[rIndex];
+        validation = splits[1];
+        Log.warn("Allocating data split frames: " + source._key.toString() + " and " + validation._key.toString());
+        Log.warn("Both will be kept after the the model is trained. It's the user's responsibility to manage their lifetime.");
+      }
 
       _train = selectVecs(source);
       _names = new String[cols.length];
