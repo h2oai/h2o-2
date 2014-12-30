@@ -923,6 +923,8 @@ public abstract class Job extends Func {
       _responseName = source._names != null && rIndex >= 0 ? source._names[rIndex] : "response";
 
       if (holdout_fraction > 0) {
+        if (holdout_fraction >= 1)
+          throw new IllegalArgumentException("Holdout fraction must be less than 1.");
         if (validation != null)
           throw new IllegalArgumentException("Cannot specify both a holdout fraction and a validation frame.");
         if (n_folds != 0)
