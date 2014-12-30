@@ -41,12 +41,6 @@ public class CreateFrame extends Request2 {
   @API(help = "Fraction of categorical columns (for randomize=true)", filter = Default.class, dmin = 0, dmax = 1, json=true)
   public double categorical_fraction = 0.2;
 
-  @API(help = "Fraction of binary columns (for randomize=true)", filter = Default.class, dmin = 0, dmax = 1, json=true)
-  public double binary_fraction = 0.1;
-
-  @API(help = "Approximate fraction of 1's in binary columns", filter = Default.class, dmin = 0, dmax = 1, json=true)
-  public double binary_ones_fraction = 0.02;
-
   @API(help = "Factor levels for categorical variables", filter = Default.class, lmin = 2, json=true)
   public int factors = 100;
 
@@ -55,6 +49,12 @@ public class CreateFrame extends Request2 {
 
   @API(help = "Range for integer variables (-range ... range)", filter = Default.class, json=true)
   public long integer_range = 100;
+
+  @API(help = "Fraction of binary columns (for randomize=true)", filter = Default.class, dmin = 0, dmax = 1, json=true)
+  public double binary_fraction = 0.1;
+
+  @API(help = "Fraction of 1's in binary columns", filter = Default.class, dmin = 0, dmax = 1, json=true)
+  public double binary_ones_fraction = 0.02;
 
   @API(help = "Fraction of missing values", filter = Default.class, dmin = 0, dmax = 1, json=true)
   public double missing_fraction = 0.01;

@@ -27,6 +27,8 @@ h2o.createFrame(object, key, rows, cols, seed, randomize, value, real_range,
   \item{factors}{Factor levels for categorical variables}
   \item{integer_fraction}{Fraction of integer columns (for randomize=true)}
   \item{integer_range}{Range for integer variables (-range ... range)}
+  \item{binary_fraction}{Fraction of binary columns (for randomize=true)}
+  \item{binary_ones_fraction}{Fraction of 1's in binary columns (for randomize=true)}
   \item{missing_fraction}{Fraction of missing values}
   \item{response_factors}{Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)}
 }
