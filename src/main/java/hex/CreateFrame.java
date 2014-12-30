@@ -41,6 +41,12 @@ public class CreateFrame extends Request2 {
   @API(help = "Fraction of categorical columns (for randomize=true)", filter = Default.class, dmin = 0, dmax = 1, json=true)
   public double categorical_fraction = 0.2;
 
+  @API(help = "Fraction of binary columns (for randomize=true)", filter = Default.class, dmin = 0, dmax = 1, json=true)
+  public double binary_fraction = 0.1;
+
+  @API(help = "Approximate fraction of 1's in binary columns", filter = Default.class, dmin = 0, dmax = 1, json=true)
+  public double binary_ones_fraction = 0.02;
+
   @API(help = "Factor levels for categorical variables", filter = Default.class, lmin = 2, json=true)
   public int factors = 100;
 
@@ -60,9 +66,11 @@ public class CreateFrame extends Request2 {
 
   @Override public Response serve() {
     try {
-      if (integer_fraction + categorical_fraction > 1) throw new IllegalArgumentException("Integer and categorical fractions must add up to <= 1.");
+      if (integer_fraction + binary_fraction + categorical_fraction > 1) throw new IllegalArgumentException("Integer, binary and categorical fractions must add up to <= 1.");
       if (Math.abs(missing_fraction) > 1) throw new IllegalArgumentException("Missing fraction must be between 0 and 1.");
       if (Math.abs(integer_fraction) > 1) throw new IllegalArgumentException("Integer fraction must be between 0 and 1.");
+      if (Math.abs(binary_fraction) > 1) throw new IllegalArgumentException("Binary fraction must be between 0 and 1.");
+      if (Math.abs(binary_ones_fraction) > 1) throw new IllegalArgumentException("Binary ones fraction must be between 0 and 1.");
       if (Math.abs(categorical_fraction) > 1) throw new IllegalArgumentException("Categorical fraction must be between 0 and 1.");
       if (categorical_fraction > 0 && factors <= 1) throw new IllegalArgumentException("Factors must be larger than 2 for categorical data.");
       if (response_factors < 1) throw new IllegalArgumentException("Response factors must be either 1 (real-valued response), or >=2 (factor levels).");
