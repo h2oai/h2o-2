@@ -61,6 +61,7 @@ public class h2odriver extends Configured implements Tool {
   static boolean enableSuspend = false;
   static int debugPort = 5005;    // 5005 is the default from IDEA
   static String licenseFileName = null;
+  static String extraJavaOpts = null;
 
   // State filled in as a result of handling options.
   static String licenseData = null;
@@ -392,6 +393,7 @@ public class h2odriver extends Configured implements Tool {
                     "          [-verbose:gc]\n" +
                     "          [-XX:+PrintGCDetails]\n" +
                     "          [-license <license file name (local filesystem, not hdfs)>]\n" +
+                    "          [-extraJavaOpts <extra Java options (e.g., -XX:MaxDirectMemorySize=128m)>]\n" +
                     "          -o | -output <hdfs output dir>\n" +
                     "\n" +
                     "Notes:\n" +
@@ -599,6 +601,10 @@ public class h2odriver extends Configured implements Tool {
       else if (s.equals("-license")) {
         i++; if (i >= args.length) { usage(); }
         licenseFileName = args[i];
+      }
+      else if (s.equals("-extraJavaOpts")) {
+        i++; if (i >= args.length) { usage(); }
+        extraJavaOpts = args[i];
       }
       else {
         error("Unrecognized option " + s);
@@ -856,6 +862,7 @@ public class h2odriver extends Configured implements Tool {
               + (enableExcludeMethods ? " -XX:CompileCommand=exclude,water/fvec/NewChunk.append2slowd" : "")
               + (enableLog4jDefaultInitOverride ? " -Dlog4j.defaultInitOverride=true" : "")
               + (enableDebug ? " -agentlib:jdwp=transport=dt_socket,server=y,suspend=" + (enableSuspend ? "y" : "n") + ",address=" + debugPort : "")
+              + (extraJavaOpts != null ? (" " + extraJavaOpts) : "")
               ;
       conf.set("mapred.child.java.opts", mapChildJavaOpts);
       conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
