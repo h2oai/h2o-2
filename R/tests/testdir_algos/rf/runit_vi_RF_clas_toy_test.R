@@ -7,30 +7,9 @@ function(conn) {
     print(summary(data.hex))
     x <- 1:6
     y <- 7
-    rf <- h2o.randomForest(x,y,data.hex,importance=T, ntree=500, depth=20, nbins=100, type = "BigData")
+    rf <- h2o.randomForest(x,y,data.hex,importance=T, ntree=500, depth=20, nbins=100, type = "BigData", seed=1234)
     print(rf@model$varimp)
-    expect_equal(order(rf@model$varimp[1,],decreasing=T), c(3,2,6,5,1,4))
+    expect_equal(order(rf@model$varimp[1,],decreasing=T), c(3,2,6,1,5,4))
     testEnd()
 }
 doTest("Variable Importance RF Test: Weston toy data Smalldata", rf.vi.test)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
