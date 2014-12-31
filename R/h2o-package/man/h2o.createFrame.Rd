@@ -9,7 +9,8 @@ Create an H2O data frame from scratch, with optional randomization. Supports cat
 }
 \usage{
 h2o.createFrame(object, key, rows, cols, seed, randomize, value, real_range, 
-  categorical_fraction, factors, integer_fraction, integer_range, binary_fraction, binary_ones_fraction,
+  categorical_fraction, factors, integer_fraction, integer_range,
+  binary_fraction, binary_ones_fraction,
   missing_fraction, response_factors)
 }
 %- maybe also 'usage' for other objects documented here.
