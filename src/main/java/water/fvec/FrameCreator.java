@@ -58,7 +58,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
         for (int i = 0; i < _createFrame.factors; ++i) {
           _domain[c][i] = UUID.randomUUID().toString().subSequence(0,5).toString();
           // make sure that there's no pure number-labels
-          while (_domain[c][i].matches("^\\d+$")) {
+          while ( _domain[c][i].matches("^\\d+$") || _domain[c][i].matches("^\\d+e\\d+$") ) {
             _domain[c][i] = UUID.randomUUID().toString().subSequence(0,5).toString();
           }
         }
