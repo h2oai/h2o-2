@@ -105,7 +105,7 @@ h2o.assign <- function(data, key) {
   .h2o.exec2(expr = data@key, h2o = data@h2o, dest_key = key)
 }
 
-h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction, response_factors, binary_fraction=0, binary_ones_fraction=0.5) {
+h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, binary_fraction=0, binary_ones_fraction=0.5, missing_fraction, response_factors) {
   if(!is.numeric(rows)) stop("rows must be a numeric value")
   if(!is.numeric(cols)) stop("cols must be a numeric value")
   if(!is.numeric(seed)) stop("seed must be a numeric value")
