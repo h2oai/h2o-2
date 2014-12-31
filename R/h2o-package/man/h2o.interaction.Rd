@@ -30,7 +30,7 @@ localH2O = h2o.init()
 myframe = h2o.createFrame(localH2O, 'framekey', rows = 20, cols = 5,
                           seed = -12301283, randomize = TRUE, value = 0,
                           categorical_fraction = 0.8, factors = 10, real_range = 1,
-                          integer_fraction = 0.2, integer_range = 10, missing_fraction = 0.2,
+                          integer_fraction = 0.2, integer_range = 10, binary_fraction = 0, missing_fraction = 0.2,
                           response_factors = 1)[,-1]
 myframe[,3] <- as.factor(myframe[,3])
 summary(myframe)
