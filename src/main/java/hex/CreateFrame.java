@@ -3,6 +3,7 @@ package hex;
 import water.*;
 import water.api.DocGen;
 import water.fvec.*;
+import water.util.FrameUtils;
 import water.util.Log;
 import water.util.RString;
 
@@ -90,6 +91,7 @@ public class CreateFrame extends Request2 {
       fct.join();
 
       Log.info("Created frame '" + key + "'.");
+      Log.info(FrameUtils.chunkSummary((Frame)UKV.get(Key.make(key))).toString());
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -107,6 +109,7 @@ public class CreateFrame extends Request2 {
             + "' now has " + fr.numRows() + " rows and " + (fr.numCols()-1)
             + " data columns, as well as a " + (response_factors == 1 ? "real-valued" : (response_factors == 2 ? "binomial" : "multi-nomial"))
             + " response variable as the first column.<br/>Number of chunks: " + fr.anyVec().nChunks() + ".");
+    DocGen.HTML.paragraph(sb, FrameUtils.chunkSummary((Frame)UKV.get(Key.make(key))).toString().replace("\n","<br/>"));
     return true;
   }
 
