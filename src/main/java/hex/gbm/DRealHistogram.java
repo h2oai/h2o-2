@@ -1,6 +1,7 @@
 package hex.gbm;
 
 import water.MemoryManager;
+import water.TypeMap;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -15,6 +16,9 @@ import java.util.Comparator;
 */
 public class DRealHistogram extends DHistogram<DRealHistogram> {
   private double _sums[], _ssqs[]; // Sums & square-sums, shared, atomically incremented
+
+  private static int FROZENTYPE = TypeMap.onIce("hex.gbm.DRealHistogram");
+  @Override public int frozenType() { assert(FROZENTYPE != 0); return FROZENTYPE; }
 
   public DRealHistogram( String name, final int nbins, byte isInt, float min, float maxEx, long nelems, boolean doGrpSplit ) {
     super(name,nbins,isInt,min,maxEx,nelems,doGrpSplit);
