@@ -886,7 +886,7 @@ public class DeepLearning extends Job.ValidatedJob {
     if (input_dropout_ratio < 0 || input_dropout_ratio >= 1) {
       throw new IllegalArgumentException("Input dropout must be in [0,1).");
     }
-    if (class_sampling_factors != null || !balance_classes) {
+    if (class_sampling_factors != null && !balance_classes) {
       if (!quiet_mode) Log.info("Ignoring class_sampling_factors since balance_classes is not enabled.");
     }
 
