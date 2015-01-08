@@ -3,6 +3,7 @@ package hex.gbm;
 import java.util.*;
 
 import water.MemoryManager;
+import water.TypeMap;
 import water.util.Utils;
 import water.util.Utils.IcedBitSet;
 
@@ -15,6 +16,9 @@ import water.util.Utils.IcedBitSet;
 */
 public class DBinomHistogram extends DHistogram<DBinomHistogram> {
   private long _sums[]; // Sums (& square-sums since only 0 & 1 allowed), shared, atomically incremented
+
+  private static int FROZENTYPE = TypeMap.onIce("hex.gbm.DBinomHistogram");
+  @Override public int frozenType() { assert(FROZENTYPE != 0); return FROZENTYPE; }
 
   public DBinomHistogram( String name, final int nbins, byte isInt, float min, float maxEx, long nelems, boolean doGrpSplit ) {
     super(name,nbins,isInt,min,maxEx,nelems,doGrpSplit);

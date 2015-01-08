@@ -319,11 +319,11 @@ public class MRUtils {
       return sampleFrameStratified(fr, label, sampling_ratios, seed+1, debug, ++count);
     }
 
-    // shuffle intra-chunk
-    Frame shuffled = shuffleFramePerChunk(r, seed+0x580FF13);
-    r.delete();
-
-    return shuffled;
+//    // shuffle intra-chunk
+//    Frame shuffled = shuffleFramePerChunk(r, seed + 0x580FF13);
+//    r.delete();
+//    return shuffled;
+    return r;
   }
 
   /**

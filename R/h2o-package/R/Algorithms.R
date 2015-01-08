@@ -139,7 +139,7 @@ h2o.coxph <- function(x, y, data, key = "", weights = NULL, offset = NULL,
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
-                    n.bins = 20, group_split = TRUE, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
+                    n.bins = 20, group_split = TRUE, importance = FALSE, nfolds = 0, validation, holdout.fraction = 0, balance.classes = FALSE, max.after.balance.size = 5, class.sampling.factors = NULL) {
   args <- .verify_dataxy(data, x, y)
   
   if(!is.character(key)) stop("key must be of class character")
@@ -171,23 +171,23 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
   if(nfolds == 1) stop("nfolds cannot be 1")
   if(!missing(validation) && class(validation) != "H2OParsedData")
     stop("validation must be an H2O parsed dataset")
-  
+  if(!is.numeric(holdout.fraction)) stop("holdout.fraction must be numeric")
+  if(as.numeric(holdout.fraction) > 0 && (!missing(validation) || nfolds>1) ) stop("holdout.fraction cannot be combined with validation or nfolds")
+
   # NB: externally, 1 based indexing; internally, 0 based
   cols = paste(args$x_i - 1, collapse=",")
   group_split <- as.numeric(group_split)
   if(missing(validation) && nfolds == 0) {
-    # Default to using training data as validation
-#    validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family, group_split = group_split,
-                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, holdout_fraction = as.numeric(holdout.fraction), destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family, group_split = group_split,
+                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), class_sampling_factors = class.sampling.factors)
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family, group_split = group_split,
-                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), class_sampling_factors = class.sampling.factors)
   } else if(!missing(validation) && nfolds == 0) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family, group_split = group_split,
-                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+                            min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), class_sampling_factors = class.sampling.factors)
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, distribution=distribution, n.trees=n.trees, interaction.depth=interaction.depth, shrinkage=shrinkage, n.minobsinnode=n.minobsinnode, n.bins=n.bins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size,
+  params = list(x=args$x, y=args$y, distribution=distribution, n.trees=n.trees, interaction.depth=interaction.depth, shrinkage=shrinkage, n.minobsinnode=n.minobsinnode, n.bins=n.bins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, class.sampling.factors = class.sampling.factors,
                 h2o = data@h2o, group_split = group_split)
   
   if(.is_singlerun("GBM", params))
@@ -206,7 +206,8 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
   mySum$shrinkage = res$learn_rate
   mySum$balance.classes = res$balance_classes
   mySum$max.after.balance.size = res$max_after_balance_size
-  
+  mySum$class.sampling.factors = res$class_sampling_factors
+
   # if(params$distribution == "multinomial") {
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
@@ -229,6 +230,7 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
   result$modelDistribution <- extra_json$gbm_model$"_modelClassDist"
   params$balance.classes = res$balance_classes
   params$max.after.balance.size = res$max_after_balance_size
+  params$class.sampling.factors = res$class_sampling_factors
   result$params = params
   
   if(result$params$distribution %in% c("multinomial", "bernoulli")) {
@@ -629,6 +631,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
                              classification = TRUE,
                              nfolds = 0,
                              validation,
+                             holdout_fraction = 0,
                              # ----- AUTOGENERATED PARAMETERS BEGIN -----
                              checkpoint,
                              autoencoder,
@@ -706,10 +709,10 @@ h2o.deeplearning <- function(x, y, data, key = "",
   if(nfolds == 1) stop("nfolds cannot be 1")
   if(!missing(validation) && class(validation) != "H2OParsedData")
     stop("validation must be an H2O parsed dataset")
-  
+  if(!is.numeric(holdout_fraction)) stop("holdout_fraction must be numeric")
+  if(as.numeric(holdout_fraction) > 0 && (!missing(validation) || nfolds>1) ) stop("holdout_fraction cannot be combined with validation or nfolds")
+
   if(missing(validation) && nfolds == 0) {
-    # validation = data
-    # parms$validation = validation@key
     validation = new ("H2OParsedData", key = as.character(NA))
     parms$n_folds = nfolds
   } else if(missing(validation) && nfolds >= 2) {
@@ -733,6 +736,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
   }
 
   # ----- AUTOGENERATED PARAMETERS BEGIN -----
+  parms = .addFloatParm(parms, k="holdout_fraction", v=holdout_fraction)
   parms = .addBooleanParm(parms, k="override_with_best_model", v=override_with_best_model)
   parms = .addBooleanParm(parms, k="autoencoder", v=autoencoder)
   parms = .addBooleanParm(parms, k="use_all_factor_levels", v=use_all_factor_levels)
@@ -787,7 +791,6 @@ h2o.deeplearning <- function(x, y, data, key = "",
   # ----- AUTOGENERATED PARAMETERS END -----
   
   res = .h2o.__remoteSendWithParms(data@h2o, .h2o.__PAGE_DeepLearning, parms)
-  parms$h2o <- data@h2o
   parms$h2o <- data@h2o
   noGrid <- missing(hidden) || !(is.list(hidden) && length(hidden) > 1)
   noGrid <- noGrid && (missing(l1) || length(l1) == 1)
@@ -1070,11 +1073,12 @@ h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.
 
 # ----------------------------------- Random Forest --------------------------------- #
 h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, depth=20, mtries = -1, sample.rate=2/3,
-                             nbins=20, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1,
-                             balance.classes=FALSE, max.after.balance.size=5, doGrpSplit=TRUE, verbose = FALSE,
+                             nbins=20, seed=-1, importance=FALSE, nfolds=0, validation, holdout.fraction=0, nodesize=1,
+                             balance.classes=FALSE, max.after.balance.size=5, class.sampling.factors = NULL, doGrpSplit=TRUE, verbose = FALSE,
                              oobee = TRUE, stat.type = "ENTROPY", type = "fast") {
   if (type == "fast") {
-    return(h2o.SpeeDRF(x, y, data, key, classification, nfolds, validation, mtries, ntree, depth, sample.rate, oobee,
+    if (!is.null(class.sampling.factors)) stop("class.sampling.factors requires type=BigData.")
+    return(h2o.SpeeDRF(x, y, data, key, classification, nfolds, validation, holdout.fraction, mtries, ntree, depth, sample.rate, oobee,
                        importance, nbins, seed, stat.type, balance.classes, verbose))
   }
   args <- .verify_dataxy(data, x, y)
@@ -1106,21 +1110,22 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
   if(nfolds == 1) stop("nfolds cannot be 1")
   if(!missing(validation) && class(validation) != "H2OParsedData")
     stop("validation must be an H2O parsed dataset")
-  
+  if(!is.numeric(holdout.fraction)) stop("holdout.fraction must be numeric")
+  if(holdout.fraction > 0 && (!missing(validation) || nfolds>1) ) stop("holdout.fraction cannot be combined with validation or nfolds")
+
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
   if(missing(validation) && nfolds == 0) {
-    # Default to using training data as validation
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, mtries = mtries, seed=seed, importance=as.numeric(importance),
-                            classification=as.numeric(classification), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
+                            classification=as.numeric(classification), holdout_fraction = as.numeric(holdout.fraction), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), class_sampling_factors = class.sampling.factors, do_grpsplit=as.numeric(doGrpSplit))
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
-                            classification=as.numeric(classification), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
+                            classification=as.numeric(classification), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), class_sampling_factors = class.sampling.factors, do_grpsplit=as.numeric(doGrpSplit))
   } else if(!missing(validation) && nfolds == 0) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
-                            classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
+                            classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), class_sampling_factors = class.sampling.factors, do_grpsplit=as.numeric(doGrpSplit))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, type="BigData", ntree=ntree, mtries = mtries, depth=depth, nbins=nbins, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, nodesize=nodesize, h2o = data@h2o)
+  params = list(x=args$x, y=args$y, type="BigData", ntree=ntree, mtries = mtries, depth=depth, nbins=nbins, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, class.sampling.factors = class.sampling.factors, nodesize=nodesize, h2o = data@h2o)
   
   if(.is_singlerun("RF", params))
     .h2o.singlerun.internal("RF", data, res, nfolds, validation, params)
@@ -1137,6 +1142,7 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
   mySum$nbins = res$nbins
   mySum$balance_classes = res$balance_classes
   mySum$max_after_balance_size = res$max_after_balance_size
+  mySum$class.sampling.factors = res$class_sampling_factors
 
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
@@ -1153,7 +1159,8 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
   params$classification = ifelse(res$parameters$classification == "true", TRUE, FALSE)
   params$balance.classes = res$balance_classes
   params$max.after.balance.size = res$max_after_balance_size
-  
+  params$class.sampling.factors = res$class_sampling_factors
+
   result$params = params
   treeStats = unlist(res$treeStats)
   rf_matrix = rbind(treeStats[1:3], treeStats[4:6])
@@ -1186,7 +1193,7 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
 }
 
 # -------------------------- SpeeDRF -------------------------- #
-h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, validation,
+h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, validation, holdout.fraction=0,
                         mtries=-1,
                         ntree=50, 
                         depth=20,
@@ -1223,6 +1230,8 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
   if(nfolds == 1) stop("nfolds cannot be 1")
   if(!missing(validation) && class(validation) != "H2OParsedData")
     stop("validation must be an H2O parsed dataset")
+  if(!is.numeric(holdout.fraction)) stop("holdout.fraction must be numeric")
+  if(holdout.fraction > 0 && (!missing(validation) || nfolds>1 || oobee)) stop("holdout.fraction cannot be combined with validation, nfolds or oobee")
   if(!is.logical(verbose)) stop("verbose must be a logical value")
 
   if (missing(validation) && nfolds == 0 && oobee) {
@@ -1234,9 +1243,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
                                 sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
 
   } else if(missing(validation) && nfolds == 0) {
-    # Default to using training data as validation if oobee is false...
-#    validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, holdout_fraction = as.numeric(holdout.fraction), ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, mtries = mtries, importance=as.numeric(importance),
                             sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, mtries = mtries, n_folds=nfolds, importance=as.numeric(importance),
