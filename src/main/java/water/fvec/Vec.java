@@ -46,7 +46,7 @@ import static water.util.Utils.seq;
  */
 public class Vec extends Iced {
   /** Log-2 of Chunk size. */
-  public static final int LOG_CHK = 24; // Chunks are 1<<24, or 16Meg
+  public static final int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
   /** Chunk size.  Bigger increases batch sizes, lowers overhead costs, lower
    * increases fine-grained parallelism. */
   public static final int CHUNK_SZ = 1 << LOG_CHK;
