@@ -1093,8 +1093,9 @@ public class Frame extends Lockable<Frame> {
     System.arraycopy(f.vecs(), 0, vecs,0, f.numCols());
     vecs[f.numCols()] = rv;
     Frame doAllFr = new Frame(null, vecs);
-    Frame left = new DeepSelectThresh(threshold, true).doAll(f.numCols(),doAllFr).outputFrame(null, doAllFr.domains());
-    Frame rite = new DeepSelectThresh(threshold, false).doAll(f.numCols(),doAllFr).outputFrame(null, doAllFr.domains());
+    // it would be great if there was a map call for NewChunk[][] multi frame output
+    Frame left = new DeepSelectThresh(threshold,  true).doAll(f.numCols(),doAllFr).outputFrame(Key.make(), f.names(), f.domains());
+    Frame rite = new DeepSelectThresh(threshold, false).doAll(f.numCols(),doAllFr).outputFrame(Key.make(), f.names(), f.domains());
     UKV.remove(rv._key);
     return new Frame[]{left,rite};
   }
