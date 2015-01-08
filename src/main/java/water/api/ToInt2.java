@@ -19,10 +19,17 @@ public class ToInt2 extends Request2 {
   @Override
   protected Response serve() {
     try {
-      if (column_index <= 0) throw new IllegalArgumentException("Column index is 1 based. Please supply a valid column index in the range [1,"+ src_key.numCols()+"]");
+      if (column_index <= 0 || column_index > src_key.numCols()) throw new IllegalArgumentException("Column index is 1 based. Please supply a valid column index in the range [1,"+ src_key.numCols()+"]");
       Log.info("Integerizing column " + column_index);
-      assert src_key.vecs()[column_index - 1].masterVec().isInt();
-      Vec nv = src_key.vecs()[column_index - 1].masterVec();
+      Vec nv;
+      if ((nv= src_key.vecs()[column_index-1].masterVec()) == null) {
+        assert src_key.vecs()[column_index-1].isInt();
+        nv = src_key.vecs()[column_index-1];
+        nv._domain = null;
+      } else {
+        assert src_key.vecs()[column_index - 1].masterVec().isInt();
+        nv = src_key.vecs()[column_index - 1].masterVec();
+      }
       src_key.replace(column_index - 1, nv);
 
     } catch( Throwable e ) {

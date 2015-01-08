@@ -1495,47 +1495,50 @@ class ASTRbind extends ASTOp {
 
   private static class ParallelRbinds extends H2O.H2OCountedCompleter{
 
-    private final Env _env;
+    private final Frame[] _f;
     private final int _argcnt;
     private final AtomicInteger _ctr;
     private int _maxP = 100;
 
     private long[] _espc;
     private Vec[] _vecs;
-    ParallelRbinds(Env e, int argcnt) { _env = e; _argcnt = argcnt; _ctr = new AtomicInteger(_maxP-1); }  //TODO pass maxP to constructor
+    ParallelRbinds(Frame[] f, int argcnt) { _f = f; _argcnt = argcnt; _ctr = new AtomicInteger(_maxP-1); }  //TODO pass maxP to constructor
 
     @Override public void compute2() {
-      addToPendingCount(_env.peekAry().numCols()-1);
+      addToPendingCount(_f[0].numCols()-1);
       int nchks=0;
       for (int i =0; i < _argcnt; ++i)
-        nchks+=_env.ary(-(i+1)).anyVec().nChunks();
+        nchks+=_f[i].anyVec().nChunks();
 
       _espc = new long[nchks+1];
-      int coffset = _env.peekAry().anyVec().nChunks();
-      long[] first_espc = _env.peekAry().anyVec()._espc;
+      int coffset = _f[0].anyVec().nChunks();
+      long[] first_espc = _f[0].anyVec()._espc;
       System.arraycopy(first_espc, 0, _espc, 0, first_espc.length);
-      for (int i=1; i< _argcnt; ++i) {
+      for (int i=1; i < _argcnt; ++i) {
         long roffset = _espc[coffset];
-        long[] espc = _env.ary(-(i+1)).anyVec()._espc;
+        long[] espc = _f[i].anyVec()._espc;
         int j = 1;
         for (; j < espc.length; j++)
           _espc[coffset + j] = roffset+ espc[j];
-        coffset += _env.ary(-(i+1)).anyVec().nChunks();
+        coffset += _f[i].anyVec().nChunks();
       }
 
-      Key[] keys = _env.peekAry().anyVec().group().addVecs(_env.peekAry().numCols());
+      Key[] keys = _f[0].anyVec().group().addVecs(_f[0].numCols());
       _vecs = new Vec[keys.length];
       String type;
-      for (int i=0; i<_vecs.length; ++i)
-        _vecs[i] = new Vec( keys[i], _espc, null, (type=get_type(_env.peekAry().vec(i))).equals("UUID"), type.equals("time") ? (byte)3 : (byte)-1);
+      for (int i=0; i<_vecs.length; ++i) {
+        _vecs[i] = new Vec(keys[i], _espc, null, (type = get_type(_f[0].vec(i))).equals("UUID"), type.equals("time") ? (byte) 3 : (byte) -1);
+      }
 
       for (int i=0; i < Math.min(_maxP, _vecs.length); ++i) forkVecTask(i);
     }
 
     private void forkVecTask(final int i) {
       Vec[] vecs = new Vec[_argcnt];
-      for (int j= 0; j < _argcnt; ++j)
-        vecs[j] = _env.ary(-(j+1)).vec(i);
+      for (int j= 0; j < _argcnt; ++j) {
+        Vec vm, v = _f[j].vec(i);
+        vecs[j] = ((vm=v.masterVec())==null) ? v : vm;
+      }
       new RbindTask(new Callback(), vecs, _vecs[i], _espc).fork();
     }
 
@@ -1554,25 +1557,32 @@ class ASTRbind extends ASTOp {
     // quick check to make sure rbind is feasible
     if (argcnt-1 == 1) { return; } // leave stack as is
 
+    Frame[] fs = new Frame[argcnt-1];
     Frame f1 = env.peekAry();
-
+    int j = fs.length-1;
+    boolean[] wrapped = new boolean[f1.numCols()];
+    for (int c = 0; c<f1.numCols(); ++c) wrapped[c] = f1.vec(c).masterVec() != null;
+    fs[j--] = f1;
     // do error checking and compute new offsets in tandem
-    for (int i = 0; i < argcnt-1; ++i) {
+    for (int i = 1; i < argcnt-1; ++i) {
       Frame t = env.ary(-(i+1));
-
+      fs[j--]=t;
       // check columns match
       if (t.numCols() != f1.numCols())
         throw new IllegalArgumentException("Column mismatch! Expected " + f1.numCols() + " but frame has " + t.numCols());
 
       // check column types
       for (int c = 0; c < f1.numCols(); ++c) {
+        wrapped[c] |= t.vec(c).masterVec() != null;
         if (!get_type(f1.vec(c)).equals(get_type(t.vec(c))))
           throw new IllegalArgumentException("Column type mismatch! Expected type " + get_type(f1.vec(c)) + " but vec has type " + get_type(t.vec(c)));
       }
     }
 
     ParallelRbinds t;
-    H2O.submitTask(t =new ParallelRbinds(env, argcnt-1)).join();
+    H2O.submitTask(t = new ParallelRbinds(fs, argcnt-1)).join();
+    for (int i = 0; i < wrapped.length; ++i)
+      if (wrapped[i]) t._vecs[i] = t._vecs[i].toEnum();
     Key m = Key.make();
     env.poppush(argcnt, new Frame(m, f1.names(), t._vecs), m.toString());
   }
