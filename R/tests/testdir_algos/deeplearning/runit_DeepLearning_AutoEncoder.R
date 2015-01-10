@@ -57,7 +57,7 @@ check.deeplearning_autoencoder <- function(conn) {
      cm <- h2o.confusionMatrix(test_preds[,1], test_labels)
      cm
 
-     checkTrue(cm[length(cm)] == 0.104) #10% test set error
+     checkTrue(cm[length(cm)] == 0.1085) #10% test set error
 
      testEnd()
 }
