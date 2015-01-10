@@ -8,10 +8,10 @@ Performs Deep Learning neural networks on an \code{\linkS4class{H2OParsedData}} 
 }
 \usage{
 h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification = TRUE,
-    nfolds = 0, validation, holdout_fraction = 0, checkpoint = "", autoencoder, use_all_factor_levels,
-    activation, hidden, epochs, train_samples_per_iteration, seed, adaptive_rate,
-    rho, epsilon, rate, rate_annealing, rate_decay, momentum_start,
-    momentum_ramp, momentum_stable, nesterov_accelerated_gradient,
+    nfolds = 0, validation, holdout_fraction = 0, checkpoint = "", autoencoder,
+    use_all_factor_levels, activation, hidden, epochs, train_samples_per_iteration,
+    seed, adaptive_rate, rho, epsilon, rate, rate_annealing, rate_decay,
+    momentum_start, momentum_ramp, momentum_stable, nesterov_accelerated_gradient,
     input_dropout_ratio, hidden_dropout_ratios, l1, l2, max_w2,
     initial_weight_distribution, initial_weight_scale, loss,
     score_interval, score_training_samples, score_validation_samples,
