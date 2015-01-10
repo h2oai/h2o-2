@@ -9,7 +9,7 @@ library(h2o)
 # Launch H2O Cluster with YARN on HDP2.1
 #wget http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/5/h2o-2.9.0.5.zip
 #unzip h2o-2.9.0.5.zip
-#cd h2o-2.9.0.5
+#cd h2o-2.9.0.5/hadoop
 #hadoop fs -rmr myDir
 #hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -n 14 -mapperXmx 50g -output myDir -baseport 61111
 
