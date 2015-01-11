@@ -4,7 +4,7 @@ if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/5/R", getOption("repos"))))
 library(h2o)
 
-# Connect to cluster (10 nodes with -Xmx50G each)
+# Connect to cluster (14 nodes with -Xmx 50g each)
 
 # Launch H2O Cluster with YARN on HDP2.1
 #wget http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/5/h2o-2.9.0.5.zip
