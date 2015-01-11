@@ -1,15 +1,15 @@
 # Install and Launch H2O R package
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/5/R", getOption("repos"))))
+install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/6/R", getOption("repos"))))
 library(h2o)
 
 # Connect to cluster (14 nodes with -Xmx 50g each)
 
 # Launch H2O Cluster with YARN on HDP2.1
-#wget http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/5/h2o-2.9.0.5.zip
-#unzip h2o-2.9.0.5.zip
-#cd h2o-2.9.0.5/hadoop
+#wget http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/5/h2o-2.9.0.6.zip
+#unzip h2o-2.9.0.6.zip
+#cd h2o-2.9.0.6/hadoop
 #hadoop fs -rmr myDir
 #hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -n 14 -mapperXmx 50g -output myDir -baseport 61111
 
