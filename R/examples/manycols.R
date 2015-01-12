@@ -1,17 +1,17 @@
 # Install and Launch H2O R package
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/6/R", getOption("repos"))))
+install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/7/R", getOption("repos"))))
 library(h2o)
 
-# Connect to cluster (14 nodes with -Xmx 50g each)
+# Connect to cluster (8 nodes with -Xmx 40g each)
 
 # Launch H2O Cluster with YARN on HDP2.1
-#wget http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/5/h2o-2.9.0.6.zip
-#unzip h2o-2.9.0.6.zip
-#cd h2o-2.9.0.6/hadoop
+#wget http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/5/h2o-2.9.0.7.zip
+#unzip h2o-2.9.0.7.zip
+#cd h2o-2.9.0.7/hadoop
 #hadoop fs -rmr myDir
-#hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -n 14 -mapperXmx 50g -output myDir -baseport 61111
+#hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -n 8 -mapperXmx 40g -output myDir -baseport 61111
 
 h2oCluster <- h2o.init(ip="mr-0xd1", port=61111)
 
@@ -23,9 +23,9 @@ random <- h2o.runif(data.hex, seed = 123456789)
 train <- h2o.assign(data.hex[random < .8,], "X15Mx2_2k_part0.hex")
 valid <- h2o.assign(data.hex[random >= .8,], "X15Mx2_2k_part1.hex")
 
-# Delete full data and temporaries
-h2o.rm(h2oCluster, "15Mx2_2k.hex")
-h2o.rm(h2oCluster, grep(pattern = "Last.value", x = h2o.ls(h2oCluster)$Key, value = TRUE))
+# Delete full training data and temporaries - only needed if memory is tight
+#h2o.rm(h2oCluster, "15Mx2_2k.hex") # optional
+#h2o.rm(h2oCluster, grep(pattern = "Last.value", x = h2o.ls(h2oCluster)$Key, value = TRUE))
 
 response=2 #1:1000 imbalance
 predictors=c(3:ncol(data.hex))
