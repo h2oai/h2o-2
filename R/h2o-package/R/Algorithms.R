@@ -283,7 +283,8 @@ h2o.glm <- function(x, y, data, key = "",
                     epsilon = 1e-4,
                     iter.max = 100,
                     higher_accuracy = FALSE,
-                    beta_constraints = NULL)
+                    beta_constraints = NULL,
+                    disable_line_search = FALSE)
 {
   args <- .verify_dataxy(data, x, y)
 
@@ -446,7 +447,8 @@ h2o.glm <- function(x, y, data, key = "",
                  variable_importances  = as.integer(variable_importances),
                  beta_epsilon          = epsilon,
                  max_iter              = iter.max,
-                 higher_accuracy       = as.integer(higher_accuracy))
+                 higher_accuracy       = as.integer(higher_accuracy),
+                 disable_line_search   = as.integer(disable_line_search))
 
   if (family == "binomial")
     params <- c(params, list(prior = prior))
