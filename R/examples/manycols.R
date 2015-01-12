@@ -10,7 +10,7 @@ library(h2o)
 #wget http://h2o-release.s3.amazonaws.com/h2o/h2o-parsemanycols/8/h2o-2.9.0.8.zip
 #unzip h2o-2.9.0.8.zip
 #cd h2o-2.9.0.8/hadoop
-#hadoop fs -rmr myDir
+#hadoop fs -rm -r myDir
 #hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -n 8 -mapperXmx 40g -output myDir -baseport 61111 -data_max_factor_levels 65000 -chunk_bits 24
 
 h2oCluster <- h2o.init(ip="mr-0xd1", port=61111)
@@ -40,10 +40,10 @@ mdl.glm
 pred.glm <- h2o.predict(mdl.glm, valid)
 h2o.performance(pred.glm[,3], valid[,response], measure="F1")
 
-# Random Forest
-mdl.rf  <- h2o.randomForest(x=predictors, y=response, data=train, validation=valid, type="BigData", depth=15, importance=T, balance.classes = T, class.sampling.factors = c(1,250)) 
-mdl.rf
-
 # Gradient Boosted Trees
 mdl.gbm <- h2o.gbm(x=predictors, y=response, data=train, validation=valid, importance=T, balance.classes = T, class.sampling.factors = c(1,250))
 mdl.gbm
+
+# Random Forest
+mdl.rf  <- h2o.randomForest(x=predictors, y=response, data=train, validation=valid, type="BigData", depth=15, importance=T, balance.classes = T, class.sampling.factors = c(1,250)) 
+mdl.rf
