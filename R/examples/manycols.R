@@ -24,8 +24,8 @@ train <- h2o.assign(data.hex[random < .8,], "X15Mx2_2k_part0.hex")
 valid <- h2o.assign(data.hex[random >= .8,], "X15Mx2_2k_part1.hex")
 
 # Delete full training data and temporaries - only needed if memory is tight
-#h2o.rm(h2oCluster, "15Mx2_2k.hex") # optional
-#h2o.rm(h2oCluster, grep(pattern = "Last.value", x = h2o.ls(h2oCluster)$Key, value = TRUE))
+h2o.rm(h2oCluster, "15Mx2_2k.hex") # optional
+h2o.rm(h2oCluster, grep(pattern = "Last.value", x = h2o.ls(h2oCluster)$Key, value = TRUE))
 
 response=2 #1:1000 imbalance
 predictors=c(3:ncol(data.hex))
