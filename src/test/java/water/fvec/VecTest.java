@@ -16,6 +16,7 @@ import java.util.Arrays;
 
 /** This test tests stability of Vec API. */
 public class VecTest extends TestUtil {
+  final int CHUNK_SZ = 1 << H2O.LOG_CHK;
 
   /** Test toEnum call to return correct domain. */
   @Test public void testToEnum() {
@@ -75,62 +76,62 @@ public class VecTest extends TestUtil {
   @Test public void testMakeConSeq() {
     Vec v;
 
-    v = makeConSeq(0xCAFE,Vec.CHUNK_SZ);
+    v = makeConSeq(0xCAFE,CHUNK_SZ);
     assertTrue(v.at(234) == 0xCAFE);
     assertTrue(v._espc.length == 2);
     assertTrue(
             v._espc[0] == 0              &&
-            v._espc[1] == Vec.CHUNK_SZ
+            v._espc[1] == CHUNK_SZ
     );
     v.remove(new Futures()).blockForPending();
 
-    v = makeConSeq(0xCAFE,2*Vec.CHUNK_SZ);
+    v = makeConSeq(0xCAFE,2*CHUNK_SZ);
     assertTrue(v.at(234) == 0xCAFE);
-    assertTrue(v.at(2*Vec.CHUNK_SZ-1) == 0xCAFE);
+    assertTrue(v.at(2*CHUNK_SZ-1) == 0xCAFE);
     assertTrue(v._espc.length == 3);
     assertTrue(
             v._espc[0] == 0              &&
-            v._espc[1] == Vec.CHUNK_SZ   &&
-            v._espc[2] == Vec.CHUNK_SZ*2
+            v._espc[1] == CHUNK_SZ   &&
+            v._espc[2] == CHUNK_SZ*2
     );
     v.remove(new Futures()).blockForPending();
 
-    v = makeConSeq(0xCAFE,2*Vec.CHUNK_SZ+1);
+    v = makeConSeq(0xCAFE,2*CHUNK_SZ+1);
     assertTrue(v.at(234) == 0xCAFE);
-    assertTrue(v.at(2*Vec.CHUNK_SZ) == 0xCAFE);
+    assertTrue(v.at(2*CHUNK_SZ) == 0xCAFE);
     assertTrue(v._espc.length == 4);
     assertTrue(
             v._espc[0] == 0              &&
-            v._espc[1] == Vec.CHUNK_SZ   &&
-            v._espc[2] == Vec.CHUNK_SZ*2 &&
-            v._espc[3] == Vec.CHUNK_SZ*2+1
+            v._espc[1] == CHUNK_SZ   &&
+            v._espc[2] == CHUNK_SZ*2 &&
+            v._espc[3] == CHUNK_SZ*2+1
     );
     v.remove(new Futures()).blockForPending();
 
-    v = makeConSeq(0xCAFE,3*Vec.CHUNK_SZ);
+    v = makeConSeq(0xCAFE,3*CHUNK_SZ);
     assertTrue(v.at(234) == 0xCAFE);
-    assertTrue(v.at(3*Vec.CHUNK_SZ-1) == 0xCAFE);
+    assertTrue(v.at(3*CHUNK_SZ-1) == 0xCAFE);
     assertTrue(v._espc.length == 4);
     assertTrue(
             v._espc[0] == 0              &&
-            v._espc[1] == Vec.CHUNK_SZ   &&
-            v._espc[2] == Vec.CHUNK_SZ*2 &&
-            v._espc[3] == Vec.CHUNK_SZ*3
+            v._espc[1] == CHUNK_SZ   &&
+            v._espc[2] == CHUNK_SZ*2 &&
+            v._espc[3] == CHUNK_SZ*3
     );
     v.remove(new Futures()).blockForPending();
   }
   // Test HEX-1819
   @Test public void testMakeSeq() {
-    Vec v = makeSeq(3*Vec.CHUNK_SZ);
+    Vec v = makeSeq(3*CHUNK_SZ);
     assertTrue(v.at(0) == 1);
     assertTrue(v.at(234) == 235);
-    assertTrue(v.at(2*Vec.CHUNK_SZ) == 2*Vec.CHUNK_SZ+1);
+    assertTrue(v.at(2*CHUNK_SZ) == 2*CHUNK_SZ+1);
     assertTrue(v._espc.length == 4);
     assertTrue(
             v._espc[0] == 0 &&
-            v._espc[1] == Vec.CHUNK_SZ &&
-            v._espc[2] == Vec.CHUNK_SZ * 2 &&
-            v._espc[3] == Vec.CHUNK_SZ * 3
+            v._espc[1] == CHUNK_SZ &&
+            v._espc[2] == CHUNK_SZ * 2 &&
+            v._espc[3] == CHUNK_SZ * 3
     );
     v.remove(new Futures()).blockForPending();
   }

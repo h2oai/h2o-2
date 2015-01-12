@@ -817,7 +817,7 @@ public class Utils {
           break;
         off += len;
         if( off == bs.length ) { // Dataset is uncompressing alot! Need more space...
-          if( bs.length >= water.fvec.Vec.CHUNK_SZ )
+          if( bs.length >= (1 << H2O.LOG_CHK))
             break; // Already got enough
           bs = Arrays.copyOf(bs, bs.length * 2);
         }
