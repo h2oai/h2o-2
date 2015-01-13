@@ -46,7 +46,7 @@ public final class H2O {
   // Max. number of factor levels ber column (before flipping all to NAs)
   public static int DATA_MAX_FACTOR_LEVELS = 65000;
 
-  public static int LOG_CHK = 24; // Chunks are 1<<24, or 16Meg
+  public static int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
 
   // The multicast discovery port
   static MulticastSocket  CLOUD_MULTICAST_SOCKET;
