@@ -9,7 +9,8 @@ Create an H2O data frame from scratch, with optional randomization. Supports cat
 }
 \usage{
 h2o.createFrame(object, key, rows, cols, seed, randomize, value, real_range, 
-  categorical_fraction, factors, integer_fraction, integer_range, 
+  categorical_fraction, factors, integer_fraction, integer_range,
+  binary_fraction, binary_ones_fraction,
   missing_fraction, response_factors)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -27,6 +28,8 @@ h2o.createFrame(object, key, rows, cols, seed, randomize, value, real_range,
   \item{factors}{Factor levels for categorical variables}
   \item{integer_fraction}{Fraction of integer columns (for randomize=true)}
   \item{integer_range}{Range for integer variables (-range ... range)}
+  \item{binary_fraction}{Fraction of binary columns (for randomize=true)}
+  \item{binary_ones_fraction}{Fraction of 1's in binary columns (for randomize=true)}
   \item{missing_fraction}{Fraction of missing values}
   \item{response_factors}{Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)}
 }
@@ -39,8 +42,9 @@ localH2O = h2o.init(beta = TRUE)
 myframe = h2o.createFrame(localH2O, 'myframekey', rows = 1000, cols = 10, 
                           seed = -12301283, randomize = TRUE, value = 0, real_range = 2.0,
                           categorical_fraction = 0.2, factors = 100, 
-                          integer_fraction = 0.2, integer_range = 100, missing_fraction = 0.1, 
-                          response_factors = 2)
+                          integer_fraction = 0.2, integer_range = 100,
+                          binary_fraction = 0.1, binary_ones_fraction = 0.01,
+                          missing_fraction = 0.1, response_factors = 2)
 head(myframe)
 summary(myframe)
 h2o.shutdown(localH2O)

@@ -73,6 +73,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   public boolean balance_classes = false;
 
   /**
+   * Desired over/under-sampling ratios per class (lexicographic order). Only when balance_classes is enabled. If not specified, they will be automatically computed to obtain class balance during training.
+   */
+  @API(help = "Desired over/under-sampling ratios per class (lexicographic order).", filter = Default.class, dmin = 0, json = true, importance = ParamImportance.SECONDARY)
+  public float[] class_sampling_factors;
+
+  /**
    * When classes are balanced, limit the resulting dataset size to the
    * specified multiple of the original dataset size.
    */
@@ -203,9 +209,17 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Handle imbalanced classes by stratified over/under-sampling
     // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
     float[] trainSamplingFactors;
+    if (class_sampling_factors != null && !balance_classes) {
+      Log.info("Ignoring class_sampling_factors since balance_classes is not enabled.");
+    }
     if (classification && balance_classes) {
       int response_idx = fr.find(_responseName);
       trainSamplingFactors = new float[domain.length]; //leave initialized to 0 -> will be filled up below
+      if (class_sampling_factors != null) {
+        if (class_sampling_factors.length != fr.vecs()[response_idx].domain().length)
+          throw new IllegalArgumentException("class_sampling_factors must have " + fr.vecs()[response_idx].domain().length + " elements");
+        trainSamplingFactors = class_sampling_factors.clone(); //clone: don't modify the original
+      }
       Frame stratified = sampleFrameStratified(
               fr, fr.lastVec(), trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
       if (stratified != fr) {

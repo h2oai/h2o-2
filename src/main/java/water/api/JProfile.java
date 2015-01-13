@@ -24,7 +24,7 @@ public class JProfile extends Func {
   static final String DOC_GET = "Displays profile dumps from all nodes.";
 
   @API(help="Stack trace depth", required=true, filter=Default.class, json=true)
-  public int depth = 5;
+  public int depth = 10;
 
   @API(help="This node's name")
   public String node_name;

@@ -8,10 +8,10 @@ Performs Deep Learning neural networks on an \code{\linkS4class{H2OParsedData}} 
 }
 \usage{
 h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification = TRUE,
-    nfolds = 0, validation, checkpoint = "", autoencoder, use_all_factor_levels, 
-    activation, hidden, epochs, train_samples_per_iteration, seed, adaptive_rate,
-    rho, epsilon, rate, rate_annealing, rate_decay, momentum_start,
-    momentum_ramp, momentum_stable, nesterov_accelerated_gradient,
+    nfolds = 0, validation, holdout_fraction = 0, checkpoint = "", autoencoder,
+    use_all_factor_levels, activation, hidden, epochs, train_samples_per_iteration,
+    seed, adaptive_rate, rho, epsilon, rate, rate_annealing, rate_decay,
+    momentum_start, momentum_ramp, momentum_stable, nesterov_accelerated_gradient,
     input_dropout_ratio, hidden_dropout_ratios, l1, l2, max_w2,
     initial_weight_distribution, initial_weight_scale, loss,
     score_interval, score_training_samples, score_validation_samples,
@@ -33,6 +33,7 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
         \item{classification}{ (Optional) A logical value indicating whether the algorithm should conduct classification. }
         \item{nfolds}{(Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.}
         \item{validation}{(Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
+        \item{holdout_fraction}{ (Optional) Fraction of the training data to hold out for validation.}
         \item{checkpoint}{"Model checkpoint (either key or H2ODeepLearningModel) to resume training with."}
         \item{activation}{A string indicating the activation function to use. Must be either "Tanh", "TanhWithDropout", "Rectifier", "RectifierWithDropout", "Maxout" or "MaxoutWithDropout".}
         \item{hidden}{ Hidden layer sizes (e.g. c(100,100)}

@@ -27,6 +27,8 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
   final static public String H2O_BETA_KEY = "h2o.beta";
   final static public String H2O_RANDOM_UDP_DROP_KEY = "h2o.random.udp.drop";
   final static public String H2O_NTHREADS_KEY = "h2o.nthreads";
+  final static public String H2O_CHUNKBITS_KEY = "h2o.chunk.bits";
+  final static public String H2O_DATAMAXFACTORLEVELS_KEY = "h2o.data.max.factor.levels";
   final static public String H2O_BASE_PORT_KEY = "h2o.baseport";
   final static public String H2O_LICENSE_DATA_KEY = "h2o.license.data";
   final static public String H2O_HADOOP_VERSION = "h2o.hadoop.version";
@@ -360,6 +362,8 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     String driverIp = conf.get(H2O_DRIVER_IP_KEY);
     String driverPortString = conf.get(H2O_DRIVER_PORT_KEY);
     String network = conf.get(H2O_NETWORK_KEY);
+    String chunkBitsString = conf.get(H2O_CHUNKBITS_KEY);
+    String dataMaxFactorLevelsString = conf.get(H2O_DATAMAXFACTORLEVELS_KEY);
     String nthreadsString = conf.get(H2O_NTHREADS_KEY);
     String basePortString = conf.get(H2O_BASE_PORT_KEY);
     String betaString = conf.get(H2O_BETA_KEY);
@@ -399,6 +403,20 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
         argsList.add("-baseport");
         int basePort = Integer.parseInt(basePortString);
         argsList.add(Integer.toString(basePort));
+      }
+    }
+    if (dataMaxFactorLevelsString != null) {
+      if (dataMaxFactorLevelsString.length() > 0) {
+        argsList.add("-max_data_factor_levels");
+        int dataMaxFactorLevels = Integer.parseInt(dataMaxFactorLevelsString);
+        argsList.add(Integer.toString(dataMaxFactorLevels));
+      }
+    }
+    if (chunkBitsString != null) {
+      if (chunkBitsString.length() > 0) {
+        argsList.add("-chunk_bits");
+        int chunkBits = Integer.parseInt(chunkBitsString);
+        argsList.add(Integer.toString(chunkBits));
       }
     }
     if (betaString != null) {

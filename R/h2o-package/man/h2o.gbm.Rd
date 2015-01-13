@@ -12,8 +12,8 @@ H2O: Gradient Boosted Machines
 \usage{
 h2o.gbm(x, y, distribution = "multinomial", data, key = "", n.trees = 10, 
   interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1, n.bins = 20,
-  group_split = TRUE, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE,
-  max.after.balance.size = 5)
+  group_split = TRUE, importance = FALSE, nfolds = 0, validation, holdout.fraction = 0,
+  balance.classes = FALSE, max.after.balance.size = 5, class.sampling.factors = NULL)
 }
 \arguments{
   \item{x}{
@@ -56,10 +56,11 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
     \item{nfolds}{
 (Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.
 }
-  \item{validation}{
-  (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
+  \item{validation}{ (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
+  \item{holdout.fraction}{ (Optional) Fraction of the training data to hold out for validation.}
   \item{balance.classes}{(Optional) Balance training data class counts via over/under-sampling (for imbalanced data)}
   \item{max.after.balance.size}{Maximum relative size of the training data after balancing class counts (can be less than 1.0)}
+  \item{class.sampling.factors}{ Desired over/under-sampling ratios per class (lexicographic order). }
   }
 \value{
 An object of class \code{\linkS4class{H2OGBMModel}} with slots key, data, valid (the validation dataset) and model, where the last is a list of the following components:

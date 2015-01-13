@@ -7,10 +7,10 @@ H2O: Single-Node Random Forest
 Performs single-node random forest classification on a data set.
 }
 \usage{
-h2o.SpeeDRF(x, y, data, key = "", classification = TRUE, nfolds = 0, validation, 
-  mtries = -1, ntree = 50, depth = 20, sample.rate = 2/3, oobee = TRUE, 
-  importance = FALSE, nbins = 1024, seed = -1, stat.type = "ENTROPY", 
-  balance.classes = FALSE, verbose = FALSE)
+h2o.SpeeDRF(x, y, data, key = "", classification = TRUE, nfolds = 0, validation,
+  holdout.fraction = 0, mtries = -1, ntree = 50, depth = 20, sample.rate = 2/3,
+  oobee = TRUE, importance = FALSE, nbins = 1024, seed = -1,
+  stat.type = "ENTROPY", balance.classes = FALSE, verbose = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -34,6 +34,9 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
 }
   \item{validation}{
   (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
+
+  \item{holdout.fraction}{ (Optional) Fraction of the training data to hold out for validation.}
+
   \item{mtries}{
   (Optional) Number of features to randomly select at each split in the tree. If set to the default of -1, this will be set to \code{sqrt(ncol(data))}, rounded down to the nearest integer.
   }

@@ -1164,12 +1164,11 @@ rbind.H2OParsedData <- function(..., deparse.level = 1) {
   # l_dep <- sapply(substitute(placeholderFunction(...))[-1], deparse)
   if(length(l) == 0) stop('rbind requires an H2O parsed dataset')
 
-  klass <- 'H2OParsedData'
+#  klass <- 'H2OParsedData'
   h2o <- l[[1]]@h2o
-  nrows <- nrow(l[[1]])
-  m <- Map(function(elem){ inherits(elem, klass) & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem) }, l)
-  compatible <- Reduce(function(l,r) l & r, x=m, init=T)
-  if(!compatible){ stop(paste('rbind: all elements must be of type', klass, 'and in the same H2O instance'))}
+#  m <- Map(function(elem){ inherits(elem, klass) & elem@h2o@ip == h2o@ip & elem@h2o@port == h2o@port & nrows == nrow(elem) }, l)
+#  compatible <- Reduce(function(l,r) l & r, x=m, init=T)
+#  if(!compatible){ stop(paste('rbind: all elements must be of type', klass, 'and in the same H2O instance'))}
 
   # If cbind(x,x), dupe colnames will automatically be renamed by H2O
   if(is.null(names(l)))

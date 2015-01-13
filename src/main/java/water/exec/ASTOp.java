@@ -5,6 +5,7 @@ import hex.Quantiles;
 import hex.gram.Gram.GramTask;
 import hex.la.DMatrix;
 import hex.la.Matrix;
+import jsr166y.CountedCompleter;
 import org.apache.commons.math3.util.ArithmeticUtils;
 import org.joda.time.DateTime;
 import org.joda.time.MutableDateTime;
@@ -18,6 +19,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static water.util.Utils.seq;
 
@@ -1406,7 +1408,7 @@ class ASTRbind extends ASTOp {
           OPP_PREFIX,OPA_RIGHT); }
   @Override ASTOp make() {return new ASTRbind(); }
 
-  private String get_type(Vec v) {
+  private static String get_type(Vec v) {
     if (v.isUUID()) return "UUID";
     if (v.isEnum()) return "factor";
     if (v.isTime()) return "time";
@@ -1414,119 +1416,175 @@ class ASTRbind extends ASTOp {
     return "bad";
   }
 
+
+  private static class RbindMRTask extends MRTask2<RbindMRTask> {
+    private final int[] _emap;
+    private final int _chunkOffset;
+    private final Vec _v;
+    RbindMRTask(H2O.H2OCountedCompleter hc, int[] emap, Vec v, int offset) { super(hc); _emap = emap; _v = v; _chunkOffset = offset;}
+
+    @Override public void map(Chunk cs) {
+      int idx = _chunkOffset+cs.cidx();
+      Key ckey = Vec.chunkKey(_v._key, idx);
+      if (_emap != null) {
+        NewChunk nc = new NewChunk(_v, idx);
+        // loop over rows and update ints for new domain mapping according to vecs[c].domain()
+        for (int r=0;r < cs._len;++r) {
+          if (cs.isNA0(r)) nc.addNA();
+          else nc.addNum(_emap[(int)cs.at80(r)], 0);
+        }
+        nc.close(_fs);
+      } else {
+        Chunk oc = cs.clone();
+        oc._start = -1;
+        oc._vec = null;
+        oc._mem = cs.getBytes().clone(); // needless replication of the data, can do ref counting on byte[] _mem
+        DKV.put(ckey, oc, _fs, true);
+      }
+    }
+  }
+
+  private static class RbindTask extends H2O.H2OCountedCompleter<RbindTask> {
+    final transient Vec[] _vecs;
+    final Vec _v;
+    final long[] _espc;
+    String[] _dom;
+
+    RbindTask(H2O.H2OCountedCompleter cc, Vec[] vecs, Vec v, long[] espc) { super(cc); _vecs = vecs; _v = v; _espc = espc; }
+
+    private static Map<Integer, String> invert(Map<String, Integer> map) {
+      Map<Integer, String> inv = new HashMap<Integer, String>();
+      for (Map.Entry<String, Integer> e : map.entrySet()) {
+        inv.put(e.getValue(), e.getKey());
+      }
+      return inv;
+    }
+
+    @Override public void compute2() {
+      addToPendingCount(_vecs.length-1);
+      boolean isEnum = _vecs[0].domain() != null;
+      int[][] emaps  = new int[_vecs.length][];
+
+      if (isEnum) {
+        // loop to create BIG domain
+        HashMap<String, Integer> dmap = new HashMap<String, Integer>(); // probably should allocate something that's big enough (i.e. 2*biggest_domain)
+        int c = 0;
+        for (int i = 0; i < _vecs.length; ++i) {
+          emaps[i] = new int[_vecs[i].domain().length];
+          for (int j = 0; j < emaps[i].length; ++j)
+            if (!dmap.containsKey(_vecs[i].domain()[j]))
+              dmap.put(_vecs[i].domain()[j], emaps[i][j]=c++);
+            else emaps[i][j] = dmap.get(_vecs[i].domain()[j]);
+        }
+        _dom = new String[dmap.size()];
+        HashMap<Integer, String> inv = (HashMap<Integer, String>) invert(dmap);
+        for (int s = 0; s < _dom.length; ++s) _dom[s] = inv.get(s);
+      }
+      int offset=0;
+      for (int i=0; i<_vecs.length; ++i) {
+        new RbindMRTask(this, emaps[i], _v, offset).asyncExec(_vecs[i]);
+        offset += _vecs[i].nChunks();
+      }
+    }
+
+    @Override public void onCompletion(CountedCompleter cc) {
+      _v._domain = _dom;
+      UKV.put(_v._key,_v);
+    }
+  }
+
+  private static class ParallelRbinds extends H2O.H2OCountedCompleter{
+
+    private final Frame[] _f;
+    private final int _argcnt;
+    private final AtomicInteger _ctr;
+    private int _maxP = 100;
+
+    private long[] _espc;
+    private Vec[] _vecs;
+    ParallelRbinds(Frame[] f, int argcnt) { _f = f; _argcnt = argcnt; _ctr = new AtomicInteger(_maxP-1); }  //TODO pass maxP to constructor
+
+    @Override public void compute2() {
+      addToPendingCount(_f[0].numCols()-1);
+      int nchks=0;
+      for (int i =0; i < _argcnt; ++i)
+        nchks+=_f[i].anyVec().nChunks();
+
+      _espc = new long[nchks+1];
+      int coffset = _f[0].anyVec().nChunks();
+      long[] first_espc = _f[0].anyVec()._espc;
+      System.arraycopy(first_espc, 0, _espc, 0, first_espc.length);
+      for (int i=1; i < _argcnt; ++i) {
+        long roffset = _espc[coffset];
+        long[] espc = _f[i].anyVec()._espc;
+        int j = 1;
+        for (; j < espc.length; j++)
+          _espc[coffset + j] = roffset+ espc[j];
+        coffset += _f[i].anyVec().nChunks();
+      }
+
+      Key[] keys = _f[0].anyVec().group().addVecs(_f[0].numCols());
+      _vecs = new Vec[keys.length];
+      String type;
+      for (int i=0; i<_vecs.length; ++i) {
+        _vecs[i] = new Vec(keys[i], _espc, null, (type = get_type(_f[0].vec(i))).equals("UUID"), type.equals("time") ? (byte) 3 : (byte) -1);
+      }
+
+      for (int i=0; i < Math.min(_maxP, _vecs.length); ++i) forkVecTask(i);
+    }
+
+    private void forkVecTask(final int i) {
+      Vec[] vecs = new Vec[_argcnt];
+      for (int j= 0; j < _argcnt; ++j) {
+        Vec vm, v = _f[j].vec(i);
+        vecs[j] = ((vm=v.masterVec())==null) ? v : vm;
+      }
+      new RbindTask(new Callback(), vecs, _vecs[i], _espc).fork();
+    }
+
+    private class Callback extends H2O.H2OCallback {
+      public Callback(){super(ParallelRbinds.this);}
+      @Override public void callback(H2O.H2OCountedCompleter h2OCountedCompleter) {
+        int i = _ctr.incrementAndGet();
+        if(i < _vecs.length)
+          forkVecTask(i);
+      }
+    }
+  }
+
+
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     // quick check to make sure rbind is feasible
     if (argcnt-1 == 1) { return; } // leave stack as is
 
-    Frame f1 = null;
-    ArrayList<long[]> espcs_al = new ArrayList<long[]>();   // the new espc for each frame
-    ArrayList<String[]> doms= new ArrayList<String[]>();      // union'd domains
-    ArrayList<String> types = new ArrayList<String>();        // types for each col
-    ArrayList<long[]> new_starts = new ArrayList<long[]>(); // list of the new starts
-    final int[/*frame*/][/*column*/][/*ints*/] new_doms = new int[argcnt][][];    // domain mappings (extending domains)
-
+    Frame[] fs = new Frame[argcnt-1];
+    Frame f1 = env.peekAry();
+    int j = fs.length-1;
+    boolean[] wrapped = new boolean[f1.numCols()];
+    for (int c = 0; c<f1.numCols(); ++c) wrapped[c] = f1.vec(c).masterVec() != null;
+    fs[j--] = f1;
     // do error checking and compute new offsets in tandem
-    for (int i = 0; i < argcnt-1; ++i) {
+    for (int i = 1; i < argcnt-1; ++i) {
       Frame t = env.ary(-(i+1));
-      if (f1 == null) {
-        f1 = t;
-        espcs_al.add(f1.vec(f1.numCols() - 1)._espc.clone());
-        for (int c = 0; c < f1.numCols(); ++c) {
-          doms.add(f1.vec(c).domain());
-          types.add(get_type(f1.vec(c)));
-        }
-        continue; // no need to go further on first frame, subsequent frames must be compatible.
-      } else {
-        long offset = espcs_al.get(i-1)[espcs_al.get(i-1).length-1]; // last long in previous espc
-        long t_espc[] = Arrays.copyOfRange(t.anyVec()._espc, 1, t.anyVec()._espc.length);
-        espcs_al.add(water.util.Utils.add(t_espc, offset));
-        new_starts.add(new long[]{offset+1});
-      }
-
+      fs[j--]=t;
       // check columns match
       if (t.numCols() != f1.numCols())
         throw new IllegalArgumentException("Column mismatch! Expected " + f1.numCols() + " but frame has " + t.numCols());
 
       // check column types
       for (int c = 0; c < f1.numCols(); ++c) {
+        wrapped[c] |= t.vec(c).masterVec() != null;
         if (!get_type(f1.vec(c)).equals(get_type(t.vec(c))))
           throw new IllegalArgumentException("Column type mismatch! Expected type " + get_type(f1.vec(c)) + " but vec has type " + get_type(t.vec(c)));
-        // try to union domains of vecs -- TODO: what happens if union > 65K ?
-        try {
-          doms.set(c, doms.get(c) == null ? null : water.util.Utils.union(doms.get(c), t.vec(c).domain(), true));
-        } catch (NullPointerException e) {
-          throw new IllegalArgumentException("The factor levels for vec "+(c+1)+" in frame "+(i+1)+" was null");
-        }
       }
     }
 
-    // go 'round and create mappings for all of the extended domains
-    for (int i=0; i < argcnt-1; ++i) {
-      Frame t = env.ary(-(i+1));
-      new_doms[i] = new int[t.numCols()][];
-      for (int c=0;c<t.numCols();++c)
-        if (t.vec(c).isEnum()) {
-          if (t.vec(c).domain() == null) continue;
-          new_doms[i][c] = new int[t.vec(c).domain().length];
-          for (int d=0;d<new_doms[i][c].length;++d)
-            new_doms[i][c][d] = Arrays.asList(doms.get(c)).indexOf(t.vec(c).domain()[d]);
-        }
-    }
-
-    // have all of the new espcs computed, set up new Vecs
-    assert f1 != null;
-    final Vec[] vecs = new Vec[f1.numCols()];
-    final long[][] espcs = new long[espcs_al.size()][];
-    // flatten the espcs_al into a single long[]
-    long espc_completa[] = new long[0];
-    for (int i=0;i<espcs.length;++i)
-      espc_completa = water.util.Utils.join(espc_completa, espcs[i] = espcs_al.get(i));
-    Key[] keys = Vec.VectorGroup.VG_LEN1.addVecs(f1.numCols());
-    for (int i = 0; i < vecs.length; ++i)
-      vecs[i] = new Vec(keys[i], espc_completa, doms.get(i), types.get(i).equals("UUID"), (byte)(types.get(i).equals("time") ? 1 : 0));
-
-    // loop over frames & combine
-    final Futures fs = new Futures();
-    for (int i = 0; i < argcnt-1; ++i) {
-      final long espc[] = i == 0 ? espcs[i] : water.util.Utils.join(new_starts.get(i - 1), espcs[i]);
-      final int dom[][] = new_doms[i];
-      new MRTask2() {
-        @Override public void map(Chunk[] cs) {
-          int cidx = cs[0].cidx();
-          for (int c = 0; c < cs.length; ++c) {
-            Futures f = new Futures();
-            NewChunk nc = new NewChunk(vecs[c], vecs[c].elem2ChunkIdx(espc[cidx]));
-            Key ckey = Vec.chunkKey(vecs[c]._key, vecs[c].elem2ChunkIdx(espc[cidx]));
-            if (cs[c]._vec.isEnum() && dom[c] != null) {
-              // loop over rows and update ints for new domain mapping according to vecs[c].domain()
-              for (int r=0;r < cs[c]._len;++r) {
-                if (cs[c].isNA0(r)) nc.addNA();
-                else nc.addEnum(dom[c][(int) cs[c].at0(r)]);
-              }
-            } else if (cs[c]._vec.isInt()) {
-              for (int r=0;r<cs[c]._len;++r) {
-                if (cs[c].isNA0(r)) nc.addNA();
-                else nc.addNum(cs[c].at80(r));
-              }
-            } else if (cs[c]._vec.isUUID()) {
-              for (int r=0;r<cs[c]._len;++r) nc.addUUID(cs[c], r);
-            } else {
-              for (int r=0;r<cs[c]._len;++r) {
-                if (cs[c].isNA0(r)) nc.addNA();
-                else nc.addNum(cs[c].at0(r));
-              }
-            }
-            nc.close(vecs[c].elem2ChunkIdx(espc[cidx]), f);
-            f.blockForPending();
-            DKV.put(ckey, nc.modifiedChunk(), new Futures(), true);
-          }
-        }
-      }.doAll(env.ary(-(i+1)));
-    }
-    for (Vec v : vecs) { DKV.put(v._key, v, fs); v.postWrite(); }
-    fs.blockForPending();
-    Frame res = new Frame(f1.names(), vecs);
-    env.poppush(argcnt, res, null);
+    ParallelRbinds t;
+    H2O.submitTask(t = new ParallelRbinds(fs, argcnt-1)).join();
+    for (int i = 0; i < wrapped.length; ++i)
+      if (wrapped[i]) t._vecs[i] = t._vecs[i].toEnum();
+    Key m = Key.make();
+    env.poppush(argcnt, new Frame(m, f1.names(), t._vecs), m.toString());
   }
 }
 

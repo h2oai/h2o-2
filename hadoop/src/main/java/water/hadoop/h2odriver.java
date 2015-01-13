@@ -47,6 +47,8 @@ public class h2odriver extends Configured implements Tool {
   static int cloudFormationTimeoutSeconds = DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS;
   static int nthreads = -1;
   static int basePort = -1;
+  static int chunk_bits;
+  static int data_max_factor_levels;
   static boolean beta = false;
   static boolean enableRandomUdpDrop = false;
   static boolean enableExceptions = false;
@@ -389,6 +391,8 @@ public class h2odriver extends Configured implements Tool {
                     "          -n | -nodes <number of H2O nodes (i.e. mappers) to create>\n" +
                     "          [-nthreads <maximum typical worker threads, i.e. cpus to use>]\n" +
                     "          [-baseport <starting HTTP port for H2O nodes; default is 54321>]\n" +
+                    "          [-chunk_bits <bits per chunk (e.g., 22 for 4MB chunks)>]\n" +
+                    "          [-data_max_factor_levels <max. number of factors per column (e.g., 65000)>]\n" +
                     "          [-ea]\n" +
                     "          [-verbose:gc]\n" +
                     "          [-XX:+PrintGCDetails]\n" +
@@ -542,6 +546,14 @@ public class h2odriver extends Configured implements Tool {
       else if (s.equals("-nthreads")) {
         i++; if (i >= args.length) { usage(); }
         nthreads = Integer.parseInt(args[i]);
+      }
+      else if (s.equals("-chunk_bits")) {
+        i++; if (i >= args.length) { usage(); }
+        chunk_bits = Integer.parseInt(args[i]);
+      }
+      else if (s.equals("-data_max_factor_levels")) {
+        i++; if (i >= args.length) { usage(); }
+        data_max_factor_levels = Integer.parseInt(args[i]);
       }
       else if (s.equals("-baseport")) {
         i++; if (i >= args.length) { usage(); }
@@ -911,6 +923,12 @@ public class h2odriver extends Configured implements Tool {
     }
     if (beta) {
         conf.set(h2omapper.H2O_BETA_KEY, "-beta");
+    }
+    if (chunk_bits > 0) {
+      conf.set(h2omapper.H2O_CHUNKBITS_KEY, Integer.toString(chunk_bits));
+    }
+    if (data_max_factor_levels > 0) {
+      conf.set(h2omapper.H2O_DATAMAXFACTORLEVELS_KEY, Integer.toString(data_max_factor_levels));
     }
     if (enableRandomUdpDrop) {
       conf.set(h2omapper.H2O_RANDOM_UDP_DROP_KEY, "-random_udp_drop");

@@ -64,7 +64,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class, importance = ParamImportance.EXPERT)
   protected double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
-  private double _iceptAdjust; // adjustment due to the prior
+
+  @API(help="disable line search in all cases.",filter=Default.class, importance = ParamImportance.EXPERT, hide = true)
+  protected boolean disable_line_search = false; // -1 is magic value for default value which is mean(y) computed on the current dataset
+
+  private double _iceptAdjust = 0; // adjustment due to the prior
 
   @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
   protected int n_folds;
@@ -672,6 +676,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 //  protected boolean needLineSearch(final double [] beta,double objval, double step){
   protected boolean needLineSearch(final GLMIterationTask glmt) {
+    if(disable_line_search)
+      return false;
     if(_glm.family == Family.gaussian)
       return false;
     if(glmt._beta == null)
@@ -759,6 +765,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     int intercept = (this.intercept ?1:0);
     double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
     if(val != null) val.null_deviance = _nullDeviance;
+    if(this.intercept)
+      fullBeta[fullBeta.length-1] += _iceptAdjust;
     if(_noffsets > 0){
       fullBeta = Arrays.copyOf(fullBeta,fullBeta.length + _noffsets);
       if(this.intercept)
@@ -820,15 +828,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         final double [] grad = glmt2.gradient(alpha[0],_currentLambda);
         if(Utils.hasNaNsOrInfs(grad)){
           _failedLineSearch = true;
-          if(!failedLineSearch) {
-            getCompleter().addToPendingCount(1);
-            checkKKTAndComplete(cc,glmt,glmt._beta,true);
-            LogInfo("Check KKT got NaNs. Taking previous solution");
-            return;
-          } else {
-            // TODO: add warning and break th lambda search? Or throw Exception?
-            LogInfo("got NaNs/Infs in gradient at lambda " + _currentLambda);
-          }
+          // TODO: add warning and break the lambda search? Or throw Exception?
         }
         glmt._val = glmt2._val;
         _lastResult = makeIterationInfo(_iter,glmt2,null,glmt2.gradient(alpha[0],0));
@@ -1166,14 +1166,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         _ymu = ymut.ymu();
         _nobs = ymut.nobs();
         if(_glm.family == Family.binomial && prior != -1 && prior != _ymu && !Double.isNaN(prior)) {
-          double ratio = prior / _ymu;
-          double pi0 = 1, pi1 = 1;
-          if (ratio > 1) {
-            pi1 = 1.0 / ratio;
-          } else if (ratio < 1) {
-            pi0 = ratio;
-          }
-          _iceptAdjust = Math.log(pi0 / pi1);
+          _iceptAdjust = -Math.log(_ymu * (1-prior)/(prior * (1-_ymu)));
         } else prior = _ymu;
         H2OCountedCompleter cmp = (H2OCountedCompleter)getCompleter();
         cmp.addToPendingCount(1);

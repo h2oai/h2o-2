@@ -50,8 +50,14 @@ public abstract class Persist<T> {
       I[Value.TACHYON] = new PersistTachyon();
 
       // By popular demand, clear out ICE on startup instead of trying to preserve it
-      if( H2O.OPT_ARGS.keepice == null )
-        ice.clear();
+      if( H2O.OPT_ARGS.keepice == null ) {
+        final Persist ice2 = ice;
+        new Thread() {
+          public void run() {
+            ice2.clear();
+          }
+        }.start();
+      }
       else
         ice.loadExisting();
     }

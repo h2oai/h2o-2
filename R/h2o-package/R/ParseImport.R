@@ -105,7 +105,7 @@ h2o.assign <- function(data, key) {
   .h2o.exec2(expr = data@key, h2o = data@h2o, dest_key = key)
 }
 
-h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction, response_factors) {
+h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, binary_fraction=0, binary_ones_fraction=0.5, missing_fraction, response_factors) {
   if(!is.numeric(rows)) stop("rows must be a numeric value")
   if(!is.numeric(cols)) stop("cols must be a numeric value")
   if(!is.numeric(seed)) stop("seed must be a numeric value")
@@ -118,9 +118,11 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   if(!is.numeric(integer_range)) stop("integer_range must be a numeric value")
   if(!is.numeric(missing_fraction)) stop("missing_fraction must be a numeric value")
   if(!is.numeric(response_factors)) stop("response_factors must be a numeric value")
+  if(!is.numeric(binary_fraction)) stop("binary_fraction must be a numeric value")
+  if(!is.numeric(binary_ones_fraction)) stop("binary_ones_fraction must be a numeric value")
 
   res <- .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value, real_range = real_range,
-                          categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, missing_fraction = missing_fraction, response_factors = response_factors)
+                          categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, binary_fraction = binary_fraction, binary_ones_fraction=binary_ones_fraction, missing_fraction = missing_fraction, response_factors = response_factors)
   .h2o.exec2(expr = key, h2o = object, dest_key = key)
 }
 

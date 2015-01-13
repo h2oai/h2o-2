@@ -165,7 +165,7 @@ public class Inspect2 extends Request2 {
         sb.append("<td><b>").append(btn).append("</b></td>");
         continue;
       }
-      if(src_key.vecs()[i] instanceof TransfVec) {
+      if(src_key.vecs()[i] instanceof TransfVec || (src_key.vecs()[i].isInt() && src_key.vecs()[i].isEnum() && src_key.vecs()[i].masterVec() == null)) {
         String btn2 = "<span class='btn_custom'>\n";
         btn2 += "<a href='ToInt2.html?src_key=" + src_key._key.toString() + "&column_index=" + (i+1)  + "'>"
                 + "<button type='submit' class='btn btn-custom'>As Integer</button>\n";

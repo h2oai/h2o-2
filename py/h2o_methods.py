@@ -606,6 +606,8 @@ def create_frame(self, timeoutSecs=120, **kwargs):
         'factors': None,
         'integer_fraction': None,
         'integer_range': None,
+        'binary_fraction': None,
+        'binary_ones_fraction': None,
         'missing_fraction': None,
         'response_factors': None,
     }
