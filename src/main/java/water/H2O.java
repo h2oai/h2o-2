@@ -46,6 +46,8 @@ public final class H2O {
   // Max. number of factor levels ber column (before flipping all to NAs)
   public static int DATA_MAX_FACTOR_LEVELS = 65000;
 
+  public static int LOG_CHK = 24; // Chunks are 1<<24, or 16Meg
+
   // The multicast discovery port
   static MulticastSocket  CLOUD_MULTICAST_SOCKET;
   static NetworkInterface CLOUD_MULTICAST_IF;
@@ -713,6 +715,7 @@ public final class H2O {
     public String version = null;
     public String single_precision = null;
     public int data_max_factor_levels;
+    public int chunk_bits;
     public String beta = null;
     public String mem_watchdog = null; // For developer debugging
     public boolean md5skip = false;
@@ -764,6 +767,10 @@ public final class H2O {
     "          Reduce the max. (storage) precision for floating point numbers\n" +
     "          from double to single precision to save memory of numerical data.\n" +
     "          (The default is double precision.)\n" +
+    "\n" +
+    "    -chunk_bits <integer>\n" +
+    "          The number of bits per chunk.\n" +
+    "          (The default is " + LOG_CHK + ", which is " + PrettyPrint.bytes(1<<LOG_CHK) + ".)\n" +
     "\n" +
     "    -data_max_factor_levels <integer>\n" +
     "          The maximum number of factor levels for categorical columns.\n" +
@@ -917,6 +924,12 @@ public final class H2O {
       DATA_MAX_FACTOR_LEVELS = OPT_ARGS.data_max_factor_levels;
       Log.info("Max. number of factor levels per column: " + DATA_MAX_FACTOR_LEVELS);
     }
+
+    if (OPT_ARGS.chunk_bits != 0) {
+      if (OPT_ARGS.chunk_bits > 0)
+        LOG_CHK = OPT_ARGS.chunk_bits;
+    }
+    Log.info("Chunk size: " + PrettyPrint.bytes(1<<LOG_CHK));
 
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT();
