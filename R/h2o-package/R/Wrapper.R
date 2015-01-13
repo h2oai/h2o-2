@@ -4,7 +4,7 @@
 # 3) If user does want to start H2O, but running non-locally, print an error
 h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
                      beta = FALSE, assertion = TRUE, license = NULL, nthreads = -2, max_mem_size = NULL, min_mem_size = NULL,
-                     ice_root = NULL, strict_version_check = TRUE, data_max_factor_levels = 65000) {
+                     ice_root = NULL, strict_version_check = TRUE, data_max_factor_levels = 65000, many_cols = FALSE, chunk_bytes = 22) {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
@@ -22,6 +22,8 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
   if(!is.null(ice_root) && !is.character(ice_root)) stop("ice_root must be of class character")
   if(!is.logical(strict_version_check)) stop("strict_version_check must be of class logical")
   if(!is.numeric(data_max_factor_levels)) stop("`data_max_factor_levels` must be numeric.")
+  if(!is.logical(many_cols)) stop("`many_cols` must be logical")
+  if(!is.numeric(chunk_bytes)) stop("`chunk_bytes` must be numeric")
 
   if ((R.Version()$major == "3") && (R.Version()$minor == "1.0")) {
     warning("H2O is specifically not compatible with this exact")
@@ -63,7 +65,8 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
                     min_memory = min_mem_size, beta = beta,
                     assertion = assertion, forceDL = forceDL,
                     license = license, ice_root = ice_root,
-                    max_factor_levels = data_max_factor_levels)
+                    max_factor_levels = data_max_factor_levels,
+                    many_cols = many_cols, chunk_bytes = chunk_bytes)
 
       count = 0;
       while(!url.exists(myURL) && (count < 60)) {
@@ -259,7 +262,8 @@ h2o.clusterStatus <- function(client) {
 .h2o.startJar <- function(nthreads = -1, max_memory = NULL,
                           min_memory = NULL, beta = FALSE,
                           assertion = TRUE, forceDL = FALSE,
-                          license = NULL, ice_root, max_factor_levels = 65000) {
+                          license = NULL, ice_root, max_factor_levels = 65000,
+                          many_cols = FALSE, chunk_bytes = 22) {
   command <- .h2o.checkJava()
 
   if (! is.null(license)) {
@@ -322,6 +326,8 @@ http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.h
   if(beta) args <- c(args, "-beta")
   if(!is.null(license)) args <- c(args, "-license", license)
   args <- c(args, "-data_max_factor_levels", max_factor_levels)
+  if(many_cols) args <- c(args, "-many_cols")
+  args <- c(args, "-chunk_bytes", chunk_bytes)
 
   cat("\n")
   cat(        "Note:  In case of errors look at the following log files:\n")
