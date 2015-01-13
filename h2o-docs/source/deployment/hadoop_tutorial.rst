@@ -1,7 +1,7 @@
 .. _Hadoop_Tutorial:
 
 Running H2O on Hadoop
-================================
+=====================
 
 The following tutorial will walk the user through the download or build of H2O and the parameters involved in launching H2O from the command line.
 
@@ -44,5 +44,4 @@ review the output from your command after the nodes has clouded up and formed a 
 
 .. image:: hadoop_cmd_output.png
     :width: 100 %
-    
-""""    
+

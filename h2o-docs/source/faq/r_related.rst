@@ -1,7 +1,7 @@
 .. _R_Related:
 
-R and H\ :sub:`2`\ O
-====================
+R FAQ
+=====
 
   In order for H2O and R to work together, an H2O instance that is specified in the R workspace must be running. If the H2O instance is terminated, the H2O package in R will no longer work because R cannot send or receive information to or from H2O's distributed analysis. Even if a new instance of H2O with the exact same IP and port number is started, users must re-establish the connection between  H2O and R using the command `h2o.init()` and restart their H2O work session. 
   
