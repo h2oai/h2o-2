@@ -4,11 +4,45 @@
 Hadoop and H\ :sub:`2`\ O
 =========================
 
-Sending YARN Logs for Hadoop Troubleshooting
+Sending Logs for Hadoop Troubleshooting
 """"""""""""""""""""""""""""""""""""""""""""
-If H2O does not launch properly on Hadoop, send us the YARN logs.
+If H2O does not launch properly on Hadoop, send us the logs.
 
-When launching H2O on Hadoop, the following messages display regardless of launch failure or success. If these messages do not display, the argument has not been entered correctly:
+There are a number of ways to get the logs: 
+
+- From the drop-down **Admin** menu, select **Inspect Log** or go to http://localhost:54321/LogView.html. On the **Log View** page, click the **Download Logs** button in the upper-left corner. 
+|
+
+- Use the Jobtracker UI: `http://<JobtrackerIP>:<PortNumber>`
+  
+  NOTE: Different distributions may use different ports. 
+  The default for Cloudera is 50030. The default for MapR is 9001.
+ 
+ To retrieve the logs using the Hadoop resource manager, click the **Tools** menu and select **Local logs**. 
+
+  .. image:: HadoopLocalLogs1.png
+     :width: 50%
+
+
+ The logs display as links: 
+ 
+  .. image:: HadoopLocalLogs2.png
+     :width: 50%
+
+
+
+ To retrieve the logs using MapR, click the **Log directory** link at the bottom of the page. 
+
+  .. image:: MapRLogs1.png
+     :width: 50%
+
+
+ The logs display as links:
+
+  .. image:: MapRLogs2.png
+     :width: 50%
+
+- Obtain the logs using YARN. When launching H2O on Hadoop, the following messages display regardless of launch failure or success. If these messages do not display, the argument has not been entered correctly:
 
 ::
 
@@ -36,10 +70,17 @@ To view the YARN log, execute the command specified in the next to last line in 
 ::
 
   yarn logs -applicationId application_201407040936_0030
+  
+By default, the logs are located in the following directories: 
 
-Copy and email the logs to support@h2o.ai or paste to h2ostream@googlegroups.com with a brief
-description of your Hadoop environment, including the Hadoop distribution and version.
+- `/var/log/hadoop-<VersionNumber>-mapreduce`
+- `/var/log/hadoop-yarn`
+- `/var/log/hadoop-hdfs`
 
+
+Copy and email the logs to support@h2o.ai or submit them to h2ostream@googlegroups.com with a brief description of your Hadoop environment, including the Hadoop distribution and version.
+
+""""""""
 
 Common Hadoop Questions
 """"""""""""""""""""""""
