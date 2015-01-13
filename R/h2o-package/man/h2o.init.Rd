@@ -7,7 +7,7 @@ Connects to a running H2O instance and checks the local H2O R package is the cor
 h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx, 
          beta = FALSE, assertion = TRUE, license = NULL,
          nthreads = -2, max_mem_size, min_mem_size,
-         ice_root = NULL, strict_version_check = TRUE)}
+         ice_root = NULL, strict_version_check = TRUE, data_max_factor_levels = 65000)}
 
 \arguments{
   \item{ip}{Object of class \code{"character"} representing the IP address of the server where H2O is running.}
@@ -23,6 +23,7 @@ h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
   \item{min_mem_size}{(Optional) A string specifying the minimum size, in bytes, of the memory allocation pool to H2O. This value must a multiple of 1024 greater than 2MB. Append the letter m or M to indicate megabytes, or g or G to indicate gigabytes.  This value is only used when R starts H2O. }
   \item{ice_root}{(Optional) A directory specifying where H2O should write log files and spill to disk (if needed).  Default is tempdir().  This value is only used when R starts H2O.}
   \item{strict_version_check}{(Optional) Setting this to FALSE is unsupported and should only be done when advised by technical support.}
+  \item{data_max_factor_levels}{(Optional) The limit for the number of factor levels that may appear in a single column. Default is 65,000.}
 }
 \details{
 This method first checks if H2O is connectible. If it cannot connect and \code{startH2O = TRUE} with IP of localhost, it will attempt to start an instance of H2O with IP = localhost, port = 54321. Otherwise, it stops immediately with an error.
