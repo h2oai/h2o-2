@@ -294,7 +294,16 @@
             <p class="terminal">
                 unzip h2o-SUBST_PROJECT_VERSION.zip<br/>
                 cd h2o-SUBST_PROJECT_VERSION/hadoop<br/>
+                <br/>
+                # Example for HDP 2.x users<br/>
                 hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName<br/>
+                <br/>
+                # Example for CDH 5.x users<br/>
+                hadoop jar h2odriver_cdh5.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName<br/>
+                <br/>
+                # Example for MapR 4.x users<br/>
+                hadoop jar h2odriver_mapr4.0.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName<br/>
+                <br/>
             </p>
             <p>3. Point your browser to any of the H2O nodes launched. The IP addresses of the nodes will be available in the output:</p>
             <p class="terminal">
