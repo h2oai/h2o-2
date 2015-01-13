@@ -47,7 +47,8 @@ public class h2odriver extends Configured implements Tool {
   static int cloudFormationTimeoutSeconds = DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS;
   static int nthreads = -1;
   static int basePort = -1;
-  static int chunk_bits;
+  static boolean manyCols = false;
+  static int chunk_bytes;
   static int data_max_factor_levels;
   static boolean beta = false;
   static boolean enableRandomUdpDrop = false;
@@ -391,8 +392,9 @@ public class h2odriver extends Configured implements Tool {
                     "          -n | -nodes <number of H2O nodes (i.e. mappers) to create>\n" +
                     "          [-nthreads <maximum typical worker threads, i.e. cpus to use>]\n" +
                     "          [-baseport <starting HTTP port for H2O nodes; default is 54321>]\n" +
-                    "          [-chunk_bits <bits per chunk (e.g., 22 for 4MB chunks)>]\n" +
-                    "          [-data_max_factor_levels <max. number of factors per column (e.g., 65000)>]\n" +
+                    "          [-many_cols] (improve handling of high-dimensional datasets, same as -chunk_bytes 24)\n" +
+                    "          [-chunk_bytes <log (base 2) of chunk size in bytes (e.g., default is 22 for 4MB chunks)>]\n" +
+                    "          [-data_max_factor_levels <max. number of factors per column (e.g., default is 65000)>]\n" +
                     "          [-ea]\n" +
                     "          [-verbose:gc]\n" +
                     "          [-XX:+PrintGCDetails]\n" +
@@ -547,9 +549,12 @@ public class h2odriver extends Configured implements Tool {
         i++; if (i >= args.length) { usage(); }
         nthreads = Integer.parseInt(args[i]);
       }
-      else if (s.equals("-chunk_bits")) {
+      else if (s.equals("-many_cols")) {
+        manyCols = true;
+      }
+      else if (s.equals("-chunk_bytes")) {
         i++; if (i >= args.length) { usage(); }
-        chunk_bits = Integer.parseInt(args[i]);
+        chunk_bytes = Integer.parseInt(args[i]);
       }
       else if (s.equals("-data_max_factor_levels")) {
         i++; if (i >= args.length) { usage(); }
@@ -924,8 +929,11 @@ public class h2odriver extends Configured implements Tool {
     if (beta) {
         conf.set(h2omapper.H2O_BETA_KEY, "-beta");
     }
-    if (chunk_bits > 0) {
-      conf.set(h2omapper.H2O_CHUNKBITS_KEY, Integer.toString(chunk_bits));
+    if (manyCols) {
+      conf.set(h2omapper.H2O_MANYCOLS_KEY, "-many_cols");
+    }
+    if (chunk_bytes > 0) {
+      conf.set(h2omapper.H2O_CHUNKBITS_KEY, Integer.toString(chunk_bytes));
     }
     if (data_max_factor_levels > 0) {
       conf.set(h2omapper.H2O_DATAMAXFACTORLEVELS_KEY, Integer.toString(data_max_factor_levels));

@@ -715,7 +715,8 @@ public final class H2O {
     public String version = null;
     public String single_precision = null;
     public int data_max_factor_levels;
-    public int chunk_bits;
+    public String many_cols = null;
+    public int chunk_bytes;
     public String beta = null;
     public String mem_watchdog = null; // For developer debugging
     public boolean md5skip = false;
@@ -768,9 +769,12 @@ public final class H2O {
     "          from double to single precision to save memory of numerical data.\n" +
     "          (The default is double precision.)\n" +
     "\n" +
-    "    -chunk_bits <integer>\n" +
-    "          The number of bits per chunk.\n" +
-    "          (The default is " + LOG_CHK + ", which is " + PrettyPrint.bytes(1<<LOG_CHK) + ".)\n" +
+    "    -many_cols\n" +
+    "          Enables improved handling of high-dimensional datasets.  Same as -chunk_bytes 24.\n" +
+    "\n" +
+    "    -chunk_bytes <integer>\n" +
+    "          Experimental option. Not in combination with -many_cols. The log (base 2) of chunk size in bytes.\n" +
+    "          (The default is " + LOG_CHK + ", which leads to a chunk size of " + PrettyPrint.bytes(1<<LOG_CHK) + ".)\n" +
     "\n" +
     "    -data_max_factor_levels <integer>\n" +
     "          The maximum number of factor levels for categorical columns.\n" +
@@ -925,9 +929,21 @@ public final class H2O {
       Log.info("Max. number of factor levels per column: " + DATA_MAX_FACTOR_LEVELS);
     }
 
-    if (OPT_ARGS.chunk_bits != 0) {
-      if (OPT_ARGS.chunk_bits > 0)
-        LOG_CHK = OPT_ARGS.chunk_bits;
+    if (OPT_ARGS.chunk_bytes != 0 || OPT_ARGS.many_cols != null) {
+      if (OPT_ARGS.many_cols != null) {
+        LOG_CHK = 24;
+        if (OPT_ARGS.chunk_bytes > 0) {
+          Log.warn("-chunk_bytes is ignored since -many_cols was set.");
+        }
+      } else if (OPT_ARGS.chunk_bytes > 0) {
+        LOG_CHK = OPT_ARGS.chunk_bytes;
+        if (OPT_ARGS.chunk_bytes < 22) {
+          Log.warn("-chunk_bytes < 22 is not officially supported. Use at your own risk.");
+        }
+        if (OPT_ARGS.chunk_bytes > 24) {
+          Log.warn("-chunk_bytes > 24 is not officially supported. Use at your own risk.");
+        }
+      }
     }
     Log.info("Chunk size: " + PrettyPrint.bytes(1<<LOG_CHK));
 
