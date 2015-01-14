@@ -425,7 +425,7 @@ setMethod("show", "H2ODRFModel", function(object) {
     if(is.na(object@valid@key))
       if (!is.null(object@model$params$nfolds) && object@model$params$nfolds >= 2)
         cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
-      else cat("Reported on training data.")
+      else cat("Reported on training data.\n")
     else
       cat("Reported on", object@valid@key, "\n")
     print(model$confusion)

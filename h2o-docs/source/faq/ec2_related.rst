@@ -1,8 +1,8 @@
 .. _EC2_Related:
 
 
-EC2 and H\ :sub:`2`\ O
-======================
+Amazon's EC2 FAQ
+================
 
 **How do you import data from a S3 bucket?**
 
