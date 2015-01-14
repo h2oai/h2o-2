@@ -158,6 +158,23 @@
         text-decoration: none;
         background-color: #555;
       }
+      a.documentation-button {
+        display: inline-block;
+        background-color: #1c1c1c;
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABfklEQVRYw2NggIK/f/9q/Pv3byMQfwXi/3TALxmQLFcBCrz9T0eA4gAgZyma5G9oSNAS30d2wEMky9f++vWLjYGeABQcSA7IoavlWBzwGIgzgDiGxjgEqwMGKhEOXgcA5a4D8Wkq4eskO+DPnz8m1EprILOGlwO+fPnCApR3AJakGUCcAmRbvH37lokuDgCK6wD13cSSZs4D5dRo6oAfP35wgYpSPAn3PrA05aKZA4DBHYdk0MqfP39KAC1UArJ3wsSBapJo5gCg+tlQQ/4CLRZDskAPyYKJNHMANOHFAXEEWshYIVnQSPNcgAx+//4tBDTnIixkQKFBNwcA1cggl3LAkGjEoY76Dvj06RMTKOshWd6Nx6HUdwBQ3gzJ0I0E1NLEAR5A/XdBGOj7ALo7gBRAqxAAJcDDoHQADAE9ujsAaGkzkqFLB8IBAaCOBjQHFA1IGgBabAbEDgOSBkgB+BzwEI8D/IDFrBw1MMgsXA5Y+p/OYHB1TqGOGJDuOQAnkat5SShT9wAAAABJRU5ErkJggg==);
+        background-repeat: no-repeat;
+        background-position: 15px center;
+        color: #fff;
+        text-transform: uppercase;
+        font-size: 11px;
+        height: 50px;
+        line-height: 50px;
+        padding: 0 20px 0 50px;
+      }
+      a.documentation-button:hover {
+        text-decoration: none;
+        background-color: #555;
+      }
       #documentation {
         border-top: 1px solid #ddd;
       }
@@ -285,6 +302,9 @@
               demo(h2o.glm)
           </div>
           <div id="quickstart-hadoop" style="display:none">
+            <div id="downloads">
+                <a id="dzip" class="documentation-button" href="docs-website/deployment/hadoop.html">  Documentation</a>
+            </div>
             <h2>Run H<sub>2</sub>O on Hadoop in just 3 steps.</h2>
             <p>1. Download H<sub>2</sub>O. This is a zip file that contains everything you need to get started.</p>
             <p class="terminal">
