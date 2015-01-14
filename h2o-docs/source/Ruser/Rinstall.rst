@@ -65,7 +65,7 @@ R subdirectory with the tar package.
   $ unzip h2o-SUBST_PROJECT_VERSION.zip
   $ cd h2o-SUBST_PROJECT_VERSION/R
   $ pwd
-    /c/Users/Amy/Downloads/h2o-SUBST_PROJECT_VERSION/R
+    ~/Downloads/h2o-SUBST_PROJECT_VERSION/R
 
 
 **Step 2**
@@ -75,7 +75,7 @@ and check that a simple demo script runs.
 
 ::
 
-  > install.packages("C:/Users/Amy/Downloads/h2o-SUBST_PROJECT_VERSION/R/h2o_SUBST_PROJECT_VERSION.tar.gz",
+  > install.packages("~/Downloads/h2o-SUBST_PROJECT_VERSION/R/h2o_SUBST_PROJECT_VERSION.tar.gz",
     repos = NULL, type = "source")
   > library(h2o)
   > demo(h2o.glm)
