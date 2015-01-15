@@ -1255,7 +1255,7 @@ public abstract class Neurons {
    */
   public static class DenseVector extends Iced implements Vector {
     private float[] _data;
-    DenseVector(int len) { _data = new float[len]; }
+    DenseVector(int len) { _data = MemoryManager.malloc4f(len); }
     DenseVector(float[] v) { _data = v; }
     @Override public float get(int i) { return _data[i]; }
     @Override public void set(int i, float val) { _data[i] = val; }
@@ -1286,8 +1286,8 @@ public abstract class Neurons {
         }
       }
       // only allocate what's needed
-      _indices = new int[_nnz];
-      _values = new float[_nnz];
+      _indices = MemoryManager.malloc4(_nnz);
+      _values = MemoryManager.malloc4f(_nnz);
       // fill values
       int idx = 0;
       for (int i=0; i<dv._data.length; ++i) {
@@ -1374,7 +1374,7 @@ public abstract class Neurons {
     private float[] _data;
     private int _cols;
     private int _rows;
-    DenseRowMatrix(int rows, int cols) { this(new float[cols*rows], rows, cols); }
+    DenseRowMatrix(int rows, int cols) { this(MemoryManager.malloc4f(cols*rows), rows, cols); }
     DenseRowMatrix(float[] v, int rows, int cols) { _data = v; _rows = rows; _cols = cols; }
     @Override public float get(int row, int col) { assert(row<_rows && col<_cols); return _data[row*_cols + col]; }
     @Override public void set(int row, int col, float val) { assert(row<_rows && col<_cols); _data[row*_cols + col] = val; }
@@ -1392,7 +1392,7 @@ public abstract class Neurons {
     private float[] _data;
     private int _cols;
     private int _rows;
-    DenseColMatrix(int rows, int cols) { this(new float[cols*rows], rows, cols); }
+    DenseColMatrix(int rows, int cols) { this(MemoryManager.malloc4f(cols*rows), rows, cols); }
     DenseColMatrix(float[] v, int rows, int cols) { _data = v; _rows = rows; _cols = cols; }
     DenseColMatrix(DenseRowMatrix m, int rows, int cols) { this(rows, cols); for (int row=0;row<rows;++row) for (int col=0;col<cols;++col) set(row,col, m.get(row,col)); }
     @Override public float get(int row, int col) { assert(row<_rows && col<_cols); return _data[col*_rows + row]; }
