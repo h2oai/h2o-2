@@ -89,7 +89,7 @@ public class TCPReceiverThread extends Thread {
           }
         } catch( java.nio.channels.AsynchronousCloseException ex ) {
           break;                // Socket closed for shutdown
-        } catch( Exception e ) {
+        } catch( Throwable e ) {
           // On any error from anybody, close everything
           System.err.println("IO error");
           e.printStackTrace();
