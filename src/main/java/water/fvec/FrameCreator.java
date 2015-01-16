@@ -43,10 +43,10 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
     _bin_cols  = Arrays.copyOfRange(shuffled_idx, catcols+intcols+realcols, catcols+intcols+realcols+bincols);
 
     // create domains for categorical variables
+    _domain = new String[_createFrame.cols + (_createFrame.has_response ? 1 : 0)][];
     if (_createFrame.randomize) {
       if(_createFrame.has_response) {
         assert(_createFrame.response_factors >= 1);
-        _domain = new String[_createFrame.cols+1][];
         _domain[0] = _createFrame.response_factors == 1 ? null : new String[_createFrame.response_factors];
         if (_domain[0] != null) {
           for (int i = 0; i < _domain[0].length; ++i) {
@@ -80,7 +80,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
   final private Key _job;
 
   @Override public void compute2() {
-    int totcols = _createFrame.has_response ? (_createFrame.cols+1) : _createFrame.cols;
+    int totcols = _createFrame.cols + (_createFrame.has_response ? 1 : 0);
     Vec[] vecs = Vec.makeNewCons(_createFrame.rows, totcols, _createFrame.value, _domain);
     String[] names = new String[vecs.length];
     if(_createFrame.has_response) {
