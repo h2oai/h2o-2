@@ -17,8 +17,8 @@ public class CXIChunk extends Chunk {
   protected transient int _valsz_log; //
   protected transient int _ridsz; // byte size of stored (chunk-relative) row nums
   protected static final int OFF = 6;
-  protected transient int _lastOff = OFF;
-  protected transient volatile int _offCache = OFF;
+  protected transient volatile int _lastOff = OFF;
+
 
   private static final long [] NAS = {C1Chunk._NA,C2Chunk._NA,C4Chunk._NA,C8Chunk._NA};
 
@@ -57,21 +57,8 @@ public class CXIChunk extends Chunk {
   @Override boolean setNA_impl(int idx)         { return false; }
 
   @Override protected long at8_impl(int idx) {
-/*    int off = _offCache;
-    int prevIdx = getId(off);
-    if(prevIdx == idx)
-      return getIValue(off);
-    if(prevIdx < idx) {
-      int nextIdx = getId(off + _ridsz + _valsz);
-      if(nextIdx > idx) return 0;
-      if(nextIdx == idx) {
-        _offCache = (off += _ridsz + _valsz);
-        return getIValue(off);
-      }
-    } */
     int off = findOffset(idx);
     if(getId(off) != idx)return 0;
-//    _offCache = off;
     long v = getIValue(off);
     if( v== NAS[_valsz_log])
       throw new IllegalArgumentException("at8 but value is missing");
@@ -136,26 +123,29 @@ public class CXIChunk extends Chunk {
   // find offset of the chunk-relative row id, or -1 if not stored (i.e. sparse zero)
   protected final int findOffset(int idx) {
     if(idx >= _len)throw new IndexOutOfBoundsException();
-    final byte [] mem = _mem;
     int sparseLen = sparseLen();
     if(sparseLen == 0)return 0;
+    final byte [] mem = _mem;
+    if(idx <= getId(OFF))  // easy cut off accessing the zeros prior first nz
+      return OFF;
+    int last = mem.length - _ridsz - _valsz;
+    if(idx >= getId(last))  // easy cut off accessing of the tail zeros
+      return last;
     final int off = _lastOff;
     int lastIdx = getId(off);
-    // check the last accessed elem
+    // check the last accessed elem + one after
     if( idx == lastIdx ) return off;
     if(idx > lastIdx){
-      // check the next one
+      // check the next one (no need to check bounds, already checked at the beginning)
       final int nextOff = off + _ridsz + _valsz;
-      if(nextOff < mem.length){
-        int nextId =  getId(nextOff);
-        if(idx < nextId)return off;
-        if(idx == nextId){
-          _lastOff = nextOff;
-          return nextOff;
-        }
+      int nextId =  getId(nextOff);
+      if(idx < nextId) return off;
+      if(idx == nextId){
+        _lastOff = nextOff;
+        return nextOff;
       }
     }
-    // no match so far, do binary search
+    // binary search
     int lo=0, hi = sparseLen;
     while( lo+1 != hi ) {
       int mid = (hi+lo)>>>1;
