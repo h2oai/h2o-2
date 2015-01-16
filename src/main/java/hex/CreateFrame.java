@@ -65,6 +65,9 @@ public class CreateFrame extends Request2 {
 
   public boolean positive_response; // only for response_factors=1
 
+  @API(help = "Whether an additional response column should be generated", filter = Default.class, json=true)
+  public boolean has_response = false;
+
   @Override public Response serve() {
     try {
       if (integer_fraction + binary_fraction + categorical_fraction > 1) throw new IllegalArgumentException("Integer, binary and categorical fractions must add up to <= 1.");

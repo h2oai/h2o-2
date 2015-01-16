@@ -23,7 +23,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
     _job=job;
     _createFrame = createFrame;
 
-    int[] idx = Utils.seq(1, _createFrame.cols+1);
+    int[] idx = _createFrame.has_response ? Utils.seq(1, _createFrame.cols + 1) : Utils.seq(0, _createFrame.cols);
     int[] shuffled_idx = new int[idx.length];
     Utils.shuffleArray(idx, idx.length, shuffled_idx, _createFrame.seed, 0);
 
@@ -44,13 +44,17 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
 
     // create domains for categorical variables
     if (_createFrame.randomize) {
-      assert(_createFrame.response_factors >= 1);
-      _domain = new String[_createFrame.cols+1][];
-      _domain[0] = _createFrame.response_factors == 1 ? null : new String[_createFrame.response_factors];
-      if (_domain[0] != null) {
-        for (int i=0; i <_domain[0].length; ++i) {
-          _domain[0][i] = "resp." + i;
+      if(_createFrame.has_response) {
+        assert(_createFrame.response_factors >= 1);
+        _domain = new String[_createFrame.cols+1][];
+        _domain[0] = _createFrame.response_factors == 1 ? null : new String[_createFrame.response_factors];
+        if (_domain[0] != null) {
+          for (int i = 0; i < _domain[0].length; ++i) {
+            _domain[0][i] = "resp." + i;
+          }
         }
+      } else {
+        _domain = new String[_createFrame.cols][];
       }
 
       for (int c : _cat_cols) {
@@ -76,14 +80,19 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
   final private Key _job;
 
   @Override public void compute2() {
-    Vec[] vecs = Vec.makeNewCons(_createFrame.rows, _createFrame.cols+1, _createFrame.value, _domain);
+    int totcols = _createFrame.has_response ? (_createFrame.cols+1) : _createFrame.cols;
+    Vec[] vecs = Vec.makeNewCons(_createFrame.rows, totcols, _createFrame.value, _domain);
     String[] names = new String[vecs.length];
-    names[0] = "response";
-    for( int i=1; i<vecs.length; i++ ) names[i] = "C"+i;
+    if(_createFrame.has_response) {
+      names[0] = "response";
+      for (int i = 1; i < vecs.length; i++) names[i] = "C" + i;
+    } else {
+      for (int i = 0; i < vecs.length; i++) names[i] = "C" + (i+1);
+    }
 
     _out = new Frame(Key.make(_createFrame.key), names, vecs);
     assert _out.numRows() == _createFrame.rows;
-    assert _out.numCols() == _createFrame.cols+1;
+    assert _out.numCols() == totcols;
     _out.delete_and_lock(_job);
 
     // fill with random values
@@ -125,14 +134,16 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
       final Random rng = new Random();
 
       // response
-      for (int r = 0; r < cs[0]._len; r++) {
-        setSeed(rng, 0, cs[0]._start + r);
-        if (_createFrame.response_factors >1)
-          cs[0].set0(r, (int)(rng.nextDouble() * _createFrame.response_factors)); //classification
-        else if (_createFrame.positive_response)
-          cs[0].set0(r, _createFrame.real_range * rng.nextDouble()); //regression with positive response
-        else
-          cs[0].set0(r, _createFrame.real_range * (1 - 2 * rng.nextDouble())); //regression
+      if(_createFrame.has_response) {
+        for (int r = 0; r < cs[0]._len; r++) {
+          setSeed(rng, 0, cs[0]._start + r);
+          if (_createFrame.response_factors > 1)
+            cs[0].set0(r, (int) (rng.nextDouble() * _createFrame.response_factors)); //classification
+          else if (_createFrame.positive_response)
+            cs[0].set0(r, _createFrame.real_range * rng.nextDouble()); //regression with positive response
+          else
+            cs[0].set0(r, _createFrame.real_range * (1 - 2 * rng.nextDouble())); //regression
+        }
       }
 
       for (int c : _cat_cols) {
@@ -162,8 +173,6 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
     }
   }
 
-
-
   public static class MissingInserter extends MRTask2<MissingInserter> {
     final long _seed;
     final double _frac;
@@ -192,7 +201,4 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
       }
     }
   }
-
-
-
 }

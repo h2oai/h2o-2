@@ -8,16 +8,14 @@ Create an H2O Frame
 Create an H2O data frame from scratch, with optional randomization. Supports categoricals, integers, reals and missing values.
 }
 \usage{
-h2o.createFrame(object, key, rows, cols, seed, randomize, value, real_range, 
-  categorical_fraction, factors, integer_fraction, integer_range,
-  binary_fraction, binary_ones_fraction,
-  missing_fraction, response_factors)
+h2o.createFrame(object, key = "", rows = 10000, cols = 10, seed, randomize = TRUE, value = 0, real_range = 100, 
+  categorical_fraction = 0.2, factors = 100, integer_fraction = 0.2, integer_range = 100, binary_fraction = 0.1, 
+  binary_ones_fraction = 0.02, missing_fraction = 0.01, response_factors = 2, has_response = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{object}{An \code{\linkS4class{H2OClient}} object containing the IP address and port of the server running H2O.}
-  \item{key}{
-  The unique hex key assigned to the created frame.}
+  \item{key}{The unique hex key assigned to the created frame.}
   \item{rows}{Number of rows}
   \item{cols}{Number of columns}
   \item{seed}{Random number seed}
@@ -32,6 +30,7 @@ h2o.createFrame(object, key, rows, cols, seed, randomize, value, real_range,
   \item{binary_ones_fraction}{Fraction of 1's in binary columns (for randomize=true)}
   \item{missing_fraction}{Fraction of missing values}
   \item{response_factors}{Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)}
+  \item{has_response}{Whether an additional response column should be generated. The final data frame will have cols+1 columns}
 }
 \value{
 Returns an H2O data frame.
@@ -44,7 +43,7 @@ myframe = h2o.createFrame(localH2O, 'myframekey', rows = 1000, cols = 10,
                           categorical_fraction = 0.2, factors = 100, 
                           integer_fraction = 0.2, integer_range = 100,
                           binary_fraction = 0.1, binary_ones_fraction = 0.01,
-                          missing_fraction = 0.1, response_factors = 2)
+                          missing_fraction = 0.1, response_factors = 2, has_response = FALSE)
 head(myframe)
 summary(myframe)
 h2o.shutdown(localH2O)
