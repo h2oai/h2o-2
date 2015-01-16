@@ -13,6 +13,7 @@ This tutorial will show you how to:
 - [view a model](#ViewModels)
 - [view predictions](#ViewPredict)
 - [view a frame](#ViewFrames)
+- [use clips](#Clips)
 
 
 <a name="GetHelp"></a> 
@@ -35,20 +36,22 @@ You can also access the quick start guide, keyboard shortcuts, or H2O documentat
 
 
 <a name="Cell"></a>
-##Understanding Cell Modes
+###Understanding Cell Modes
 ---
 
 There are two modes for cells: edit and command. In edit mode, the cell is yellow, there is an orange flag to the left of the cell and a blinking bar to indicate where text can be entered.
 
 ![Edit Mode](Flow_imgs/Flow_EditMode.png)
+
+**NOTE**: If there is an error in the cell, the flag is red. 
  
  In command mode, the flag is yellow. The flag also indicates the cell's format: 
 
 - **MD**: Markdown
- ![Flow - Markdown](Flow_imgs/Flow_Markdown.png)
+ ![Flow - Markdown](Flow_imgs/Flow_markdown.png)
 - **CS**: Code
- ![Flow - Code](Flow_imgs/Flow_parse_code.png)
-- **RAW**: ?? (for user input?)
+ ![Flow - Code](Flow_imgs/Flow_parse_code_ex.png)
+- **RAW**: Raw format (for code comments)
 - **H[1-5]**: Heading level (where 1 is a first-level heading)
  ![Flow - Heading Levels](Flow_imgs/Flow_headinglevels.png)
 
@@ -77,6 +80,11 @@ Now that you are familiar with the cell modes, let's import some data.
 ---
 <a name="ImportData"></a>
 ##Importing Data
+
+If you don't have any of your own data to work with, you can find some example datasets here: 
+
+- http://docs.h2o.ai/resources/publicdata.html
+- http://data.h2o.ai
 
 There are multiple ways to import data in H2O flow:
 
@@ -178,21 +186,21 @@ First, select an algorithm from the drop-down menu:
 
 - **quantile**: Obtain the quantile for the current data
 
-The available options vary depending on the selected model. 
+The available options vary depending on the selected model. If an option is only available for a specific model type, the model type is listed. If no model type is specified, the option is applicable to all model types. 
 
 - **Destination\_key**: (Optional) Enter a custom name for the model to use as a reference. By default, H2O automatically generates a destination key. 
 
-- **Training_frame**: Select the dataset used to build the model. 
+- **Training_frame**: (Optional) Select the dataset used to build the model. 
 
-- **Validation_frame**: Select the dataset used to evaluate the accuracy of the model. 
+- **Validation_frame**: (Optional) Select the dataset used to evaluate the accuracy of the model. 
 
-- **Ignored_columns**: Click the plus sign next to a column name to add it to the list of columns excluded from the model. To add all columns, click the **Add all** button. To remove a column from the list of ignored columns, click the X next to the column name. To remove all columns from the list of ignored columns, click the **Clear all** button. 
+- **Ignored_columns**: (Optional) Click the plus sign next to a column name to add it to the list of columns excluded from the model. To add all columns, click the **Add all** button. To remove a column from the list of ignored columns, click the X next to the column name. To remove all columns from the list of ignored columns, click the **Clear all** button. 
 
-- **Score\_each\_iteration**: (K-Means, GLM, grep, splitframe, GBM, DL) Score the validation set after each iteration of the model-building process. If you select this option, the model-building time increases. 
+- **Score\_each\_iteration**: (Optional) Score the validation set after each iteration of the model-building process. If you select this option, the model-building time increases. 
 
 - **Probs**: (Quantiles) Specify the probabilities for quantiles. The default values are [0.01, 0.05, 0.1, 0.25, 0.333, 0.5, 0.667, 0.75, 0.9, 0.95, 0.99]. 
 
-- **Response_column**: (GLM, GBM, DL) Select the column to use as the independent variable.
+- **Response_column**: (Required for GLM, GBM, DL) Select the column to use as the independent variable.
 
 - **Ratios**: (Splitframe) Specify the split ratio. The resulting number of the split is the ratio length +1. The default value is 0.5. 
 
@@ -212,13 +220,13 @@ The available options vary depending on the selected model.
 
 - **Learn_rate**: (GBM) Specify the learning rate. The range is 0.0 to 1.0 and the default is 0.1. 
 
-- **Loss**: (GBM, DL) Select the loss function. For GBM, the options are auto, bernoulli, or none and the default is auto. For DL, the options are automatic, mean square, cross-entropy, and none and the default value is mean square. 
+- **Loss**: (GBM, DL) Select the loss function. For GBM, the options are auto, bernoulli, or none and the default is auto. For DL, the options are automatic, mean square, cross-entropy, or none and the default value is mean square. 
 
 - **Variable_importance**: (GBM, DL) Check this checkbox to compute variable importance. This option is not selected by default. 
 
 - **Group_split**: (GBM) Check this checkbox to perform group-splitting categoricals. This option is selected by default. 
 
-- **K**: (K-Means only) Specify the number of clusters. The default is 0.
+- **K**: (K-Means) Specify the number of clusters. The default is 0.
 
 - **Max_iters**: (K-Means) Specify the number of training iterations. The default is 1000. 
 
@@ -230,7 +238,7 @@ The available options vary depending on the selected model.
 
 - **Keep\_cross\_validation\_splits**: (DL) Check this checkbox to keep the cross-validation frames. This option is not selected by default. 
 
-- **Checkpoint**: (DL) Enter the hex key for the model (??) to resume training. 
+- **Checkpoint**: (DL) Enter a model key associated with a previously-trained Deep Learning model. Use this option to build a new model as a continuation of a previously-generated model (e.g., by a grid search).
 
 - **Override\_with\_best\_model**: (DL) Check this checkbox to override the final model with the best model found during training. This option is selected by default. 
 
@@ -248,7 +256,9 @@ The available options vary depending on the selected model.
 
 - **Max\_confusion\_matrix\_size**: (DL) Specify the number of classes for the confusion matrices. The default value is 20. 
 
-- **Class\_sampling\_factors**: (DL) Specify the per-class (in lexicographical order) over/under-sampling ratios. By default, these ratios are automatically computed during training to obtain the class balance. There is no default value. 
+- **Class\_sampling\_factors**: (GLM, DL) Specify the per-class (in lexicographical order) over/under-sampling ratios. By default, these ratios are automatically computed during training to obtain the class balance. There is no default value. 
+
+- **Solver**: (GLM) Select the solver to use (ADMM, L\_BFGS, or none). [ADMM](http://www.stanford.edu/~boyd/papers/admm_distr_stats.html) supports more features and [L_BFGS](http://cran.r-project.org/web/packages/lbfgs/vignettes/Vignette.pdf) scales better for datasets with many columns. The default is ADMM. 
 
 - **Diagnostics**: (DL) Check this checkbox to compute the variable importances for input features (using the Gedeon method). For large networks, selecting this option can reduce speed. This option is selected by default. 
 
@@ -264,9 +274,9 @@ The available options vary depending on the selected model.
 
 - **Minwordfreq**: (word2vec) Specify the number of times a word must appear to be included in the model. The default is 5. 
 
-- **WordModel**: (word2vec) Select the model type (continuous bag of words [CBOW], Skip-Gram, or None). 
+- **WordModel**: (word2vec) Select the model type (continuous bag of words [CBOW], SkipGram, or None). 
 
-- **NormModel**: (word2vec) Select the ?? type (Hierarchical Softmax [HSM], Negative Sampling [NegSampling], or None). 
+- **NormModel**: (word2vec) Select the normalization type (Hierarchical Softmax [HSM], Negative Sampling [NegSampling], or None). 
 
 - **NegSampleCnt**: (word2vec) Specify the number of negative examples (for example, entering 0 would mean that the example is not used). The default value is 5. 
 
@@ -274,7 +284,7 @@ The available options vary depending on the selected model.
 
 - **Windowsize**: (word2vec) Specify the max skip length between words. The default is 5. 
 
-- **Sentsamplerate**: (word2vec) Specify the threshold for word occurence. Words with higher frequencies in the training data are randomly down-sampled. The default value is 0.001. 
+- **Sentsamplerate**: (word2vec) Specify the threshold for word occurences. Words with higher frequencies in the training data are randomly down-sampled. The default value is 0.001. 
 
 - **Initlearningrate**: (word2vec) Specify the starting learning rate. The default is 0.05. 
 
@@ -283,7 +293,7 @@ The available options vary depending on the selected model.
 
 - **Standardize**: To standardize the numeric columns to have mean of zero and unit variance, check this checkbox. Standardization is highly recommended; if you do not use standardization, the results can include components that are dominated by variables that appear to have larger variances relative to other attributes as a matter of scale, rather than true contribution. This option is selected by default. 
 
-- **Link**: ?? (Identity, Family_Default, Logit, Log, Inverse, Tweedie)
+- **Link**: (GLM) Select a link function (Identity, Family_Default, Logit, Log, Inverse, Tweedie).
 
 - **Tweedie\_variance\_power**: (GLM with Tweedie) Specify the variance power for the Tweedie model. 
 
@@ -337,7 +347,7 @@ The available options vary depending on the selected model.
 
 - **Initial\_weight\_distribution**: (DL) Select the initial weight distribution (Uniform Adaptive, Uniform, Normal, or None). The default is Uniform Adaptive. 
 
-- **Initial\_weight\_scale**: (DL) Specify the initial weight scale. ?? The default value is 1.0. 
+- **Initial\_weight\_scale**: (DL) Specify the initial weight scale of the distribution function for Uniform or Normal distributions. For Uniform, the values are drawn uniformly from initial weight scale. For Normal, the values are drawn from a Normal distribution with the standard deviation of the initial weight scale. The default value is 1.0. 
 
 - **Score\_training\_samples**: (DL) Specify the number of training set samples for scoring. To use all training samples, enter 0. The default value is 10000. 
 
@@ -376,13 +386,13 @@ The available options vary depending on the selected model.
 <a name="ViewModel"></a>
 ###Viewing Models
 
-Enter `getModels` and press **Ctrl+Enter**. A list of available models displays. 
+Click the **Assist Me!** button, then click the **getModels** link, or enter `getModels` in the cell in CS mode and press **Ctrl+Enter**. A list of available models displays. 
 
-
+ ![Flow Models](Flow_imgs/Flow_getModels.png)
 
 To inspect a model, check its checkbox then click the **Inspect** button, or click the **Inspect** button to the right of the model name. 
 
-To compare models, check the checkboxes for the models to use in the comparison and click the **Compare selected models**. To select all models, check the checkbox at the top of the checkbox column (next to the **KEY** heading). 
+To compare models, check the checkboxes for the models to use in the comparison and click the **Compare selected models** button. To select all models, check the checkbox at the top of the checkbox column (next to the **KEY** heading). 
 
 To learn how to make predictions, continue to the next section. 
 
@@ -396,20 +406,65 @@ After creating your model, click the destination key link for the model, then cl
 <a name="ViewPredict"></a>
 ###Viewing Predictions
 
-Enter `getPredictions` and press **Ctrl+Enter**. A list of the stored predictions displays. 
+Click the **Assist Me!** button, then click the **getPredictions** link, or enter `getPredictions` in the cell in CS mode and press **Ctrl+Enter**. A list of the stored predictions displays. 
 
 <a name="ViewFrame"></a>
-##Viewing Frames
+###Viewing Frames
 
-Enter `getFrames` and press **Ctrl+Enter**. A list of the current frames in H2O displays that includes the following information for each frame: 
+Click the **Assist Me!** button, then click the **getFrames** link, or enter `getFrames` in the cell in CS mode and press **Ctrl+Enter**. A list of the current frames in H2O displays that includes the following information for each frame: 
 
 
 - Column headings
 - Number of rows and columns
 - Size 
 
+ ![Pre-Parse Frame](Flow_imgs/Flow_getFrame.png)
+
 For parsed data, the following information displays: 
 
 - Link to the .hex file
 - The **Build Model**, **Predict**, and **Inspect** buttons
+
+ ![Parsed Frames](Flow_imgs/Flow_getFrames.png)
+
+To make a prediction, check the checkboxes for the frames you want to use to make the prediction, then click the **Predict on Selected Frames** button. 
+
+<a name="Clips"></a>
+
+##Using Clips
+
+Clips enable you to save cells containing your workflow for later reuse. To save a cell as a clip, click the paperclip icon to the right of the cell (highlighted in the red box in the following screenshot). 
+ ![Paperclip icon](Flow_imgs/Flow_clips_paperclip.png)
+
+To use a clip in a workflow, click the "Clips" tab in the sidebar on the right. 
+
+ ![Clips tab](Flow_imgs/Flow_clips.png)
+
+All saved clips, including the default system clips (such as `assist`, `importFiles`, and `predict`), are listed. Clips you have created are listed under the "My Clips" heading. To select a clip to insert, click the circular button to the left of the clip name. To delete a clip, click the trashcan icon to right of the clip name. 
+
+**NOTE**: The default clips listed under "System" cannot be deleted. 
+
+Deleted clips are stored in the trash. To permanently delete all clips in the trash, click the **Empty Trash** button. 
+
+<a name="Outline"></a>
+##Viewing Outlines
+
+The "Outline" tab in the sidebar displays a brief summary of the cells currently used in your flow. To jump to a specific cell, click the cell description. 
+
+ ![View Outline](Flow_imgs/Flow_Outline.png)
+
+<a name"SaveFlow"></a>
+##Saving Flows
+
+You can save your flow for later reuse. To save your flow, click the "Save" button (the first button in the row of buttons below the flow name), or click the drop-down "Flow" menu and select "Save." 
+To enter a custom name for the flow, click the default flow name ("Untitled Flow") and type the desired flow name. A pencil icon indicates where to enter the desired name. 
+
+ ![Renaming Flows](Flow_imgs/Flow_rename.png)
+
+To confirm the name, click the checkmark to the right of the name field. 
+ ![Confirm Name](Flow_imgs/Flow_rename2.png)
+
+To reuse a saved flow, click the "Flows" tab in the sidebar, then click the flow name. To delete a saved flow, click the trashcan icon to the right of the flow name. 
+
+ ![Flows](Flow_imgs/Flow_flows.png)
 

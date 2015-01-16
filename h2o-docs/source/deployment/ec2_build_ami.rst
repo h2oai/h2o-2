@@ -1,7 +1,7 @@
 .. _EC2_Build_AMI:
 
 Launch H\ :sub:`2`\ O from AWS Console
-=======================================
+======================================
 
 Choose Operating System and Virtualization Type
 """""""""""""""""""""""""""""""""""""""""""""""

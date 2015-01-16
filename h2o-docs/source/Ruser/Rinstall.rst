@@ -52,7 +52,7 @@ To install the packages, use ``install.packages()`` (for example, ``install.pack
 """"""""""""""""""""""
 
 Download zip file from h2o.ai
-"""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""
 
 **Step 1**
 
@@ -62,10 +62,10 @@ R subdirectory with the tar package.
 
 ::
 
-  $ unzip h2o-2.7.0.1497.zip
-  $ cd h2o-2.7.0.1497/R
+  $ unzip h2o-SUBST_PROJECT_VERSION.zip
+  $ cd h2o-SUBST_PROJECT_VERSION/R
   $ pwd
-    /c/Users/Amy/Downloads/h2o-2.7.0.1497/R
+    ~/Downloads/h2o-SUBST_PROJECT_VERSION/R
 
 
 **Step 2**
@@ -75,7 +75,7 @@ and check that a simple demo script runs.
 
 ::
 
-  > install.packages("C:/Users/Amy/Downloads/h2o-2.7.0.1497/R/h2o_2.7.0.1497.tar.gz",
+  > install.packages("~/Downloads/h2o-SUBST_PROJECT_VERSION/R/h2o_SUBST_PROJECT_VERSION.tar.gz",
     repos = NULL, type = "source")
   > library(h2o)
   > demo(h2o.glm)
@@ -139,7 +139,7 @@ After making the build, navigate to the Rcran folder with the R package in the b
 ::
 
   Amy@LENOVO-PC ~/Documents/h2o/target/Rcran (master)
-  $ R CMD INSTALL h2o_2.7.0.99999.tar.gz
+  $ R CMD INSTALL h2o_SUBST_PROJECT_VERSION.tar.gz
   * installing to library 'C:/Users/Amy/Documents/R/win-library/3.0'
   * installing *source* package 'h2o' ...
   ** R

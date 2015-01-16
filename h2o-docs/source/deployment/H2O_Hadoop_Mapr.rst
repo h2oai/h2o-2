@@ -8,7 +8,7 @@ All mappers must be able to communicate with each other and need to run at the s
 """"""""""
 
 Installation
--------------
+------------
 
 1. Log in to the Hadoop cluster: 
 
@@ -17,7 +17,7 @@ Installation
 	If you are asked if you want to continue connecting, enter ``yes``.
 2. Enter the following: 
 
-	``wget http://h2o-release.s3.amazonaws.com/h2o/master/1624/h2o-2.9.0.1624.zip``
+	``wget http://h2o-release.s3.amazonaws.com/h2o/SUBST_RELEASE_NAME/SUBST_BUILD_NUMBER/h2o-SUBST_PROJECT_VERSION.zip``
 	
 3. Wait while H2O downloads - the progress bar indicates completion. 
 
@@ -25,12 +25,12 @@ Installation
 	
 4. 	Enter the following: 
 
-	``unzip h2o-2.9.0.1624.zip``
+	``unzip h2o-SUBST_PROJECT_VERSION.zip``
 	
 5. Wait while the H2O package unzips. 
 6. On the Hadoop node, change the current directory to the location of the Hadoop and H2O driver jar files: 
 
-	``cd h2o-2.9.0.1624/hadoop``
+	``cd h2o-SUBST_PROJECT_VERSION/hadoop``
 	
 7. Enter the following: 
 
@@ -64,7 +64,7 @@ Installation
 """"""""
 
 Monitoring Jobs
-----------------
+---------------
 
 Use the standard JobTracker web UI (``http://<JobTrackerIP>:<default_port>``). Different distributions can have different default JobTracker web UI ports. 
 The default JobTracker web UI port for MapR is 50030. 
@@ -74,7 +74,7 @@ Because of the way H2O works with Hadoop, most H2O tasks display in the Hadoop m
 """"""""
 
 Shutting Down Clusters
------------------------
+----------------------
 
 From the H2O web UI (``http://<H2O_node>:54321``), click the drop-down **Admin** menu and select **Shutdown**. 
 
@@ -83,7 +83,7 @@ You can also use the ``hadoop job -kill`` command.
 """"""""""
 
 Getting Help
--------------
+------------
 
 - To view information about parameters and usage, use: ``hadoop jar h2odriver_mapr4.0.1.jar water.hadoop.h2odriver -libjar ../h2o.jar -help``
 
