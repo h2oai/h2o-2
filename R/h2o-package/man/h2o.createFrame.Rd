@@ -8,9 +8,11 @@ Create an H2O Frame
 Create an H2O data frame from scratch, with optional randomization. Supports categoricals, integers, reals and missing values.
 }
 \usage{
-h2o.createFrame(object, key = "", rows = 10000, cols = 10, seed, randomize = TRUE, value = 0, real_range = 100, 
-  categorical_fraction = 0.2, factors = 100, integer_fraction = 0.2, integer_range = 100, binary_fraction = 0.1, 
-  binary_ones_fraction = 0.02, missing_fraction = 0.01, response_factors = 2, has_response = FALSE)
+h2o.createFrame(object, key = "", rows = 10000, cols = 10, seed, randomize = TRUE, 
+value = 0, real_range = 100, categorical_fraction = 0.2, factors = 100, 
+integer_fraction = 0.2, integer_range = 100, binary_fraction = 0.1, 
+binary_ones_fraction = 0.02, missing_fraction = 0.01, response_factors = 2, 
+has_response = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
