@@ -101,8 +101,32 @@ dim(mnist_test_hex)
 dl_model <- h2o.deeplearning(data=mnist_train_hex, validation=mnist_test_hex, hidden=c(20,20,20), epochs=1, x=1:784, y=785)
 dl_model
 
+
+
+## EXTRAS
+
 ## Compare to GBM
 gbm_model <- h2o.gbm(data=mnist_train_hex, validation=mnist_test_hex, x=1:784, y=785, distribution="multinomial", n.trees=5)
 gbm_model
 
+## Run H2O K-Means
+h2o.kmeans(data = mnist_train_hex[,1:784], centers = 50)
+
+## Run R's K-Means (benchmark)
+#kmeans(as.data.frame(mnist_train_hex[,1:784]), centers = 50)
+
+## Run H2O PCA and plot variances of principal components
+h2o_pca <- h2o.prcomp(data = mnist_train_hex[,1:784])
+plot(h2o_pca@model$sdev^2)
+
+## Upload Iris dataset from R's memory to the H2O Server and run H2O's K-Means
+iris_hex <- as.h2o(h2oServer, iris)
+summary(iris_hex)
+h2o.kmeans(data = iris_hex[,1:4], centers = 3)
+
+## Final cleanup
+h2o.rm(h2oServer, grep(pattern = "Last.value", x = h2o.ls(h2oServer)$Key, value = TRUE))
+h2o.ls(h2oServer)
+
+## Go to http://localhost:8996 to inspect datasets, models, jobs, etc.
 ## For more examples, see http://learn.h2o.ai/content/
