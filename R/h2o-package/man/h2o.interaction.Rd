@@ -33,7 +33,7 @@ myframe = h2o.createFrame(localH2O, 'framekey', rows = 20, cols = 5,
                           integer_fraction = 0.2, integer_range = 10,
                           binary_fraction = 0, binary_ones_fraction = 0.5,
                           missing_fraction = 0.2,
-                          response_factors = 1)[,-1]
+                          response_factors = 1)
 myframe[,3] <- as.factor(myframe[,3])
 summary(myframe)
 head(myframe, 20)

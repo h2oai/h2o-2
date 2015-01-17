@@ -105,11 +105,13 @@ h2o.assign <- function(data, key) {
   .h2o.exec2(expr = data@key, h2o = data@h2o, dest_key = key)
 }
 
-h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, binary_fraction=0, binary_ones_fraction=0.5, missing_fraction, response_factors) {
+h2o.createFrame <- function(object, key, rows = 10000, cols = 10, seed, randomize = TRUE, value = 0, real_range = 100, categorical_fraction = 0.2, factors = 100, integer_fraction = 0.2, integer_range = 100, binary_fraction = 0.1, binary_ones_fraction = 0.02, missing_fraction = 0.01, response_factors = 2, has_response = FALSE) {
+  if(class(object) != "H2OClient") stop("object must be of class H2OClient")
+  if(!is.character(key)) stop("key must be a character string")
   if(!is.numeric(rows)) stop("rows must be a numeric value")
   if(!is.numeric(cols)) stop("cols must be a numeric value")
-  if(!is.numeric(seed)) stop("seed must be a numeric value")
-  if(!is.logical(randomize)) stop("randomize must be a boolean value")
+  if(!missing(seed) && !is.numeric(seed)) stop("seed must be a numeric value")
+  if(!is.logical(randomize)) stop("randomize must be a logical value")
   if(!is.numeric(value)) stop("value must be a numeric value")
   if(!is.numeric(real_range)) stop("real_range must be a numeric value")
   if(!is.numeric(categorical_fraction)) stop("categorical_fraction must be a numeric value")
@@ -120,9 +122,16 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   if(!is.numeric(response_factors)) stop("response_factors must be a numeric value")
   if(!is.numeric(binary_fraction)) stop("binary_fraction must be a numeric value")
   if(!is.numeric(binary_ones_fraction)) stop("binary_ones_fraction must be a numeric value")
+  if(!is.logical(has_response)) stop("has_response must be a logical value")
 
-  res <- .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value, real_range = real_range,
-                          categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, binary_fraction = binary_fraction, binary_ones_fraction=binary_ones_fraction, missing_fraction = missing_fraction, response_factors = response_factors)
+  if(missing(seed))
+    res <- .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, randomize = as.numeric(randomize), value = value, real_range = real_range,
+                             categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, binary_fraction = binary_fraction, 
+                             binary_ones_fraction = binary_ones_fraction, missing_fraction = missing_fraction, response_factors = response_factors, has_response = as.numeric(has_response))
+  else
+    res <- .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value, real_range = real_range,
+                           categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, binary_fraction = binary_fraction, 
+                           binary_ones_fraction = binary_ones_fraction, missing_fraction = missing_fraction, response_factors = response_factors, has_response = as.numeric(has_response))
   .h2o.exec2(expr = key, h2o = object, dest_key = key)
 }
 
