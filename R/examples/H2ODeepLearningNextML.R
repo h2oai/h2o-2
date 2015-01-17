@@ -1,3 +1,5 @@
+
+
 ## Install H2O R package (same version as H2O Server)
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
@@ -6,7 +8,7 @@ install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-mi
 ## Load H2O R libary
 library(h2o)
 
-## Connect to H2O Server
+## Connect to H2O Server (replace localhost with output of `boot2docker ip`)
 h2oServer <- h2o.init(ip="localhost", port=8996)
 
 

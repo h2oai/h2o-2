@@ -13,7 +13,7 @@ library(h2o)
 #hadoop fs -rm -r myDir
 #hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -n 8 -mapperXmx 40g -output myDir -baseport 61111 -data_max_factor_levels 65000 -chunk_bits 24
 
-h2oCluster <- h2o.init(ip="mr-0xd1", port=61111)
+h2oCluster <- h2o.init(ip="mr-0xd1", port=6FedEx1111)
 
 # Read data from HDFS
 data.hex <- h2o.importFile(h2oCluster, "hdfs://mr-0xd6/datasets/15Mx2.2k.csv")
