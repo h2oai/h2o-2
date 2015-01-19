@@ -44,7 +44,7 @@ public final class H2O {
   public static boolean SINGLE_PRECISION = false;
 
   // Max. number of factor levels ber column (before flipping all to NAs)
-  public static int DATA_MAX_FACTOR_LEVELS = 65000;
+  public static int DATA_MAX_FACTOR_LEVELS = 1000000;
 
   public static int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
 

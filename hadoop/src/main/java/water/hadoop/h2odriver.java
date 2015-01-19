@@ -394,7 +394,7 @@ public class h2odriver extends Configured implements Tool {
                     "          [-baseport <starting HTTP port for H2O nodes; default is 54321>]\n" +
                     "          [-many_cols] (improve handling of high-dimensional datasets, same as -chunk_bytes 24)\n" +
                     "          [-chunk_bytes <log (base 2) of chunk size in bytes (e.g., default is 22 for 4MB chunks)>]\n" +
-                    "          [-data_max_factor_levels <max. number of factors per column (e.g., default is 65000)>]\n" +
+                    "          [-data_max_factor_levels <max. number of factors per column (e.g., default is 1,000,000)>]\n" +
                     "          [-ea]\n" +
                     "          [-verbose:gc]\n" +
                     "          [-XX:+PrintGCDetails]\n" +

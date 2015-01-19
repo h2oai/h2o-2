@@ -4,7 +4,7 @@
 # 3) If user does want to start H2O, but running non-locally, print an error
 h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
                      beta = FALSE, assertion = TRUE, license = NULL, nthreads = -2, max_mem_size = NULL, min_mem_size = NULL,
-                     ice_root = NULL, strict_version_check = TRUE, data_max_factor_levels = 65000, many_cols = FALSE, chunk_bytes = 22) {
+                     ice_root = NULL, strict_version_check = TRUE, data_max_factor_levels = 1000000, many_cols = FALSE, chunk_bytes = 22) {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
@@ -262,7 +262,7 @@ h2o.clusterStatus <- function(client) {
 .h2o.startJar <- function(nthreads = -1, max_memory = NULL,
                           min_memory = NULL, beta = FALSE,
                           assertion = TRUE, forceDL = FALSE,
-                          license = NULL, ice_root, max_factor_levels = 65000,
+                          license = NULL, ice_root, max_factor_levels = 1000000,
                           many_cols = FALSE, chunk_bytes = 22) {
   command <- .h2o.checkJava()
 
