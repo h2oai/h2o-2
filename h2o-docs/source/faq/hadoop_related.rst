@@ -4,9 +4,9 @@
 Hadoop FAQ
 ==========
 
-***************
+****************
 Accessing Logs
-***************
+****************
 
 Depending on whether you are using Hadoop with H2O and whether the job is currently running, there are different ways of obtaining the logs for H2O. 
 
