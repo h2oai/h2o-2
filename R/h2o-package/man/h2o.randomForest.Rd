@@ -9,10 +9,10 @@ Performs random forest classification on a data set.
 \usage{
 h2o.randomForest(x, y, data, key = "", classification = TRUE, ntree = 50, 
   depth = 20, mtries = -1, sample.rate = 2/3, nbins = 20, seed = -1,
-  importance = FALSE, nfolds = 0, validation, holdout.fraction = 0, nodesize = 1,
-  balance.classes = FALSE, max.after.balance.size = 5, class.sampling.factors = NULL,
-  doGrpSplit = TRUE, verbose = FALSE, oobee = TRUE, stat.type = "ENTROPY",
-  type = "fast")
+  importance = FALSE, score.each.iteration = FALSE, nfolds = 0, validation, 
+  holdout.fraction = 0, nodesize = 1, balance.classes = FALSE, max.after.balance.size = 5, 
+  class.sampling.factors = NULL, doGrpSplit = TRUE, verbose = FALSE, oobee = TRUE, 
+  stat.type = "ENTROPY", type = "fast")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -54,6 +54,9 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{importance}{
   (Optional) A logical value indicating whether to calculate variable importance. Set to \code{FALSE} to speed
   up computations.
+  }
+  \item{score.each.iteration}{
+  (Optional) A logical value indicating whether to perform scoring after every iteration. Set to \code{FALSE} to speed up computations. Note that this can only be set to \code{TRUE} if \code{type = "BigData"}.
   }
   \item{nfolds}{
   (Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.
