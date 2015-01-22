@@ -10,9 +10,9 @@ Performs random forest classification on a data set.
 h2o.randomForest(x, y, data, key = "", classification = TRUE, ntree = 50, 
   depth = 20, mtries = -1, sample.rate = 2/3, nbins = 20, seed = -1,
   importance = FALSE, score.each.iteration = FALSE, nfolds = 0, validation, 
-  holdout.fraction = 0, nodesize = 1, balance.classes = FALSE, max.after.balance.size = 5, 
-  class.sampling.factors = NULL, doGrpSplit = TRUE, verbose = FALSE, oobee = TRUE, 
-  stat.type = "ENTROPY", type = "fast")
+  holdout.fraction = 0, nodesize = 1, balance.classes = FALSE, 
+  max.after.balance.size = 5, class.sampling.factors = NULL, doGrpSplit = TRUE, 
+  verbose = FALSE, oobee = TRUE, stat.type = "ENTROPY", type = "fast")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
