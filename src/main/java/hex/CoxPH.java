@@ -165,6 +165,7 @@ public class CoxPH extends Job {
     public float progress() { return (float) iter / (float) get_params().iter_max; }
 
     // Following three overrides created for use in super.scoreImpl
+    /*
     @Override
     public String[] classNames() {
       final String[] names = new String[nclasses()];
@@ -234,6 +235,46 @@ public class CoxPH extends Job {
         }
       }
       preds[0] = Float.NaN;
+      return preds;
+    }
+    */
+
+    @Override
+    protected float[] score0(double[] data, float[] preds) {
+      final int n_offsets = (parameters.offset_columns == null) ? 0 : parameters.offset_columns.length;
+      final int n_cats    = data_info._cats;
+      final int n_nums    = data_info._nums;
+      final int n_data    = n_cats + n_nums;
+      final int numStart  = data_info.numStart();
+      final int n_non_offsets = n_nums - n_offsets;
+      boolean catsAllNA   = true;
+      boolean catsHasNA   = false;
+      boolean numsHasNA   = false;
+      for (int j = 0; j < n_cats; ++j) {
+        catsAllNA &= Double.isNaN(data[j]);
+        catsHasNA |= Double.isNaN(data[j]);
+      }
+      for (int j = n_cats; j < n_data; ++j)
+        numsHasNA |= Double.isNaN(data[j]);
+      if (numsHasNA || (catsHasNA && !catsAllNA)) {
+        preds[0] = Float.NaN;
+      } else {
+        double logRisk = 0;
+        for (int j = 0; j < n_cats; ++j) {
+          final int k_start = data_info._catOffsets[j];
+          final int k_end   = data_info._catOffsets[j + 1];
+          if (Double.isNaN(data[j]))
+            for (int k = k_start; k < k_end; ++k)
+              logRisk += x_mean_cat[k] * coef[k];
+          else if (data[j] != 0)
+            logRisk += coef[k_start + (int) (data[j] - 1)];
+        }
+        for (int j = 0; j < n_non_offsets; ++j)
+          logRisk += (data[n_cats + j] - data_info._normSub[j]) * coef[numStart + j];
+        for (int j = n_non_offsets; j < n_nums; ++j)
+          logRisk += (data[n_cats + j] - data_info._normSub[j]);
+        preds[0] = (float) Math.exp(logRisk);
+      }
       return preds;
     }
 
