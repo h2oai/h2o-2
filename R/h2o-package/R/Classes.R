@@ -223,6 +223,7 @@ function(formula, newdata, conf.int = 0.95,
     res$cumhaz <- outer(res$cumhaz, pred, FUN = "*")
   res$std.err <- NULL
   res$surv <- exp(- res$cumhaz)
+  class(res) <- c("survfit.H2OCoxPHModel", "survfit.cox", "survfit")
   return(res)
 
   # Code below assumes calculation in H2O
