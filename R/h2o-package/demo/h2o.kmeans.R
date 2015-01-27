@@ -8,10 +8,11 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prostate.hex = h2o.uploadFile(localH2O, path = system.file("extdata", "prostate.csv", package="h2o"), key = "prostate.hex")
 summary(prostate.hex)
 prostate.km = h2o.kmeans(prostate.hex, centers = 10, cols = c("AGE","RACE","GLEASON","CAPSULE","DCAPS"))
+prostate.pred = h2o.predict(object = prostate.km, newdata = prostate.hex)
 print(prostate.km)
 
 prostate.data = as.data.frame(prostate.hex)
-prostate.clus = as.data.frame(prostate.km@model$cluster)
+prostate.clus = as.data.frame(prostate.pred)
 
 # Plot categorized data
 # if(!"fpc" %in% rownames(installed.packages())) install.packages("fpc")
