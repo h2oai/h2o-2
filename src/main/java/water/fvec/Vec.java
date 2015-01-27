@@ -73,9 +73,6 @@ public class Vec extends Iced {
   private long _checksum_timestamp = -1;
   private long _checksum = 0;
 
-  /** Maximal size of enum domain */
-  public static final int MAX_ENUM_SIZE = 10000;
-
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
   public Vec( Key key, long espc[]) { this(key, espc, null); }
@@ -364,7 +361,8 @@ public class Vec extends Iced {
     if( !isInt() ) throw new IllegalArgumentException("Enum conversion only works on integer columns");
     long[] domain;
     String[] sdomain = Utils.toString(domain = new CollectDomain(this).doAll(this).domain());
-    if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column domain is too large to be represented as an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
+    if( domain.length > H2O.DATA_MAX_FACTOR_LEVELS )
+      throw new IllegalArgumentException("Column domain is too large to be represented as an enum: " + domain.length + " > " + H2O.DATA_MAX_FACTOR_LEVELS + ". Launch H2O with -data_max_factor_levels <N>.");
     return this.makeSimpleTransf(domain, sdomain);
   }
 
