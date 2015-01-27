@@ -125,8 +125,8 @@ h2o.coxph <- function(x, y, data, key = "", weights = NULL, offset = NULL,
          n.censor     = res[[3L]]$n_censor,
          surv         = NULL,
          type         = ifelse(ny == 2L, "right", "counting"),
-         cumhaz       = NULL,
-         std.err      = NULL,
+         cumhaz       = res[[3L]]$cumhaz_0,
+         std.err      = list(var_cumhaz_1 = res[[3L]]$var_cumhaz_1, var_cumhaz_2 = res[[3L]]$var_cumhaz_2),
          upper        = NULL,
          lower        = NULL,
          conf.type    = NULL,
@@ -1079,11 +1079,13 @@ h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.
 
 # ----------------------------------- Random Forest --------------------------------- #
 h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, depth=20, mtries = -1, sample.rate=2/3,
-                             nbins=20, seed=-1, importance=FALSE, nfolds=0, validation, holdout.fraction=0, nodesize=1,
-                             balance.classes=FALSE, max.after.balance.size=5, class.sampling.factors = NULL, doGrpSplit=TRUE, verbose = FALSE,
-                             oobee = TRUE, stat.type = "ENTROPY", type = "fast") {
+                             nbins=20, seed=-1, importance=FALSE, score.each.iteration=FALSE, nfolds=0, validation, 
+                             holdout.fraction=0, nodesize=1, balance.classes=FALSE, max.after.balance.size=5, 
+                             class.sampling.factors = NULL, doGrpSplit=TRUE, verbose = FALSE, oobee = TRUE, 
+                             stat.type = "ENTROPY", type = "fast") {
   if (type == "fast") {
-    if (!is.null(class.sampling.factors)) stop("class.sampling.factors requires type=BigData.")
+    if (!is.null(class.sampling.factors)) stop("class.sampling.factors requires type = 'BigData'.")
+    if(score.each.iteration) stop("score.each.iteration = TRUE requires type = 'BigData'")
     return(h2o.SpeeDRF(x, y, data, key, classification, nfolds, validation, holdout.fraction, mtries, ntree, depth, sample.rate, oobee,
                        importance, nbins, seed, stat.type, balance.classes, verbose))
   }
@@ -1103,6 +1105,7 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
   if( any(nbins < 1)) stop('nbins must be an integer >= 1')
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
   if(!is.logical(importance)) stop("importance must be logical (TRUE or FALSE)')")
+  if(!is.logical(score.each.iteration)) stop("score.each.iteration must be logical (TRUE or FALSE)")
   
   if(!is.logical(balance.classes)) stop('balance.classes must be logical (TRUE or FALSE)')
   if(!is.numeric(max.after.balance.size)) stop('max.after.balance.size must be a number')
@@ -1122,16 +1125,16 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
   if(missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, mtries = mtries, seed=seed, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, mtries = mtries, seed=seed, importance=as.numeric(importance), score_each_iteration=as.numeric(score.each.iteration),
                             classification=as.numeric(classification), holdout_fraction = as.numeric(holdout.fraction), balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), class_sampling_factors = class.sampling.factors, do_grpsplit=as.numeric(doGrpSplit))
   } else if(missing(validation) && nfolds >= 2) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), score_each_iteration=as.numeric(score.each.iteration),
                             classification=as.numeric(classification), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), class_sampling_factors = class.sampling.factors, do_grpsplit=as.numeric(doGrpSplit))
   } else if(!missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), score_each_iteration=as.numeric(score.each.iteration),
                             classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), class_sampling_factors = class.sampling.factors, do_grpsplit=as.numeric(doGrpSplit))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, type="BigData", ntree=ntree, mtries = mtries, depth=depth, nbins=nbins, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, class.sampling.factors = class.sampling.factors, nodesize=nodesize, h2o = data@h2o)
+  params = list(x=args$x, y=args$y, type="BigData", ntree=ntree, mtries = mtries, depth=depth, nbins=nbins, sample.rate=sample.rate, nbins=nbins, importance=importance, score.each.iteration=score.each.iteration, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, class.sampling.factors = class.sampling.factors, nodesize=nodesize, h2o = data@h2o)
   
   if(.is_singlerun("RF", params))
     .h2o.singlerun.internal("RF", data, res, nfolds, validation, params)

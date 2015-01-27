@@ -214,6 +214,19 @@ function(formula, newdata, conf.int = 0.95,
     capture.output(newdata <- as.h2o(formula@data@h2o, newdata, header = TRUE))
   conf.type <- match.arg(conf.type)
 
+  # Code below has calculation performed in R
+  pred <- as.data.frame(h2o.predict(formula, newdata))[[1L]]
+  res <- formula@survfit
+  if (length(pred) == 1L)
+    res$cumhaz <- pred * res$cumhaz
+  else
+    res$cumhaz <- outer(res$cumhaz, pred, FUN = "*")
+  res$std.err <- NULL
+  res$surv <- exp(- res$cumhaz)
+  class(res) <- c("survfit.H2OCoxPHModel", "survfit.cox", "survfit")
+  return(res)
+
+  # Code below assumes calculation in H2O
   pred <- as.matrix(h2o.predict(formula, newdata)[,-1L])
   nms <- colnames(pred)
   dimnames(pred) <- NULL

@@ -178,6 +178,10 @@
       #documentation {
         border-top: 1px solid #ddd;
       }
+      #get-started {
+        margin-top: 15px;
+        border-top: 1px solid #ddd;
+      }
 
     </style>
     <script>
@@ -276,16 +280,25 @@
             <div id="downloads">
               <a id="dzip" class="download-button" href="h2o-SUBST_PROJECT_VERSION.zip">Download H<sub>2</sub>O</a>
             </div>
-            <h2>Get started with H<sub>2</sub>O in 3 easy steps</h2>
-            <p>1. Download H<sub>2</sub>O. This is a zip file that contains everything you need to get started.</p>
-            <p>2. From your terminal, run:</p>
-            <p class="terminal">
-              cd ~/Downloads<br/>
-              unzip h2o-SUBST_PROJECT_VERSION.zip<br/>
-              cd h2o-SUBST_PROJECT_VERSION<br/>
-              java -jar h2o.jar<br/>
-            </p>
-            <p>3. Point your browser to <a href="http://localhost:54321/" target="_blank">http://localhost:54321</a>
+            <div id="license">
+              <h2>License</h2>
+              <ul>
+                <li>Everything in this version of H<sub>2</sub>O (including H<sub>2</sub>O for R and Hadoop) is licensed under the <a id="license-h2o" href="http://www.apache.org/licenses/LICENSE-2.0">Apache V2 License</a>.</li>
+                <li>Generated Java scoring POJOs are also licensed under the <a id="license-scoring" href="http://www.apache.org/licenses/LICENSE-2.0">Apache V2 License</a> (since the Mirzakhani release).</li>
+              </ul>
+            </div>
+            <div id="get-started">
+              <h2>Get started with H<sub>2</sub>O in 3 easy steps</h2>
+              <p>1. Download H<sub>2</sub>O. This is a zip file that contains everything you need to get started.</p>
+              <p>2. From your terminal, run:</p>
+              <p class="terminal">
+                cd ~/Downloads<br/>
+                unzip h2o-SUBST_PROJECT_VERSION.zip<br/>
+                cd h2o-SUBST_PROJECT_VERSION<br/>
+                java -jar h2o.jar<br/>
+              </p>
+              <p>3. Point your browser to <a href="http://localhost:54321/" target="_blank">http://localhost:54321</a>
+            </div>
           </div>
           <div id="quickstart-r" style="display:none">
             <h2>Use H<sub>2</sub>O directly from R</h2>
