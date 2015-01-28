@@ -1396,6 +1396,14 @@ h2o.predict <- function(object, newdata, ...) {
     stop(paste("Prediction has not yet been implemented for", class(object)))
 }
 
+
+h2o.makeGLMModel <- function(model, beta) {
+  if( missing(model) || class(model) != "H2OGLMModel") 
+    stop('Must specify source glm model')      
+   res = .h2o.__remoteSend(model@data@h2o, .h2o.__GLMMakeModel, model=model@key, names = paste(names(beta),sep=","), beta = as.vector(beta))   
+   .h2o.get.glm(model@data@h2o, as.character(res$destination_key), FALSE)
+}
+
 h2o.confusionMatrix <- function(data, reference) {
   if(class(data) != "H2OParsedData") stop("data must be an H2O parsed dataset")
   if(class(reference) != "H2OParsedData") stop("reference must be an H2O parsed dataset")
