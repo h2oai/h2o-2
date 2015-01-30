@@ -302,29 +302,31 @@ setMethod("show", "H2OGLMModel", function(object) {
     if(!is.null(model$normalized_coefficients)) {
         cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
     }
-    cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
-    cat("\nNull Deviance:    ", round(model$null.deviance,1))
+    if( !(identical(model$df.null, numeric(0))) ) 
+      cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
+    if(is.numeric(model$null.deviance)) cat("\nNull Deviance:    ", round(model$null.deviance,1))
     #Return AIC NaN while calculations for tweedie/gamma not implemented; keep R from throwing error
     if (class(model$aic) != "numeric") {
-      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: NaN")
+      if(is.numeric(model$deviance)) cat("\nResidual Deviance:", round(model$deviance,1), " AIC: NaN")
     } else {
-      cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+      if(is.numeric(model$deviance)) cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
     }
-    cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5), "\n")
+    if(is.numeric(model$null.deviance)) cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5), "\n")
     # cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
-    
+
     family <- model$params$family$family
     if(family == "binomial") {
-        cat(" Best Threshold:", round(model$best_threshold,5))
-        cat("\n\nConfusion Matrix:\n"); print(model$confusion)
-    if (!is.null(model$auc)) {
-        if(.hasSlot(object, "valid"))
-          trainOrValidation <- ifelse(is.na(object@valid@key), "train)", "validation)")
-        else trainOrValidation <- "train)"
-        cat("\nAUC = ", model$auc, "(on", trainOrValidation ,"\n")
-      }
+        if(is.numeric(model$best_threshold)) cat(" Best Threshold:", round(model$best_threshold,5))
+        if(is.matrix(model$confusion)) cat("\n\nConfusion Matrix:\n") ; if(is.matrix(model$confusion)) print(model$confusion)
+        if (!is.null(model$auc)) {
+            if(.hasSlot(object, "valid")) {
+              trainOrValidation <- ifelse(is.na(object@valid@key), "train)", "validation)")
+            } else {trainOrValidation <- "train)"
+            if(is.numeric(model$auc)) cat("\nAUC = ", model$auc, "(on", trainOrValidation ,"\n")
+            }
+          }
     }
-
+    
     if(length(object@xval) > 0) {
         cat("\nCross-Validation Models:\n")
         if(family == "binomial") {

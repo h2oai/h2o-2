@@ -499,26 +499,31 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         if((v = beta_constraints.vec("lower_bounds")) != null) {
           _lbs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.NEGATIVE_INFINITY), map);
           System.out.println("lower bounds = " + Arrays.toString(_lbs));
-          for(int i = 0; i < _lbs.length; ++i)
-            if(_lbs[i] > 0) throw new IllegalArgumentException("lower bounds must be non-positive");
+//          for(int i = 0; i < _lbs.length; ++i)
+//            if(_lbs[i] > 0) throw new IllegalArgumentException("lower bounds must be non-positive");
           if(_srcDinfo._normMul != null) {
             for (int i = numoff; i < _srcDinfo.fullN(); ++i) {
               if (Double.isInfinite(_lbs[i])) continue;
               _lbs[i] /= _srcDinfo._normMul[i - numoff];
             }
           }
-
         }
         if((v = beta_constraints.vec("upper_bounds")) != null) {
           _ubs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.POSITIVE_INFINITY), map);
           System.out.println("upper bounds = " + Arrays.toString(_ubs));
-          for(int i = 0; i < _ubs.length; ++i)
-            if (_ubs[i] < 0) throw new IllegalArgumentException("lower bounds must be non-positive");
+//          for(int i = 0; i < _ubs.length; ++i)
+//            if (_ubs[i] < 0) throw new IllegalArgumentException("lower bounds must be non-positive");
           if(_srcDinfo._normMul != null)
             for(int i = numoff; i < _srcDinfo.fullN(); ++i) {
               if(Double.isInfinite(_ubs[i]))continue;
               _ubs[i] /= _srcDinfo._normMul[i - numoff];
             }
+        }
+
+        if(_lbs != null && _ubs != null) {
+          for(int i = 0 ; i < _lbs.length; ++i)
+            if(_lbs[i] > _ubs[i])
+              throw new IllegalArgumentException("Invalid upper/lower bounds: lower bounds must be <= upper bounds for all variables.");
         }
         if((v =  beta_constraints.vec("beta_given")) != null) {
           _bgs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, 0), map);
