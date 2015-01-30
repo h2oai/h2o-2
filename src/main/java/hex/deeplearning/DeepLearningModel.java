@@ -344,6 +344,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           for (int i=0; i<dinfo._adaptedFrame.numCols() - (get_params().autoencoder ? 0 : 1) && count < 10; ++i) {
             if (dinfo._adaptedFrame.domains()[i] != null && dinfo._adaptedFrame.domains()[i].length >= levelcutoff) {
               Log.warn("Categorical feature '" + dinfo._adaptedFrame._names[i] + "' has cardinality " + dinfo._adaptedFrame.domains()[i].length + ".");
+              count++;
             }
           }
         }
