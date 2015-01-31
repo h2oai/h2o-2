@@ -7,7 +7,7 @@ iris_train.hex <- h2o.uploadFile(conn, train)
 
 heading("Creating DL model in H2O")
 balance_classes <- if (exists("balance_classes")) balance_classes else FALSE
-iris.dl.h2o <- h2o.deeplearning(x = x, y = y, data = iris_train.hex, hidden = hidden, balance_classes = balance_classes, classification = classification, activation = activation, epochs = epochs)
+iris.dl.h2o <- h2o.deeplearning(x = x, y = y, data = iris_train.hex, seed = 1234, reproducible = T, hidden = hidden, balance_classes = balance_classes, classification = classification, activation = activation, epochs = epochs, autoencoder = autoencoder)
 print(iris.dl.h2o)
 
 heading("Downloading Java prediction model code from H2O")

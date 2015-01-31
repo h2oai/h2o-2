@@ -102,10 +102,14 @@ class PredictCSV {
         }
 
         // Print outputCSV column names.
-        output.write("predict");
-        for (int i = 0; i < model.getNumResponseClasses(); i++) {
-            output.write(",");
-            output.write(model.getDomainValues(model.getResponseIdx())[i]);
+        if (model.isAutoEncoder()) {
+          output.write(model.getHeader());
+        } else {
+            output.write("predict");
+            for (int i = 0; i < model.getNumResponseClasses(); i++) {
+                output.write(",");
+                output.write(model.getDomainValues(model.getResponseIdx())[i]);
+            }
         }
         output.write("\n");
 
@@ -132,7 +136,7 @@ class PredictCSV {
             // Parse the CSV line.  Don't handle quoted commas.  This isn't a parser test.
             String trimmedLine = line.trim();
             String[] inputColumnsArray = trimmedLine.split(",");
-            int numInputColumns = model.getNames().length-1; // we do not need response !
+            int numInputColumns = model.isAutoEncoder() ? model.getNames().length : model.getNames().length-1; // we do not need response !
             if (inputColumnsArray.length != numInputColumns) {
                 System.out.println("WARNING: Line " + lineno + " has " + inputColumnsArray.length + " columns (expected " + numInputColumns + ")");
             }
@@ -201,7 +205,7 @@ class PredictCSV {
                 } else {
                     if (i > 0) output.write(",");
                     output.write(Double.toHexString(preds[i]));
-                    if (!model.isClassifier()) break;
+                    if (!model.isClassifier() && !model.isAutoEncoder()) break;
                 }
             }
             output.write("\n");
