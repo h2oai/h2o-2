@@ -76,6 +76,15 @@ public class h2odriver extends Configured implements Tool {
   volatile boolean clusterIsUp = false;
   volatile boolean clusterFailedToComeUp = false;
   volatile boolean clusterHasNodeWithLocalhostIp = false;
+  volatile boolean shutdownRequested = false;
+
+  public void setShutdownRequested() {
+    shutdownRequested = true;
+  }
+
+  public boolean getShutdownRequested() {
+    return shutdownRequested;
+  }
 
   public static class H2ORecordReader extends RecordReader<Text, Text> {
     H2ORecordReader() {
@@ -141,6 +150,7 @@ public class h2odriver extends Configured implements Tool {
       if (_complete) {
         return;
       }
+      _complete = true;
 
       boolean killed = false;
 
@@ -357,12 +367,20 @@ public class h2odriver extends Configured implements Tool {
           t.setCallbackManager(this);
           t.start();
         }
+        catch (SocketException e) {
+          if (getShutdownRequested()) {
+            _ss = null;
+            return;
+          }
+          else {
+            System.out.println("Exception occurred in CallbackManager");
+            System.out.println("ERROR: " + (e.getMessage() != null ? e.getMessage() : "(null)"));
+            e.printStackTrace();
+          }
+        }
         catch (Exception e) {
           System.out.println("Exception occurred in CallbackManager");
-          System.out.println(e.toString());
-          if (e.getMessage() != null) {
-            System.out.println(e.getMessage());
-          }
+          System.out.println("ERROR: " + (e.getMessage() != null ? e.getMessage() : "(null)"));
           e.printStackTrace();
         }
       }
@@ -1044,6 +1062,45 @@ public class h2odriver extends Configured implements Tool {
     }
 
     return rv;
+  }
+
+  /*
+   * Shut down and release resources.
+   *
+   * Normally this happens automatically when the driver process finishes.
+   *
+   * This method was added so that it can be called from inside
+   * Spring Hadoop and the driver can be created and then deleted from inside
+   * a single process.
+   *
+   * This method is blocking.
+   */
+  public void shutdown() {
+    setShutdownRequested();
+
+    if (ctrlc != null) {
+      Runtime.getRuntime().removeShutdownHook(ctrlc);
+      ctrlc.run();
+      ctrlc = null;
+    }
+
+    if (driverCallbackSocket != null) {
+      try {
+        driverCallbackSocket.close();
+        driverCallbackSocket = null;
+      }
+      catch (Exception e) {
+        System.out.println("ERROR: " + (e.getMessage() != null ? e.getMessage() : "(null)"));
+        e.printStackTrace();
+      }
+    }
+
+    // At this point, resources are released.
+    // The job has been killed, so the cluster memory and cpus are freed.
+    // The driverCallbackSocket has been closed so a new one can be made.
+
+    // The callbackManager itself may or may not have finished, but it doesn't
+    // matter since the server socket has been closed.
   }
 
   /**
