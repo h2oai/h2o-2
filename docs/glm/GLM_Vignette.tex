@@ -319,6 +319,33 @@ In summary, H2O's GLM functionalities include:
 \item proximal operator interface
 \end{itemize}
 
+
+\subsection{Alternating Direction Method of Multipliers (ADMM)}
+
+H2O uses Stephen Boyd's Alternating Direction Method of Multipliers (ADMM), which is a distributed optimization method that always converges. ADMM treats large-scale logistic regression model fitting as a constrained convex optimization task. It enforces an additional constraint that the coefficients from all the partitions must equal, while minimizing the user-specified loss threshold. To complete the optimization task, ADMM uses an iterative process. For each iteration, ADMM divides the data into many small partitions then fits an independent logistic regression pattern for each partition. The ADMM algorithm then aggregates the coefficients gathered from all the partitions, determines the consensus coefficients, and returns the data to the partitions for further training. After ten to twenty iterations, the result is a converged solution that approximates the results from training on a single machine. 
+
+For the following optimization task: 
+
+(1) $\min\limits_{x,z} f (x) + g(z)$
+\\
+ (2) s.t. $Ax + Bz = c$
+
+derive the Lagrange value and add a quadratic penalty for violating the constraint:  
+
+$L_p(x,z,y) = f(x) + g(z) + y^T (Ax + Bz - c) + {\rho\over2} \Arrowvert  Ax + Bz - c \Arrowvert {2\over2}$
+\\
+Finally, apply the following algorithm: 
+\\
+For initial primal and dual iterates $x_0, z_0,$ and $y_0$:
+\\
+1. Optimize over the first primal variable $x_{t+1} = argmin_x L_\rho(x, z_t, y_t)$
+\\
+2. Optimize over the second primal variable $z_{t+1} = argmin_x L_\rho(x_{t+1}, z, y_t)$
+\\
+3. Take a gradient step for the dual variable $y_{t+1} = y_t +\rho(Ax_{t+1}+Bz_{t+1}-c)$
+
+The addition of the step size selection for updating $y_t$ and the quadratic term to the Lagrangian are key requirements for ADMM. 
+
 \subsection{Benchmarks}
 
 Using GLM Logistic Regression for the airline dataset, a 42 GB .csv consisting of: 
