@@ -167,7 +167,7 @@ public class h2odriver extends Configured implements Tool {
           Thread.sleep(1000);
         }
       }
-      catch (Exception e) {
+      catch (Exception ignore) {
       }
       finally {
         if (! killed) {
@@ -287,8 +287,6 @@ public class h2odriver extends Configured implements Tool {
    * Start a long-running thread ready to handle Mapper->Driver messages.
    */
   class CallbackManager extends Thread {
-    private boolean _registered = false;
-
     private ServerSocket _ss;
 
     // Nodes and socks
@@ -315,8 +313,6 @@ public class h2odriver extends Configured implements Tool {
         if (_nodes.size() != numNodes) {
           return;
         }
-
-        _registered = true;   // Definitely don't want to do this more than once.
 
         System.out.println("Sending flatfiles to nodes...");
 
@@ -862,7 +858,7 @@ public class h2odriver extends Configured implements Tool {
       Pattern p = Pattern.compile("([1-9][0-9]*)([mgMG])");
       Matcher m = p.matcher(mapperXmx);
       boolean b = m.matches();
-      if (b == false) {
+      if (!b) {
         System.out.println("(Could not parse mapperXmx.");
         System.out.println("INTERNAL FAILURE.  PLEASE CONTACT TECHNICAL SUPPORT.");
         System.exit(1);
@@ -995,7 +991,7 @@ public class h2odriver extends Configured implements Tool {
     ctrlc = new CtrlCHandler();
     Runtime.getRuntime().addShutdownHook(ctrlc);
 
-    System.out.printf("Waiting for H2O cluster to come up...\n", numNodes);
+    System.out.printf("Waiting for H2O cluster to come up...\n");
     int rv = waitForClusterToComeUp();
     if (rv != 0) {
       System.out.println("ERROR: H2O cluster failed to come up");
@@ -1041,7 +1037,6 @@ public class h2odriver extends Configured implements Tool {
    * The run method called by ToolRunner.
    * @param args Arguments after ToolRunner arguments have been removed.
    * @return Exit value of program.
-   * @throws Exception
    */
   @Override
   public int run(String[] args) {
