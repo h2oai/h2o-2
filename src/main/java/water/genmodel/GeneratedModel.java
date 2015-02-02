@@ -34,6 +34,8 @@ public abstract class GeneratedModel implements IGeneratedModel {
     return (gcmp[idx >> 3] & ((byte)1 << (idx % 8))) != 0;
   }
 
+  public String getHeader() { return null; }
+  public boolean isAutoEncoder() { return false; }
   @Override public int getColIdx(String name) {
     String[] names = getNames();
     for (int i=0; i<names.length; i++) if (names[i].equals(name)) return i;

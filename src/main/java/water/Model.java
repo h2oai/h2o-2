@@ -661,7 +661,7 @@ public abstract class Model extends Lockable<Model> {
     return sb;
   }
   private SB toJavaNAMES( SB sb ) { return JCodeGen.toStaticVar(sb, "NAMES", _names, "Names of columns used by model."); }
-  private SB toJavaNCLASSES( SB sb ) { return isClassifier() ? JCodeGen.toStaticVar(sb, "NCLASSES", nclasses(), "Number of output classes included in training data response column.") : sb; }
+  protected SB toJavaNCLASSES( SB sb ) { return isClassifier() ? JCodeGen.toStaticVar(sb, "NCLASSES", nclasses(), "Number of output classes included in training data response column.") : sb; }
   private SB toJavaDOMAINS( SB sb, SB fileContextSB ) {
     sb.nl();
     sb.ii(1);

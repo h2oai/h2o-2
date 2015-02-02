@@ -179,6 +179,8 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_RemoveVec = "2/RemoveVec.json"
 .h2o.__PAGE_Order = "2/Order.json"
 
+.h2o.__GLMMakeModel = "2/GLMMakeModel.json"
+
 # client -- Connection object returned from h2o.init().
 # page   -- URL to access within the H2O server.
 # parms  -- List of parameters to send to the server.

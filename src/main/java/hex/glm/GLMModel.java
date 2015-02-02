@@ -52,6 +52,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="index of lambda_value giving best results")
   int best_lambda_idx;
 
+  public DataInfo dinfo(){return data_info;}
   public Key [] xvalModels() {
     if(submodels == null)return null;
     for(Submodel sm:submodels)
@@ -151,9 +152,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   // fully expanded beta used for scoring
   private double [] global_beta;
 
-  public void setBestSubmodel(double lambda){
 
-  }
 
   @API(help="Validation of the null model")
   public GLMValidation null_validation;
@@ -220,6 +219,25 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "Variable importances", json=true)
   VarImp variable_importances;
 
+  public GLMModel(GLM2 parameters, Key selfKey, Key dataKey, GLMParams glmp, String [] coefficients_names, double [] beta, DataInfo dinfo, double threshold) {
+    super(selfKey,dataKey,dinfo._adaptedFrame,null);
+    this.parameters = (GLM2)parameters.clone();
+    submodels = new Submodel[]{new Submodel(0,beta,null,-1,-1,false)};
+    this.coefficients_names = coefficients_names;
+    alpha = 0;
+    lambda_max = Double.NaN;
+    this.threshold = threshold;
+    useAllFactorLevels = dinfo._useAllFactorLevels;
+    global_beta = submodels[0].beta.clone();
+    this.glm = glmp;
+    this.ymu = Double.NaN;
+    this.prior = Double.NaN;
+    this.warnings = new String[]{"Hand made model."};
+    this.data_info = dinfo;
+    this.beta_eps = Double.NaN;
+    this.job_key = null;
+    best_lambda_idx = 0;
+  }
   public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, GLMValidation nullVal, double beta_eps, double alpha, double lambda_max, double ymu, double prior) {
     super(selfKey,job.source._key == null ? dinfo._frameKey : job.source._key,dinfo._adaptedFrame, /* priorClassDistribution */ null);
     parameters = Job.hygiene((GLM2) job.clone());

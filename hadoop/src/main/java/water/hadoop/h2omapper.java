@@ -409,7 +409,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     }
     if (dataMaxFactorLevelsString != null) {
       if (dataMaxFactorLevelsString.length() > 0) {
-        argsList.add("-max_data_factor_levels");
+        argsList.add("-data_max_factor_levels");
         int dataMaxFactorLevels = Integer.parseInt(dataMaxFactorLevelsString);
         argsList.add(Integer.toString(dataMaxFactorLevels));
       }

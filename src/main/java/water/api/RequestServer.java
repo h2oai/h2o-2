@@ -105,7 +105,7 @@ public class RequestServer extends NanoHTTPD {
     // Register Inspect2 just for viewing frames
     registerRequest(new Inspect2());
     registerRequest(new MMStats());
-
+    registerRequest(new GLMMakeModel());
     // FVec models
     Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",                   "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "Generalized Linear Model",        "Model");

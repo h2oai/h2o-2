@@ -11,7 +11,9 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Random;
 
 /**
@@ -326,6 +328,35 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         units[0] = num_input;
       System.arraycopy(get_params().hidden, 0, units, 1, layers);
       units[layers+1] = num_output;
+
+      if ((long)units[0] > 100000L) {
+        final String[][] domains = dinfo._adaptedFrame.domains();
+        int[] levels = new int[domains.length];
+        for (int i=0; i<levels.length; ++i) {
+          levels[i] = domains[i] != null ? domains[i].length : 0;
+        }
+        Arrays.sort(levels);
+        Log.warn("===================================================================================================================================");
+        Log.warn(num_input + " input features" + (dinfo._cats > 0 ? " (after categorical one-hot encoding)" : "") + ". Can be slow and require a lot of memory.");
+        if (levels[levels.length-1] > 0) {
+          int levelcutoff = levels[levels.length-1-Math.min(10, levels.length)];
+          int count = 0;
+          for (int i=0; i<dinfo._adaptedFrame.numCols() - (get_params().autoencoder ? 0 : 1) && count < 10; ++i) {
+            if (dinfo._adaptedFrame.domains()[i] != null && dinfo._adaptedFrame.domains()[i].length >= levelcutoff) {
+              Log.warn("Categorical feature '" + dinfo._adaptedFrame._names[i] + "' has cardinality " + dinfo._adaptedFrame.domains()[i].length + ".");
+              count++;
+            }
+          }
+        }
+        Log.warn("Suggestions:");
+        Log.warn(" *) Limit the size of the first hidden layer");
+        if (dinfo._cats > 0) {
+          Log.warn(" *) Limit the total number of one-hot encoded features with the parameter 'max_categorical_features'");
+          Log.warn(" *) Run h2o.interaction(...,pairwise=F) on high-cardinality categorical columns to limit the factor count, see http://learn.h2o.ai");
+        }
+        Log.warn("===================================================================================================================================");
+      }
+
       // weights (to connect layers)
       dense_row_weights = new Neurons.DenseRowMatrix[layers+1];
       dense_col_weights = new Neurons.DenseColMatrix[layers+1];
@@ -1019,6 +1050,21 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return sb.toString();
   }
 
+  public String getHeader() {
+    assert get_params().autoencoder;
+    StringBuilder sb = new StringBuilder();
+    final int len = model_info().data_info().fullN();
+    String prefix = "reconstr_";
+    assert (model_info().data_info()._responses == 0);
+    String[] coefnames = model_info().data_info().coefNames();
+    assert (len == coefnames.length);
+    for (int c = 0; c < len; c++) {
+      if (c>0) sb.append(",");
+      sb.append(prefix + coefnames[c]);
+    }
+    return sb.toString();
+  }
+
   /**
    * This is an overridden version of Model.score(). Make either a prediction or a reconstruction.
    * @param frame Test dataset
@@ -1217,6 +1263,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     DeepLearningTask.step(-1, neurons, model_info, false, null); // reconstructs data in expanded space
     float[] in  = neurons[0]._a.raw(); //input (expanded)
     float[] out = neurons[neurons.length - 1]._a.raw(); //output (expanded)
+    // DEBUGGING
+//    Log.info(Arrays.toString(data));
+//    Log.info(Arrays.toString(in));
+//    Log.info(Arrays.toString(out));
     assert(in.length == out.length);
 
     // First normalize categorical reconstructions to be probabilities
@@ -1234,6 +1284,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       model_info().data_info().unScaleNumericals(out, out); //only modifies the numericals
       System.arraycopy(out, 0, preds, 0, out.length); //copy reconstruction into preds
     }
+    // DEBUGGING
+//    Log.info(Arrays.toString(preds));
+//    Log.info("");
     return l2;
   }
 
@@ -1642,6 +1695,17 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return true;
   }
 
+  @Override
+  protected SB toJavaNCLASSES(SB sb) {
+    return !get_params().autoencoder ? super.toJavaNCLASSES(sb) :
+            JCodeGen.toStaticVar(sb, "NCLASSES", model_info.units[model_info.units.length-1], "Number of output features (same as features of training data).");
+  }
+
+  @Override
+  protected void toJavaFillPreds0(SB bodySb) {
+    if (!get_params().autoencoder) super.toJavaFillPreds0(bodySb);
+  }
+
   public void toJavaHtml(StringBuilder sb) {
     sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
             "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">");
@@ -1701,6 +1765,13 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     for (int i=0;i<neurons.length;++i)
       layers[i] = neurons[i].units;
     JCodeGen.toStaticVar(sb, "NEURONS", layers, "Number of neurons for each layer.");
+
+    if (get_params().autoencoder) {
+      sb.i(1).p("@Override public int getPredsSize() { return " + model_info.units[model_info.units.length-1] + "; }").nl();
+      sb.i(1).p("@Override public boolean isAutoEncoder() { return true; }").nl();
+      sb.i(1).p("@Override public String getHeader() { return \"" + getHeader() + "\"; }").nl();
+
+    }
 
     // activation storage
     sb.i(1).p("// Storage for neuron activation values.").nl();
@@ -1795,6 +1866,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       bodySb.i(0).p("}").nl();
     }
+    bodySb.i().p("java.util.Arrays.fill(ACTIVATION[0],0);").nl();
     if (cats > 0) {
       bodySb.i().p("for (i=0; i<ncats; ++i) ACTIVATION[0][CATS[i]] = 1f;").nl();
     }
@@ -1807,6 +1879,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     boolean tanh=(get_params().activation == DeepLearning.Activation.Tanh || get_params().activation == DeepLearning.Activation.TanhWithDropout);
     boolean relu=(get_params().activation == DeepLearning.Activation.Rectifier || get_params().activation == DeepLearning.Activation.RectifierWithDropout);
     boolean maxout=(get_params().activation == DeepLearning.Activation.Maxout || get_params().activation == DeepLearning.Activation.MaxoutWithDropout);
+
+    final String stopping = get_params().autoencoder ? "(i<=ACTIVATION.length-1)" : "(i<ACTIVATION.length-1)";
 
     // make prediction: forward propagation
     bodySb.i().p("for (i=1; i<ACTIVATION.length; ++i) {").nl();
@@ -1823,20 +1897,20 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     if (!maxout) {
       bodySb.i(3).p("ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
     } else {
-      bodySb.i(3).p("if (i<ACTIVATION.length-1) cmax = Math.max(ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c], cmax);").nl();
+      bodySb.i(3).p("if " + stopping + " cmax = Math.max(ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c], cmax);").nl();
       bodySb.i(3).p("else ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
     }
     bodySb.i(2).p("}").nl();
     if (maxout) {
-      bodySb.i(2).p("if (i<ACTIVATION.length-1) ACTIVATION[i][r] = Float.isInfinite(cmax) ? 0f : cmax;").nl();
+      bodySb.i(2).p("if "+ stopping +" ACTIVATION[i][r] = Float.isInfinite(cmax) ? 0f : cmax;").nl();
     }
     bodySb.i(2).p("ACTIVATION[i][r] += BIAS[i][r];").nl();
     if (maxout) {
-      bodySb.i(2).p("if (i<ACTIVATION.length-1) rmax = Math.max(rmax, ACTIVATION[i][r]);").nl();
+      bodySb.i(2).p("if " + stopping + " rmax = Math.max(rmax, ACTIVATION[i][r]);").nl();
     }
     bodySb.i(1).p("}").nl();
 
-    if (!maxout) bodySb.i(1).p("if (i<ACTIVATION.length-1) {").nl();
+    if (!maxout) bodySb.i(1).p("if " + stopping + " {").nl();
     bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
     if (tanh) {
       bodySb.i(3).p("ACTIVATION[i][r] = 1f - 2f / (1f + (float)Math.exp(2*ACTIVATION[i][r]));").nl();
@@ -1846,7 +1920,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       bodySb.i(3).p("if (rmax > 1 ) ACTIVATION[i][r] /= rmax;").nl();
     }
     if (get_params().hidden_dropout_ratios != null) {
-      if (maxout) bodySb.i(1).p("if (i<ACTIVATION.length-1) {").nl();
+      if (maxout) bodySb.i(1).p("if " + stopping + " {").nl();
       bodySb.i(3).p("ACTIVATION[i][r] *= HIDDEN_DROPOUT_RATIOS[i-1];").nl();
       if (maxout) bodySb.i(1).p("}").nl();
     }
@@ -1872,18 +1946,40 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       bodySb.i(2).p("}").nl();
       bodySb.i(1).p("}").nl();
       bodySb.i().p("}").nl();
-    } else {
+    } else if (!get_params().autoencoder) { //Regression
       bodySb.i().p("}").nl();
+      bodySb.i().p("if (i == ACTIVATION.length-1) {").nl();
       // regression: set preds[1], FillPreds0 will put it into preds[0]
       if (model_info().data_info()._normRespMul != null) {
-        bodySb.i().p("preds[1] = (float) (ACTIVATION[ACTIVATION.length-1][0] / NORMRESPMUL[0] + NORMRESPSUB[0]);").nl();
+        bodySb.i().p("preds[1] = (float) (ACTIVATION[i][0] / NORMRESPMUL[0] + NORMRESPSUB[0]);").nl();
       }
       else {
-        bodySb.i().p("preds[1] = ACTIVATION[ACTIVATION.length-1][0];").nl();
+        bodySb.i().p("preds[1] = ACTIVATION[i][0];").nl();
       }
       bodySb.i().p("if (Float.isNaN(preds[1])) throw new RuntimeException(\"Predicted regression target NaN!\");").nl();
+      bodySb.i().p("}").nl();
+    } else { //AutoEncoder
+      bodySb.i(1).p("if (i == ACTIVATION.length-1) {").nl();
+      bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; r++) {").nl();
+      bodySb.i(3).p("if (Float.isNaN(ACTIVATION[i][r]))").nl();
+      bodySb.i(4).p("throw new RuntimeException(\"Numerical instability, reconstructed NaN.\");").nl();
+      bodySb.i(3).p("preds[r] = ACTIVATION[i][r];").nl();
+      bodySb.i(2).p("}").nl();
+      if (model_info().data_info()._nums > 0) {
+        int ns = model_info().data_info().numStart();
+        bodySb.i(2).p("for (int k=" + ns + "; k<" + model_info().data_info().fullN() + "; ++k) {").nl();
+        bodySb.i(3).p("preds[k] = preds[k] / (float)NORMMUL[k-" + ns + "] + (float)NORMSUB[k-" + ns + "];").nl();
+        bodySb.i(2).p("}").nl();
+      }
+      bodySb.i(1).p("}").nl();
+      bodySb.i().p("}").nl();
+      // DEBUGGING
+//      bodySb.i().p("System.out.println(java.util.Arrays.toString(data));").nl();
+//      bodySb.i().p("System.out.println(java.util.Arrays.toString(ACTIVATION[0]));").nl();
+//      bodySb.i().p("System.out.println(java.util.Arrays.toString(ACTIVATION[ACTIVATION.length-1]));").nl();
+//      bodySb.i().p("System.out.println(java.util.Arrays.toString(preds));").nl();
+//      bodySb.i().p("System.out.println(\"\");").nl();
     }
-
     fileCtxSb.p(model);
     toJavaUnifyPreds(bodySb);
     toJavaFillPreds0(bodySb);
