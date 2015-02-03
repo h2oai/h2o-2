@@ -35,8 +35,10 @@
 
 \newpage
 
-\section{What is H2O?}
+\section{Introduction} \label{1}
+This document describes Generalized Linear Model implementation on H2O platform, list of supported features and how to use them from R. 
 
+\subsection{What is H2O?}
 It is the only alternative to combine the power of highly advanced algorithms, the freedom of open source, and the capacity of truly scalable in-memory processing for big data on one or many nodes. Combined, these capabilities make it faster, easier, and more cost-effective to harness big data to maximum benefit for the business. 
 
 Data collection is easy. Decision making is hard. H2O makes it fast and easy to derive insights from your data through faster and better predictive modeling. Existing Big Data stacks are batch-oriented. Search and analytics need to be interactive. Use machines to learn machine-generated data. And more data beats better algorithms. 
@@ -51,14 +53,11 @@ Download H2O
 Join the Community
 \url{h2ostream@googlegroups.com} and \url{github.com/h2oai/h2o.git}
 
-\section{Introduction} \label{1}
+\subsection{What is GLM?}
+Generalized linear models (GLM) are the workhorse for most predictive analysis use cases. GLM can be used for both regression and classification, it scales well to large datasets and is based on solid statistical background. It is a ganrelaztion of linear models, allowing for modeling of data with exponential distributions and for categorical data (classification). GLM models are fitted solving the maximum likelihood optimization problem.
 
-Generalized linear models (GLM) are the workhorse for most predictive analysis use cases.  GLM is mostly used for regression (for example, logistic and linear regression).  Linear and logistic modeling are the standards of most predictive analytics. In addition to linear and logistic regression, GLM can also produce other types of regression models, such as Poisson, binomial, Tweedie, and gamma.  Dependent and independent variables measure the outcome based on fitting an equation. 
-
-Generalized linear models are some of the most commonly-used models for many types of data analysis use cases. While some data analysis can be done using general linear models, if the variables are more complex, general linear models may not be as accurate. For example, if the dependent variable has a non-continuous distribution or if the effect of the predictors is not linear, generalized linear models will produce more accurate results than general linear models.  
-
-H2O's GLM algorithm fits the generalized linear model with elastic net penalties. The model fitting computation is distributed, extremely fast,and scales extremely well for models with a limited number (~ low thousands) of predictors with non-zero coefficients. The algorithm can compute models for a single value of a penalty argument or the full regularization path, similar to glmnet.  This document describes the usage of H2O's implementation of GLM in R.
-
+\subsection{GLM on H2O}
+H2O's GLM algorithm fits the generalized linear model with elastic net penalties. The model fitting computation is distributed, extremely fast, and scales extremely well for models with a limited number (~ low thousands) of predictors with non-zero coefficients. The algorithm can compute models for a single value of a penalty argument or the full regularization path, similar to glmnet package for R\cite{glmnet}. 
 H2O's GLM fits the model by solving following problem:
 
 \[ \min\limits_{\beta}\ {{1\over{N}} log-likelihood(family,\beta)  + \lambda (\alpha \| \beta \|_1}  + {1- \alpha \over 2} \| \beta \|_2^2) \]
@@ -67,13 +66,24 @@ The elastic net parameter $\alpha$ controls the penalty distribution between L1 
 
 The main advantage of an L1 penalty is that with sufficiently high $\lambda$, it produces a sparse solution; the L2-only penalty does not reduce coefficients to exactly 0. The two penalties also differ in the case of correlated predictors. The L2 penalty shrinks coefficients for correlated columns towards each other, while the L1 penalty will pick one and drive the others to zero. Using the elastic net argument $\alpha$, you can combine these two behaviors. It is also useful to always add a small L2 penalty to increase numerical stability.
 
-As mentioned before, model-fitting works and scales well if numcols $<<$ numrows. However, in many cases we want to fit a GLM model over many predictors (10,000 or more) with an L1 penalty, selecting only a few of them for the model. The rest will have a zero coefficient and will not be part of the model. To maintain excellent performance and scaling properties in such cases, we employ strong rules  (as described in ``Strong Rules for Discarding Predictors in Lasso-type Problems") to limit the set of active coefficients. The performance of the algorithm is then limited by the number of coefficients in the model, rather than the number of coefficients present in the training data set. 
-
-The algorithm can handle categorical variables, which are treated as special kinds of sparse vectors: each categorical column is expanded on the fly into multiple binary vectors. 
+Similarly to \cite{glmnet}, h2o can compute the full regularization path, starting from null-model (maximum penalty) going down to minimally penalized model. This search is made efficient by employing strong-rules \cite{strong} to filter out inactive coefficients (coefficients pushed to zero by penalty). Computing full regularization path is usefull in that it gives more insight about the importance of indiviaul coefficvient, quiality of the model and it allows to select optimal amount of penalization for the given problem and data.
 
 
+\subsubsection{Summary of features} 
+In summary, H2O's GLM functionalities include:
 
-To prevent such a correlation, we usually skip one of the levels (the first one). This is not necessary with a non-zero penalty and H2O has an option to include or factor levels in the model. All levels are always included when computing the whole regularization path. This is useful when interpreting the variable importance of the model. 
+\begin{itemize} 
+\item fits generalized linear model with elastic net penalty
+\item supported GLM families include Gaussian, Binomial, Poisson and Gamma
+\item efficient handling of categorical variables
+\item efficient computation full regularization path
+\item efficient distributed n-fold cross validation
+\item distributed grid search over elastic-net parameter $\alpha$
+\item upper and lower bounds for coefficients
+\item proximal operator interface
+\end{itemize}
+
+
 
 \section{Installation} 
 
@@ -287,6 +297,15 @@ The gamma distribution is useful for modeling a positive continuous response var
 
 It is usually used with inverse or log link, inverse is the canonical link.
 
+The model is fitted by solving:
+
+\[  \min\limits_{\beta,\beta_0} { {1 \over N}\sum\limits_{i=1}\limits^{N}{y_i \over (x_i^{T}\beta  + \beta_0)} - log({x_i^{T}\beta  + \beta_0})  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \| \beta \|_2^2} \]
+
+Deviance is 
+
+\[D = -2\sum\limits_{i=1}\limits^{N}{log({y_i \over \hat{y}_i}) - {y_i - \hat{y}_i \over\hat{y}_i }}\]
+
+
 \textbf{Example}\\
 To change the link function from the default inverse function to the log link function, modify the \textit{link} argument.
 
@@ -303,68 +322,6 @@ To change the link function from the default inverse function to the log link fu
 This section describes the specifics of GLM implementation on H2O, such as selecting regularization parameters and handling of categoricals. 
 
 H2O's GLM implementation presents a high-performance distributed algorithm, which scales linearly with the number of rows and works extremely well for datasets with limited number of active predictors. 
-
-\subsection{Summary of features} 
-In summary, H2O's GLM functionalities include:
-
-
-\begin{itemize} 
-\item fits generalized linear model with elastic net penalty
-\item supported GLM families include Gaussian, Binomial, Poisson and Gamma
-\item efficient handling of categorical variables
-\item efficient computation full regularization path
-\item efficient distributed n-fold cross validation
-\item distributed grid search over elastic-net parameter $\alpha$
-\item upper and lower bounds for coefficients
-\item proximal operator interface
-\end{itemize}
-
-
-\subsection{Alternating Direction Method of Multipliers (ADMM)}
-
-H2O uses Stephen Boyd's Alternating Direction Method of Multipliers (ADMM), which is a distributed optimization method that always converges. ADMM treats large-scale logistic regression model fitting as a constrained convex optimization task. It enforces an additional constraint that the coefficients from all the partitions must equal, while minimizing the user-specified loss threshold. To complete the optimization task, ADMM uses an iterative process. For each iteration, ADMM divides the data into many small partitions then fits an independent logistic regression pattern for each partition. The ADMM algorithm then aggregates the coefficients gathered from all the partitions, determines the consensus coefficients, and returns the data to the partitions for further training. After ten to twenty iterations, the result is a converged solution that approximates the results from training on a single machine. 
-
-For the following optimization task: 
-
-(1) $\min\limits_{x,z} f (x) + g(z)$
-\\
- (2) s.t. $Ax + Bz = c$
-
-derive the Lagrange value and add a quadratic penalty for violating the constraint:  
-
-$L_p(x,z,y) = f(x) + g(z) + y^T (Ax + Bz - c) + {\rho\over2} \Arrowvert  Ax + Bz - c \Arrowvert {2\over2}$
-\\
-Finally, apply the following algorithm: 
-\\
-For initial primal and dual iterates $x_0, z_0,$ and $y_0$:
-\\
-1. Optimize over the first primal variable $x_{t+1} = argmin_x L_\rho(x, z_t, y_t)$
-\\
-2. Optimize over the second primal variable $z_{t+1} = argmin_x L_\rho(x_{t+1}, z, y_t)$
-\\
-3. Take a gradient step for the dual variable $y_{t+1} = y_t +\rho(Ax_{t+1}+Bz_{t+1}-c)$
-
-The addition of the step size selection for updating $y_t$ and the quadratic term to the Lagrangian are key requirements for ADMM. 
-
-\subsection{Benchmarks}
-
-Using GLM Logistic Regression for the airline dataset, a 42 GB .csv consisting of: 
-
-\begin{itemize}
-\item 1 billion rows
-\item 12 input columns
-\item 1 outcome column
-\item 9 numerical features
-\item 3 categorical features (with cardinalities 30, 376, and 380)
-\end{itemize}
-
-H2O has the following benchmarks for an AWS EC2 c3.2xlarge with 8 cores and 15 GB per node and a 1 GbE interconnect: 
-\begin{itemize}
-\item 16 EC2 Nodes: 34.9 seconds for 3 iterations (numerical and categorical)
-\item 16 EC2 Nodes: 16.5 seconds for 2 iterations (numerical)
-\item 48 EC2 Nodes: 14.2 seconds for 3 iterations (numerical and categorical)
-\item 48 EC2 Nodes: 5.6 seconds for 2 iterations (numerical)
-\end{itemize}
 
 \subsection{Input Parameters}
 \subsubsection{Predictors \& Response}
@@ -383,19 +340,18 @@ Family and Link are both optional parameters. The default family is \textit{Gaus
 While it is possible to select something other than a canonical link, it can lead to an unstable computation. Recommended combinations are Gaussian and Log, or Inverse and Gamma with log.  
 
 \subsubsection{Regularization}
-Regularization is specified by \textit{alpha}, \textit{lambda}, \textit{lambda\_search}, \textit{lambda\_min\_ratio}, \textit{nlambda} and the related \textit{return\_all\_lambda} arguments, all of which are optional. 
-\textbf{Note:} Lambda values are capped at $\lambda_{max}$, which is the smallest $\lambda$ s.t. the solution is empty model (all zeros except for intercept).
 
-The \textit{alpha} argument controls the elastic net penalty distribution. It can have any value in (0,1) range (inclusive) or a vector of values (triggers grid search).
+H2O supports elastic net regularization which is parametrized by \textit{alpha} and \textit{lambda} arguments (similarly to \cite{glmnet})
+
+The \textit{alpha} argument controls the elastic net penalty distribution to L1 and L2 norms. It can have any value in [0,1] range (inclusive) or a vector of values (triggers grid search). Alpha = 0 leads to \textbf{Ridge Regression}, alpha = 1 leads to \textbf{LASSO}.  
 
 The \textit{lambda} argument controls the penalty strength; it can have any positive value or a vector of values (which triggers grid search).
+\textbf{Note:} Lambda values are capped at $\lambda_{max}$, which is the smallest $\lambda$ s.t. the solution is empty model (all zeros except for intercept).
 
-If you enable \textit{lambda\_search}, H2O performs an automatic grid search over the lambda parameter (the lambda parameter's value is ignored in this case). H2O generates a list of \textit{nlambda} values starting at $\lambda_{max}$ and ending at $\lambda_{min} = \lambda_{max}$ \textit{lambda\_min\_ratio} and then computes a model for each of them.
-This method is highly recommended if computation time is not a critical issue, as it will provide better and more stable results in general. 
- 
-\textit{lambda\_min\_ratio} and \textit{nlambda} parametrize the \textit{lambda\_search}.
-
-If you enable \textit{return\_all\_lambda} before running a grid search over lambda, H2O returns a list of models, one each per lambda. The default value is false, in which case H2O returns the best model.  
+\subsubsection{Lambda-Search}
+Lambda search is special case of automatic and efficient grid search over lambda argument and is described in its own section. Lambda search can be enabled by using the \textit{lambda\_search = T} option. It can be further parametrized by the \textit{n\_lambdas} and \textit{lambda\_min\_ratio} parameters. 
+\textit{n\_lambdas} specifies the number of lambda values on the regularization path
+\textit{lambda\_min\_ratio} specifies the minimal lambda value to be computed as a ration of $\lambda_{max}$
 
 \subsection{Coefficient Constraints}
 Coefficient constraints allow you to set special conditions over the model coefficients. Currently supported constraints are upper and lower bounds and proximal operator \cite{prox} interface. 
@@ -533,6 +489,8 @@ The $\lambda$-list is automatically generated as an exponentially decreasing seq
 the smallest $\lambda$ s.t.the solution is a model with all 0s, to $\lambda_{min} = $ \textit{lambda\_min\_ratio} * $ \lambda_{max}$.
 
 H2O computes $\lambda$-models sequentially and in decreasing order, warm-starting the model for $\lambda_k$ with the solution for $\lambda_{k-1}$. By warm-starting the models, we get better performance: typically models for subsequent $\lambda$s are close to each other, so we need only a few iterations per $\lambda$ (typically 2 or 3). We also achieve greater numerical stability, since models with a higher penalty are easier to compute; so, we start with an easy problem and then keep making only small changes to it.
+
+\textbf{Note:} \textit{nlambda}, \textit{lambda.min.ratio} also specify the relative distance of any two lambdas in the sequence. This is important for the application of recursive strong rules, which are only effectove if the neighbouring lambdas are \textit{"close"} to each other. The default values are \textit{nlambda} = 100 and $\lambda_{min} = \lambda_{max} 1e^{-4}$, which gives us the ratio of.   In order for strong rules to work, you should keep the ratio close to the default.  
     
 \subsubsection{Grid Search Over Lambdas}
 While automatic lambda search is the preferred method, it is also possible to do a grid search over lambda values by passing in vector of lambdas and disabling the lambda-search option. The behavior will be identical to lambda search, except H2O will use a user-supplied list of lambdas instead (still capped at $\lambda_{max}$).
@@ -559,6 +517,7 @@ And the overall memory cost is given by:
 \[ O(MN + N^2pn)\]
 
 In case of $M >> N$, we can forget the second term and the algorithm scales linearly both in the number of nodes and number of CPUs per node. However, the equation above also implies that our algorithm is limited in the number of predictors it can handle, since the size of the Gram matrix grows quadratically (due to a memory and network throughput issue) with the number of predictors and its decomposition cost grows as the cube of the number of predictors (which is computational cost issue). H2O can get around these limitations in many cases due to its handling of categoricals and by employing strong rules to filter out inactive predictors; both are described later in this chapter.  
+
 
 \section{Use case: Classification with Airline data}
 
