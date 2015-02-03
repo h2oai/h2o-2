@@ -821,6 +821,37 @@ public class h2odriver extends Configured implements Tool {
     }
   }
 
+  /*
+   * Clean up driver-side resources after the hadoop job has finished.
+   *
+   * This method was added so that it can be called from inside
+   * Spring Hadoop and the driver can be created and then deleted from inside
+   * a single process.
+   */
+  private void cleanUpDriverResources() {
+    ctrlc.setComplete();
+    Runtime.getRuntime().removeShutdownHook(ctrlc);
+    ctrlc = null;
+
+    try {
+      setShutdownRequested();
+      driverCallbackSocket.close();
+      driverCallbackSocket = null;
+    }
+    catch (Exception e) {
+      System.out.println("ERROR: " + (e.getMessage() != null ? e.getMessage() : "(null)"));
+      e.printStackTrace();
+    }
+
+    // At this point, resources are released.
+    // The hadoop job has completed (job.isComplete() is true),
+    // so the cluster memory and cpus are freed.
+    // The driverCallbackSocket has been closed so a new one can be made.
+
+    // The callbackManager itself may or may not have finished, but it doesn't
+    // matter since the server socket has been closed.
+  }
+
   private int run2(String[] args) throws Exception {
     // Parse arguments.
     // ----------------
@@ -1019,7 +1050,8 @@ public class h2odriver extends Configured implements Tool {
     System.out.println("(Press Ctrl-C to kill the cluster)");
     System.out.println("Blocking until the H2O cluster shuts down...");
     waitForClusterToShutdown();
-    ctrlc.setComplete();
+    cleanUpDriverResources();
+
     boolean success = job.isSuccessful();
     int exitStatus;
     exitStatus = success ? 0 : 1;
@@ -1057,45 +1089,6 @@ public class h2odriver extends Configured implements Tool {
     }
 
     return rv;
-  }
-
-  /*
-   * Shut down and release resources.
-   *
-   * Normally this happens automatically when the driver process finishes.
-   *
-   * This method was added so that it can be called from inside
-   * Spring Hadoop and the driver can be created and then deleted from inside
-   * a single process.
-   *
-   * This method is blocking.
-   */
-  public void shutdown() {
-    setShutdownRequested();
-
-    if (ctrlc != null) {
-      Runtime.getRuntime().removeShutdownHook(ctrlc);
-      ctrlc.run();
-      ctrlc = null;
-    }
-
-    if (driverCallbackSocket != null) {
-      try {
-        driverCallbackSocket.close();
-        driverCallbackSocket = null;
-      }
-      catch (Exception e) {
-        System.out.println("ERROR: " + (e.getMessage() != null ? e.getMessage() : "(null)"));
-        e.printStackTrace();
-      }
-    }
-
-    // At this point, resources are released.
-    // The job has been killed, so the cluster memory and cpus are freed.
-    // The driverCallbackSocket has been closed so a new one can be made.
-
-    // The callbackManager itself may or may not have finished, but it doesn't
-    // matter since the server socket has been closed.
   }
 
   /**
