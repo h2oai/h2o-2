@@ -34,6 +34,9 @@ hdp2.0.6_JARS=$(hdp2.0.6_JAR_DIR)/hadoop-common-2.2.0.2.0.6.0-101.jar${SEP}$(hdp
 hdp2.1_JAR_DIR=../lib/hadoop/hdp2.1
 hdp2.1_JARS=$(hdp2.1_JAR_DIR)/hadoop-common-2.4.0.2.1.1.0-385.jar${SEP}$(hdp2.1_JAR_DIR)/hadoop-mapreduce-client-core-2.4.0.2.1.1.0-385.jar${SEP}${hdp2.1_JAR_DIR}/hadoop-annotations-2.4.0.2.1.1.0-385.jar
 
+hdp2.2_JAR_DIR=../lib/hadoop/hdp2.2
+hdp2.2_JARS=$(hdp2.2_JAR_DIR)/hadoop-common-2.6.0.2.2.0.0-2041.jar${SEP}$(hdp2.2_JAR_DIR)/hadoop-mapreduce-client-core-2.6.0.2.2.0.0-2041.jar${SEP}${hdp2.2_JAR_DIR}/hadoop-annotations-2.6.0.2.2.0.0-2041.jar
+
 # ------------------------------
 
 # Figure out classpath separator for Unix vs. Windows
@@ -90,6 +93,7 @@ build: clean
 	$(MAKE) build_inner HADOOP_VERSION=hdp1.3.2  YARN=false L4JOVR=false
 	$(MAKE) build_inner HADOOP_VERSION=hdp2.0.6  YARN=false L4JOVR=false
 	$(MAKE) build_inner HADOOP_VERSION=hdp2.1    YARN=false L4JOVR=false
+	$(MAKE) build_inner HADOOP_VERSION=hdp2.2    YARN=false L4JOVR=false
 	rm -rf ../target/hadoop
 	mkdir ../target/hadoop
 	cp README.txt ../target/hadoop
