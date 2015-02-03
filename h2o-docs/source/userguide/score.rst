@@ -5,7 +5,7 @@ Score
 .. toctree::
    :maxdepth: 1
 
-   scoreMulitModel
+   scoreMultiModel
    scorePOJO
    scorePCAscore
    scoreauc
