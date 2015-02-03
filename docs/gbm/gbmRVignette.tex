@@ -11,7 +11,7 @@
 \usepackage{hyperref}
 \hypersetup{colorlinks, urlcolor={blue}}
 \usepackage{graphicx}
-\graphicspath{ {images/} }
+\graphicspath{{images/}}
 
 \begin{document}
 
@@ -34,7 +34,7 @@ Data collection is easy. Decision making is hard. H2O makes it fast and easy to 
 
 With H2O, you can make better predictions by harnessing sophisticated, ready-to-use algorithms and the processing power you need to analyze bigger data sets, more models, and more variables. 
 
-Get started with minimal effort and investment. H2O is an extensible open source platform that offers the most pragmatic way to put big data to work for your business. With H2O, you can work with your existing languages and tools. Further, you can extend the platform seamlessly into your Hadoop environments. Get H2O!
+Get started with minimal effort and investment. H2O is an extensible open source platform that offers the most pragmatic way to put big data to work for your business. With H2O, you can work with your existing languages and tools. You can further extend the platform seamlessly into your Hadoop environments. Get H2O!
 
 Download H2O
 {\url{http://www.h2o.ai/download}}
@@ -45,7 +45,7 @@ Join the Community
 
 \section{Introduction}
 
-This vignette presents the gradient boosted machine (GBM) framework in the H2O package at {\url{http://cran.r-project.org/web/packages/h2o/index.html}}. Further documentation on H2O's system and algorithms can be found at the h2o.ai website at {\url{http://docs.h2o.ai}} and the R package manual at {\url{http://cran.r-project.org/web/packages/h2o/h2o.pdf}}. The full datasets and code of this vignette can be found at the H2O Github at {\url{github.com/h2oai/h2o.git}}. This introductory section provides instructions on getting H2O started, followed by a brief overview of gradient boosting.
+This vignette presents the gradient boosted machine (GBM) framework in the H2O package at {\url{http://cran.r-project.org/web/packages/h2o/index.html}}. Further documentation on H2O's system and algorithms can be found at the h2o.ai website at {\url{http://docs.h2o.ai}} and the R package manual at {\url{http://cran.r-project.org/web/packages/h2o/h2o.pdf}}. The full datasets and code of this vignette can be found at the H2O Github at {\url{http://github.com/h2oai/h2o}}. This introductory section provides instructions on getting H2O started, followed by a brief overview of gradient boosting.
 
 
 \section{Installation}
@@ -75,9 +75,7 @@ To download R Studio:
 
 \subsection{Installing H2O in R}
 \begin{enumerate}
-\item Load the latest CRAN H2O package by running \begin{spverbatim} install.packages("h2o") \end{spverbatim} 
-
-Note: Our push to CRAN will be behind the bleeding edge version and due to resource constraints, may be behind the published version. However, there is a best-effort to keep the versions the same. 
+\item Load the latest CRAN H2O package by running \begin{spverbatim} install.packages("h2o") \end{spverbatim}\footnote{Note: Our push to CRAN will be behind the bleeding edge version and due to resource constraints, may be behind the published version. However, there is a best-effort to keep the versions the same.} 
 
 To get the latest build, download it from \url{http://h2o.ai/download} and make sure to run the following (replacing the asterisks [*] with the version number): 
 \begin{spverbatim}
@@ -99,25 +97,61 @@ If you are a developer who wants to make changes to the R package before buildin
 
 After making the build, navigate to the Rcran folder with the R package in the build’s directory, then run and install.
 \begin{spverbatim}
-$ make clean
-$ make build
-$ cd target/R/src/contrib
-$ R CMD INSTALL h2o_2.9.0.99999.tar.gz
-* installing to library 'C:/Users//Documents/R/win-library/3.0'
+ cd ~/Documents/h2o/target/Rcran (master)
+$ R CMD INSTALL h2o_version#.tar.gz
+* installing to library 'C:/Users/H2O-User/Documents/R/win-library/3.0'
 * installing *source* package 'h2o' ...
 ** R
 ** demo
 ** inst
-...
+** preparing package for lazy loading
+Warning: package 'statmod' was built under R version 3.0.3
+Creating a generic function for 'summary' from package 'base' in package 'h2o'
+Creating a generic function for 'colnames' from package 'base' in package 'h2o'
+Creating a generic function for 't' from package 'base' in package 'h2o'
+Creating a generic function for 'colnames<-' from package 'base' in package 'h2o'
+Creating a generic function for 'nrow' from package 'base' in package 'h2o'
+Creating a generic function for 'ncol' from package 'base' in package 'h2o'
+Creating a generic function for 'sd' from package 'stats' in package 'h2o'
+Creating a generic function for 'var' from package 'stats' in package 'h2o'
+Creating a generic function for 'as.factor' from package 'base' in package 'h2o'
+Creating a generic function for 'is.factor' from package 'base' in package 'h2o'
+Creating a generic function for 'levels' from package 'base' in package 'h2o'
+Creating a generic function for 'apply' from package 'base' in package 'h2o'
+Creating a generic function for 'findInterval' from package 'base' in package 'h2o'
+** help
 *** installing help indices
 ** building package indices
 ** testing if installed package can be loaded
-...
-DONE (h2o)
+*** arch - i386
+Warning: package 'statmod' was built under R version 3.0.3
+*** arch - x64
+Warning: package 'statmod' was built under R version 3.0.3
+* DONE (h2o)
 \end{spverbatim}
 
 
 \section{H2O Initialization}
+
+Use the command {\texttt{h2o.init()}} to launch H2O. The following section describes the parameters for the {\texttt{h2o.init()}} command. 
+
+\subsection{H2O Initialization Parameters}
+
+The {\texttt{h2o.init()}} command creates an H2O cluster or establishes a connection to an existing cluster. The following parameters are supported: 
+
+\begin{itemize}
+\item {\texttt{ip}}: Specify an IP address for H2O
+\item {\texttt{port}}: Specify a port for H2O
+\item {\texttt{startH2O}}: Enable ({\texttt{startH2O = TRUE}}) or disable ({\texttt{startH2O = FALSE}}) H2O initialization from R if no connection with H2O is detected. This option is enabled only is {\texttt{ip = "localhost"}} or {\texttt{ip = "127.0.0.1"}}. If an existing connection is detected, R does not initialize H2O. 
+\item {\texttt{forceDL}}: Enable ({\texttt{forceDL = TRUE}}) or disable ({\texttt{forceDL = FALSE}}) forced downloads of the H2O executable. The default value is {\texttt{FALSE}}, so the executable is  only downloaded if it does not already exist in the H2O R library resources directory, {\texttt{h2o/java/h2o.jar}}. This option is only enabled when H2O is started from R. 
+\item {\texttt{beta}}:  Enable ({\texttt{beta = TRUE}}) or disable ({\texttt{beta = FALSE}}) beta mode. 
+\item {\texttt{assertion}}: Launch H2O with ({\texttt{assertion = TRUE}}) or without ({\texttt{assertion = FALSE}}) assertions. Use this mode for error checking and debugging. 
+\item {\texttt{license}}: Specify the full path of the license file to enable additional features. 
+\item {\texttt{nthreads}}: Specify the number of threads in the thread pool, which is related to the number of CPUs used. To use the CRAN default (2 CPUs), enter {\texttt{-2}}. To use all CPUs on the host, enter {\texttt{-1}}. To specify the number of CPUs, enter a positive integer. 
+\item {\texttt{max_mem_size}}: Specify the maximum amount (in bytes) of memory to allocate to H2O. The value must be greater than 2MB and a multiple of 1024. Enter {\texttt{m}} or {\texttt{M}} to specify megabytes or enter {\texttt{g}} or {\texttt{G}} to specify gigabytes. 
+\item {\texttt{min_mem_size}}: Specify the minimum amount (in bytes) of memory to allocate to H2O. Specify the maximum amount (in bytes) of memory to allocate to H2O. The value must be greater than 2MB and a multiple of 1024. Enter {\texttt{m}} or {\texttt{M}} to specify megabytes or enter {\texttt{g}} or {\texttt{G}} to specify gigabytes.
+\end{itemize}
+
 
 \subsection{Launching from R}
 
@@ -128,8 +162,8 @@ For best performance, the allocated memory should be 4x the size of your data, b
 
 To launch H2O from R, run the following in R:
 \begin{spverbatim}
-> library(h2o) ##Loads required files for H2O
-localH2O <- h2o.init(ip = 'localhost', port = 54321, nthreads= -1, max_mem_size = ‘4g') ##Starts H2O on the localhost, port 54321, with 4g of memory using all CPUs on the host  \end{spverbatim} 
+> library(h2o) # # Loads required files for H2O
+localH2O <- h2o.init(ip = 'localhost', port = 54321, nthreads= -1, max_mem_size = ‘4g') # # Starts H2O on the localhost, port 54321, with 4g of memory using all CPUs on the host  \end{spverbatim} 
 \\
 
 R displays the following output: 
@@ -166,7 +200,7 @@ To launch H2O nodes and form a cluster on the Hadoop cluster, run:
 $ hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
 \end{spverbatim}
 \begin{itemize}
-\item For each major release of each distribution of hadoop, there is a driver jar file that the user will need to launch H2O with. Currently available driver jar files in each build of H2O includes {\texttt{h2odriver_cdh5.jar, h2odriver_hdp2.1.jar}}, and {\texttt{mapr2.1.3.jar}}.
+\item For each major release of each distribution of Hadoop, there is a driver jar file that the user will need to launch H2O with. Currently available driver jar files in each build of H2O includes {\texttt{h2odriver_cdh5.jar, h2odriver_hdp2.1.jar}}, and {\texttt{mapr2.1.3.jar}}.
 \item The above command launches exactly one 1g node of H2O; however,  we recommend launching the cluster with 4 times the memory of your data file.
 \item{\texttt{mapperXmx}} is the mapper size or the amount of memory allocated to each node.
 \item{\texttt{nodes}} is the number of nodes requested to form the cluster.
@@ -219,13 +253,11 @@ R is connected to H2O cluster:
 \subsection{Support} 
 Users of the H2O package may submit general enquiries and bug reports to h2o.ai support at {\url{h2ostream@googlegroups.com}}. Alternatively, specific bugs or issues may be filed to the h2o.ai JIRA at {\url{https://0xdata.atlassian.net/secure/Dashboard.jspa}}.
 
-\subsection{Gradient Boosting overview} 
+\subsection{Gradient Boosting Overview} 
 
-A gradient boosted model can be either regression or classification. Both are forward-learning ensemble methods that obtain predictive results through gradually improved estimations. Boosting is a flexible nonlinear regression procedure that helps improve the accuracy of trees. By sequentially applying weak classification algorithms to the incrementally changed data, a series of decision trees are created that produce an ensemble of weak prediction models.
+A gradient boosted model is an ensemble of tree models that can be either regression or classification. Both are forward-learning ensemble methods that obtain predictive results through gradually improved estimations. Boosting is a flexible nonlinear regression procedure that helps improve the accuracy of trees. By sequentially applying weak classification algorithms to the incrementally changed data, a series of decision trees are created that produce an ensemble of weak prediction models.
 
 While boosting trees increases their accuracy, it also decreases speed and interpretability. The gradient boosting method generalizes tree boosting to minimize these issues. 
-
-After creating a GBM, H2O displays the confusion matrix that shows the classifications for each group, the associated error by group, and the overall average error. 
 
 \subsubsection{Summary of features} 
 H2O's GBM functionalities include:
@@ -238,14 +270,51 @@ H2O's GBM functionalities include:
 
 \item fast and memory-efficient Java implementations of the underlying algorithms
 
-\item elegant web interface to mirror the model building and scoring process running in R
+\item user-friendly web interface to mirror the model building and scoring process running in R
 
 \item grid search for hyperparameter optimization and model selection
 
-\item model export in plain java code for deployment in production environments
+\item model export in plain Java code for deployment in production environments
 
 \item additional parameters for model tuning
 
+\end{itemize}
+
+\subsubsection{Common Model Parameters}
+
+This section describes the functions of the parameters for GBM: 
+
+\begin{itemize}
+
+\item {\texttt{x}}: The names or indices of the predictor variables for use in building the gradient boosted model. 
+
+\item {\texttt{y}}: The name or index of the response variable (must be an integer or a categorical variable). If the data does not contain a header, {\texttt{y}} is the column index number starting at 0 and increasing from left to right. 
+
+\item {\texttt{key}}: The unique hex key assigned to the generated model. If left blank, a key is automatically generated. 
+
+\item {\texttt{loss}}: Enter {\texttt{AUTO}} or {\texttt{Bernoulli}} to select the loss type. The default is {\texttt{AUTO}}. 
+
+\item {\texttt{ntrees}}: A non-negative integer that defines the number of trees. The default is 50. 
+
+\item {\texttt{max_depth}}: The user-defined tree depth. The default is 5. 
+
+\item {\texttt{min_rows}}: The minimum number of rows to assign to the terminal nodes. The default is 10. 
+
+\item {\texttt{learn_rate}}:An integer that defines the learning rate. The default is 0.1 and the range is 0.0 to 1.0. 
+
+\item {\texttt{nbins}}: The number of bins to use for building the histogram. The default is 20. 
+
+{\texttt{validation_frame}}: An {\texttt{H2OFrame}} object that defines the validation dataset used to construct the confusion matrix. If left blank and {\texttt{nfolds = 0}}, the default is the training dataset.
+
+\item {\texttt{balance_classes}}: Balance training data class counts via over or undersampling for imbalanced data. The default is {\texttt{FALSE}}. 
+
+\item {\texttt{max_after_balance_size}}: Maximum relative size of the training data after balancing class counts; can be less than 1.0.  The default is 1. 
+
+\item {\texttt{seed}}: Seed for random numbers that affects sampling. 
+
+\item {\texttt{data}}: An {\texttt{H2OFrame}} object that contains the variables in the model. 
+
+\item {\texttt{nfolds}}: Number of folds for cross-validation. If {\texttt{nfolds >= 2}}, then {\texttt{validation}} must be blank. 
 \end{itemize}
 
 \subsubsection{Theory and framework} 
@@ -270,7 +339,7 @@ Gradient boosting is a machine learning technique that combines two powerful too
 \indent \indent ii. Fit a regression tree to the targets $r_{ikm}, i = 1,2,\dots,N$, 
 \par \hspace{3em} giving terminal regions $R_{jim}, 1,2,\dots,J_m$
 \\
-\indent \indent iii. Compute $$\gamma_{jkm} = \frac{K-1}{K} \frac{\sum_{x_i \in R_{jkm}} (r_{ikm}}{\sum_{x_i \in R_{jkm}} |r_{ikm}| (1 - |r_{ikm}|)} , j=1,2,\dots,J_m$$
+\indent \indent iii. Compute $$\gamma_{jkm} = \frac{K-1}{K} \frac{\sum_{x_i \in R_{jkm}} (r_{ikm})}{\sum_{x_i \in R_{jkm}} |r_{ikm}| (1 - |r_{ikm}|)} , j=1,2,\dots,J_m$$
 \\
 \indent \indent iv. Update $f_{km}(x) = f_{k,m-1}(x) + \sum_{j=1}^{J_m} \gamma_{jkm} I(x \in R_{jkm})$
 \\
@@ -279,10 +348,55 @@ Gradient boosting is a machine learning technique that combines two powerful too
 \line(1,0){500}
 \\
 \\ 
-In the above algorithm, the index $m$ tracks of the number of weak learners added to the current ensemble. Within this outer loop, there is an inner loop across each of the $K$ classes. In this inner loop, the first step is to compute the residuals, $r_{ikm}$, which are actually the gradient values, for each of the $N$ bins in the CART model, and then to fit a regression tree to these gradient computations. This fitting process is distributed and parallelized, and details on this framework can be found on the h2o.ai blog at {\url{http://h2o.ai/blog/2013/10/building-distributed-gbm-h2o/}}.
+In the above algorithm, for $k$-classification, H2O builds $k$-regression trees to represent one classification tree. The index $m$ tracks of the number of weak learners added to the current ensemble. Within this outer loop, there is an inner loop across each of the $K$ classes. In this inner loop, the first step is to compute the residuals, $r_{ikm}$, which are actually the gradient values, for each of the $N$ bins in the CART model, and then to fit a regression tree to these gradient computations. This fitting process is distributed and parallelized, and details on this framework can be found on the h2o.ai blog at {\url{http://h2o.ai/blog/2013/10/building-distributed-gbm-h2o/}}.
 \\
 \\
 The final procedure in the inner loop is to add to the current model to the fitted regression tree, which improves the accuracy of the model during the inherent gradient descent step. After $M$ iterations, the final ``boosted" model can be tested out on new data.
+
+\subsubsection{Loss Function}
+
+The AdaBoost method builds an additive logistic regression model:
+
+$${F(x) = log}\frac{Pr(Y = 1|x)}{Pr(Y = -1|x)} = \sum_{m=1}^{M} \alpha_m f_m (x) $$
+
+by stagewise fitting using the loss function: 
+
+$$L(y, F(x)) = exp(-y  F (x)) $$
+
+
+
+\subsubsection{Distributed Trees}
+
+In H2O's implementation of GBM, distributed trees are used. H2O overlays trees on the data by assigning a tree node to each row. The nodes are numbered and the number of each node is stored in a temporary vector as "Node_ID" for each row. H2O makes a pass over all the rows using the most efficient method, which is not necessarily numerical order. A local histogram using local data only is created in parallel for each row on each node. The histograms are then assembled and a split column is selected to make the decision. The rows are re-assigned to nodes and the entire process is repeated. 
+
+For example, for an initial tree, all rows start on node 0. A MapReduce (MR) task computes the statistics and uses them to make an algorithmically-based decision, such as lowest mean squared error (MSE). In the next layer in the tree (and the next MR task), a decision is made for each row: if X $<$ 1.5, go right in the tree; otherwise, go left. H2O computes the stats for each new leaf in the tree, and each pass across all the rows builds the entire layer. 
+
+For multinomial or binomial, the split is determined by the number of columns. The number of columns is evaluated to find the best split out of the possible combinations. For example, for a hundred-column dataset that uses twenty bins, there are 2000 (20x100) possible split points. 
+
+Each layer represents another MR task; therefore, a tree that is five layers deep requires five passes. Each tree level is fully data-parallelized. Each pass is over one layer in the tree, and builds a per-node histogram in the MR calls. As each pass analyzes a tree level, H2O then decides how to build the next level. H2O reassigns rows to new levels in another pass by merging the two passes and builds a histogram for each node. Each per-level histogram is done in parallel. 
+
+Scoring and building is done in one pass. Each row is tested against the decision from the previous pass, assigned to a new leaf, and a histogram is built on that leaf. To score, H2O traverses the tree and obtains the results. The tree is compressed to a smaller object that can still be traversed, scored, and printed. 
+
+Although the GBM algorithm builds each tree one level at a time, H2O is able to quickly run the entire level in parallel and distributed. More data can be offset by more CPUs or nodes.  Since H2O does the per-level compute in parallel, which requires sending histograms over the network, the amount of data can become very large for a very deep tree. 
+
+High max-bin sizes slow down generation of deep trees, but this is not an issue for GBM tree depths, as GBM typically uses very shallow trees. Bin limits over 20 have been shown to have very little improvement on the quality of the GBM model. 
+
+For the MSE reports, the zero-tree report uses the class distribution as the prediction. The one-tree report actually uses the first tree, so the first two reports are not equal. The reported MSE is the inclusive effect of all prior trees, and generally decreases monotonically on the training dataset. However, the curve will generally bottom out and then begin to slowly rise on the validation set as overfitting sets in. 
+
+The computing cost is based on the number of leaves, but depending on the dataset, the number of leaves can be difficult to predict. The maximum number of leaves is $2^d$, where $d$ represents the tree depth.
+
+\subsubsection{Treatment of factors}
+
+When the specified GBM model includes factors, those factors are analyzed by assigning an integer to each distinct factor level, and then binning the ordered integers according to the user-specified number of bins ($N$ bins). Split points are determined by considering the end points of each bin and the one-versus-many split for each bin. 
+
+For example, if the factor is split into five bins, H2O orders the bins by bin number, then considers the split between the first and second bin, then the second and third, then the third and fourth, and the fourth and fifth. Additionally, the split that results from splitting the first bin from the other four and all analogous splits for the other four bins are considered. To specify a model that considers all factors individually, set the value for $N$ bins equal to the number of factor levels. This can be done for over 1024 levels (the maximum number of levels that can be handled in R), though this increases the time to fully generate a model. 
+
+Increasing the number of bins is less useful for covering factor columns, but is more important for the one-versus-many approach. The "split-by-a-numerical-value" is basically a random split of the factors, so the number of bins is less important. Top-level tree splits (shallow splits) use the maximum allotment as their bin size, so the top split uses 1024 bins, the next level in the tree uses 512 bins, and so on. 
+
+Factors for binary classification have a third (and optimal) choice: to split all bins (and factors within those bins) that have a mean of less than 0.5 one way, and the rest of the bins and factors the other way, creating an arbitrary set of factors with a known optimal split. This is represented as a bitset in the embedded Java model. Therefore, factor columns with less than the limit ($~$1024) always get an optimal split for categorical problems. 
+
+For categorical problems with $N$ possible values, the split candidate is determined by the formula $2^{N-1}-1$. For binary classification and regression problems, the number of split candidates is reduced to $N-1$ by sorting the categorical feature values by label average. 
+
 
 \subsubsection{Key parameters}
 
@@ -320,7 +434,7 @@ summary(weather.hex)
 Returning to the Airline dataset, load the dataset with H2O and select the variables to use to predict a chosen response. For example, model whether flights are delayed based on the departure's scheduled day of the week and day of the month.
 \begin{spverbatim}
 
-#Load the data and prepare for modeling
+# Load the data and prepare for modeling
 air_train.hex = h2o.uploadFile(h2o_server, path = "AirlinesTrain.csv", header = TRUE, sep = ",", key = "airline_train.hex")
 
 air_test.hex = h2o.uploadFile(h2o_server, path = "AirlinesTest.csv", header = TRUE, sep = ",", key = "airline_test.hex")
@@ -348,10 +462,10 @@ Since it is meant just as a trial run, the model contains only 100 trees. In thi
 Now, extract the parameters of the model, examine the scoring process, and make predictions on the new data.
 
 \begin{spverbatim}
-#View the specified parameters of your GBM model
+# View the specified parameters of your GBM model
 air.model@model$params
 
-#Examine the performance of the trained model
+# Examine the performance of the trained model
 air.model
 
 \end{spverbatim}
@@ -361,10 +475,10 @@ The second command ({\texttt{air.model}}) returns the trained model's training a
 \\
 After generating a satisfactory model, use the \texttt{h2o.predict()} command to compute and store predictions on the new data, which can then be used for further tasks in the interactive modeling process.
 \begin{spverbatim}
-#Perform classification on the held out data
+# Perform classification on the held out data
 prediction = h2o.predict(air.model, newdata=air_test.hex)
 
-#Copy predictions from H2O to R
+# Copy predictions from H2O to R
 pred = as.data.frame(prediction)
 
 head(pred)
@@ -375,11 +489,23 @@ head(pred)
 \subsection{Web interface} 
 
 To mirror the model building process in R, use the H2O web interface. After loading data or training a model in R, use the browser to access the IP address and port number (e.g., {\texttt{localhost:12345}}) and launch the web interface. From the web interface, click  \textsc{Admin} $>$ \textsc{Jobs} to view specific model details or click  \textsc{Data} $>$ \textsc{View All} to view and keep track of currently used datasets. 
+\\
+\\
+\includegraphics[height=5cm]{AdminJobs.jpg} \includegraphics[height=5cm]{DataViewAll.jpg}
 
 \subsubsection{Variable importances} 
 
 To enable the variable importances option, use the additional argument \texttt{importance=TRUE}. This displays the absolute and relative predictive strength of each feature in the prediction task. From R, access these strengths using the command \texttt{air.model@model\$varimp}. You can also view a visualization of the variable
 importances on the web interface.
+
+\subsubsection{Supported Output}
+
+The following algorithm outputs are supported: 
+\begin{itemize}
+\item {\bf{Regression}}: Mean Squared Error (MSE), with an option to output variable importances or a Java POJO model
+\item {\bf{Binary Classification}}: Confusion Matrix or Area Under Curve (AUC), with an option to output variable importances or a Java POJO model
+\item {\bf{Classification}}: Confusion Matrix (with an option to output variable importances or a Java POJO model)
+\end{itemize}
 
 \subsubsection{Java model}  
 
@@ -411,18 +537,18 @@ air.grid <- h2o.gbm(y = "IsDepDelayed", x = myX,
 This example specifies three different tree numbers, three different tree sizes, and two different shrinkage values. This grid search model effectively trains eighteen different models over the possible combinations of these parameters. Of course, sets of other parameters can be specified for a larger space of models. This allows for more subtle insights in the model tuning and selection process, especially during inspection and comparison of the trained models after the grid search process is complete. To decide how and when to choose different parameter configurations in a grid search, refer to the beginning section for parameter descriptions and suggested values.
 
 \begin{spverbatim}
-#print out all prediction errors and run times of the models
+# print out all prediction errors and run times of the models
 air.grid
 air.grid@model
 
-#print out a *short* summary of each of the models (indexed by parameter)
+# print out a *short* summary of each of the models (indexed by parameter)
 air.grid@sumtable
 
-#print out *full* summary of each of the models
+# print out *full* summary of each of the models
 all_params = lapply(air.grid@model, function(x) { x@model$params })
 all_params
 
-#access a particular parameter across all models
+# access a particular parameter across all models
 shrinkages = lapply(air.grid@model, function(x) { x@model$params$shrinkage })
 
 shrinkages
@@ -436,6 +562,9 @@ Gradient boosted machines sequentially fit new models to provide a more accurate
 
 \section{References}
 
+Click, Cliff and SriSatish Ambati. {\textbf{"Cliff Click Explains GBM at Netflix October 10 2013"}} \url{http://www.slideshare.net/0xdata/cliff-click-explains-gbm} SlideShare (2013).  
+\\
+\\
 Dietterich, Thomas G, and Eun Bae Kong. {\textbf{“Machine Learning Bias, Statistical Bias, and Statistical Variance of Decision Tree Algorithms.”}} \url{http://www.iiia.csic.es/~vtorra/tr-bias.pdf} ML-95 255 (1995).
 \\
 \\
@@ -454,7 +583,6 @@ Friedman, Jerome, Trevor Hastie, and Robert Tibshirani. {\textbf{``Additive Logi
 Hastie, Trevor, Robert Tibshirani, and J Jerome H Friedman. {\textbf{The Elements of Statistical Learning}}  \url{http://statweb.stanford.edu/~tibs/ElemStatLearn/printings/ESLII_print10.pdf}. Vol.1. N.p., page 339: Springer New York, 2001. 
 \\
 \\
-Niu, Feng, et al. {\textbf{“Hogwild!: A lock-free approach to parallelizing stochastic gradient descent.”}} {\url{https://papers.nips.cc/paper/4390-hogwild-a-lock-free-approach-to-parallelizing-stochastic-gradient-descent.pdf}}  Advances in Neural Information Processing Systems 24 (2011): 693-701. (algorithm implemented is on p.5) 
 
 
 
