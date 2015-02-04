@@ -572,7 +572,7 @@ head(test_recon.hex)
 \item \texttt{rate}: The learning rate $\alpha$. Higher values lead to less stable models  while lower values  lead to slower convergence. Default is 0.005.
 \item \texttt{rate\_annealing}: Default value is 1e-6 (when adaptive learning is disabled). See section \ref{2.4.2} for more details.
 \item \texttt{rate\_decay}: Default is 1.0 (when adaptive learning is disabled). The learning rate decay parameter controls the change of learning rate across layers.
-\item \texttt{momentum\_start}: The momentum\_start parameter controls the amount of momentum at the beginning of training (when adaptive learning is disabled). Default is 0. \ref{2.4.1} for more details.
+\item \texttt{momentum\_start}: The momentum\_start parameter controls the amount of momentum at the beginning of training (when adaptive learning is disabled). Default is 0. See section \ref{2.4.1} for more details.
 \item \texttt{momentum\_ramp}: The momentum\_ramp parameter controls the amount of learning for which momentum increases assuming momentum\_stable is larger than momentum\_start. It can be enabled when adaptive learning is disabled. The ramp is measured in the number of training samples. Default is 1e-6. See section \ref{2.4.1} for more details.
 \item \texttt{momentum\_stable}: The momentum\_stable parameter controls the final momentum value reached after momentum\_ramp training samples (when adaptive learning is disabled). The momentum used for training will remain the same for training beyond reaching that point. Default is 0.  See section \ref{2.4.1} for more details.
 \item \texttt{nesterov\_accelerated\_gradient}: The default is true (when adaptive learning is disabled). See Section \ref{2.4.1} for more details.
