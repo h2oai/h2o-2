@@ -70,6 +70,7 @@ These changes are to resolve incorrect software behavior:
 
 #####UI
 - Fixed a bug in an example due to createFrame change [(github)](https://github.com/h2oai/h2o/commit/afc93a9734ea22efa9afcec46bbc7e26b2faee98)
+- Import file hangs at 99% for past 45 mins [(HEX-2003)](https://0xdata.atlassian.net/browse/HEX-2003)
 
 #####API
 - as.h2o returns NA when character field has many unique values [(PUB-1108)](https://0xdata.atlassian.net/browse/PUB-1108)
@@ -84,6 +85,8 @@ These changes are to resolve incorrect software behavior:
 - Fixed typo in parameter validation [(github)](https://github.com/h2oai/h2o/commit/f6c6996594894c5ecdcd2ad112953b92844a3848)
 - Don't shuffle intra-chunk after stratified sampling [(github)](https://github.com/h2oai/h2o/commit/f0ff6f027e4aa9e3faebcd5f192bd8781d47c5f1)
 - Fixed intercept adjustment by prior probability in logistic regression [(github)](https://github.com/h2oai/h2o/commit/cdd8a6b54a35e83a5f9aebb419ada476593ab144)
+- DL: DL build model running for past 12 hrs doesn't complete [(HEX-1997)](https://0xdata.atlassian.net/browse/HEX-1997)
+- GLM fails simpleCheckGLM in multinode when cross-validation is on [(HEX-1867)](https://0xdata.atlassian.net/browse/HEX-1867)
 
 #####System
 
