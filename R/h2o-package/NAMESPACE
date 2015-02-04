@@ -1,15 +1,48 @@
-import("RCurl", "rjson", "statmod", "tools", "methods")
-importFrom("stats", "extractAIC", "logLik", "vcov")
+import("methods")
+import("RCurl")
+importFrom("graphics", "abline", "arrows", "barplot", "lines", "par", "plot")
+importFrom("rjson", "fromJSON")
+importFrom("statmod", "tweedie")
+importFrom("stats", "binomial", "extractAIC", "Gamma", "gaussian", "logLik",
+           "pchisq", "poisson", "qnorm", "quantile", "screeplot", "vcov", "xtabs")
 importFrom("survival", "survfit")
-importFrom("utils", "installed.packages")
+importFrom("tools", "md5sum")
+importFrom("utils", "capture.output", "download.file", "head",
+           "packageVersion", "read.csv", "setTxtProgressBar",
+           "tail", "txtProgressBar", "URLencode", "write.csv")
+
 exportPattern("^[[:alpha:]]+")
 export('h2o.shutdown', 'h2o.init', 'h2o.coxph', 'h2o.coxph.control', 'h2o.glm',
        'h2o.kmeans', 'h2o.randomForest', 'h2o.prcomp', 'h2o.naiveBayes',
        'h2o.gbm', 'h2o.deeplearning', 'h2o.predict', 'h2o.importFile',
        'h2o.importFolder', 'h2o.uploadFile', 'h2o.parseRaw', 'h2o.ls',
-       'h2o.rm', 'summary.H2OParsedData', 'screeplot.H2OPCAModel',
-       'h2o.cut', '.', 'h2o..', 'h2o.ddply',
-       'cbind.H2OParsedData', 'unique.H2OParsedData')
+       'h2o.rm', 'h2o.cut', '.', 'h2o..', 'h2o.ddply', 'cbind.H2OParsedData')
+S3method("as.Date",       "H2OParsedData")
+S3method("as.data.frame", "H2OParsedData")
+S3method("as.matrix",     "H2OParsedData")
+S3method("as.table",      "H2OParsedData")
+S3method("diff",          "H2OParsedData")
+S3method("head",          "H2OParsedData")
+S3method("hist",          "H2OParsedData")
+S3method("mean",          "H2OParsedData")
+S3method("month",         "H2OParsedData")
+S3method("quantile",      "H2OParsedData")
+S3method("revalue",       "H2OParsedData")
+S3method("round",         "H2OParsedData")
+S3method("signif",        "H2OParsedData")
+S3method("str",           "H2OParsedData")
+S3method("strsplit",      "H2OParsedData")
+S3method("summary",       "H2OParsedData")
+S3method("tail",          "H2OParsedData")
+S3method("tolower",       "H2OParsedData")
+S3method("toupper",       "H2OParsedData")
+S3method("unique",        "H2OParsedData")
+S3method("year",          "H2OParsedData")
+S3method("plot", "H2OGapStatModel")
+S3method("summary", "H2OGapStatModel")
+S3method("plot", "H2OPerfModel")
+S3method("screeplot", "H2OPCAModel")
+S3method("summary", "H2OPCAModel")
 S3method("coef", "H2OCoxPHModel")
 S3method("coef", "H2OCoxPHModelSummary")
 S3method("extractAIC", "H2OCoxPHModel")
