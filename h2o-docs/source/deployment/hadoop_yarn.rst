@@ -20,7 +20,7 @@ each mapper.
 
 Try the job again but this time with a smaller heap size ``-mapperXmx`` and less
 nodes ``-nodes`` to verify that a small launch can proceed at all. The default
-test case is to run a single 1g node.
+test case is to run a single 1g node. 
 
 **How to increase the maximum memory Yarn will allow for each mapper?**
 

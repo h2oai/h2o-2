@@ -480,6 +480,9 @@ References
     
     Deep Learning Training http://learn.h2o.ai/content/hands-on_training/deep_learning.html
     
-   
+   Niu, Feng, et al. "Hogwild!: A lock-free approach to parallelizing
+stochastic gradient descent." Advances in Neural Information
+Processing Systems 24 (2011): 693-701. (algorithm implemented is on p.5)
+https://papers.nips.cc/paper/4390-hogwild-a-lock-free-approach-to-parallelizing-stochastic-gradient-descent.pdf
 
 """"""
