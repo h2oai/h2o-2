@@ -112,10 +112,10 @@ h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 3, inter
 
 # GBM variable importance
 # Also see:
-#   https://github.com/0xdata/h2o/blob/master/R/tests/testdir_demos/runit_demo_VI_all_algos.R
+#   https://github.com/h2oai/h2o/blob/master/R/tests/testdir_demos/runit_demo_VI_all_algos.R
 data.hex = h2o.importFile(
   localH2O,
-  path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv",
+  path = "https://raw.github.com/h2oai/h2o/master/smalldata/bank-additional-full.csv",
   key = "data.hex")
 myX = 1:20
 myY="y"
