@@ -17,14 +17,14 @@ public abstract class Persist<T> {
   public static void initialize() {}
 
   static {
+    Log.POST(3100);
     Persist ice = null;
     URI uri = H2O.ICE_ROOT;
     if( uri != null ) { // Otherwise class loaded for reflection
       boolean windowsPath = uri.toString().matches("^[a-zA-Z]:.*");
 
-      // System.out.println("TOM uri getPath(): " + uri.getPath());
-      // System.out.println("TOM windowsPath: " + (windowsPath ? "true" : "false"));
-
+      Log.POST(3101, "uri getPath(): " + uri.getPath());
+      Log.POST(3101, "windowsPath: " + (windowsPath ? "true" : "false"));
       if ( windowsPath ) {
         ice = new PersistFS(new File(uri.toString()));
       }
@@ -44,7 +44,15 @@ public abstract class Persist<T> {
 //          ice = new PersistNFS(uri);
 //        }
       I[Value.ICE    ] = ice;
-      I[Value.HDFS   ] = new PersistHdfs();
+      Log.POST(3102, "");
+      try {
+        I[Value.HDFS] = new PersistHdfs();
+      }
+      catch (Throwable e) {
+        Log.POST(3103, e.toString());
+        e.printStackTrace();
+      }
+      Log.POST(3104, "");
       I[Value.S3     ] = new PersistS3();
       I[Value.NFS    ] = new PersistNFS();
       I[Value.TACHYON] = new PersistTachyon();
@@ -58,8 +66,10 @@ public abstract class Persist<T> {
           }
         }.start();
       }
-      else
+      else {
         ice.loadExisting();
+      }
+      Log.POST(3105, "");
     }
   }
 
