@@ -39,19 +39,28 @@
 This document describes Generalized Linear Model implementation on H2O platform, list of supported features and how to use them from R. 
 
 \subsection{What is H2O?}
-It is the only alternative to combine the power of highly advanced algorithms, the freedom of open source, and the capacity of truly scalable in-memory processing for big data on one or many nodes. Combined, these capabilities make it faster, easier, and more cost-effective to harness big data to maximum benefit for the business. 
+H2O is an open source analytics platform for data scientists and business analysts who need scalable and fast machine learning capabilities. Our product helps organizations like PayPal, ShareThis, and Cisco reduce model building, training, and scoring times from months to days. Our use cases range from predictive modeling, fraud detection, and even customer intelligence in industries as diverse as insurance, SaaS, finance, ad tech, and recruiting.
 
-Data collection is easy. Decision making is hard. H2O makes it fast and easy to derive insights from your data through faster and better predictive modeling. Existing Big Data stacks are batch-oriented. Search and analytics need to be interactive. Use machines to learn machine-generated data. And more data beats better algorithms. 
+With its in-memory compression techniques, H2O can handle billions of data rows in-memory — even with a fairly small cluster. The platform includes interfaces for R, Python, Scala, Java, JSON and Coffeescript/JavaScript, along with its built-in web interface that makes it easier for non-engineers to stitch together a complete analytic workflow. The platform was built alongside (and on top of) both Hadoop and Spark Clusters.
 
-With H2O, you can make better predictions by harnessing sophisticated, ready-to-use algorithms and the processing power you need to analyze bigger data sets, more models, and more variables. 
+H2O implements almost all common machine learning algorithms — such as generalized linear modeling (linear regression, logistic regression, etc.), Naive Bayes, principal components analysis, time series, k-means clustering and others. H2O also implements best-in-class algorithms such as Random Forest, Gradient Boosting and Deep Learning at scale. Customers can build thousands of models and compare them to get the best prediction results. 
 
-Get started with minimal effort and investment. H2O is an extensible open source platform that offers the most pragmatic way to put big data to work for your business. With H2O, you can work with your existing languages and tools. Further, you can extend the platform seamlessly into your Hadoop environments. Get H2O!
+H2O was built by a passionate team of computer scientists, systems engineers and data scientists, from the ground up, for the data science community. We’re driven by strong curiosity, a desire to learn, and strong drive to tackle the scalability challenges of real world data analysis. Our team members have come to H2O from organizations as diverse as Marketo, Oracle, Azul, Teradata, and SAS. Our advisory board comes from Stanford University’s engineering, statistics, and health research departments. 
 
-Download H2O
-\url{http://www.h2o.ai/download}
+We host meetups, run experiments, and spend our days learning alongside our customers.
 
-Join the Community
-\url{h2ostream@googlegroups.com} and \url{github.com/h2oai/h2o.git}
+
+\textbf{Try it out}
+
+H2O offers an R package that can be installed from CRAN. H2O can be downloaded from \url{www.h2o.ai/download}.
+
+\textbf{Join the community}
+
+Connect with \url{h2ostream@googlegroups.com} and \url{https://github.com/h2oai} to learn about our meetups, training sessions, hackathons, and product updates.
+
+\textbf{Learn more about H2O}
+
+Visit \url{www.h2o.ai}
 
 \subsection{What is GLM?}
 Generalized linear models (GLM) are the workhorse for most predictive analysis use cases. GLM can be used for both regression and classification, it scales well to large datasets and is based on solid statistical background. It is a ganrelaztion of linear models, allowing for modeling of data with exponential distributions and for categorical data (classification). GLM models are fitted solving the maximum likelihood optimization problem.
@@ -66,7 +75,7 @@ The elastic net parameter $\alpha$ controls the penalty distribution between L1 
 
 The main advantage of an L1 penalty is that with sufficiently high $\lambda$, it produces a sparse solution; the L2-only penalty does not reduce coefficients to exactly 0. The two penalties also differ in the case of correlated predictors. The L2 penalty shrinks coefficients for correlated columns towards each other, while the L1 penalty will pick one and drive the others to zero. Using the elastic net argument $\alpha$, you can combine these two behaviors. It is also useful to always add a small L2 penalty to increase numerical stability.
 
-Similarly to \cite{glmnet}, h2o can compute the full regularization path, starting from null-model (maximum penalty) going down to minimally penalized model. This search is made efficient by employing strong-rules \cite{strong} to filter out inactive coefficients (coefficients pushed to zero by penalty). Computing full regularization path is usefull in that it gives more insight about the importance of indiviaul coefficvient, quiality of the model and it allows to select optimal amount of penalization for the given problem and data.
+Similarly to \cite{glmnet}, H2O can compute the full regularization path, starting from null-model (maximum penalty) going down to minimally penalized model. This search is made efficient by employing strong-rules \cite{strong} to filter out inactive coefficients (coefficients pushed to zero by penalty). Computing full regularization path is useful in that it gives more insight about the importance of individual coefficients and quality of the model while allowing selection of the optimal amount of penalization for the given problem and data.
 
 
 \subsubsection{Summary of features} 
@@ -222,7 +231,7 @@ It models the dependency as a purely linear function (with link = identity):
 
 The model is fitted by solving the least squares problem (maximum likelihood for gaussian family):
 
-\[ \min\limits_{\beta,\beta_0} { {1 \over 2N}\sum\limits_{i=1}\limits^{N}(x_i^{T}\beta  + \beta_0- y_i)^T (x_i^{T}\beta + \beta_0 - y_i))  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \| \beta \|_2^2} \]
+\[ \min\limits_{\beta,\beta_0} { {1 \over 2N}\sum\limits_{i=1}\limits^{N}(x_i^{T}\beta  + \beta_0- y_i)^T (x_i^{T}\beta + \beta_0 - y_i)  + \lambda (\alpha \|\beta \|_1 + {1-\alpha \over 2}) \| \beta \|_2^2} \]
 
 
 Deviance is simply the sum of squared errors:
@@ -544,25 +553,27 @@ summary(weather.hex)
 
 \subsection{Performing a trial run} \label{3.2}
 Returning to the Airline dataset demo, we first load the dataset into H2O and select the variables we want to use to predict a chosen response. For example, we can model if flights are delayed based on the departure's scheduled day of the week and day of the month.
-% @TODO localH2O not found FIXXXXXXX & CHECK VARIABLES - [Code below tested & run in R - Jessica]%
 
 \begin{spverbatim}
 
+library(h2o)
+localH2O = h2o.init(nthreads = -1)
 #Load the data and prepare for modeling
-air_train.hex = h2o.uploadFile(localH2O, path = "Downloads/AirlinesTrain.csv", header = TRUE, sep = ",", key = "airline_train.hex")
-
-air_test.hex = h2o.uploadFile(localH2O, path = "Downloads/AirlinesTest.csv", header = TRUE, sep = ",", key = "airline_test.hex")
-
-x = c("fYear", "fMonth", "fDayofMonth", "fDayOfWeek", "UniqueCarrier", "Origin", "Dest", "Distance")
-y = "IsDepDelayed" 
+air_train.hex = h2o.uploadFile(localH2O, path = "~/Downloads/AirlinesTrain.csv", 
+                               header = TRUE, sep = ",", key = "airline_train.hex")
+air_test.hex = h2o.uploadFile(localH2O, path = "~/Downloads/AirlinesTest.csv", 
+                              header = TRUE, sep = ",", key = "airline_test.hex")
+x = c("fYear", "fMonth", "fDayofMonth", "fDayOfWeek", "UniqueCarrier", "Origin",
+      "Dest", "Distance")
+y = "IsDepDelayed"
 
 \end{spverbatim}
 
 Now we train the GLM model:
 
 \begin{spverbatim}
-airline.glm <- h2o.glm(x=x, 
-                       y=y, 
+airline.glm <- h2o.glm(x=x,
+                       y=y,
                        data=air_train.hex,
                        key = "glm_model",
                        family="binomial",
@@ -576,30 +587,27 @@ airline.glm <- h2o.glm(x=x,
 
 We can extract the parameters of our model, examine the scoring process, and make predictions on new data.
 
-%@ NOTE typoe in R demo test… i spelled performance wrong :(
-% [Jessica: Need some help with code below - 2nd to last line throws error still]
 \begin{spverbatim}
 print("Predict on GLM model")
-best_glm = airlines.glm@models[[airlines.glm@best_model]]
+best_glm = airline.glm@models[[airline.glm@best_model]]
 air.results = h2o.predict(object = best_glm, newdata = air_test.hex)
 print("Check performance and AUC")
 perf = h2o.performance(air.results$YES,air_test.hex$IsDepDelayed )
 print(perf)
 perf@model$auc
 print("Show distribution of predictions with quantile.")
-quantile.H2OParsedData(air.results$YES)  
+quant = quantile.H2OParsedData(air.results$YES)
 print("Extract strongest predictions.")
-top.air <- h2o.assign(air.results[air.results$YES > quant‘75%,key="top.air")
+top.air <- h2o.assign(air.results[air.results$YES > quant["75%"]], key="top.air")
 top.air
 \end{spverbatim}
 \noindent
 \\
 \\
 Once we have a satisfactory model, the \texttt{h2o.predict()} command can be used to compute and store predictions on the new data, which can then be used for further tasks in the interactive modeling process.
-%[Jessica: I think this code needs work as well]
 \begin{spverbatim}
 #Perform classification on the held out data
-prediction = h2o.predict(airline.glm, newdata=air_test.hex)
+prediction = h2o.predict(object = best_glm, newdata=air_test.hex)
 #Copy predictions from H2O to R
 pred = as.data.frame(prediction)
 head(pred)
@@ -677,7 +685,7 @@ Regularization Paths for Generalized Linear Models via Coordinate Descent
 April 29, 2009
 
 \bibitem{strong}
-  Robert Tibshirani, Jacob Bien, Jerome Friedman, Trevor Hastie, Noah Simon, Jonathan Tay- lor, and Ryan J. Tibshirani
+  Robert Tibshirani, Jacob Bien, Jerome Friedman, Trevor Hastie, Noah Simon, Jonathan Taylor, and Ryan J. Tibshirani
   Strong Rules for Discarding Predictors in Lasso-type Problems
   J. R. Statist. Soc. B, vol. 74, 
   2012.
