@@ -102,9 +102,9 @@ The basic unit in the model (shown above) is the neuron, a biologically inspired
 \noindent
 Multi-layer, feedforward neural networks consist of many layers of interconnected neuron units: beginning with an input layer to match the feature space; followed by multiple layers of nonlinearity; and terminating with a linear regression or classification layer to match the output space. The inputs and outputs of the model's units follow the basic logic of the single neuron described above. Bias units are included in each non-output layer of the network. The weights linking neurons and biases with other neurons fully determine the output of the entire network, and learning occurs when these weights are adapted to minimize the error on labeled training data. More specifically, for each training example $j$ the objective is to minimize a loss function 
 \begin{center}
-$L(W,b$ $|$ $j)$.
+$L(W,B$ $|$ $j)$.
 \end{center}
-Here $W$ is the collection $\left\{W_i\right\}_{1:N-1}$, where $W_i$ denotes the weight matrix connecting layers $i$ and $i+1$ for a network of $N$ layers; similarly $b$ is the collection $\left\{b_i\right\}_{1:N-1}$, where $b_i$ denotes the column vector of biases for layer $i+1$. 
+Here $W$ is the collection $\left\{W_i\right\}_{1:N-1}$, where $W_i$ denotes the weight matrix connecting layers $i$ and $i+1$ for a network of $N$ layers; similarly $B$ is the collection $\left\{b_i\right\}_{1:N-1}$, where $b_i$ denotes the column vector of biases for layer $i+1$. 
 \\
 \\
 This basic framework of multi-layer neural networks can be used to accomplish deep learning tasks. Deep learning architectures are models of hierarchical feature extraction, typically involving multiple levels of nonlinearity. Such models are able to learn useful representations of raw data, and have exhibited high performance on complex data such as images, speech, and text \href{http://www.iro.umontreal.ca/~lisa/pointeurs/TR1312.pdf}{(Bengio, 2009)}. 
@@ -228,7 +228,7 @@ Iterate until convergence criterion reached
 \line(1,0){275}
 \\
 \\
-Stochastic gradient descent is known to be fast and memory-efficient, but not easily parallelizable without becoming slow. We utilize \textsc{Hogwild!}, the recently developed lock-free parallelization scheme from \href{http://i.stanford.edu/hazy/papers/hogwild-nips.pdf}{Niu et al, 2011}. \textsc{Hogwild!} follows a shared memory model where multiple cores, each handling separate subsets (or all) of the training data, are able to make independent contributions to the gradient updates $\nabla L(W,B$ $ |$ $j)$ asynchronously. In a multi-node system this parallelization scheme works on top of H2O's distributed setup, where the training data is distributed across the cluster. Each node operates in parallel on its local data until the final parameters $W,b$ are obtained by averaging. Below is a rough summary.
+Stochastic gradient descent is known to be fast and memory-efficient, but not easily parallelizable without becoming slow. We utilize \textsc{Hogwild!}, the recently developed lock-free parallelization scheme from \href{http://i.stanford.edu/hazy/papers/hogwild-nips.pdf}{Niu et al, 2011}. \textsc{Hogwild!} follows a shared memory model where multiple cores, each handling separate subsets (or all) of the training data, are able to make independent contributions to the gradient updates $\nabla L(W,B$ $ |$ $j)$ asynchronously. In a multi-node system this parallelization scheme works on top of H2O's distributed setup, where the training data is distributed across the cluster. Each node operates in parallel on its local data until the final parameters $W,B$ are obtained by averaging. Below is a rough summary.
 \\
 \\
 \noindent
