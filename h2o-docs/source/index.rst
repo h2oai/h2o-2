@@ -53,6 +53,17 @@ Overview and walkthroughs for the different APIs to H\ :sub:`2`\ O.
    Ruser/top
    tableau/top
 
+Sparkling Water Integration
+===========================
+
+Information, tutorials, and meetup slide decks for Sparkling Water.
+
+.. toctree::
+   :maxdepth: 1
+
+   sparkling/sparkling_water_documentation
+
+
 Deployment and Big Data Management
 ==================================
 
