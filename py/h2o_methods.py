@@ -602,6 +602,7 @@ def create_frame(self, timeoutSecs=120, **kwargs):
         'randomize': None,
         'value': None,
         'real_range': None,
+        'binary_fraction': None,
         'categorical_fraction': None,
         'factors': None,
         'integer_fraction': None,
@@ -610,6 +611,7 @@ def create_frame(self, timeoutSecs=120, **kwargs):
         'binary_ones_fraction': None,
         'missing_fraction': None,
         'response_factors': None,
+        'has_response': None,
     }
     browseAlso = kwargs.pop('browseAlso', False)
     check_params_update_kwargs(params_dict, kwargs, 'create_frame', print_params=True)
