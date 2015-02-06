@@ -63,7 +63,7 @@ Connect with \url{h2ostream@googlegroups.com} and \url{https://github.com/h2oai}
 Visit \url{www.h2o.ai}
 
 \subsection{What is GLM?}
-Generalized linear models (GLM) are the workhorse for most predictive analysis use cases. GLM can be used for both regression and classification, it scales well to large datasets and is based on solid statistical background. It is a ganrelaztion of linear models, allowing for modeling of data with exponential distributions and for categorical data (classification). GLM models are fitted solving the maximum likelihood optimization problem.
+Generalized linear models (GLM) are the workhorse for most predictive analysis use cases. GLM can be used for both regression and classification, it scales well to large datasets and is based on solid statistical background. It is a generalization of linear models, allowing for modeling of data with exponential distributions and for categorical data (classification). GLM models are fitted by solving the maximum likelihood optimization problem.
 
 \subsection{GLM on H2O}
 H2O's GLM algorithm fits the generalized linear model with elastic net penalties. The model fitting computation is distributed, extremely fast, and scales extremely well for models with a limited number (~ low thousands) of predictors with non-zero coefficients. The algorithm can compute models for a single value of a penalty argument or the full regularization path, similar to glmnet package for R\cite{glmnet}. 
@@ -262,8 +262,6 @@ The model is fitted by solving:
 
 Deviance is -2 log likelihood:
 \[D = -2\sum\limits_{i=1}\limits^{N}{(y log(\hat{y}) + (1 - y)log(1-\hat{y})  )}\]
-
-\textbf{Decision threshold}
 
 \textbf{Example}\\
 Using the prostate data set, build a binomial model that classifies if there is penetration of the prostatic capsule (CAPSULE). Make sure the entries in the CAPSULE column are binary entries by using the \texttt{h2o.table()} function. Change the regression by setting the family to binomial.
@@ -499,7 +497,7 @@ the smallest $\lambda$ s.t.the solution is a model with all 0s, to $\lambda_{min
 
 H2O computes $\lambda$-models sequentially and in decreasing order, warm-starting the model for $\lambda_k$ with the solution for $\lambda_{k-1}$. By warm-starting the models, we get better performance: typically models for subsequent $\lambda$s are close to each other, so we need only a few iterations per $\lambda$ (typically 2 or 3). We also achieve greater numerical stability, since models with a higher penalty are easier to compute; so, we start with an easy problem and then keep making only small changes to it.
 
-\textbf{Note:} \textit{nlambda}, \textit{lambda.min.ratio} also specify the relative distance of any two lambdas in the sequence. This is important for the application of recursive strong rules, which are only effectove if the neighbouring lambdas are \textit{"close"} to each other. The default values are \textit{nlambda} = 100 and $\lambda_{min} = \lambda_{max} 1e^{-4}$, which gives us the ratio of.   In order for strong rules to work, you should keep the ratio close to the default.  
+\textbf{Note:} \textit{nlambda}, \textit{lambda.min.ratio} also specify the relative distance of any two lambdas in the sequence. This is important for the application of recursive strong rules, which are only effective if the neighbouring lambdas are \textit{"close"} to each other. The default values are \textit{nlambda} = 100 and $\lambda_{min} = \lambda_{max} 1e^{-4}$, which gives us the ratio of 0.912.   In order for strong rules to work, you should keep the ratio close to the default.  
     
 \subsubsection{Grid Search Over Lambdas}
 While automatic lambda search is the preferred method, it is also possible to do a grid search over lambda values by passing in vector of lambdas and disabling the lambda-search option. The behavior will be identical to lambda search, except H2O will use a user-supplied list of lambdas instead (still capped at $\lambda_{max}$).

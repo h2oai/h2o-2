@@ -9,7 +9,6 @@ import java.util.concurrent.Callable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3.S3Exception;
 
 import water.*;
 import water.Job.ProgressMonitor;
@@ -35,29 +34,40 @@ public final class PersistHdfs extends Persist {
   }
 
   static {
+    Log.POST(4001, "");
     Configuration conf = null;
+    Log.POST(4002, "");
     if( H2O.OPT_ARGS.hdfs_config != null ) {
+      Log.POST(4003, "");
       conf = new Configuration();
       File p = new File(H2O.OPT_ARGS.hdfs_config);
       if( !p.exists() ) Log.die("Unable to open hdfs configuration file " + p.getAbsolutePath());
       conf.addResource(new Path(p.getAbsolutePath()));
       Log.debug(Sys.HDFS_, "resource ", p.getAbsolutePath(), " added to the hadoop configuration");
       Log.info(Sys.HDFS_, "resource ", p.getAbsolutePath(), " added to the hadoop configuration");
+      Log.POST(4004, "");
     } else {
+      Log.POST(4005, "");
       conf = new Configuration();
+      Log.POST(4006, "");
       if( !Strings.isNullOrEmpty(H2O.OPT_ARGS.hdfs) ) {
         // setup default remote Filesystem - for version 0.21 and higher
+        Log.POST(4007, "");
         conf.set("fs.defaultFS", H2O.OPT_ARGS.hdfs);
         // To provide compatibility with version 0.20.0 it is necessary to setup the property
         // fs.default.name which was in newer version renamed to 'fs.defaultFS'
+        Log.POST(4008, "");
         conf.set("fs.default.name", H2O.OPT_ARGS.hdfs);
       }
     }
+    Log.POST(4009, "");
     CONF = conf;
+    Log.POST(4010, "");
   }
 
   // Loading HDFS files
   PersistHdfs() {
+    Log.POST(4000, "");
     _iceRoot = null;
   }
 
@@ -216,15 +226,20 @@ public final class PersistHdfs extends Persist {
         ignoreAndWait(e, false);
       } catch( SocketTimeoutException e ) {
         ignoreAndWait(e, false);
-      } catch( S3Exception e ) {
-        // Preserve S3Exception before IOException
-        // Since this is tricky code - we are supporting different HDFS version
-        // New version declares S3Exception as IOException
-        // But old versions (0.20.xxx) declares it as RuntimeException
-        // So we have to catch it before IOException !!!
-        ignoreAndWait(e, false);
       } catch( IOException e ) {
-        ignoreAndWait(e, true);
+        // Newer versions of Hadoop derive S3Exception from IOException
+        if (e.getClass().getName().contains("S3Exception")) {
+          ignoreAndWait(e, false);
+        } else {
+          ignoreAndWait(e, true);
+        }
+      } catch( RuntimeException e ) {
+        // Older versions of Hadoop derive S3Exception from RuntimeException
+        if (e.getClass().getName().contains("S3Exception")) {
+          ignoreAndWait(e, false);
+        } else {
+          throw Log.errRTExcept(e);
+        }
       } catch( Exception e ) {
         throw Log.errRTExcept(e);
       }

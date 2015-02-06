@@ -305,8 +305,19 @@ public class Boot extends ClassLoader {
       // method. Problem showed up on samples where users launched the wrong one.
       main = mainClazz.getMethod("userMain", String[].class);
     } catch(NoSuchMethodException ex) {}
-    if(main == null) main = mainClazz.getMethod("main", String[].class);
-    main.invoke(null,(Object)args);
+    if (main == null) {
+      main = mainClazz.getMethod("main", String[].class);
+    }
+    Log.POST(20, (main == null) ? "main is null" : "main is not null");
+    try {
+      main.invoke(null, (Object) args);
+    }
+    catch (Exception e) {
+      Log.POST(20, "invoke got an exception");
+      Log.POST(20, "");
+      Log.POST(20, e);
+      throw e;
+    }
     Log.POST(20, "after (in run) mainClass invoke "+ mainClazz.getName());
 
     int index = Arrays.asList(args).indexOf("-runClass");

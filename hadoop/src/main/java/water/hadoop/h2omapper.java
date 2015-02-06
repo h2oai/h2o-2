@@ -479,20 +479,26 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     }
     catch (Exception e) {
       Log.POST(13, "Exception in boot");
+      Log.POST(13, "");
       context.write(textId, new Text("exception in water.Boot.main()"));
 
       String s = e.getMessage();
       if (s == null) { s = "(null exception message)"; }
+      Log.POST(13, s);
+      Log.POST(13, "");
       context.write(textId, new Text(s));
 
       s = e.toString();
       if (s == null) { s = "(null exception toString)"; }
+      Log.POST(13, s);
+      Log.POST(13, "");
       context.write(textId, new Text(s));
 
       StackTraceElement[] els = e.getStackTrace();
       for (int i = 0; i < els.length; i++) {
         StackTraceElement el = els[i];
         s = el.toString();
+        Log.POST(13, s);
         context.write(textId, new Text("    " + s));
       }
     }

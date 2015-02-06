@@ -836,6 +836,9 @@ public abstract class Log {
           POST(n, els[i].toString());
       }
   }
+  public static void POST(int n) {
+      POST(n, "");
+  }
 
   public static void main(String[]args) {
       Log.info("hi");

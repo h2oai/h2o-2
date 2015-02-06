@@ -8,9 +8,9 @@ Author: Anqi Fu, Spencer Aiello, Ariel Rao, Tom Kraljevic and Petr Maj,
 Maintainer: Tom Kraljevic <tomk@0xdata.com>
 Description: Run H2O via its REST API from within R.
 License: Apache License (== 2.0)
-Depends: R (>= 2.13.0), RCurl, rjson, statmod, survival, stats, tools, utils,
-         methods
-Collate: Wrapper.R Internal.R Classes.R ParseImport.R models.R Algorithms.R 
+Depends: R (>= 2.13.0), statmod, survival, stats, graphics, utils, methods
+Imports: RCurl, rjson, tools
+Collate: Wrapper.R Internal.R Classes.R ParseImport.R models.R Algorithms.R
          zzz.R
 NeedsCompilation: no
 SystemRequirements: Java (>= 1.6)
