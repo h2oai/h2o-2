@@ -289,6 +289,7 @@ dw_3:
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/hadoop
 	cp -p hadoop/README.txt $(BUILD_WEBSITE_DIR)/bits/hadoop
 	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
+	cp -p docs/sparkling_water_meetup.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -p docs/h2o_datasheet.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -p docs/H2ODeveloperCookbook.pdf $(BUILD_WEBSITE_DIR)/bits
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
