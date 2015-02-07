@@ -131,7 +131,9 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
     double best_se1=Double.MAX_VALUE;   // Best squared error
     byte equal=0;                // Ranged check
     for( int b=1; b<=nbins-1; b++ ) {
-      if( (_bins[b] == 0) || (ns0[b] < _min_rows) || (ns1[b] < _min_rows) ) continue; // Ignore small splits
+      if( _bins[b] == 0 ) continue; // Ignore empty splits
+      if( ns0[b] < _min_rows ) continue;
+      if( ns1[b] < _min_rows ) break; // ns1 shrinks at the higher bin#s, so if it fails once it fails always
       // We're making an unbiased estimator, so that MSE==Var.
       // Then Squared Error = MSE*N = Var*N
       //                    = (ssqs/N - mean^2)*N
@@ -154,9 +156,9 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
         _maxEx-_min > 2 ) { // Also need more than 2 (boolean) choices to actually try a new split pattern
       for( int b=1; b<=nbins-1; b++ ) {
         if( _bins[b] < _min_rows ) continue; // Ignore small bin
-        long N =        ns0[b+0] + ns1[b+1];
-        double sums = sums0[b+0]+sums1[b+1];
-        double ssqs = ssqs0[b+0]+ssqs1[b+1];
+        long N =        ns0[b] + ns1[b+1];
+        double sums = sums0[b]+sums1[b+1];
+        double ssqs = ssqs0[b]+ssqs1[b+1];
         if( N < _min_rows ) continue;
         double si =  ssqs    -  sums   * sums   /   N    ; // Left+right, excluding 'b'
         double sx = _ssqs[b] - _sums[b]*_sums[b]/_bins[b]; // Just 'b'
