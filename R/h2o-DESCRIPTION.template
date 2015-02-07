@@ -3,16 +3,21 @@ Type: Package
 Title: H2O R Interface
 Version: SUBST_PROJECT_VERSION
 Date: 2015-02-05
-Author: Anqi Fu, Spencer Aiello, Ariel Rao, Tom Kraljevic and Petr Maj,
+Author: Anqi Fu [aut], Spencer Aiello [aut], Ariel Rao [aut],
+        Amy Wang [aut], Tom Kraljevic [aut], and Petr Maj [ctb]
         with contributions from the H2O team
 Maintainer: Tom Kraljevic <tomk@0xdata.com>
-Description: Run H2O via its REST interface from within R.
+Description: R scripting functionality for H2O, the open source
+  math engine for big data that computes parallel distributed
+  machine learning algorithms such as generalized linear models,
+  gradient boosting machines, random forests, and neural networks
+  (deep learning) within various cluster environments.
 License: Apache License (== 2.0)
 Depends: R (>= 2.13.0), statmod, survival, stats, graphics, utils, methods
 Imports: RCurl, rjson, tools
+Suggests: plyr
 Collate: Wrapper.R Internal.R Classes.R ParseImport.R models.R Algorithms.R
          zzz.R
 NeedsCompilation: no
 SystemRequirements: Java (>= 1.6)
-Suggests: plyr
 URL: http://www.h2o.ai
