@@ -444,7 +444,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // DRF picks a random different set of columns for the 2nd tree.
         if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
-        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],group_split,false) ); // The "root" node
+        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],min_rows,group_split,false) ); // The "root" node
       }
     }
     int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
