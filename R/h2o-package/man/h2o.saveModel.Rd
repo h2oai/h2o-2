@@ -23,7 +23,7 @@ Returns path of model object saved.
 library(h2o)
 localH2O = h2o.init()
 prostate.hex = h2o.importFile(localH2O, path = paste("https://raw.github.com", 
-  "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
+  "h2oai/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), 
   data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 h2o.saveModel(object = prostate.glm, dir = "/Users/UserName/Desktop", save_cv = TRUE, force = TRUE)

@@ -8,7 +8,7 @@ localH2O = new("H2OClient", ip = "localhost", port = 54321)
 # h2o.checkClient(localH2O)
 
 # Test using prostate cancer data set
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/h2oai/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 prostate.sum = summary(prostate.hex)
 print(prostate.sum)
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
@@ -38,13 +38,13 @@ for(i in 1:length(glm_test.hex))
   
   
 #Test of GLMGrid using prostate cancer data set
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/h2oai/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 prostate.sum = summary(prostate.hex)
 prostate.glmgrid = h2o.glmgrid(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = c(0.2,0.5,1),lambda=c(1e-4,1))
 print(prostate.glmgrid)
 
 # Test of PCA using prostate cancer data set
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/h2oai/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 prostate.pca = h2o.prcomp(prostate.hex)
 print(prostate.pca)
 summary(prostate.pca)

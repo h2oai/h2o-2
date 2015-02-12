@@ -439,7 +439,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         //if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
         boolean isBinom = classification;
-        new DRFUndecidedNode(ktrees[k],-1, DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],do_grpsplit,isBinom) ); // The "root" node
+        new DRFUndecidedNode(ktrees[k],-1, DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],min_rows,do_grpsplit,isBinom) ); // The "root" node
       }
     }
 

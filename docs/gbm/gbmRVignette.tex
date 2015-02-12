@@ -28,19 +28,11 @@
 \newpage
 \section{What is H2O?}
 
-It is the only alternative to combine the power of highly advanced algorithms, the freedom of open source, and the capacity of truly scalable in-memory processing for big data on one or many nodes. Combined, these capabilities make it faster, easier, and more cost-effective to harness big data to maximum benefit for the business. 
-
-Data collection is easy. Decision making is hard. H2O makes it fast and easy to derive insights from your data through faster and better predictive modeling. Existing Big Data stacks are batch-oriented. Search and analytics need to be interactive. Use machines to learn machine-generated data. And more data beats better algorithms. 
-
-With H2O, you can make better predictions by harnessing sophisticated, ready-to-use algorithms and the processing power you need to analyze bigger data sets, more models, and more variables. 
-
-Get started with minimal effort and investment. H2O is an extensible open source platform that offers the most pragmatic way to put big data to work for your business. With H2O, you can work with your existing languages and tools. You can further extend the platform seamlessly into your Hadoop environments. Get H2O!
-
-Download H2O
-{\url{http://www.h2o.ai/download}}
-
-Join the Community
-{\url{h2ostream@googlegroups.com}} and {\url{github.com/h2oai/h2o.git}}
+H2O is fast scalable open -source machine learning and deep learning for Smarter Applications. With H2O enterprises like PayPal, Nielsen, Cisco and others can use all of their data without sampling and get accurate predictions faster. Advanced algorithms, like Deep Learning, Boosting and Bagging Ensembles are readily available for application designers to build smarter applications through elegant APIs. Some of our earliest customers have built powerful domain-specific predictive engines for Recommendations, Customer Churn, Propensity to Buy, Dynamic Pricing and Fraud Detection for the Insurance, Healthcare, Telecommunications, AdTech,Retail and Payment Systems.
+Using in-memory compression techniques, H2O can handle billions of data rows in-memory — even with a fairly small cluster. The platform includes interfaces for R, Python, Scala, Java, JSON and Coffeescript/JavaScript, along with its built-in Flow web interface that make it easier for non-engineers to stitch together complete analytic workflows. The platform was built alongside (and on top of) both Hadoop and Spark Clusters and is typically deployed within minutes.
+H2O implements almost all common machine learning algorithms — such as generalized linear modeling (linear regression, logistic regression, etc.), Na\"{i}ve Bayes, principal components analysis, time series, k-means clustering and others. H2O also implements best-in-class algorithms such as Random Forest, Gradient Boosting and Deep Learning at scale. Customers can build thousands of models and compare them to get the best prediction results.
+H2O is nurturing a grassroots movement of physicists, mathematicians, computer and data scientists to herald the new wave of discovery with data science. Academic re- searchers and Industrial data scientists collaborate closely with our team to make this possible. Stanford university giants Stephen Boyd, Trevor Hastie, Rob Tibshirani advise the H2O team to build scalable machine learning algorithms. With 100s of meetups over the past two years, H2O has become a word-of-mouth phenomenon growing amongst the data community by a 100-fold and is now used by 12,000+ users, deployed in 2000+ corporations using R, Python, Hadoop and Spark.\textbf{Try it out}H2O offers an R package that can be installed from CRAN. H2O can be downloaded from \url{www.h2o.ai/download}.\textbf{Join the community}Connect with \url{h2ostream@googlegroups.com} and \url{https://github.com/h2oai} to learn about our meetups, training sessions, hackathons, and product updates.\textbf{Learn more about H2O}
+Visit \url{www.h2o.ai}
 
 
 \section{Introduction}
@@ -200,7 +192,7 @@ To launch H2O nodes and form a cluster on the Hadoop cluster, run:
 $ hadoop jar h2odriver_hdp2.1.jar water.hadoop.h2odriver -libjars ../h2o.jar -mapperXmx 1g -nodes 1 -output hdfsOutputDirName
 \end{spverbatim}
 \begin{itemize}
-\item For each major release of each distribution of Hadoop, there is a driver jar file that the user will need to launch H2O with. Currently available driver jar files in each build of H2O includes {\texttt{h2odriver_cdh5.jar, h2odriver_hdp2.1.jar}}, and {\texttt{mapr2.1.3.jar}}.
+\item For each major release of each distribution of Hadoop, there is a driver jar file that the user will need to launch H2O with. Currently available driver jar files in each build of H2O include {\texttt{h2odriver_cdh5.jar, h2odriver_hdp2.1.jar}}, and {\texttt{mapr2.1.3.jar}}.
 \item The above command launches exactly one 1g node of H2O; however,  we recommend launching the cluster with 4 times the memory of your data file.
 \item{\texttt{mapperXmx}} is the mapper size or the amount of memory allocated to each node.
 \item{\texttt{nodes}} is the number of nodes requested to form the cluster.
@@ -337,7 +329,7 @@ Gradient boosting is a machine learning technique that combines two powerful too
 \indent \indent i. Compute $r_{ikm} = y_{ik} - p_k(x_i),  i = 1,2,\dots,N$
 \\
 \indent \indent ii. Fit a regression tree to the targets $r_{ikm}, i = 1,2,\dots,N$, 
-\par \hspace{3em} giving terminal regions $R_{jim}, 1,2,\dots,J_m$
+\par \hspace{3em} giving terminal regions $R_{jkm}, 1,2,\dots,J_m$
 \\
 \indent \indent iii. Compute $$\gamma_{jkm} = \frac{K-1}{K} \frac{\sum_{x_i \in R_{jkm}} (r_{ikm})}{\sum_{x_i \in R_{jkm}} |r_{ikm}| (1 - |r_{ikm}|)} , j=1,2,\dots,J_m$$
 \\

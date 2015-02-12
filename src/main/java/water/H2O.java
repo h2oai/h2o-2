@@ -1385,13 +1385,22 @@ public final class H2O {
   }
 
   static void initializePersistence() {
+    Log.POST(3001);
     HdfsLoader.loadJars();
+    Log.POST(3002);
     if( OPT_ARGS.aws_credentials != null ) {
       try {
+        Log.POST(3003);
         PersistS3.getClient();
-      } catch( IllegalArgumentException e ) { Log.err(e); }
+        Log.POST(3004);
+      } catch( IllegalArgumentException e ) {
+        Log.POST(3005);
+        Log.err(e);
+      }
     }
+    Log.POST(3006);
     Persist.initialize();
+    Log.POST(3007);
   }
 
   static void initializeLicenseManager() {
