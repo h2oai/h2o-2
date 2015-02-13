@@ -4,11 +4,13 @@ Running H2O on Hadoop
 =====================
 
 **NOTE**: 
+
 - Each H2O node runs as a mapper
 - Run only one mapper per host
 - There are no combiners or reducers 
 - Each H2O cluster must have a unique job name
 - `-mapperXmx`, `-nodes`, and `-output` are required
+- Root permissions are not required - just unzip the H2O .zip file on any single node
 
 The following tutorial will walk the user through the download or build of H2O and the parameters involved in launching H2O from the command line.
 
