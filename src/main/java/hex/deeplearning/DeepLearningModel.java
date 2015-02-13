@@ -928,18 +928,18 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             if (adaptCM) orig_label.remove(new Futures()).blockForPending();
           }
 
-          if (get_params().variable_importances) {
-            if (!get_params().quiet_mode) Log.info("Computing variable importances.");
-            final float[] vi = model_info().computeVariableImportances();
-            err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
-          }
-
           // only keep confusion matrices for the last step if there are fewer than specified number of output classes
           if (err.train_confusion_matrix.cm != null
                   && err.train_confusion_matrix.cm.length - 1 >= get_params().max_confusion_matrix_size) {
             err.train_confusion_matrix = null;
             err.valid_confusion_matrix = null;
           }
+        }
+
+        if (get_params().variable_importances) {
+          if (!get_params().quiet_mode) Log.info("Computing variable importances.");
+          final float[] vi = model_info().computeVariableImportances();
+          err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
         }
 
         _timeLastScoreEnd = System.currentTimeMillis();
