@@ -37,12 +37,24 @@ tool that predicts whether an object is an internet ad or not.
 Building a Model
 """"""""""""""""
 
+After parsing the data, select either **Random Forest** or **BigData Random Forest** from the **Build models using...** links at the top of the page. 
+Select **Random Forest** to create a SpeeDRF model for classification, or select **BigData Random Forest** a DRF model that can be either classification or regression. 
+
+
 #. Once data are parsed a horizontal menu appears at the top
    of the screen that displays "Build model using ... ". Select 
    *Random Forest* here, or go to the drop-down **Model** menu  and
    find Random Forest there.
 
 #. In the "source" field, enter the .hex key generated during data parsing. 
+
+
+#. From the "response" drop-down list, select the column to use for the response variable. 
+
+
+#. To exclude an attribute from tree building, select it in the "Ignored columns" section.
+
+#. (For BigData only)Check the "classification" checkbox to use classification or uncheck it to use regression. 
 
 #. In the "ntrees" field, specify the number of trees to build (in this case, 150).
  
@@ -58,7 +70,6 @@ Building a Model
 #. Make a selection from the drop-down "select stat type" list to choose between split criteria. Entropy maximizes information gain, where Gini seeks to isolate the dominant category at each node. For this example, select Gini. 
 
 
-#. To exclude an attribute from tree building, select it in the "Ignore" section.
 
 
 #. To correct unbalanced data, use "balance classes" and "sampling strategy". For this example, use the default values.
@@ -76,9 +87,8 @@ RF Output
 """""""""
 
 
-The RF output is a confusion matrix detailing
-the classification error rates for each level in the range of the
-target variable. In addition to the confusion matrix, the overall
+
+For a SpeeDRF model or BigData RF classification model, the RF output is a confusion matrix detailing the classification error rates for each level in the range of the target variable. In addition to the confusion matrix, the overall
 classification error, the number of trees, and data use descriptives
 are included in the output. 
 
@@ -88,12 +98,7 @@ are included in the output.
 |
 
 RF inspect also includes information about the specified
-tuning parameters at the top of RFView. At the top of the page there
-is also an option to go directly to generating predictions for
-another dataset. 
-
-.. image:: RFoutput.png
-   :width: 90 %
+tuning parameters at the top of RFView. To generate predictions for another dataset, click the "Score on dataset" link at the top of the page. 
 
 """"
 
@@ -101,7 +106,7 @@ another dataset.
 RF Predict
 """"""""""
 
-To generate a prediction, click the *Predict!* link at the top
+To generate a prediction, click the *Score on dataset* link at the top
 of the RFView page or go to the drop-down **Score** menu and select *Predict*. 
 
 The predict function requires a .hex key associated with a model. To find the .hex key, go to the drop-down **Admin** menu and select *Jobs*.
