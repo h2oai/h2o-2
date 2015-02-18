@@ -72,7 +72,17 @@ public class Exec2 extends Request2 {
     catch( Throwable e2 ) { Log.err(e=e2); }
     finally {
       if (env != null) {
-        try { env.remove_and_unlock(); }
+        try {
+          long start = System.currentTimeMillis();
+          env.remove_and_unlock();
+          long elapsed_1 = System.currentTimeMillis() - start;
+
+          Log.info("");
+          Log.info("");
+          Log.info("Time to unlock all frame keys: " + elapsed_1 / 1000.0 + "(s)");
+          Log.info("");
+          Log.info("");
+        }
         catch (Exception xe) { Log.err("env.remove_and_unlock() failed", xe); }
       }
     }
