@@ -67,6 +67,7 @@ public class Exec2 {
         @Override public boolean filter(H2O.KeyInfo k) { return k._type == TypeMap.FRAME; }
       }).keys();
     Log.info("Locking " + frameKeys.length +"keys for Exec2.");
+    long start = System.currentTimeMillis();
     for( Key k : frameKeys ) {      // Convert all VAs to Frames
       Value val = DKV.get(k);
       if( val == null || !val.isFrame()) continue;
@@ -86,6 +87,15 @@ public class Exec2 {
       }
     }
 
+    long elapsed_1 = System.currentTimeMillis() - start;
+
+    Log.info("");
+    Log.info("");
+    Log.info("Time to lock (" + frameKeys.length + ") frames: " + elapsed_1 / 1000.0 + "(s)");
+    Log.info("");
+    Log.info("");
+
+
     // Some global constants
     global.add(new ASTId(Type.DBL,"TRUE",0,global.size())); env.push(1.0);
     global.add(new ASTId(Type.DBL,"FALSE",0,global.size())); env.push(0.0);
@@ -98,10 +108,29 @@ public class Exec2 {
     try {
       int argcnt = global.size();
       Exec2 ex = new Exec2(str, global);
+      start = System.currentTimeMillis();
       AST ast = ex.parse();
+      elapsed_1 = System.currentTimeMillis() - start;
+
+      Log.info("");
+      Log.info("");
+      Log.info("Time to parse the expression: " + elapsed_1 / 1000.0 + "(s)");
+      Log.info("");
+      Log.info("");
+
 
       env.push(global.size()-argcnt);   // Push space for temps
+
+      start = System.currentTimeMillis();
       ast.exec(env);
+      elapsed_1 = System.currentTimeMillis() - start;
+
+      Log.info("");
+      Log.info("");
+      Log.info("Time to perform the exec query: " + elapsed_1 / 1000.0 + "(s)");
+      Log.info("");
+      Log.info("");
+
       env.postWrite();
     } catch( RuntimeException t ) {
       env.remove_and_unlock();
