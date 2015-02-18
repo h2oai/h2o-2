@@ -16,6 +16,7 @@ Getting Started with Sparkling Water
 - `Launch on Hadoop and Import From HDFS <https://github.com/h2oai/sparkling-water/tree/master/examples#sparkling-water-on-hadoop>`_
 - `Sparkling Water Tutorials <https://github.com/h2oai/sparkling-water/tree/master/examples>`_
 - `Sparkling Water on YARN <http://h2o.ai/blog/2014/11-sparkling-water-on-yarn-example/>`_
+- `Sparkling Water FAQ <http://h2o.ai/product/faq/#SparklingH2O>`_
 
 ---
 
