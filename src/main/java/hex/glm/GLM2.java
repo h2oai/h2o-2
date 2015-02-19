@@ -530,11 +530,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           if(_srcDinfo._normMul != null) {
             double norm = 0;
             for (int i = numoff; i < _srcDinfo.fullN(); ++i) {
-              norm += _bgs[i] * _srcDinfo._normMul[i-numoff];
+              norm += _bgs[i] * _srcDinfo._normSub[i-numoff];
               _bgs[i] /= _srcDinfo._normMul[i-numoff];
+
             }
             if(_intercept == 1)
-              _bgs[_bgs.length-1] += norm;
+              _bgs[_bgs.length-1] -= norm;
           }
         }
         if((v = beta_constraints.vec("rho")) != null)
