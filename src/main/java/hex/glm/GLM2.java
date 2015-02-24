@@ -769,7 +769,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private double [] setSubmodel(final double[] newBeta, GLMValidation val, H2OCountedCompleter cmp){
     int intercept = (this.intercept ?1:0);
-    double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
+    double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta.clone():expandVec(newBeta,_activeCols);
     if(val != null) val.null_deviance = _nullDeviance;
     if(this.intercept)
       fullBeta[fullBeta.length-1] += _iceptAdjust;
