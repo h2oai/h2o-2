@@ -489,7 +489,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           for(int i = 0; i < names.length; ++i)
             m.put(names[i],i);
           int [] newMap = MemoryManager.malloc4(dom.length);
-          for(int i = 0; i < dom.length; ++i) {
+          for(int i = 0; i < map.length; ++i) {
             Integer I = m.get(dom[map[i]]);
             newMap[i] = I == null?-1:I;
           }
