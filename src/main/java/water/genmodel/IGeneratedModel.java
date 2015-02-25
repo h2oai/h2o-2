@@ -6,6 +6,9 @@ import java.util.Map;
  * A generic interface to access generated models.
  */
 public interface IGeneratedModel {
+    /** Returns model's unique identifier. */
+    public String getUUID();
+
     /** Returns number of columns used as input for training (i.e., exclude response column). */
     public int getNumCols();
 

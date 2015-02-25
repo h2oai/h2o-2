@@ -1,25 +1,18 @@
 package water;
 
+import static water.util.JCodeGen.toStaticVar;
 import hex.ConfusionMatrix;
 import hex.VarImp;
+
+import java.util.*;
+
 import javassist.*;
 import water.api.*;
 import water.api.Request.API;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.TransfVec;
-import water.fvec.Vec;
+import water.fvec.*;
 import water.serial.AutoBufferSerializer;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-
-import static water.util.JCodeGen.toStaticVar;
-import static water.util.Utils.contains;
 
 /**
  * A Model models reality (hopefully).
@@ -658,6 +651,9 @@ public abstract class Model extends Lockable<Model> {
     sb.ii(1);
     sb.i().p("public String[]   getNames() { return NAMES; } ").nl();
     sb.i().p("public String[][] getDomainValues() { return DOMAINS; }").nl();
+    String uuid = this.uniqueId != null ? this.uniqueId.getId() : this._key.toString();
+    sb.i().p("public String     getUUID() { return ").ps(uuid).p("; }").nl();
+
     return sb;
   }
   private SB toJavaNAMES( SB sb ) { return JCodeGen.toStaticVar(sb, "NAMES", _names, "Names of columns used by model."); }
