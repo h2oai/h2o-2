@@ -58,8 +58,8 @@ test.LR.betaConstraints <- function(conn) {
   }
   
   families = c("gaussian", "binomial", "poisson")
-  sapply(families, function(family) run_glm(family_type = family))
-  
+  familyTest <- sapply(families, function(family) run_glm(family_type = family))
+  print(familyTest)
   
   testEnd()
 }
