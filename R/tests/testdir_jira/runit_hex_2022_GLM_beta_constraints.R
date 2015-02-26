@@ -38,29 +38,36 @@ test.LR.betaConstraints <- function(conn) {
   run_glm <- function(  family_type = "gaussian",
                         alpha = 0.5,
                         standardization = T,
-                        upper_bound = 1,
-                        lower_bound = -1) {
-    Log.info(paste("Set Beta Constraints :", "upper bound =", upper_bound, "and lower bound =", lower_bound, "..."))
+                        bounds = c(-1,1)
+                        ) {
+    upper_bound = bounds[2]
+    lower_bound = bounds[1]
+    Log.info(paste("Set Beta Constraints :", "lower bound =", lower_bound,"and upper bound =", upper_bound, "..."))
     betaConstraints.hex = as.h2o(conn, betaConstraints, key = "betaConstraints.hex")
     betaConstraints.hex$upper_bounds = upper_bound
     betaConstraints.hex$lower_bounds = lower_bound
     
-    Log.info(paste("Run H2O's GLM with :", "family =", family_type, ", lower bound =", alpha, ", standardization =", standardization, "..."))
+    Log.info(paste("Run H2O's GLM with :", "family =", family_type, ", alpha =", alpha, ", standardization =", standardization, "..."))
     glm_constraints.h2o = h2o.glm(x = myX, y = myY, data = prostate.hex, standardize = standardization,
                                   family = family_type, alpha = alpha , beta_constraints = betaConstraints.hex)
     lambda = glm_constraints.h2o@model$lambda
     
     Log.info(paste("Run GLMnet with the same parameters, using lambda =", lambda))
-    glm_constraints.r = glmnet(x = as.matrix(xDataFrame), alpha = alpha, lambda = lambda, 
+    glm_constraints.r = glmnet(x = as.matrix(xDataFrame), alpha = alpha, lambda = lambda, standardize = standardization,
                                y = prostate.csv[,myY], family = family_type, lower.limits = lower_bound, upper.limits = upper_bound)
-    compare_deviance(glm_constraints.h2o, glm_constraints.r)
-    compare_coeff(glm_constraints.h2o, glm_constraints.r)
+    checkGLMModel2(glm_constraints.h2o, glm_constraints.r)
   }
   
   families = c("gaussian", "binomial", "poisson")
-  familyTest <- sapply(families, function(family) run_glm(family_type = family))
-  print(familyTest)
+  alpha = c(0,0.5,1.0)
+  standard = c(T, F)
+
+  grid = expand.grid(families, alpha, standard)
+  names(grid) = c("Family", "Alpha", "Standardize")
   
+  fullTest <- mapply(run_glm, as.character(grid[,1]), grid[,2], grid[,3])  
+  testResults <- cbind(grid,Passed = fullTest)
+  print(testResults)  
   testEnd()
 }
 
