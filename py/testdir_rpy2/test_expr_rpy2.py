@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
                 else:
                     # skip Inf
                     # don't do logicals..h2o 1/0, R True/False
-                    h2o_util.approxEqual(rResult, hResult, tol=1e-12, msg='mismatch h2o/R expression result')
+                    h2o_util.assertApproxEqual(rResult, hResult, tol=1e-12, msg='mismatch h2o/R expression result')
 
 
 if __name__ == '__main__':

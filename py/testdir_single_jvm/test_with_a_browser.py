@@ -13,8 +13,7 @@ class Basic(unittest.TestCase):
         # java_extra_args='-XX:+PrintGCDetails')
         # use_hdfs=True, 
         # Uses your username specific json: pytest_config-<username>.json
-        h2o.init (1, 
-            java_heap_GB=12)
+        h2o.init (1, java_heap_GB=28)
 
     @classmethod
     def tearDownClass(cls):
