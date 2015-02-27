@@ -37,10 +37,8 @@ test.LR.betaConstraints <- function(conn) {
   xMatrix_age = as.matrix(xDataFrame)
   lr.R = glmnet(x = xMatrix_age, alpha = 0., lambda = lr.h2o@model$lambda, standardize = T,
                 y = prostate.csv[,"CAPSULE"], family = "gaussian", lower.limits = 0., upper.limits = 1.)
+  checkGLMModel2(lr.h2o, lr.R)
   
-  compare_deviance(lr.h2o, lr.R)
-  compare_coeff(lr.h2o, lr.R)
-
   #### shift AGE coefficient by 0.002
   Log.info("Test Beta Constraints with negative upper bound in H2O...")
   lower_bound = -0.007
@@ -55,8 +53,7 @@ test.LR.betaConstraints <- function(conn) {
   lr_negativeUpper.R = glmnet(x = xMatrix_age, alpha = 0., lambda = lr.h2o@model$lambda, standardize = T,
                               y = prostate.csv[,"CAPSULE"], family = "gaussian", lower.limits = lower_bound-upper_bound, upper.limits = 0.)
   
-  compare_deviance(lr_negativeUpper.h2o, lr_negativeUpper.R)
-  compare_coeff(lr_negativeUpper.h2o, lr_negativeUpper.R)
+  checkGLMModel2(lr_negativeUpper.h2o, lr_negativeUpper.R)
   
   testEnd()
 }
