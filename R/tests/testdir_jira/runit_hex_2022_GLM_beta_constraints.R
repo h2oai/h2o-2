@@ -48,7 +48,7 @@ test.LR.betaConstraints <- function(conn) {
     betaConstraints.hex$lower_bounds = lower_bound
     
     Log.info(paste("Run H2O's GLM with :", "family =", family_type, ", alpha =", alpha, ", standardization =", standardization, "..."))
-    glm_constraints.h2o = h2o.glm(x = myX, y = myY, data = prostate.hex, standardize = standardization,
+    glm_constraints.h2o = h2o.glm(x = myX, y = myY, data = prostate.hex, standardize = standardization, higher_accuracy = T,
                                   family = family_type, alpha = alpha , beta_constraints = betaConstraints.hex)
     lambda = glm_constraints.h2o@model$lambda
     
