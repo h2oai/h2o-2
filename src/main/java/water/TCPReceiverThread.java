@@ -53,7 +53,7 @@ public class TCPReceiverThread extends Thread {
         break;                  // Socket closed for shutdown
       } catch( Exception e ) {
         // On any error from anybody, close all sockets & re-open
-        Log.err("Retrying after IO error on TCP port "+H2O.UDP_PORT+": ",e);
+        Log.err("Retrying after IO error on TCP port "+H2O.H2O_PORT +": ",e);
         saw_error = true;
         errsock = SOCK ;  SOCK = null; // Signal error recovery on the next loop
       }
@@ -93,7 +93,7 @@ public class TCPReceiverThread extends Thread {
           // On any error from anybody, close everything
           System.err.println("IO error");
           e.printStackTrace();
-          Log.err("IO error on TCP port "+H2O.UDP_PORT+": ",e);
+          Log.err("IO error on TCP port "+H2O.H2O_PORT +": ",e);
           break;
         }
         // Reuse open sockets for the next task

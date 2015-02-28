@@ -17,6 +17,7 @@ import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 import water.license.LicenseManager;
+import java.nio.channels.ServerSocketChannel;
 
 /**
 * Start point for creating or joining an <code>H2O</code> Cloud.
@@ -37,7 +38,7 @@ public final class H2O {
 
   // The default port for finding a Cloud
   public static int DEFAULT_PORT = 54321;
-  public static int UDP_PORT; // Fast/small UDP transfers
+  public static int H2O_PORT; // Fast/small UDP transfers
   public static int API_PORT; // RequestServer and the new API HTTP port
 
   // Whether to toggle to single precision as upper limit for storing floating point numbers
@@ -1128,9 +1129,9 @@ public final class H2O {
     API_PORT = OPT_ARGS.port != 0 ? OPT_ARGS.port : DEFAULT_PORT;
 
     while (true) {
-      UDP_PORT = API_PORT+1;
+      H2O_PORT = API_PORT+1;
       if( API_PORT<0 || API_PORT>65534 ) // 65535 is max, implied for udp port
-        Log.die("Attempting to use system illegal port, either "+API_PORT+" or "+UDP_PORT);
+        Log.die("Attempting to use system illegal port, either "+API_PORT+" or "+ H2O_PORT);
       try {
         // kbn. seems like we need to set SO_REUSEADDR before binding?
         // http://www.javadocexamples.com/java/net/java.net.ServerSocket.html#setReuseAddress:boolean
@@ -1149,16 +1150,23 @@ public final class H2O {
           ? new ServerSocket(API_PORT)
           : new ServerSocket(API_PORT, -1/*defaultBacklog*/, SELF_ADDRESS);
         _apiSocket.setReuseAddress(true);
-
+        // Bind to the UDP socket
         _udpSocket = DatagramChannel.open();
         _udpSocket.socket().setReuseAddress(true);
-        _udpSocket.socket().bind(new InetSocketAddress(SELF_ADDRESS, UDP_PORT));
+        InetSocketAddress isa = new InetSocketAddress(H2O.SELF_ADDRESS, H2O_PORT);
+        _udpSocket.socket().bind(isa);
+        // Bind to the TCP socket also
+        TCPReceiverThread.SOCK = ServerSocketChannel.open();
+        TCPReceiverThread.SOCK.socket().setReceiveBufferSize(water.AutoBuffer.TCP_BUF_SIZ);
+        TCPReceiverThread.SOCK.socket().bind(isa);
         break;
       } catch (IOException e) {
         try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { Log.err(ohwell); }
         Utils.close(_udpSocket);
+        if( TCPReceiverThread.SOCK != null ) try { TCPReceiverThread.SOCK.close(); } catch( IOException ie ) { }
         _apiSocket = null;
         _udpSocket = null;
+        TCPReceiverThread.SOCK = null;
         if( OPT_ARGS.port != 0 )
           Log.die("On " + SELF_ADDRESS +
               " some of the required ports " + (OPT_ARGS.port+0) +
@@ -1168,7 +1176,7 @@ public final class H2O {
       API_PORT += 2;
     }
     SELF = H2ONode.self(SELF_ADDRESS);
-    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http://",SELF_ADDRESS.getHostAddress(),":"+_apiSocket.getLocalPort()+"/");
+    Log.info("Internal communication uses port: ", H2O_PORT,"\nListening for HTTP and REST traffic on  http://",SELF_ADDRESS.getHostAddress(),":"+_apiSocket.getLocalPort()+"/");
 
     String embeddedConfigFlatfile = null;
     AbstractEmbeddedH2OConfig ec = getEmbeddedH2OConfig();
