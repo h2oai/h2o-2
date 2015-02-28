@@ -178,6 +178,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private Key _progressKey;
   private DataInfo _srcDinfo;
   private int [] _activeCols;
+  private boolean _allIn;
   private DataInfo _activeData;
   public GLMParams _glm;
   private boolean _grid;
@@ -1377,6 +1378,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
   // filter the current active columns using the strong rules
   private int [] activeCols(final double l1, final double l2, final double [] grad){
+    if(_allIn) return null;
+
     final double rhs = alpha[0]*(2*l1-l2);
     int [] cols = MemoryManager.malloc4(_srcDinfo.fullN());
     int selected = 0;
@@ -1391,6 +1394,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       cols[selected++] = c;
     if(!strong_rules || selected == _srcDinfo.fullN()){
       _activeCols = null;
+      _allIn = true;
       _activeData._adaptedFrame = _srcDinfo._adaptedFrame;
       _activeData = _srcDinfo;
     } else {
