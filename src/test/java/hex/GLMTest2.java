@@ -394,24 +394,21 @@ public class GLMTest2  extends TestUtil {
     //String[] cfs1 = new String[]{"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON","Intercept"};
     //double[] vals = new double[]{0, 0, 0.54788332,0.53816534, 0.02380097, 0, 0.98115670,-8.945984};
     // [AGE, RACE, DPROS, DCAPS, PSA, VOL, GLEASON, Intercept]
-    FVecTest.makeByteVec(betaConsKey, "names, beta_given, rho\n AGE, .5, 2\n RACE, .75, 1 \n DPROS, -.5, 10 \n DCAPS, .4, .5 \n PSA, -.15, 25\n VOL, .1, .5\nGLEASON, -.5, .5\n Intercept, 0, 0 \n");
+    FVecTest.makeByteVec(betaConsKey, "names, beta_given, rho\n AGE, 0.1, 1\n RACE, -0.1, 1 \n DPROS, 10, 1 \n DCAPS, -10, 1 \n PSA, 0, 1\n VOL, 0, 1\nGLEASON, 0, 1\n Intercept, 0, 0 \n");
     Frame betaConstraints = ParseDataset2.parse(parsed, new Key[]{betaConsKey});
     try {
       // H2O differs on intercept and race, same residual deviance though
-      GLM2.Source src = new GLM2.Source((Frame)fr.clone(), fr.vec("CAPSULE"), true, true);
-      new GLM2("GLM offset test on prostate.", Key.make(), modelKey, src, Family.binomial).setNonNegative(false).setRegularization(new double[]{0},new double[]{0.000}).setBetaConstraints(betaConstraints).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
+      GLM2.Source src = new GLM2.Source((Frame)fr.clone(), fr.vec("CAPSULE"), false, true);
+      new GLM2("GLM offset test on prostate.", Key.make(), modelKey, src, Family.binomial).setNonNegative(false).setRegularization(new double[]{0},new double[]{0.000}).setBetaConstraints(betaConstraints).setHighAccuracy().doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
       model = DKV.get(modelKey).get();
-      System.out.println(Arrays.toString(model.coefficients_names));
-      System.out.println(model.coefficients());
       fr.add("CAPSULE", fr.remove("CAPSULE"));
-//      public GLMIterationTask(int noff, Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double[] beta, double ymu, double reg, float[] thresholds, H2OCountedCompleter cmp) {
       DataInfo dinfo = new DataInfo(fr, 1, true, false, TransformType.NONE, DataInfo.TransformType.NONE);
       GLMIterationTask glmt = new GLMTask.GLMIterationTask(0,null, dinfo, new GLMParams(Family.binomial),false, true, true, model.beta(), 0, 1.0/380, ModelUtils.DEFAULT_THRESHOLDS, null).doAll(dinfo._adaptedFrame);
       double [] beta = model.beta();
       double [] grad = glmt.gradient(0,0);
-//      for(int i = 0; i < beta.length; ++i) {
-//        System.out.println("grad[" + i + "] = " + grad[i] + ", penaltyGrad = " + betaConstraints.vec("rho").at(i) * (beta[i] - betaConstraints.vec("beta_given").at(i)) + ", res = " + (grad[i] + betaConstraints.vec("rho").at(i) * (beta[i] - betaConstraints.vec("beta_given").at(i))));
-//      }
+      for(int i = 0; i < beta.length; ++i)
+        Assert.assertEquals(0,grad[i] + betaConstraints.vec("rho").at(i) * (beta[i] - betaConstraints.vec("beta_given").at(i)),1e-8);
+      // now standardized
     } finally {
       fr.delete();
       if(model != null)model.delete();
