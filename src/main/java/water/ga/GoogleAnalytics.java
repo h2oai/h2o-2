@@ -164,9 +164,9 @@ public class GoogleAnalytics {
       try {
         httpResponse = (BasicHttpResponse) httpClient.execute(httpPost);
       } catch (ClientProtocolException e) {
-        Log.debug("GA connectivity had a problem or the connectivity was aborted.  "+e.toString());
+        Log.trace("GA connectivity had a problem or the connectivity was aborted.  "+e.toString());
       } catch (IOException e) {
-        Log.debug("GA connectivity suffered a protocol error.  "+e.toString());
+        Log.trace("GA connectivity suffered a protocol error.  "+e.toString());
       }
 
       //Log.debug("GA response: " +httpResponse.toString());
@@ -183,9 +183,9 @@ public class GoogleAnalytics {
 
     } catch (Exception e) {
       if (e instanceof UnknownHostException) {
-        Log.debug("Coudln't connect to GA. Internet may not be available. " + e.toString());
+        Log.trace("Coudln't connect to GA. Internet may not be available. " + e.toString());
       } else {
-        Log.debug("Exception while sending the GA tracker request: " + request +".  "+ e.toString());
+        Log.trace("Exception while sending the GA tracker request: " + request +".  "+ e.toString());
       }
     }
 
@@ -295,7 +295,7 @@ public class GoogleAnalytics {
             return post(request);
           }
         } catch (Exception e) {
-          Log.debug("Request Provider (" + requestProvider + ") thrown exception " + e.toString() + " and hence nothing is posted to GA.");
+          Log.trace("Request Provider (" + requestProvider + ") thrown exception " + e.toString() + " and hence nothing is posted to GA.");
         }
 
         return null;
