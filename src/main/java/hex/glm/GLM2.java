@@ -541,6 +541,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
         if((v = beta_constraints.vec("rho")) != null)
           _rho = map == null?Utils.asDoubles(v):mapVec(Utils.asDoubles(v),makeAry(names.length,0),map);
+        else if(_bgs != null)
+          throw new IllegalArgumentException("Missing vector of penalties (rho) in beta_constraints file.");
       }
       if (non_negative) { // make srue lb is >= 0
         if (_lbs == null)
@@ -1357,7 +1359,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private final double proxPen(double [] beta){
     double [] fullBeta = expandVec(beta,_activeCols);
     double res = 0;
-    if(_bgs != null){
+    if(_bgs != null && _rho != null) {
       for(int i = 0; i < _bgs.length; ++i){
         double diff = fullBeta[i] - _bgs[i];
         res += .5*_rho[i]*diff*diff;
