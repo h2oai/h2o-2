@@ -23,9 +23,8 @@ test.LR.betaConstraints <- function(conn) {
   upperbound = rep(1, times = length(myX)+1)
   starting = as.numeric(my_glm@model$coefficients)
   colnames = names(my_glm@model$coefficients)
-  betaConstraints = data.frame(names = colnames, lower_bounds = lowerbound, upper_bounds = upperbound, beta_given= starting)
-  betaConstraints.hex = as.h2o(conn, betaConstraints, key = "betaConstraints.hex")
-  
+  betaConstraints = data.frame(names = colnames, lower_bounds = lowerbound, upper_bounds = upperbound, beta_given= starting, rho = 0)
+  betaConstraints.hex = as.h2o(conn, betaConstraints, key = "betaConstraints.hex")  
   Log.info("Pull data frame into R to run GLMnet...")
   prostate.csv = as.data.frame(prostate.hex)
   Log.info("Prep Data Frame for run in GLMnet, includes categorical expansions...")
