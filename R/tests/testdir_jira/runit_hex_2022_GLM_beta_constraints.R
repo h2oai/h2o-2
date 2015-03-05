@@ -7,7 +7,7 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
-test.LR.betaConstraints <- function(conn) {
+test.GLM.betaConstraints <- function(conn) {
   
   Log.info("Importing prostate dataset...")
   prostate.hex = h2o.importFile(
@@ -70,5 +70,5 @@ test.LR.betaConstraints <- function(conn) {
   testEnd()
 }
 
-doTest("GLM Test: LR w/ Beta Constraints", test.LR.betaConstraints)
+doTest("GLM Test: GLM w/ Beta Constraints", test.GLM.betaConstraints)
 
