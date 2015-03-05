@@ -17,8 +17,8 @@ import java.util.List;
 
 
 public class PrateemTest extends TestUtil {
-  private String marketingName;
-  private double[] modelCoeffs;
+  //private String marketingName;
+  //private double[] modelCoeffs;
 
   @BeforeClass public static void stall()
   {
@@ -41,9 +41,7 @@ public class PrateemTest extends TestUtil {
     double _res;
     @Override public void map(Chunk[] c) {
       for(int i = 0; i < c[0]._len; i++) {
-        _res += (c[0].at0(i) - c[1].at0(i))/c[2].at0(i);
-        //_res += (c[0].at0(i) - c[1].at0(i));
-        //_res += c[0].at0(i);
+        _res += (c[0].at0(i) - c[1].at0(i)) / c[2].at0(i);
       }
     }
     @Override public void reduce(ModelEvalTask mst) {
@@ -51,12 +49,141 @@ public class PrateemTest extends TestUtil {
     }
   }
 
-  private void scoreModelAttrib(GLMModel model) {}
+  private double [] scoreModelAttrib(
+    GLMModel model,
+    Frame stackFrame,
+    List<String> baseNamesList,
+    List<String> marketingNamesList) {
+    // Extract the coefficients of the full model
+    double [] modelCoeffs = model.beta().clone();
+
+    for(double coeff : modelCoeffs) {
+      System.out.println("coeff: " + coeff);
+    }
+
+
+    /*
+    Score the full model to find out the conversion probability. There is
+    one output for every row of the stack. An output is a tuple of three
+    elements:
+    o Boolean whether converted or not
+    o Probability of non conversion
+    o Probability of conversion
+    */
+    Frame convProbFull = model.score(stackFrame);
+
+    /*
+    Create the base model structure from full model by masking the
+    marketing variables.
+    Step 1: mask the marketing coefficients from the full model
+    coefficients.
+    */
+    double [] baseModelCoeffs =
+      maskModelCoeffs(
+        baseNamesList,
+        null,
+        modelCoeffs,
+        model);
+
+    // Diagnostic printing of base coefficients.
+    for(double basecoeff : baseModelCoeffs) {
+      System.out.println("basecoeff: " + basecoeff);
+    }
+
+    /*
+    Step 2: Create the H2O model structure of the base model from the
+    full model.
+    */
+    Key baseModelKey = Key.make();
+    GLMModel baseModel = new GLMModel(
+      model.get_params(),
+      baseModelKey,
+      model._dataKey,
+      model.getParams(),
+      model.coefficients_names,
+      baseModelCoeffs,
+      model.dinfo(),
+      0.5);
+    baseModel.delete_and_lock(null).unlock(null);
+
+    /* Score the base model to find out the base conversion probability. */
+    Frame convProbBase = baseModel.score(stackFrame);
+
+    double [] lift = new double[marketingNamesList.size()];
+
+    /*
+    For each marketing term, add it individually to the the base model
+    and score it to get the conversion probability of that
+    {all base terms + single marketing term} model and calculate
+    avg(singleprob - baseprob / fullprob)
+    */
+    for (String marketingName : marketingNamesList) {
+      System.out.println("Trying out: " + marketingName);
+      // Create a list with the single marketing variable to pass it to mask
+      // function
+      ArrayList<String> marketingList = new ArrayList<String>();
+      marketingList.add(marketingName);
+
+      /*
+      Keep all the base terms and mask out all the marketing terms except
+      for the one marketing term being tackled in this iteration
+      */
+      double [] singleMarketingModelCoeffs =
+        maskModelCoeffs(baseNamesList, marketingList, modelCoeffs, baseModel);
+
+      // Diagnostic printing of {all base + single marketing} model
+      // coefficients
+
+      for(double singlecoeff : singleMarketingModelCoeffs) {
+        System.out.println("singlecoeff: " + singlecoeff);
+      }
+
+      /* Make the H2O model structure for {all base + single marketing} model */
+      Key singleMarketingModelKey = Key.make();
+      GLMModel singleMarketingModel = new GLMModel(
+        model.get_params(),
+        singleMarketingModelKey,
+        model._dataKey,
+        model.getParams(),
+        model.coefficients_names,
+        singleMarketingModelCoeffs,
+        model.dinfo(),
+        0.5);
+      singleMarketingModel.delete_and_lock(null).unlock(null);
+
+      // Score the {all base + single marketing} model and find the
+      // conversion probability
+      Frame convProbMarketing = singleMarketingModel.score(stackFrame);
+
+      // Calculate the "lift" to conversion probability due to this
+      // individual marketing term.
+      Vec [] v = new Vec[3];
+      v[0] = convProbMarketing.vec(2);
+      v[1] = convProbBase.vec(2);
+      v[2] = convProbFull.vec(2);
+      lift[marketingNamesList.indexOf(marketingName)] =
+        new ModelEvalTask().doAll(v)._res / v[0].length();
+
+      System.out.println("Is Float? " + v[0].isFloat() + ", Length: " + v[0].length());
+      for (long i = 0; i < v[0].length() && i < 4; i++) {
+        System.out.println("Marketing: " + v[0].at(i) + ", Base: " + v[1].at(i) + ", Full: " + v[2].at(i));
+      }
+
+      // Delete the model and conversion probability structures to release memory
+      convProbMarketing.delete();
+      singleMarketingModel.delete();
+    }
+    if (convProbBase != null)
+      convProbBase.delete();
+    if (convProbFull != null)
+      convProbFull.delete();
+    return lift;
+  }
 
   @Test public void test1() {
     /* base variable and marketing variable names will come in as input. */
     baseNames = "stackmetric_historical_quantity_conversion_all, transvar_non_mktg_ind, transvar_ind_cnt_webvisits_99999_1";
-    marketingNames = "transvar_add_num_affiliate_afcl_null_22_1,stackmetric_historical_quantity_conversion_all,transvar_ind_num_crm_crm_null_2_1,stackmetric_num_display_cl_desktop_as20,transvar_add_num_display_cl_mobile_22_1,stackmetric_num_display_cl_null_as60,stackmetric_num_display_cl_other_as60,transvar_add_num_display_cl_video_14_1,transvar_add_num_display_im_desktop_7_1,transvar_add_cr_display_im_mobile_14_1,transvar_add_num_display_im_null_28_1,transvar_log_num_display_im_onlineaudio_22_1,transvar_add_cr_display_im_other_28_1,transvar_add_num_display_im_video_2_1,transvar_ind_num_paidsearch_ps_psbrand_22_1,transvar_add_cr_paidsearch_ps_psnonbrand_2_1,transvar_add_num_paidsocial_socl_null_28_1,transvar_add_num_unpaidsocial_upsocl_null_28_1";
+    marketingNames = "transvar_add_num_affiliate_afcl_null_22_1,transvar_ind_num_crm_crm_null_2_1,stackmetric_num_display_cl_desktop_as20,transvar_add_num_display_cl_mobile_22_1,stackmetric_num_display_cl_null_as60,stackmetric_num_display_cl_other_as60,transvar_add_num_display_cl_video_14_1,transvar_add_num_display_im_desktop_7_1,transvar_add_cr_display_im_mobile_14_1,transvar_add_num_display_im_null_28_1,transvar_log_num_display_im_onlineaudio_22_1,transvar_add_cr_display_im_other_28_1,transvar_add_num_display_im_video_2_1,transvar_ind_num_paidsearch_ps_psbrand_22_1,transvar_add_cr_paidsearch_ps_psnonbrand_2_1,transvar_add_num_paidsocial_socl_null_28_1,transvar_add_num_unpaidsocial_upsocl_null_28_1";
 
     /* Convert the variable names string into list of names. */
     List<String> baseNamesList = Arrays.asList(baseNames.trim().split("\\s*,\\s*"));
@@ -94,9 +221,6 @@ public class PrateemTest extends TestUtil {
     //DKV.put(stackFrame._key,stackFrame);
 
     GLMModel model = null;
-    GLMModel baseModel = null;
-    Frame convProbFull = null;
-    Frame convProbBase = null;
     try {
       /*
       Create the H2O structure for the full model that is including all
@@ -119,124 +243,17 @@ public class PrateemTest extends TestUtil {
 
       // Extract the coefficients of the full model
       double [] modelCoeffs = model.beta().clone();
-      /*
+
       for(double coeff : modelCoeffs) {
         System.out.println("coeff: " + coeff);
       }
-      */
 
-      /*
-      Score the full model to find out the conversion probability. There is
-      one output for every row of the stack. An output is a tuple of three
-      elements:
-      o Boolean whether converted or not
-      o Probability of non conversion
-      o Probability of conversion
-      */
-      convProbFull = model.score(stackFrame);
-
-      /*
-      Create the base model structure from full model by masking the
-      marketing variables.
-      Step 1: mask the marketing coefficients from the full model
-      coefficients.
-      */
-      double [] baseModelCoeffs =
-        maskModelCoeffs(
+      double [] lift =
+        scoreModelAttrib(
+          model,
+          stackFrame,
           baseNamesList,
-          marketingNamesList,
-          modelCoeffs,
-          model);
-
-      // Diagnostic printing of base coefficients.
-      /*
-      for(double basecoeff : baseModelCoeffs) {
-        System.out.println("basecoeff: " + basecoeff);
-      }
-      */
-      /*
-      Step 2: Create the H2O model structure of the base model from the
-      full model.
-      */
-      Key baseModelKey = Key.make();
-      baseModel = new GLMModel(
-        model.get_params(),
-        baseModelKey,
-        model._dataKey,
-        model.getParams(),
-        model.coefficients_names,
-        baseModelCoeffs,
-        model.dinfo(),
-        0.5);
-      baseModel.delete_and_lock(null).unlock(null);
-
-      /* Score the base model to find out the base conversion probability. */
-      convProbBase = baseModel.score(stackFrame);
-
-      double [] lift = new double[marketingNamesList.size()];
-
-      /*
-      For each marketing term, add it individually to the the base model
-      and score it to get the conversion probability of that
-      {all base terms + single marketing term} model and calculate
-      avg(singleprob - baseprob / fullprob)
-      */
-      for (String marketingName : marketingNamesList) {
-        // Create a list with the single marketing variable to pass it to mask
-        // function
-        ArrayList<String> marketingList = new ArrayList<String>();
-        marketingList.add(marketingName);
-
-        /*
-        Keep all the base terms and mask out all the marketing terms except
-        for the one marketing term being tackled in this iteration
-        */
-        double [] singleMarketingModelCoeffs =
-          maskModelCoeffs(null, marketingList, modelCoeffs, baseModel);
-
-        // Diagnostic printing of {all base + single marketing} model
-        // coefficients
-        /*
-        for(double singlecoeff : singleMarketingModelCoeffs) {
-          System.out.println("singlecoeff: " + singlecoeff);
-        }
-        */
-
-        /* Make the H2O model structure for {all base + single marketing} model */
-        Key singleMarketingModelKey = Key.make();
-        GLMModel singleMarketingModel = new GLMModel(
-          model.get_params(),
-          singleMarketingModelKey,
-          model._dataKey,
-          model.getParams(),
-          model.coefficients_names,
-          singleMarketingModelCoeffs,
-          model.dinfo(),
-          0.5);
-        singleMarketingModel.delete_and_lock(null).unlock(null);
-
-        // Score the {all base + single marketing} model and find the
-        // conversion probability
-        Frame convProbMarketing = singleMarketingModel.score(stackFrame);
-
-        // Calculate the "lift" to conversion probability due to this
-        // individual marketing term.
-        Vec [] v = new Vec[3];
-        v[0] = convProbMarketing.vec(2);
-        v[1] = convProbBase.vec(2);
-        v[2] = convProbFull.vec(2);
-        lift[marketingNamesList.indexOf(marketingName)] =
-          new ModelEvalTask().doAll(v)._res / v[0].length();
-        /*
-        System.out.println("Is Float? " + v[0].isFloat() + ", Length: " + v[0].length());
-        for (long i = 0; i < v[0].length() && i < 30; i++) {
-          System.out.println("Marketing: " + v[0].at(i) + ", Base: " + v[1].at(i) + ", Full: " + v[2].at(i));
-        }
-        */
-        // Delete the model and conversion probability structures to release memory
-        convProbMarketing.delete();
-        singleMarketingModel.delete();
-      }
+          marketingNamesList);
 
       for (String marketingName : marketingNamesList) {
         System.out.println(
@@ -254,9 +271,6 @@ public class PrateemTest extends TestUtil {
     } finally {
       betaConstraints.delete();
       stackFrame.delete();
-      baseModel.delete();
-      convProbBase.delete();
-      convProbFull.delete();
       if (model != null)
         model.delete();
     }
@@ -285,8 +299,6 @@ public class PrateemTest extends TestUtil {
       System.out.println(c);
     }
     */
-
-
 
     /* Allocate and initialize the return array. Default initialization is 0.0 */
     double [] newModelCoeffs = new double[modelCoeffs.length];
