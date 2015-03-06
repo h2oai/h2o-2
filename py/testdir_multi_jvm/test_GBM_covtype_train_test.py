@@ -10,7 +10,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.init(3, java_heap_GB=28)
+        h2o.init(1, java_heap_GB=14)
 
     @classmethod
     def tearDownClass(cls):
@@ -51,8 +51,14 @@ class Basic(unittest.TestCase):
             # GBM (train iterate)****************************************
             inspect = h2o_cmd.runInspect(key=parseTestResult['destination_key'])
             ntrees = 2
-            # fails with 40
-            for max_depth in [40, 5]:
+            # fails with 40 in the past
+            for trial in range(9):
+                imp = trial % 2
+                # None means use h2o default
+                if imp == 2:
+                    imp = None
+                
+                max_depth = 10
                 params = {
                     'learn_rate': .2,
                     'nbins': 1024,
@@ -61,6 +67,8 @@ class Basic(unittest.TestCase):
                     'min_rows': 10,
                     'response': response,
                     'ignored_cols_by_name': None,
+                    'importance': imp, # h2o defaults to 1 now?
+                    'classification': 1,
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
@@ -115,11 +123,11 @@ class Basic(unittest.TestCase):
                 print h2o_gbm.pp_cm(cm)
 
                 # xList.append(ntrees)
-                xList.append(max_depth)
+                xList.append(trial)
                 eList.append(pctWrong)
                 fList.append(trainElapsed)
 
-            xLabel = 'max_depth'
+            xLabel = 'trial'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'
             eListTitle = ""
