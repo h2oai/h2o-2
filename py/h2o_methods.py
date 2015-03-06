@@ -1158,16 +1158,19 @@ def generate_auc(self, timeoutSecs=300, print_params=True, **kwargs):
     verboseprint("\nauc result:", dump_json(a))
     return a
 
-
 def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
         noPoll=False, print_params=True, **kwargs):
     params_dict = {
         'balance_classes': None,
         'checkpoint': None,
         'classification': None,
-        'family': None, # can be 'bernoulli'
+        'class_sampling_factors': None,
         'cols': None,
         'destination_key': None,
+        'distribution': None, # multinomial is a choice
+        'family': None, # can be 'bernoulli' or 'AUTO'
+        'grid_parallelism': None,
+        'group_split': None,
         'grid_parallelism': None,
         'ignored_cols': None,
         'ignored_cols_by_name': None, # either this or cols..not both
@@ -1175,14 +1178,16 @@ def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, p
         'keep_cross_validation_splits': None,
         'learn_rate': None,
         'max_depth': None,
+        'max_after_balance_size': None,
         'min_rows': None,
-        'n_folds': None,
         'nbins': None,
         'ntrees': None,
+        'n_folds': None,
+        'overwrite_checkpoint': None,
         'response': None,
-        'source': data_key,
-        'seed': None,
         'score_each_iteration': None,
+        'seed': None,
+        'source': data_key,
         'validation': None,
     }
 
