@@ -9,8 +9,8 @@ import org.junit.Test;
 import water.*;
 import water.api.Request;
 import water.fvec.*;
+import water.util.Log;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,149 +36,6 @@ public class PrateemTest extends TestUtil {
     required = true,
     filter = Request.Default.class)
   public String marketingNames;
-
-  public static class ModelEvalTask extends MRTask2<ModelEvalTask> {
-    double _res;
-    @Override public void map(Chunk[] c) {
-      for(int i = 0; i < c[0]._len; i++) {
-        _res += (c[0].at0(i) - c[1].at0(i)) / c[2].at0(i);
-      }
-    }
-    @Override public void reduce(ModelEvalTask mst) {
-      _res += mst._res;
-    }
-  }
-
-  private double [] scoreModelAttrib(
-    GLMModel model,
-    Frame stackFrame,
-    List<String> baseNamesList,
-    List<String> marketingNamesList) {
-    // Extract the coefficients of the full model
-    double [] modelCoeffs = model.beta().clone();
-
-    for(double coeff : modelCoeffs) {
-      System.out.println("coeff: " + coeff);
-    }
-
-
-    /*
-    Score the full model to find out the conversion probability. There is
-    one output for every row of the stack. An output is a tuple of three
-    elements:
-    o Boolean whether converted or not
-    o Probability of non conversion
-    o Probability of conversion
-    */
-    Frame convProbFull = model.score(stackFrame);
-
-    /*
-    Create the base model structure from full model by masking the
-    marketing variables.
-    Step 1: mask the marketing coefficients from the full model
-    coefficients.
-    */
-    double [] baseModelCoeffs =
-      maskModelCoeffs(
-        baseNamesList,
-        null,
-        modelCoeffs,
-        model);
-
-    // Diagnostic printing of base coefficients.
-    for(double basecoeff : baseModelCoeffs) {
-      System.out.println("basecoeff: " + basecoeff);
-    }
-
-    /*
-    Step 2: Create the H2O model structure of the base model from the
-    full model.
-    */
-    Key baseModelKey = Key.make();
-    GLMModel baseModel = new GLMModel(
-      model.get_params(),
-      baseModelKey,
-      model._dataKey,
-      model.getParams(),
-      model.coefficients_names,
-      baseModelCoeffs,
-      model.dinfo(),
-      0.5);
-    baseModel.delete_and_lock(null).unlock(null);
-
-    /* Score the base model to find out the base conversion probability. */
-    Frame convProbBase = baseModel.score(stackFrame);
-
-    double [] lift = new double[marketingNamesList.size()];
-
-    /*
-    For each marketing term, add it individually to the the base model
-    and score it to get the conversion probability of that
-    {all base terms + single marketing term} model and calculate
-    avg(singleprob - baseprob / fullprob)
-    */
-    for (String marketingName : marketingNamesList) {
-      System.out.println("Trying out: " + marketingName);
-      // Create a list with the single marketing variable to pass it to mask
-      // function
-      ArrayList<String> marketingList = new ArrayList<String>();
-      marketingList.add(marketingName);
-
-      /*
-      Keep all the base terms and mask out all the marketing terms except
-      for the one marketing term being tackled in this iteration
-      */
-      double [] singleMarketingModelCoeffs =
-        maskModelCoeffs(baseNamesList, marketingList, modelCoeffs, baseModel);
-
-      // Diagnostic printing of {all base + single marketing} model
-      // coefficients
-
-      for(double singlecoeff : singleMarketingModelCoeffs) {
-        System.out.println("singlecoeff: " + singlecoeff);
-      }
-
-      /* Make the H2O model structure for {all base + single marketing} model */
-      Key singleMarketingModelKey = Key.make();
-      GLMModel singleMarketingModel = new GLMModel(
-        model.get_params(),
-        singleMarketingModelKey,
-        model._dataKey,
-        model.getParams(),
-        model.coefficients_names,
-        singleMarketingModelCoeffs,
-        model.dinfo(),
-        0.5);
-      singleMarketingModel.delete_and_lock(null).unlock(null);
-
-      // Score the {all base + single marketing} model and find the
-      // conversion probability
-      Frame convProbMarketing = singleMarketingModel.score(stackFrame);
-
-      // Calculate the "lift" to conversion probability due to this
-      // individual marketing term.
-      Vec [] v = new Vec[3];
-      v[0] = convProbMarketing.vec(2);
-      v[1] = convProbBase.vec(2);
-      v[2] = convProbFull.vec(2);
-      lift[marketingNamesList.indexOf(marketingName)] =
-        new ModelEvalTask().doAll(v)._res / v[0].length();
-
-      System.out.println("Is Float? " + v[0].isFloat() + ", Length: " + v[0].length());
-      for (long i = 0; i < v[0].length() && i < 4; i++) {
-        System.out.println("Marketing: " + v[0].at(i) + ", Base: " + v[1].at(i) + ", Full: " + v[2].at(i));
-      }
-
-      // Delete the model and conversion probability structures to release memory
-      convProbMarketing.delete();
-      singleMarketingModel.delete();
-    }
-    if (convProbBase != null)
-      convProbBase.delete();
-    if (convProbFull != null)
-      convProbFull.delete();
-    return lift;
-  }
 
   @Test public void test1() {
     /* base variable and marketing variable names will come in as input. */
@@ -244,19 +101,19 @@ public class PrateemTest extends TestUtil {
       // Extract the coefficients of the full model
       double [] modelCoeffs = model.beta().clone();
 
-      for(double coeff : modelCoeffs) {
-        System.out.println("coeff: " + coeff);
+      for (double coeff : modelCoeffs) {
+        Log.info("coeff: " + coeff);
       }
 
       double [] lift =
-        scoreModelAttrib(
+        new EvalModelAttrib().scoreModelAttrib(
           model,
           stackFrame,
-          baseNamesList,
-          marketingNamesList);
+          baseNames,
+          marketingNames);
 
       for (String marketingName : marketingNamesList) {
-        System.out.println(
+        Log.info(
           "lift["
             + marketingName
             + "]: "
@@ -265,7 +122,7 @@ public class PrateemTest extends TestUtil {
 
       /*
       for (String coefficientnames : model.coefficients_names) {
-        System.out.println(coefficientnames);
+        Log.info();(coefficientnames);
       }
       */
     } finally {
@@ -274,88 +131,6 @@ public class PrateemTest extends TestUtil {
       if (model != null)
         model.delete();
     }
-    System.out.println("Hello Prateem test1");
     Assert.assertEquals(1, 0);
   }
-
-  private double[] maskModelCoeffs(
-    List<String> baseNames,
-    List<String> marketingNames,
-    double[] modelCoeffs,
-    GLMModel model) {
-
-    //System.out.println("** BEGIN **");
-    /*
-    System.out.println("Base size: " + baseNames.size() + ", Marketing size: " + marketingNames.size() + ", Coeff size: " + modelCoeffs.length);
-    if (baseNames != null)
-    for (String b : baseNames) {
-      System.out.println(b);
-    }
-    if (marketingNames != null)
-    for (String m : marketingNames) {
-      System.out.println(m);
-    }
-    for (double c : modelCoeffs) {
-      System.out.println(c);
-    }
-    */
-
-    /* Allocate and initialize the return array. Default initialization is 0.0 */
-    double [] newModelCoeffs = new double[modelCoeffs.length];
-    /*
-    If model coefficients is a list then I can find out the index for a
-    variable and selectively copy the coefficient of that particular variable
-    to new coefficients array. Hence converting double[] to List<double>
-    */
-
-    List<String> modelCoefficientsNames =
-      Arrays.asList(model.coefficients_names);
-    /*
-    for (String mcn : modelCoefficientsNames) {
-      System.out.println(mcn + ":" + mcn.length());
-    }
-    */
-    if (baseNames != null) {
-      for (String bterm : baseNames) {
-        /*
-        System.out.println("Copying " + bterm + ":" + bterm.length());
-        System.out.println(" at index " + modelCoefficientsNames.indexOf(bterm));
-        System.out.println(" with value " + modelCoeffs[modelCoefficientsNames.indexOf(bterm)]);
-        System.out.println(" to new coefficient array.");
-        */
-        //System.out.println("Copying " + bterm + " at index " + modelCoefficientsNames.indexOf(bterm) + " with value " + modelCoeffs[modelCoefficientsNames.indexOf(bterm)] + " to new coefficient array.");
-
-        int indbterm = modelCoefficientsNames.indexOf(bterm);
-          if (indbterm != -1) {
-            newModelCoeffs[modelCoefficientsNames.indexOf(bterm)] =
-              modelCoeffs[modelCoefficientsNames.indexOf(bterm)];
-        }
-        //System.out.println("Copying done");
-      }
-      //System.out.println("Out of it");
-    }
-
-    if (marketingNames != null) {
-      for (String mterm : marketingNames) {
-        /*
-        System.out.println("Copying " + bterm + ":" + bterm.length());
-        System.out.println(" at index " + modelCoefficientsNames.indexOf(bterm));
-        System.out.println(" with value " + modelCoeffs[modelCoefficientsNames.indexOf(bterm)]);
-        System.out.println(" to new coefficient array.");
-        */
-        //System.out.println("Copying " + mterm + " at index " + modelCoefficientsNames.indexOf(mterm) + " with value " + modelCoeffs[modelCoefficientsNames.indexOf(mterm)] + " to new coefficient array.");
-
-        int indbterm = modelCoefficientsNames.indexOf(mterm);
-        if (indbterm != -1) {
-          newModelCoeffs[modelCoefficientsNames.indexOf(mterm)] =
-            modelCoeffs[modelCoefficientsNames.indexOf(mterm)];
-        }
-        //System.out.println("Copying done");
-      }
-      //System.out.println("Out of it");
-    }
-    //System.out.println("*** END ***");
-    return newModelCoeffs;
-  }
-
 }
