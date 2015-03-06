@@ -178,6 +178,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private Key _progressKey;
   private DataInfo _srcDinfo;
   private int [] _activeCols;
+  private boolean _allIn;
   private DataInfo _activeData;
   public GLMParams _glm;
   private boolean _grid;
@@ -207,7 +208,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private double objval(GLMIterationTask glmt){
-    return glmt._val.residual_deviance / glmt._nobs + 0.5 * l2pen() * l2norm(glmt._beta) + l1pen() * l1norm(glmt._beta);
+    return glmt._val.residual_deviance / glmt._nobs + 0.5 * l2pen() * l2norm(glmt._beta) + l1pen() * l1norm(glmt._beta) + proxPen(glmt._beta);
   }
 
   private IterationInfo makeIterationInfo(int i, GLMIterationTask glmt, final int [] activeCols, double [] gradient){
@@ -489,7 +490,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           for(int i = 0; i < names.length; ++i)
             m.put(names[i],i);
           int [] newMap = MemoryManager.malloc4(dom.length);
-          for(int i = 0; i < dom.length; ++i) {
+          for(int i = 0; i < map.length; ++i) {
             Integer I = m.get(dom[map[i]]);
             newMap[i] = I == null?-1:I;
           }
@@ -540,6 +541,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
         if((v = beta_constraints.vec("rho")) != null)
           _rho = map == null?Utils.asDoubles(v):mapVec(Utils.asDoubles(v),makeAry(names.length,0),map);
+        else if(_bgs != null)
+          throw new IllegalArgumentException("Missing vector of penalties (rho) in beta_constraints file.");
       }
       if (non_negative) { // make srue lb is >= 0
         if (_lbs == null)
@@ -1353,6 +1356,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private final double l2pen(){return 0.5*_currentLambda*(1-alpha[0]);}
   private final double l1pen(){return _currentLambda*alpha[0];}
+  private final double proxPen(double [] beta){
+    double [] fullBeta = expandVec(beta,_activeCols);
+    double res = 0;
+    if(_bgs != null && _rho != null) {
+      for(int i = 0; i < _bgs.length; ++i){
+        double diff = fullBeta[i] - _bgs[i];
+        res += .5*_rho[i]*diff*diff;
+      }
+    }
+    return res;
+  }
 
   //  // filter the current active columns using the strong rules
 //  // note: strong rules are update so tha they keep all previous coefficients in, to prevent issues with line-search
@@ -1377,6 +1391,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
   // filter the current active columns using the strong rules
   private int [] activeCols(final double l1, final double l2, final double [] grad){
+    if(_allIn) return null;
+
     final double rhs = alpha[0]*(2*l1-l2);
     int [] cols = MemoryManager.malloc4(_srcDinfo.fullN());
     int selected = 0;
@@ -1391,6 +1407,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       cols[selected++] = c;
     if(!strong_rules || selected == _srcDinfo.fullN()){
       _activeCols = null;
+      _allIn = true;
       _activeData._adaptedFrame = _srcDinfo._adaptedFrame;
       _activeData = _srcDinfo;
     } else {

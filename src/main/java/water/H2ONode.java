@@ -143,7 +143,7 @@ public class H2ONode extends Iced implements Comparable {
   // Get a nice Node Name for this Node in the Cloud.  Basically it's the
   // InetAddress we use to communicate to this Node.
   static H2ONode self(InetAddress local) {
-    assert H2O.UDP_PORT != 0;
+    assert H2O.H2O_PORT != 0;
     try {
       // Figure out which interface matches our IP address
       List<NetworkInterface> matchingIfs = new ArrayList();
@@ -180,7 +180,7 @@ public class H2ONode extends Iced implements Comparable {
     } catch( Exception e ) {
       throw  Log.errRTExcept(e);
     }
-    return intern(new H2Okey(local,H2O.UDP_PORT));
+    return intern(new H2Okey(local,H2O.H2O_PORT));
   }
 
   // Happy printable string

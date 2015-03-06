@@ -58,7 +58,7 @@ public class UDPReceiverThread extends Thread {
         break;                  // Socket closed for shutdown
       } catch( Exception e ) {
         // On any error from anybody, close all sockets & re-open
-        Log.err("UDP Receiver error on port "+H2O.UDP_PORT,e);
+        Log.err("UDP Receiver error on port "+H2O.H2O_PORT,e);
         saw_error = true;
         errsock  = sock ;  sock  = null; // Signal error recovery on the next loop
       }

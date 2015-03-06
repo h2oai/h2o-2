@@ -13,7 +13,13 @@ test <- function(h) {
 # Parse data into H2O
 print("Parsing data into H2O")
 # From an h2o git workspace.
-data.hex = h2o.importFile(h, normalizePath(locate("smalldata/bank-additional-full.csv")), key="data.hex")
+if (FALSE) {
+  h = h2o.init()
+  data.hex = h2o.importFile(h, "/Users/tomk/0xdata/ws/h2o/smalldata/bank-additional-full.csv", key="data.hex")
+}
+else {
+  data.hex = h2o.importFile(h, normalizePath(locate("smalldata/bank-additional-full.csv")), key="data.hex")
+}
 # Or directly from github.
 # data.hex = h2o.importFile(h, path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv", key="data.hex")
 
@@ -31,7 +37,7 @@ myY="y"
 
 # Run GBM with variable importance
 my.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = data.hex, n.trees =100,
-                  interaction.depth = 2, shrinkage = 0.01, importance = T) 
+                  interaction.depth = 2, shrinkage = 0.01, importance = T)
 
 # Access Variable Importance from the built model
 gbm.VI = my.gbm@model$varimp
@@ -73,18 +79,18 @@ my.glm = h2o.glm(x=myX, y=myY, data=data.hex, family="binomial",standardize=T,us
 # Select the best model picked by glm
 best_model = my.glm@best_model
 
-# Get the normalized coefficients of the best model 
-n_coeff = abs(my.glm@models[[best_model]]@model$normalized_coefficients)  
+# Get the normalized coefficients of the best model
+n_coeff = abs(my.glm@models[[best_model]]@model$normalized_coefficients)
 
 # Access Variable Importance by removing the intercept term
-VI = abs(n_coeff[-length(n_coeff)])                                     
+VI = abs(n_coeff[-length(n_coeff)])
 
 glm.VI = VI[order(VI,decreasing=T)]
 print("Variable importance from GLM")
 print(glm.VI)
 
 # Plot variable importance from glm
-barplot(glm.VI[1:20],las=2,main="VI from GLM") 
+barplot(glm.VI[1:20],las=2,main="VI from GLM")
 
 #--------------------------------------------------
 # Run deeplearning with variable importance

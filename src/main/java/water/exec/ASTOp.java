@@ -2542,11 +2542,10 @@ class ASTNumeric extends ASTOp {
     Vec[] nvecs = new Vec[ary.numCols()];
     for (int c = 0; c < ary.numCols(); ++c) {
       Vec v = ary.vecs()[c];
-      Vec nv = v.isEnum() ? v.makeTransf(seq(0, v.domain().length), seq(0, v.domain().length), null) : null;
-      if (nv != null) nv._domain = null;
-      nvecs[c] = nv == null ? v : nv;
+      Vec nv = v.isEnum() ? v.masterVec() : null;
+      (nvecs[c] = nv == null ? v : nv)._domain = null;
     }
-    ary = new Frame(ary._names, ary.vecs());
+    ary = new Frame(ary._names, nvecs);
     env.poppush(2, ary, skey);
   }
 }

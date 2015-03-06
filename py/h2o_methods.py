@@ -1159,16 +1159,20 @@ def generate_auc(self, timeoutSecs=300, print_params=True, **kwargs):
     return a
 
 
+# http://192.168.0.34:54321/2/GBM.html?destination_key=&
 def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
         noPoll=False, print_params=True, **kwargs):
     params_dict = {
         'balance_classes': None,
         'checkpoint': None,
         'classification': None,
+        'class_sampling_factors': None,
         'family': None, # can be 'bernoulli'
         'cols': None,
         'destination_key': None,
         'grid_parallelism': None,
+        'group_split': None, # categoricals
+        'holdout_fraction': None,
         'ignored_cols': None,
         'ignored_cols_by_name': None, # either this or cols..not both
         'importance': None,
@@ -1179,10 +1183,11 @@ def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, p
         'n_folds': None,
         'nbins': None,
         'ntrees': None,
+        'overwrite_checkpoint': None,
         'response': None,
-        'source': data_key,
-        'seed': None,
         'score_each_iteration': None,
+        'seed': None,
+        'source': data_key,
         'validation': None,
     }
 
