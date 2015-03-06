@@ -14,7 +14,7 @@ New Users
    java_help
    
    
-Deployment Quick Start Guide
+**Deployment Quick Start Guide**
 
 .. raw:: html
 

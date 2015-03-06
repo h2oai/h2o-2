@@ -292,6 +292,7 @@ dw_3:
 	cp -p docs/sparkling_water_meetup.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -p docs/h2o_datasheet.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -p docs/H2ODeveloperCookbook.pdf $(BUILD_WEBSITE_DIR)/bits
+	cp -p docs/DeploymentModels_v1.pdf $(BUILD_WEBSITE_DIR)/bits
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
 	@if [ -f R/h2o_package.pdf ]; then \
