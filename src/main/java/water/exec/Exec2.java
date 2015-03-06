@@ -66,6 +66,7 @@ public class Exec2 {
     final Key [] frameKeys = H2O.KeySnapshot.globalSnapshot().filter(new H2O.KVFilter() {
         @Override public boolean filter(H2O.KeyInfo k) { return k._type == TypeMap.FRAME; }
       }).keys();
+    Log.info("Locking " + frameKeys.length +"keys for Exec2.");
     for( Key k : frameKeys ) {      // Convert all VAs to Frames
       Value val = DKV.get(k);
       if( val == null || !val.isFrame()) continue;

@@ -11,19 +11,20 @@
 if (TRUE) {
   # Set working directory so that the source() below works.
   setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
-  
+
   if (FALSE) {
     setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_demos")
+    filePath <- "/Users/tomk/0xdata/ws/h2o/smalldata/airlines/allyears2k_headers.zip"
   }
-  
+
   source('../findNSourceUtils.R')
   options(echo=TRUE)
   filePath <- normalizePath(locate("smalldata/airlines/allyears2k_headers.zip"))
 } else {
   stop("need to hardcode ip and port")
-  # myIP = "127.0.0.1"
-  # myPort = 54321
-  
+  myIP = "127.0.0.1"
+  myPort = 54321
+
   library(h2o)
   PASS_BANNER <- function() { cat("\nPASS\n\n") }
   filePath <- "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/allyears2k_headers.zip"

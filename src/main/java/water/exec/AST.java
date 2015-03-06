@@ -291,7 +291,7 @@ class ASTSlice extends AST {
     if( ary.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+ary.toStringNames());
     Vec vec = ary.anyVec();
     // Check for a matching column of bools.
-    if( ary.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
+    if( ary.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() && ary.numRows() > 1)
       return ary;    // Boolean vector selection.
     // Convert single vector to a list of longs selecting rows
     if(ary.numRows() > 10000000) throw H2O.fail("Unimplemented: Cannot explicitly select > 10000000 rows in slice.");

@@ -2,7 +2,7 @@ H2O Deep Learning R Vignette Example R script
 *********************************************
 
 This example R script goes together with the R Vignette at 
-https://github.com/0xdata/h2o/raw/master/docs/deeplearning/DeepLearningRVignette.pdf
+https://github.com/h2oai/h2o/blob/master/docs/deeplearning/DeepLearningBookletV1.pdf
 
 Please check frequently for updates.
 

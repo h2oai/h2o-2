@@ -649,7 +649,7 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
     toFactor <- names(which(unlist(lapply(object, is.factor))))
     write.csv(object, file=tmpf, quote = TRUE, row.names = FALSE)
     h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
-    invisible(lapply(toFactor, function(a) { h2o.exec(h2f[,a] <- factor(h2f[,a])) }))
+    invisible(lapply(toFactor, function(a) { h2f[,a] <- as.factor(h2f[,a]) }))
     unlink(tmpf)
     return(h2f)
   }
@@ -1544,6 +1544,16 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
+#setMethod("as.numeric", "H2OParsedData", function(x, ...) {
+#  if(class(x) != "H2OParsedData") stop("x must be of class H2OParsedData")
+#  .h2o.__unop2("as.numeric", x)
+#})
+
+as.numeric.H2OParsedData <- function(x, ...) {
+  if(class(x) != "H2OParsedData") stop("x must be of class H2OParsedData")
+  .h2o.__unop2("as.numeric", x)
+}
+#setMethod("as.numeric", "H2OParsedData", function(x) { .h2o.__unop2("as.numeric", x) })
 
 #'
 #' The H2O Gains Method

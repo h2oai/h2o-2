@@ -51,17 +51,17 @@ In the above example, the command is specified in the next to last line (``For Y
 
  1. Click the **Applications** link to view all jobs, then click the **History** link for the job.
  
-	.. image:: YARN_AllApps_History.png
+	.. image:: images/YARN_AllApps_History.png
 	   :width: 100%
 
  2. Click the **logs** link. 
 	
-	.. image:: YARN_History_Logs.png
+	.. image:: images/YARN_History_Logs.png
 	   :width: 100%
 	
  3. 	Copy the information that displays and send it in an email to support@h2o.ai. 
 	
-	.. image:: YARN_History_Logs2.png
+	.. image:: images/YARN_History_Logs2.png
 	   :width: 100%
  
 """"""""""""
@@ -76,22 +76,22 @@ If you are using Hadoop and the job is still running:
 
  1. Click the **Applications** link to view all jobs, then click the **ApplicationMaster** link for the job. 
 	
-	.. image:: YARN_AllApps_AppMaster.png
+	.. image:: images/YARN_AllApps_AppMaster.png
 	   :width: 100%
 
  2. Select the job from the list of active jobs. 
 	
-	.. image:: YARN_AppMaster_Job.png
+	.. image:: images/YARN_AppMaster_Job.png
 	   :width: 100%
 	
  3. Click the **logs** link. 
 	
-	 .. image:: YARN_AppMaster_Logs.png
+	 .. image:: images/YARN_AppMaster_Logs.png
 	    :width: 100%
 	
  4. 	Send the contents of the displayed files to support@h2o.ai. 
 	
-	.. image:: YARN_AppMaster_Logs2.png
+	.. image:: images/YARN_AppMaster_Logs2.png
 	   :width: 100%
 	
 """"""""
@@ -151,12 +151,12 @@ Cloudera 4
 ***********
 
 1. In Cloudera Manager, click the **yarn** link in the cluster section.
-  .. image:: Logs_cloudera4_1.png
+  .. image:: images/Logs_cloudera4_1.png
      :width: 50%
 
 2. Click the **Web UI** drop-down menu. If the job is running, select **ResourceManager Web UI**. If the job is not running, select **HistoryServer Web UI**. 
 
- .. image:: Logs_cloudera4_2.png
+ .. image:: images/Logs_cloudera4_2.png
     :width: 50%
  
 """""" 
@@ -166,12 +166,12 @@ Cloudera 5
 ***********
 
 1. In Cloudera Manager, click the **YARN** link in the cluster section.
-  .. image:: Logs_cloudera5_1.png
+  .. image:: images/Logs_cloudera5_1.png
      :width: 50%
   
 2. In the Quick Links section, select **ResourceManager Web UI** if the job is running or select **HistoryServer Web UI** if the job is not running. 
 
- .. image:: Logs_cloudera5_2.png
+ .. image:: images/Logs_cloudera5_2.png
     :width: 50%
 
 """"""""""
@@ -182,12 +182,12 @@ Ambari
 
 1. From the Ambari Dashboard, select **YARN**. 
 
-  .. image:: Logs_ambari1.png
+  .. image:: images/Logs_ambari1.png
      :width: 50%
 
 2. From the Quick Links drop-down menu, select **ResourceManager UI**.   
 
-  .. image:: Logs_ambari2.png
+  .. image:: images/Logs_ambari2.png
      :width: 50%
 
 """"""""""
@@ -215,7 +215,7 @@ If you are not using Hadoop and the job is still running:
 
 - (H2O1) Go to the H2O web UI and select **Admin** > **Inspect Log** or go to http://localhost:54321/LogView.html. To download the logs, click the **Download Logs** button. 
 
-	.. Image:: Logsdownload.png 
+	.. Image:: images/Logsdownload.png 
    		:width: 70%
 
  When you view the log, the output displays the location of log directory after ``Log dir:`` (as shown in the last line in the following example):

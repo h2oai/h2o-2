@@ -15,7 +15,11 @@ Getting Started with Sparkling Water
 - `Sparkling Water README <https://github.com/h2oai/sparkling-water/blob/master/README.md>`_
 - `Launch on Hadoop and Import From HDFS <https://github.com/h2oai/sparkling-water/tree/master/examples#sparkling-water-on-hadoop>`_
 - `Sparkling Water Tutorials <https://github.com/h2oai/sparkling-water/tree/master/examples>`_
+    - `Sparkling Water K-Means tutorial <https://github.com/h2oai/sparkling-water/blob/master/examples/src/main/scala/org/apache/spark/examples/h2o/ProstateDemo.scala>`_
+    - `Sparkling Water GBM tutorial <https://github.com/h2oai/sparkling-water/blob/master/examples/src/main/scala/org/apache/spark/examples/h2o/CitiBikeSharingDemo.scala>`_
 - `Sparkling Water on YARN <http://h2o.ai/blog/2014/11-sparkling-water-on-yarn-example/>`_
+- `Building Applications on top of H2O <http://learn.h2o.ai/content/hackers_station/README.html>`_
+- `Sparkling Water FAQ <http://h2o.ai/product/faq/#SparklingH2O>`_
 
 ---
 

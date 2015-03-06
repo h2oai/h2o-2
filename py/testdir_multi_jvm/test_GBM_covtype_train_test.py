@@ -24,7 +24,6 @@ class Basic(unittest.TestCase):
                 ]
 
         # h2b.browseTheCloud()
-
         for (importFolderPath, trainFilename, trainKey, timeoutSecs, response, testFilename, testKey) in files:
             # PARSE train****************************************
             start = time.time()
@@ -39,6 +38,9 @@ class Basic(unittest.TestCase):
             print "train parse end on ", trainFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "train parse result:", parseTrainResult['destination_key']
+            # make the response column categorical
+            # is the column index 1-base in to_enum
+            result = h2o.nodes[0].to_enum(None, src_key=trainKey, column_index=54+1)
 
             # Parse (test)****************************************
             parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
@@ -47,9 +49,11 @@ class Basic(unittest.TestCase):
             print "test parse end on ", testFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "test parse result:", parseTestResult['destination_key']
+            result = h2o.nodes[0].to_enum(None, src_key=testKey, column_index=54+1)
 
             # GBM (train iterate)****************************************
             inspect = h2o_cmd.runInspect(key=parseTestResult['destination_key'])
+<<<<<<< HEAD
             ntrees = 2
             # fails with 40 in the past
             for trial in range(9):
@@ -59,16 +63,38 @@ class Basic(unittest.TestCase):
                     imp = None
                 
                 max_depth = 10
+=======
+            ntrees = 3
+            for trial in range(9):
+                imp = trial % 2
+                # None will cause the h2o default for importance. otherwise: false, true
+                # what the heck, change group_split at the same time
+                if imp==2:
+                    importance = None
+                    group_split = None
+                else:
+                    importance = imp
+                    group_split = imp
+
+                max_depth = 10
+                # use defaults?
+>>>>>>> 50f5b1b8c94b6ce7cd5ec175fecdca811f41487f
                 params = {
-                    'learn_rate': .2,
-                    'nbins': 1024,
+                    # 'learn_rate': .2,
+                    # 'nbins': 20,
                     'ntrees': ntrees,
-                    'max_depth': max_depth,
-                    'min_rows': 10,
+                    # 'max_depth': max_depth,
+                    # 'min_rows': 2,
                     'response': response,
+<<<<<<< HEAD
                     'ignored_cols_by_name': None,
                     'importance': imp, # h2o defaults to 1 now?
                     'classification': 1,
+=======
+                    # 'ignored_cols_by_name': None,
+                    'importance': importance,
+                    'group_split': group_split,
+>>>>>>> 50f5b1b8c94b6ce7cd5ec175fecdca811f41487f
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
@@ -127,7 +153,11 @@ class Basic(unittest.TestCase):
                 eList.append(pctWrong)
                 fList.append(trainElapsed)
 
+<<<<<<< HEAD
             xLabel = 'trial'
+=======
+            xLabel = 'trial. importance=0,1,default,...'
+>>>>>>> 50f5b1b8c94b6ce7cd5ec175fecdca811f41487f
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'
             eListTitle = ""

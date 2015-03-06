@@ -1172,6 +1172,8 @@ def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, p
         'grid_parallelism': None,
         'group_split': None,
         'grid_parallelism': None,
+        'group_split': None, # categoricals
+        'holdout_fraction': None,
         'ignored_cols': None,
         'ignored_cols_by_name': None, # either this or cols..not both
         'importance': None,
@@ -1182,7 +1184,6 @@ def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, p
         'min_rows': None,
         'nbins': None,
         'ntrees': None,
-        'n_folds': None,
         'overwrite_checkpoint': None,
         'response': None,
         'score_each_iteration': None,

@@ -213,6 +213,7 @@ public class AutoBuffer {
   private static final AtomicInteger BBCACHE= new AtomicInteger(0);
   private static final LinkedBlockingDeque<ByteBuffer> BBS = new LinkedBlockingDeque<ByteBuffer>();
   static final int BBSIZE = 64*1024; // Bytebuffer "common big size"
+  public static int TCP_BUF_SIZ = BBSIZE;
   private static void bbstats( AtomicInteger ai ) {
     if( !DEBUG ) return;
     if( (ai.incrementAndGet()&511)==511 ) {
@@ -804,7 +805,7 @@ public class AutoBuffer {
     assert _bb.position()==0;
     putSp(1+2);
     _bb.put    ((byte)type.ordinal());
-    _bb.putChar((char)H2O.UDP_PORT  ); // Outgoing port is always the sender's (me) port
+    _bb.putChar((char)H2O.H2O_PORT); // Outgoing port is always the sender's (me) port
     assert _bb.position()==1+2;
     return this;
   }
@@ -815,7 +816,7 @@ public class AutoBuffer {
   AutoBuffer putTask(int ctrl, int tasknum) {
     assert _bb.position()==0;
     putSp(1+2+4);
-    _bb.put((byte)ctrl).putChar((char)H2O.UDP_PORT).putInt(tasknum);
+    _bb.put((byte)ctrl).putChar((char)H2O.H2O_PORT).putInt(tasknum);
     return this;
   }
 
