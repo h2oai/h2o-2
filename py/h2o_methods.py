@@ -1524,8 +1524,10 @@ def GLM_shared(self, key,
     params_dict = {
         'alpha': None,
         'beta_epsilon': None, # GLMGrid doesn't use this name
+        'beta_constraints': None, 
         'cols': None,
         'destination_key': None,
+        'disable_line_search': None,
         'family': None,
         'intercept': None, # use intercept in the model
         'higher_accuracy': None, # use line search (use if no convergence otherwise)
