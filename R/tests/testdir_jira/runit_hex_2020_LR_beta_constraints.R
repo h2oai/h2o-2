@@ -37,27 +37,27 @@ test.LR.betaConstraints <- function(conn) {
   xMatrix_age = as.matrix(xDataFrame)
   lr.R = glmnet(x = xMatrix_age, alpha = 0., lambda = lr.h2o@model$lambda, standardize = T,
                 y = prostate.csv[,"CAPSULE"], family = "gaussian", lower.limits = 0., upper.limits = 1.)
+  checkGLMModel2(lr.h2o, lr.R)
   
-  compare_deviance(lr.h2o, lr.R)
-  compare_coeff(lr.h2o, lr.R)
-
   #### shift AGE coefficient by 0.002
-  Log.info("Test Beta Constraints with negative upper bound in H2O...")
-  lower_bound = -0.007
-  upper_bound = -0.002
-  beta_age$lower_bounds = lower_bound
-  beta_age$upper_bounds = upper_bound
-  lr_negativeUpper.h2o = h2o.glm(x = "AGE", y = "CAPSULE", data = prostate.hex, family = "gaussian", alpha = 0, beta_constraints = beta_age, standardize = T)
+  run_glm <- function(family_type) {
+    Log.info("Test Beta Constraints with negative upper bound in H2O...")
+    lower_bound = -0.008
+    upper_bound = -0.002
+    beta_age$lower_bounds = lower_bound
+    beta_age$upper_bounds = upper_bound
+    lr_negativeUpper.h2o = h2o.glm(x = "AGE", y = "CAPSULE", data = prostate.hex, family = family_type, alpha = 0, beta_constraints = beta_age, standardize = T)
+    
+    Log.info("Shift AGE column to reflect negative upperbound...")
+    xDataFrame = data.frame(AGE = prostate.csv[,"AGE"]*(1+upper_bound), Intercept = intercept)
+    xMatrix_age = as.matrix(xDataFrame)
+    lr_negativeUpper.R = glmnet(x = xMatrix_age, alpha = 0., lambda = lr.h2o@model$lambda, standardize = T,
+                                y = prostate.csv[,"CAPSULE"], family = family_type, lower.limits = lower_bound, upper.limits = 0.)  
+    checkGLMModel2(lr_negativeUpper.h2o, lr_negativeUpper.R)
+  }
   
-  Log.info("Shift AGE column to reflect negative upperbound...")
-  xDataFrame = data.frame(AGE = prostate.csv[,"AGE"]*(1+upper_bound), Intercept = intercept)
-  xMatrix_age = as.matrix(xDataFrame)
-  lr_negativeUpper.R = glmnet(x = xMatrix_age, alpha = 0., lambda = lr.h2o@model$lambda, standardize = T,
-                              y = prostate.csv[,"CAPSULE"], family = "gaussian", lower.limits = lower_bound-upper_bound, upper.limits = 0.)
-  
-  compare_deviance(lr_negativeUpper.h2o, lr_negativeUpper.R)
-  compare_coeff(lr_negativeUpper.h2o, lr_negativeUpper.R)
-  
+  full_test <- sapply(c("binomial", "gaussian"), run_glm)
+  print(full_test)
   testEnd()
 }
 

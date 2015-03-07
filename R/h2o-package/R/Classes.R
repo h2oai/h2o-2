@@ -1544,6 +1544,16 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
+#setMethod("as.numeric", "H2OParsedData", function(x, ...) {
+#  if(class(x) != "H2OParsedData") stop("x must be of class H2OParsedData")
+#  .h2o.__unop2("as.numeric", x)
+#})
+
+as.numeric.H2OParsedData <- function(x, ...) {
+  if(class(x) != "H2OParsedData") stop("x must be of class H2OParsedData")
+  .h2o.__unop2("as.numeric", x)
+}
+#setMethod("as.numeric", "H2OParsedData", function(x) { .h2o.__unop2("as.numeric", x) })
 
 #'
 #' The H2O Gains Method

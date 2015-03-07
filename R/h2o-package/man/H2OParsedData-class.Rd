@@ -67,6 +67,7 @@
 \alias{apply,H2OParsedData-method}
 \alias{as.data.frame,H2OParsedData-method}
 \alias{as.factor,H2OParsedData-method}
+\alias{as.numeric, H2OParsedData-method}
 \alias{as.Date,H2OParsedData-method}
 \alias{ceiling,H2OParsedData-method}
 \alias{colMeans,H2OParsedData-method}
@@ -186,6 +187,7 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
     \item{as.data.frame}{\code{signature(x = "H2OParsedData")}: ... }
     \item{as.Date}{\code{signature(x = "H2OParsedData", format = "character")}: ... }
     \item{as.factor}{\code{signature(x = "H2OParsedData")}: ... }
+    \item{as.numeric}{\code{signature(x = "H2OParsedData")}: ... }
     \item{ceiling}{\code{signature(x = "H2OParsedData")}: ... }
     \item{colMeans}{\code{signature(x = "H2OParsedData")}: ... }
     \item{colnames}{\code{signature(x = "H2OParsedData")}: ... }

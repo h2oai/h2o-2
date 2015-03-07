@@ -15,6 +15,8 @@ if (TRUE) {
 
   if (FALSE) {
       setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_demos")
+      filePath <- "/Users/tomk/0xdata/ws/h2o/smalldata/airlines/AirlinesTrain.csv.zip"
+      testFilePath <- "/Users/tomk/0xdata/ws/h2o/smalldata/airlines/AirlinesTest.csv.zip"
   }
 
   source('../findNSourceUtils.R')
@@ -23,8 +25,8 @@ if (TRUE) {
   testFilePath <- normalizePath(locate("smalldata/airlines/AirlinesTest.csv.zip"))
 } else {
   stop("need to hardcode ip and port")
-  # myIP = "127.0.0.1"
-  # myPort = 54321
+  myIP = "127.0.0.1"
+  myPort = 54321
 
   library(h2o)
   PASS_BANNER <- function() { cat("\nPASS\n\n") }
@@ -48,7 +50,7 @@ myX = c("Origin", "Dest", "Distance", "UniqueCarrier", "fMonth", "fDayofMonth", 
 myY="IsDepDelayed"
 
 #gbm
-air.gbm = h2o.gbm(x = myX, y = myY, distribution = "multinomial", data = air.train, n.trees = 10, 
+air.gbm = h2o.gbm(x = myX, y = myY, distribution = "multinomial", data = air.train, n.trees = 10,
                   interaction.depth = 3, shrinkage = 0.01, n.bins = 100, validation = air.valid, importance = T)
 print(air.gbm@model)
 air.gbm@model$auc
@@ -62,7 +64,7 @@ air.test=h2o.importFile(conn,testFilePath,key="air.test")
 
 model_object=air.rf #air.glm air.rf air.dl
 
-#predicting on test file 
+#predicting on test file
 pred = h2o.predict(model_object,air.test)
 head(pred)
 
@@ -80,14 +82,27 @@ plot(perf,type="roc")
 
 PASS_BANNER()
 
-if (FALSE) {
-    h = h2o.init(ip="mr-0xb1", port=60024)
+BIGDATA = FALSE
+if (BIGDATA) {
+    h = h2o.init(ip="172.16.2.190", port=60024)
     df = h2o.importFile(h, "/home/tomk/airlines_all.csv")
     nrow(df)
     ncol(df)
     head(df)
+
+    s = h2o.runif(df)    # Useful when number of rows too large for R to handle
+    air.train = df[s <= 0.8,]
+    air.test = df[s > 0.8,]
+
     myX = c("Origin", "Dest", "Distance", "UniqueCarrier", "Month", "DayofMonth", "DayOfWeek")
     myY = "IsDepDelayed"
-    air.glm = h2o.glm(x = myX, y = myY, data = df, family = "binomial", nfolds = 10, alpha = 0.25, lambda = 0.001)
-    air.glm@model$confusion
+    air.glm = h2o.glm(x = myX, y = myY, data = air.train,
+                      family = "binomial", nfolds = 1, alpha = 0.25, lambda = 0.001)
+
+    pred = h2o.predict(air.glm, air.test)
+    dim(pred)
+    head(pred)
+    perf = h2o.performance(pred$YES,air.test$IsDepDelayed)
+    perf
+    plot(perf,type="roc")
 }
