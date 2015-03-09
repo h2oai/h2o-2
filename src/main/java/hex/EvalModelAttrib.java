@@ -128,8 +128,9 @@ public class EvalModelAttrib {
     /* Extract the coefficients of the full model */
     double [] modelCoeffs = model.beta().clone();
 
+    /* Diagnostic printing of all coefficients. */
     for(double coeff : modelCoeffs) {
-      Log.info("coeff: " + coeff);
+      Log.info("fullcoeff: " + coeff);
     }
 
     /*
@@ -155,7 +156,7 @@ public class EvalModelAttrib {
         modelCoeffs,
         model);
 
-    // Diagnostic printing of base coefficients.
+    /* Diagnostic printing of base coefficients. */
     for(double basecoeff : baseModelCoeffs) {
       Log.info("basecoeff: " + basecoeff);
     }
@@ -201,9 +202,10 @@ public class EvalModelAttrib {
       double [] singleMarketingModelCoeffs =
         maskModelCoeffs(baseNamesList, marketingList, modelCoeffs, baseModel);
 
-      // Diagnostic printing of {all base + single marketing} model
-      // coefficients
-
+      /*
+      Diagnostic printing of {all base + single marketing} model
+      coefficients
+      */
       for(double singlecoeff : singleMarketingModelCoeffs) {
         Log.info("singlecoeff: " + singlecoeff);
       }
@@ -255,5 +257,4 @@ public class EvalModelAttrib {
       convProbBase.delete();
     return lift;
   }
-
 }

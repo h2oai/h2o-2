@@ -66,8 +66,12 @@ public class PrateemTest extends TestUtil {
     in as input
     */
     Key betaConsKey = Key.make("beta_constraints");
+
     Frame betaConstraints =
       parseFrame(betaConsKey, "/home/prateem/constraintSample.csv");
+
+//    Frame betaConstraints =
+//      parseFrame(betaConsKey, "/home/prateem/constraintSample_test0.csv");
 
     // To remove independent variables do the below
     //Futures fs = new Futures();
@@ -101,9 +105,9 @@ public class PrateemTest extends TestUtil {
       // Extract the coefficients of the full model
       double [] modelCoeffs = model.beta().clone();
 
-      for (double coeff : modelCoeffs) {
-        Log.info("coeff: " + coeff);
-      }
+//      for (double coeff : modelCoeffs) {
+//        Log.info("coeff: " + coeff);
+//      }
 
       double [] lift =
         new EvalModelAttrib().scoreModelAttrib(

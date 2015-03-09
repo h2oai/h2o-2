@@ -241,6 +241,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new SetTimezone());
     registerRequest(new GetTimezone());
     registerRequest(new ListTimezones());
+    registerRequest(new EvalMarketingLift());
     // Typeahead
     registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadPCAModelKeyRequest());
