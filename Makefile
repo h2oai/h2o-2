@@ -284,7 +284,7 @@ dw_3:
 	mkdir $(BUILD_WEBSITE_DIR)
 	cp -r h2o-docs/build/html/* $(BUILD_WEBSITE_DIR)
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits
-	cp -p docs/0xdata_H2O_Algorithms.pdf $(BUILD_WEBSITE_DIR)/bits
+	cp -p docs/H2O-Algorithms-Road-Map.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -rp target/javadoc $(BUILD_WEBSITE_DIR)/bits
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/hadoop
 	cp -p hadoop/README.txt $(BUILD_WEBSITE_DIR)/bits/hadoop
