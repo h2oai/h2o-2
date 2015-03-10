@@ -135,7 +135,7 @@ public class DRFTest extends TestUtil {
   }
 
 
-  /*@Test*/ public void testAirlines() throws Throwable {
+  @Test public void testAirlines() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
         new PrepData() {
@@ -157,8 +157,8 @@ public class DRFTest extends TestUtil {
             return fr.find("IsDepDelayed"); }
         },
         50,
-        a( a(14890, 5997),
-           a( 6705,16386)),
+        a( a(13987, 6900),
+           a( 6147,16944)),
         s("NO", "YES"));
   }
 
