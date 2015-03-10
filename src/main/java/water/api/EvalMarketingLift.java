@@ -19,19 +19,24 @@ public class EvalMarketingLift extends Request2 {
     help = "stack",
     required = true,
     filter = Default.class)
-  public Frame stackFrame;
+  public Frame stack_frame;
 
   @API(
     help = "base coefficient names",
     required = true,
+    gridable = false,
     filter = Default.class)
-  public String baseNames;
+  public String base_names;
 
   @API(
     help = "marketing coefficient names",
     required = true,
+    gridable = false,
     filter = Default.class)
-  public String marketingNames;
+  public String marketing_names;
+
+  @API(help = "lift of marketing terms")
+  public double [] lift;
 
   @Override
   protected Response serve() {
@@ -39,23 +44,24 @@ public class EvalMarketingLift extends Request2 {
       if (model == null) {
         throw new IllegalArgumentException("Model is needed to evaluate lift due to marketing features!");
       }
-      if (stackFrame == null) {
+      if (stack_frame == null) {
         throw new IllegalArgumentException("Stack is needed to evaluate lift due to marketing features!");
       }
-      if (baseNames == null) {
-        baseNames = "";
+      if (base_names == null) {
+        base_names = "";
       }
-      if (marketingNames == null) {
-        marketingNames = "";
+      if (marketing_names == null) {
+        marketing_names = "";
       }
 
-      double [] lift =
+      lift =
         new EvalModelAttrib().scoreModelAttrib(
           model,
-          stackFrame,
-          baseNames,
-          marketingNames);
-      return Inspect2.redirect(this, lift.toString());
+          stack_frame,
+          base_names,
+          marketing_names);
+
+      return Response.done(this);
     }
     catch (Throwable t) {
       return Response.error(t);

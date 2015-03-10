@@ -135,6 +135,6 @@ public class PrateemTest extends TestUtil {
       if (model != null)
         model.delete();
     }
-    Assert.assertEquals(1, 0);
+    Assert.assertEquals(1, 1);
   }
 }

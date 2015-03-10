@@ -1349,6 +1349,29 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
   return(result)
 }
 
+# ------------------------------- Attribution ---------------------------------------- #
+
+h2o.calcattrib <- function(object, newdata, basefeatures, marketingfeatures) {
+  if( missing(object) ) stop('Must specify object')
+  if(!inherits(object, "H2OModel")) stop("object must be an H2O model")
+  # FIXME: Is the below statement correct? Mimicking "Predict" here
+  if( missing(newdata) ) newdata <- object@data
+  if(class(newdata) != "H2OParsedData") stop('newdata must be a H2O dataset')
+
+  if(class(object) == "H2OGLMModel") {
+    res = .h2o.__remoteSend(
+      object@data@h2o,
+      .h2o.__PAGE_GLMMKTGLIFT2,
+      model=object@key,
+      data=newdata@key,
+      basefeatures=basefeatures,
+      marketingfeatures=marketingfeature)
+  }
+  else {
+    stop(paste("Lift calculation has not yet been implemented for", class(object)))
+  }
+}
+
 # ------------------------------- Prediction ---------------------------------------- #
 
 h2o.predict <- function(object, newdata, ...) {

@@ -47,7 +47,9 @@ public class EvalModelAttrib {
     double _res;
     @Override public void map(Chunk[] c) {
       for(int i = 0; i < c[0]._len; i++) {
-        _res += (c[0].at0(i) - c[1].at0(i)) / c[2].at0(i);
+        if (c[2].at0(i) != 0) {
+          _res += (c[0].at0(i) - c[1].at0(i)) / c[2].at0(i);
+        }
       }
     }
     @Override public void reduce(EvalLiftTask mst) {
@@ -241,14 +243,25 @@ public class EvalModelAttrib {
         new EvalLiftTask().doAll(v)._res / v[0].length();
 
       Log.info("Is Float? " + v[0].isFloat() + ", Length: " + v[0].length());
-      for (long i = 0; i < v[0].length() && i < 4; i++) {
-        Log.info("Marketing: " + v[0].at(i) + ", Base: " + v[1].at(i) + ", Full: " + v[2].at(i));
+      for (long i = 0; i < v[0].length(); i++) {
+        if (((i % 50) == 0) && (v[0].at(i) != v[1].at(i)))
+          Log.info("Marketing: " + v[0].at(i) + ", Base: " + v[1].at(i) + ", Full: " + v[2].at(i));
       }
 
       /* Delete the model and conversion probability structures to release memory */
       convProbMarketing.delete();
       singleMarketingModel.delete();
     }
+
+    /* Diagnostic printing of the final lift array */
+    for (String marketingName : marketingNamesList) {
+      Log.info(
+        "lift["
+          + marketingName
+          + "]: "
+          + lift[marketingNamesList.indexOf(marketingName)]);
+    }
+
     if (convProbFull != null)
       convProbFull.delete();
     if (baseModel != null)
