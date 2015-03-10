@@ -9,6 +9,12 @@ import water.fvec.Frame;
  * Created by prateem on 3/9/15.
  */
 public class EvalMarketingLift extends Request2 {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+  // This Request supports the HTML 'GET' command, and this is the help text
+  // for GET.
+  static final String DOC_GET = "Linear Regression between 2 columns";
+
   @API(
     help = "model",
     required = true,
