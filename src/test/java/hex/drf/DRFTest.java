@@ -32,12 +32,12 @@ public class DRFTest extends TestUtil {
     // iris ntree=1
     // the DRF should  use only subset of rows since it is using oob validation
     basicDRFTestOOBE(
-          "./smalldata/iris/iris_train.csv","iris_train.hex",
+          "./smalldata/iris/iris.csv","iris.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
           1,
-          a( a(12, 0,  0),
-             a(0, 14,  1),
-             a(0, 1, 15)),
+          a( a(25, 0,  0),
+             a(0, 17,  1),
+             a(1, 2, 15)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
 
   }
@@ -45,12 +45,12 @@ public class DRFTest extends TestUtil {
   @Test public void testClassIris5() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
-          "./smalldata/iris/iris_train.csv","iris_train.hex",
+          "./smalldata/iris/iris.csv","iris.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
           5,
-          a( a(27, 0,  0),
-             a(0, 25,  2),
-             a(0,  5, 24)),
+          a( a(41, 0,  0),
+             a(0, 39,  3),
+             a(0,  4, 41)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -120,8 +120,7 @@ public class DRFTest extends TestUtil {
 
   }
 
-  //@Ignore("We need to have proper regression test.")
-  //@Test
+  @Test
   public void testCreditProstate1() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/logreg/prostate.csv","prostate.hex",
@@ -129,8 +128,8 @@ public class DRFTest extends TestUtil {
           UKV.remove(fr.remove("ID")._key); return fr.find("CAPSULE");
           } },
         1,
-        a( a(46294, 202),
-           a( 3187, 107)),
+        a( a(62, 19),
+           a(31, 22)),
         s("0", "1"));
 
   }
