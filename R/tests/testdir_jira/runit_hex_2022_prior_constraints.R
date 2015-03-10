@@ -9,7 +9,7 @@ source('../findNSourceUtils.R')
 test.Priors.BetaConstraints <- function(conn) {
   Log.info("Import modelStack data into H2O...")
   ## Import data
-  pathToFile = "/mnt/0xcustomer-datasets/c27/modelStack.csv"
+  pathToFile = "/mnt/0xcustomer-datasets/c27/data.csv"
   pathToConstraints <- "/mnt/0xcustomer-datasets/c27/constraints_indices.csv"
   modelStack = h2o.importFile(conn, pathToFile)
   betaConstraints.hex = h2o.importFile(conn, pathToConstraints)
