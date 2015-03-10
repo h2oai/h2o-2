@@ -20,9 +20,11 @@ if(!"ROCR"   %in% rownames(installed.packages())) install.packages("ROCR")
 if (!"plyr" %in% rownames(installed.packages())) install.packages("plyr")
 #if (!"rgl" %in% rownames(installed.packages())) install.packages("rgl")
 if (!"randomForest" %in% rownames(installed.packages())) install.packages("randomForest")
+if(!"AUC" %in% rownames(installed.packages())) install.packages("AUC")
 require(glmnet)
 require(gbm)
 require(ROCR)
+require(AUC)
 
 #Global Variables
 myIP   <- ipPort[[1]]
