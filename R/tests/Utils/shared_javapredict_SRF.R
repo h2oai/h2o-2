@@ -57,7 +57,7 @@ if (nrow(prediction1) != nrow(prediction2)) {
   stop("Number of rows mismatch")
 }
 
-match <- all(prediction1 == prediction2)
+match <- all(prediction1[,2:3] == prediction2[,2:3])
 if (! match) {
   for (i in 1:nrow(prediction1)) {
     rowmatches <- all(prediction1[i,] == prediction2[i,])
