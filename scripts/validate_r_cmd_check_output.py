@@ -37,6 +37,7 @@ class Check:
             r"^\* using R version",
             r"^\* using platform",
             r"^\* using session charset",
+            r"^\* using option .*",
             r"^\* checking .* \.\.\. OK",
             r"^\* checking extension type \.\.\. Package",
             r"^\* this is package",
