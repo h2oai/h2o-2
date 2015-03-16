@@ -441,7 +441,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         int idx = Arrays.binarySearch(ignored_cols, id);
         if (idx >= 0) Utils.remove(ignored_cols, idx);
         String name = source2.names()[id];
-        source2.add(name, source2.remove(id));
+//        source2.add(name, source2.remove(id));
         _noffsets = 1;
       }
       if (nlambdas == -1)
@@ -470,10 +470,22 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       }
       toEnum = family == Family.binomial && (!response.isEnum() && (response.min() < 0 || response.max() > 1));
       Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, toEnum, true, true);
+      if(offset != null){ // now put the offset just before response
+        int id = fr.find(offset);
+        String offsetName = fr.names()[id];
+        String responseName = fr.names()[fr.numCols()-1];
+        Vec responseVec = fr.remove(fr.numCols()-1);
+        fr.add(offsetName, fr.remove(id));
+        fr.add(responseName,responseVec);
+      }
       TransformType dt = TransformType.NONE;
       if (standardize)
         dt = intercept ? TransformType.STANDARDIZE : TransformType.DESCALE;
       _srcDinfo = new DataInfo(fr, 1, intercept, use_all_factor_levels || lambda_search, dt, DataInfo.TransformType.NONE);
+      if(offset != null && dt != TransformType.NONE) { // do not standardize offset
+        _srcDinfo._normMul[_srcDinfo._normMul.length-1] = 1;
+        _srcDinfo._normSub[_srcDinfo._normSub.length-1] = 0;
+      }
       if (!intercept && _srcDinfo._cats > 0)
         throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
       _activeData = _srcDinfo;
@@ -499,8 +511,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         final int numoff = _srcDinfo.numStart();
         if((v = beta_constraints.vec("lower_bounds")) != null) {
           _lbs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.NEGATIVE_INFINITY), map);
-          System.out.println("lower bounds = " + Arrays.toString(_lbs));
-//          for(int i = 0; i < _lbs.length; ++i)
+//            for(int i = 0; i < _lbs.length; ++i)
 //            if(_lbs[i] > 0) throw new IllegalArgumentException("lower bounds must be non-positive");
           if(_srcDinfo._normMul != null) {
             for (int i = numoff; i < _srcDinfo.fullN(); ++i) {
