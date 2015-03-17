@@ -1648,6 +1648,14 @@ h2o.sub <- function(pattern, replacement, x, ignore.case = FALSE) {
   return(res)
 }
 
+h2o.setLevel <- function(x, level) {
+  expr <- paste("setLevel(", paste(x@key, deparse(level), sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  res
+}
+
 trim <- function(x) {
   if (!inherits(x, "H2OParsedData")) stop("x must be an H2OParsedData object")
   .h2o.__unop2("trim", x)

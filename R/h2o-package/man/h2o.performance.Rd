@@ -28,8 +28,7 @@ h2o.performance(data, reference, measure = "accuracy", thresholds, gains = TRUE,
   }
   }
   \item{thresholds}{
-  (Optional) A numeric vector from 0 to 1 indicating the threshold values at which to compute the performance measure. If missing, the range will be automatically generated.
-  TODO: Still not sure I understand what exactly these thresholds are, is it the FPR or something else?
+  (Optional) A numeric vector from 0 to 1 indicating the threshold values at which to compute the performance measure. If missing, the range will be automatically generated. Changing the thresholds will change the number of plot points used to calculate the AUC value, use with caution!
   }
   \item{gains}{If TRUE, then `h2o.performance` will additionally compute the gains and lift charts. These can be accessed via @gains}
   \item{\dots}{Additional arguments to pass to the `h2o.gains` method. Accepts "percents" and "groups".}

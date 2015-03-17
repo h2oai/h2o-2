@@ -17,8 +17,7 @@ test.LR.betaConstraints <- function(conn) {
   myX =  c("AGE","RACE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON")
   lowerbound = rep(-1, times = length(myX))
   upperbound = rep(1, times = length(myX))
-  starting = rep(-0.008235181, times = length(myX))
-  betaConstraints = data.frame(names = myX, lower_bounds = lowerbound, upper_bounds = upperbound, beta_given= starting)
+  betaConstraints = data.frame(names = myX, lower_bounds = lowerbound, upper_bounds = upperbound)
   betaConstraints.hex = as.h2o(conn, betaConstraints)
   prostate.csv = as.data.frame(prostate.hex)
   
