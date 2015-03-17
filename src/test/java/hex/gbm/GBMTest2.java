@@ -3,12 +3,14 @@ package hex.gbm;
 import junit.framework.Assert;
 import hex.gbm.GBM.GBMModel;
 import hex.trees.TreeTestWithBalanceAndCrossVal;
+import org.junit.BeforeClass;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
 
 /** Test for advanced GBM workflows including data rebalancing and cross validation. */
 public class GBMTest2 extends TreeTestWithBalanceAndCrossVal {
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   @Override protected void testBalanceWithCrossValidation(String dataset, int response, int[] ignored_cols, int ntrees, int nfolds) {
     Frame f = parseFrame(dataset);
