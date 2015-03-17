@@ -383,6 +383,7 @@ public class GBMTest extends TestUtil {
         parms.learn_rate = 0.1;
         parms.min_rows = 10;
         parms.family = Family.AUTO;
+        parms.classification = false;
 
         // Build a first model; all remaining models should be equal
         GBMModel gbm = parms.fork().get();

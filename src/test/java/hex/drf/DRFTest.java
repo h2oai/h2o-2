@@ -252,6 +252,7 @@ public class DRFTest extends TestUtil {
         parms.max_depth = 8;
         parms.mtries = -1;
         parms.min_rows = 10;
+        parms.classification = false;
         parms.seed = 1234;
 
         // Build a first model; all remaining models should be equal
