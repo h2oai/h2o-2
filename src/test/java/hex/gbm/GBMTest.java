@@ -13,6 +13,7 @@ import water.*;
 import water.api.ConfusionMatrix;
 import water.api.GBMModelView;
 import water.fvec.*;
+import water.util.Log;
 
 import java.io.File;
 
@@ -352,6 +353,56 @@ public class GBMTest extends TestUtil {
     double[] mseWithoutVal = basicGBM("./smalldata/titanicalt.csv","titanic.hex", titanicPrep, false).errs;
     double[] mseWithVal    = basicGBM("./smalldata/titanicalt.csv","titanic.hex", titanicPrep, true ).errs;
     Assert.assertArrayEquals("GBM has to report same list of MSEs for run without/with validation dataset (which is equal to training data)", mseWithoutVal, mseWithVal, 0.0001);
+  }
+
+
+  public static class repro {
+    @Test public void testChunkReprodubility() {
+      Frame tfr=null;
+      final int N = 5;
+      double[] mses = new double[N];
+
+      Scope.enter();
+      try {
+        // Load data, hack frames
+        tfr = parseFrame(Key.make("air.hex"), "./smalldata/covtype/covtype.20k.data");
+
+        // rebalance to 256 chunks
+        Key dest = Key.make("df.rebalanced.hex");
+        RebalanceDataSet rb = new RebalanceDataSet(tfr, dest, 256);
+        H2O.submitTask(rb);
+        rb.join();
+        tfr.delete();
+        tfr = DKV.get(dest).get();
+
+        for (int i=0; i<N; ++i) {
+          GBM parms = new GBM();
+          parms.source = tfr;
+          parms.response = tfr.lastVec();
+          parms.nbins = 1000;
+          parms.ntrees = 1;
+          parms.max_depth = 8;
+          parms.learn_rate = 0.1;
+          parms.min_rows = 10;
+          parms.family = Family.AUTO;
+
+          // Build a first model; all remaining models should be equal
+          GBMModel gbm = parms.fork().get();
+          mses[i] = gbm.mse();
+
+          gbm.delete();
+        }
+      } finally{
+        if (tfr != null) tfr.delete();
+      }
+      Scope.exit();
+      for (int i=0; i<mses.length; ++i) {
+        Log.info("trial: " + i + " -> mse: " + mses[i]);
+      }
+      for (int i=0; i<mses.length; ++i) {
+        assertEquals(mses[i], mses[0], 1e-15);
+      }
+    }
   }
 
 }
