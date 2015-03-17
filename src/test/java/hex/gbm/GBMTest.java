@@ -7,6 +7,7 @@ import hex.gbm.GBM.GBMModel;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import water.*;
@@ -357,7 +358,9 @@ public class GBMTest extends TestUtil {
 
 
   public static class repro {
-    @Test public void testChunkReprodubility() {
+    @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+    @Test
+    public void run() {
       Frame tfr=null;
       final int N = 5;
       double[] mses = new double[N];

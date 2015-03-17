@@ -2,12 +2,16 @@ package hex.drf;
 
 import hex.drf.DRF.DRFModel;
 
+import hex.gbm.GBM;
 import org.junit.*;
 
+import static org.junit.Assert.assertEquals;
 import water.*;
 import water.api.DRFModelView;
 import water.fvec.Frame;
+import water.fvec.RebalanceDataSet;
 import water.fvec.Vec;
+import water.util.Log;
 
 public class DRFTest extends TestUtil {
 
@@ -218,6 +222,57 @@ public class DRFTest extends TestUtil {
       if (frTest!=null) frTest.delete();
       if( model != null ) model.delete(); // Remove the model
       if( pred != null ) pred.delete();
+    }
+  }
+
+  public static class repro {
+    @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+    @Test
+    public void run() {
+      Frame tfr=null;
+      final int N = 5;
+      double[] mses = new double[N];
+
+      Scope.enter();
+      try {
+        // Load data, hack frames
+        tfr = parseFrame(Key.make("air.hex"), "./smalldata/covtype/covtype.20k.data");
+
+        // rebalance to 256 chunks
+        Key dest = Key.make("df.rebalanced.hex");
+        RebalanceDataSet rb = new RebalanceDataSet(tfr, dest, 256);
+        H2O.submitTask(rb);
+        rb.join();
+        tfr.delete();
+        tfr = DKV.get(dest).get();
+
+        for (int i=0; i<N; ++i) {
+          DRF parms = new DRF();
+          parms.source = tfr;
+          parms.response = tfr.lastVec();
+          parms.nbins = 1000;
+          parms.ntrees = 1;
+          parms.max_depth = 8;
+          parms.mtries = -1;
+          parms.min_rows = 10;
+          parms.seed = 1234;
+
+          // Build a first model; all remaining models should be equal
+          DRFModel drf = parms.fork().get();
+          mses[i] = drf.mse();
+
+          drf.delete();
+        }
+      } finally{
+        if (tfr != null) tfr.delete();
+      }
+      Scope.exit();
+      for (int i=0; i<mses.length; ++i) {
+        Log.info("trial: " + i + " -> mse: " + mses[i]);
+      }
+      for (int i=0; i<mses.length; ++i) {
+        assertEquals(mses[i], mses[0], 1e-15);
+      }
     }
   }
 }
