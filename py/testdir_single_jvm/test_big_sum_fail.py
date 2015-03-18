@@ -3,7 +3,7 @@ sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_util, h2o_import as h2i
 import h2o_exec as h2e
 
-UNNECESSARY = True
+UNNECESSARY = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
                 binary_ones_fraction=0.02, binary_fraction=0, randomize=1, 
                 missing_fraction=0, integer_fraction=1, real_range=100,
                 has_response=0, response_factors=2, factors=100, cols=1, 
-                integer_range=100, value=0, categorical_fraction=0, rows=3e+08, 
+                integer_range=100, value=0, categorical_fraction=0, rows=2.5e+08, 
                 timeoutSecs=300)
 
             inspect = h2o_cmd.runInspect(key=hex_key)

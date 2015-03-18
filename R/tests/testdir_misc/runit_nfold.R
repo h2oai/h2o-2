@@ -2,7 +2,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 test.h2o.nfold <- function(conn) {
-  tolerance <- 1e-4
+  tolerance <- 1e-2
 
   hex <- h2o.importFile(conn, normalizePath(locate("smalldata/logreg/prostate.csv")))
   predictors = c(3:9)
@@ -29,22 +29,23 @@ test.h2o.nfold <- function(conn) {
   }
 
   # compare metrics
-  perf <- h2o.performance(as.h2o(conn,predictions), hex[,response])
+  perf_auc <- h2o.performance(as.h2o(conn,predictions), hex[,response], measure = "F1")
+  perf_cm <- h2o.performance(as.h2o(conn,predictions), hex[,response], thresholds = m@model$best_cutoff)
   auc <- m@model$auc
   accuracy <- m@model$accuracy
   cm <- m@model$confusion
 
   auc
-  perf@model$auc
-  if (abs(auc - perf@model$auc) > tolerance) stop("AUC is wrong")
+  perf_auc@model$auc
+  if (abs(auc - perf_auc@model$auc) > tolerance) stop("AUC is wrong")
 
   accuracy
-  perf@model$accuracy
-  if (abs(accuracy - perf@model$accuracy) > tolerance) stop("accuracy is wrong")
+  perf_cm@model$accuracy
+  if (abs(accuracy - perf_cm@model$accuracy) > tolerance) stop("accuracy is wrong")
 
   cm
-  perf@model$confusion
-  if (max(abs(cm[1:9] - perf@model$confusion[1:9])) != 0) stop("cm is wrong")
+  perf_cm@model$confusion
+  if (max(abs(cm[1:9] - perf_cm@model$confusion[1:9])) > 2) stop("cm is wrong")
 
   testEnd()
 }

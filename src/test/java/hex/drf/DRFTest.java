@@ -2,12 +2,16 @@ package hex.drf;
 
 import hex.drf.DRF.DRFModel;
 
+import hex.gbm.GBM;
 import org.junit.*;
 
+import static org.junit.Assert.assertEquals;
 import water.*;
 import water.api.DRFModelView;
 import water.fvec.Frame;
+import water.fvec.RebalanceDataSet;
 import water.fvec.Vec;
+import water.util.Log;
 
 public class DRFTest extends TestUtil {
 
@@ -32,12 +36,12 @@ public class DRFTest extends TestUtil {
     // iris ntree=1
     // the DRF should  use only subset of rows since it is using oob validation
     basicDRFTestOOBE(
-          "./smalldata/iris/iris_train.csv","iris_train.hex",
+          "./smalldata/iris/iris.csv","iris.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
           1,
-          a( a(12, 0,  0),
-             a(0, 14,  1),
-             a(0, 1, 15)),
+          a( a(25, 0,  0),
+             a(0, 17,  1),
+             a(1, 2, 15)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
 
   }
@@ -45,12 +49,12 @@ public class DRFTest extends TestUtil {
   @Test public void testClassIris5() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
-          "./smalldata/iris/iris_train.csv","iris_train.hex",
+          "./smalldata/iris/iris.csv","iris.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
           5,
-          a( a(27, 0,  0),
-             a(0, 25,  2),
-             a(0,  5, 24)),
+          a( a(41, 0,  0),
+             a(0, 39,  3),
+             a(0,  4, 41)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -120,8 +124,7 @@ public class DRFTest extends TestUtil {
 
   }
 
-  //@Ignore("We need to have proper regression test.")
-  //@Test
+  @Test
   public void testCreditProstate1() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/logreg/prostate.csv","prostate.hex",
@@ -129,14 +132,14 @@ public class DRFTest extends TestUtil {
           UKV.remove(fr.remove("ID")._key); return fr.find("CAPSULE");
           } },
         1,
-        a( a(46294, 202),
-           a( 3187, 107)),
+        a( a(62, 19),
+           a(31, 22)),
         s("0", "1"));
 
   }
 
 
-  /*@Test*/ public void testAirlines() throws Throwable {
+  @Test public void testAirlines() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
         new PrepData() {
@@ -158,8 +161,8 @@ public class DRFTest extends TestUtil {
             return fr.find("IsDepDelayed"); }
         },
         50,
-        a( a(14890, 5997),
-           a( 6705,16386)),
+        a( a(13987, 6900),
+           a( 6147,16944)),
         s("NO", "YES"));
   }
 
@@ -219,6 +222,54 @@ public class DRFTest extends TestUtil {
       if (frTest!=null) frTest.delete();
       if( model != null ) model.delete(); // Remove the model
       if( pred != null ) pred.delete();
+    }
+  }
+
+  @Test public void testReproducibility() {
+    Frame tfr=null;
+    final int N = 5;
+    double[] mses = new double[N];
+
+    Scope.enter();
+    try {
+      // Load data, hack frames
+      tfr = parseFrame(Key.make("air.hex"), "./smalldata/covtype/covtype.20k.data");
+
+      // rebalance to 256 chunks
+      Key dest = Key.make("df.rebalanced.hex");
+      RebalanceDataSet rb = new RebalanceDataSet(tfr, dest, 256);
+      H2O.submitTask(rb);
+      rb.join();
+      tfr.delete();
+      tfr = DKV.get(dest).get();
+
+      for (int i=0; i<N; ++i) {
+        DRF parms = new DRF();
+        parms.source = tfr;
+        parms.response = tfr.lastVec();
+        parms.nbins = 1000;
+        parms.ntrees = 1;
+        parms.max_depth = 8;
+        parms.mtries = -1;
+        parms.min_rows = 10;
+        parms.classification = false;
+        parms.seed = 1234;
+
+        // Build a first model; all remaining models should be equal
+        DRFModel drf = parms.fork().get();
+        mses[i] = drf.mse();
+
+        drf.delete();
+      }
+    } finally{
+      if (tfr != null) tfr.delete();
+    }
+    Scope.exit();
+    for (int i=0; i<mses.length; ++i) {
+      Log.info("trial: " + i + " -> mse: " + mses[i]);
+    }
+    for (int i=0; i<mses.length; ++i) {
+      assertEquals(mses[i], mses[0], 1e-15);
     }
   }
 }

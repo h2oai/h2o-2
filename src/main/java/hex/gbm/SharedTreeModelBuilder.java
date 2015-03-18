@@ -23,6 +23,9 @@ import water.util.MRUtils;
 import water.util.ModelUtils;
 import water.util.Utils;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -938,11 +941,22 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     return new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
   }
 
+  static int counter = 0;
   // helper for debugging
   static protected void printGenerateTrees(DTree[] trees) {
     for( int k=0; k<trees.length; k++ )
-      if( trees[k] != null )
-        System.out.println(trees[k].root().toString2(new StringBuilder(),0));
+      if( trees[k] != null ) {
+        try {
+          PrintWriter writer = new PrintWriter("/tmp/h2o.tree" + ++counter + ".txt", "UTF-8");
+          writer.println(trees[k].root().toString2(new StringBuilder(), 0));
+          writer.close();
+        } catch (FileNotFoundException e) {
+          e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+          e.printStackTrace();
+        }
+        System.out.println(trees[k].root().toString2(new StringBuilder(), 0));
+      }
   }
 
   protected final void debugPrintTreeColumns(Frame fr) {

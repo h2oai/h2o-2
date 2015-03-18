@@ -197,9 +197,12 @@ function(h2o, key, lambda_idx = -1, return_all_lambda = TRUE, pre = "", data = N
     names(result$normalized_coefficients) <- pre$json$glm_model$coefficients_names[idxes]
   if(.isBinomial(pre) && !is.null(valid) && !is.null(valid$cms)) {  # build and set the confusion matrix
     cm_ind <- trunc(100*result$best_threshold) + 1
-    if (trunc(100 * result$best_threshold) + 1 > length(valid$cms)) {
+    if (trunc(100*result$best_threshold) + 1 > length(valid$cms)) {
       threshs <- pre$json$glm_model$submodels[[lambda_idx]]$validation$thresholds
       cm_ind <- which(threshs == result$best_threshold)
+      if(is.na(cm_ind) || length(cm_ind) == 0)
+        stop("Cannot find model matching best threshold = ", result$best_threshold)
+      if(length(cm_ind) > 1) cm_ind <- sample(cm_ind, 1)   # Take random model if multiple matches
     }
     result$confusion <- .build_cm(valid$cms[[cm_ind]]$arr, c("false", "true"))
   }

@@ -31,26 +31,38 @@ test.GLM.offset <- function(conn) {
   prostate.hex = h2o.importFile(object = conn, system.file("extdata", "prostate.csv", package = "h2o"))
   prostate.csv = as.data.frame(prostate.hex)
   
+# family_type = c("binomial", "poisson", "gaussian")
   family_type = c("binomial", "poisson")
   
-  check_models <- function (family_type) {
-    Log.info (paste ("Checking", family_type, "models without offset..."))
-    prostate.glm.r = glm(formula = CAPSULE ~ . - ID - AGE, family = family_type, data = prostate.csv)
-    prostate.glm.h2o = h2o.glm(x = c("RACE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.hex, family = family_type, standardize = F, higher_accuracy = T)
+  check_models <- function (family_type, intercept = T) {
+    Log.info (paste ("Checking", family_type, "models without offset... ", ifelse (intercept, "with intercept", "without intercept") ))
+    if(intercept) { 
+      prostate.glm.r = glm(formula = CAPSULE ~ . - ID - AGE, family = family_type, data = prostate.csv)
+    } else {
+      prostate.glm.r = glm(formula = CAPSULE ~ . + 0 - ID - AGE, family = family_type, data = prostate.csv)
+    }
+    prostate.glm.h2o = h2o.glm(x = c("RACE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.hex, family = family_type, standardize = F, intercept = intercept)
+
     compare_res_deviance(prostate.glm.h2o, prostate.glm.r)
     compare_scores(prostate.glm.h2o, prostate.glm.r)
     
     Log.info (paste ("Checking", family_type, "models with offset..."))
     options(warn=-1)
-    prostate.glm.r = glm(formula = CAPSULE ~ . - ID - AGE, family = family_type, data = prostate.csv, offset = prostate.csv$AGE)
-    prostate.glm.h2o = h2o.glm(x = c("RACE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.hex, family = family_type, offset = "AGE", standardize = F, higher_accuracy = T)
+    if(intercept) {
+      prostate.glm.r = glm(formula = CAPSULE ~ . - ID - AGE, family = family_type, data = prostate.csv, offset = prostate.csv$AGE)
+    } else {
+      prostate.glm.r = glm(formula = CAPSULE ~ . + 0 - ID - AGE, family = family_type, data = prostate.csv, offset = prostate.csv$AGE)
+    }
+    prostate.glm.h2o = h2o.glm(x = c("RACE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.hex, family = family_type, offset = "AGE", standardize = F, intercept = intercept)
     compare_res_deviance(prostate.glm.h2o, prostate.glm.r)
     compare_scores(prostate.glm.h2o, prostate.glm.r)
     print("PASSED")
   }
   
-  run_models = sapply(family_type, check_models)
+  run_models = sapply(family_type, function(family) check_models(family, intercept = T))
+#  run_models_wo_intercept = sapply(family_type, function(family) check_models(family, intercept = F))
   print(run_models)
+#  print(run_models_wo_intercept)
   testEnd()
 }
 

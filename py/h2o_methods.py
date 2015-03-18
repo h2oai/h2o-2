@@ -1158,8 +1158,6 @@ def generate_auc(self, timeoutSecs=300, print_params=True, **kwargs):
     verboseprint("\nauc result:", dump_json(a))
     return a
 
-
-# http://192.168.0.34:54321/2/GBM.html?destination_key=&
 def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
         noPoll=False, print_params=True, **kwargs):
     params_dict = {
@@ -1167,9 +1165,12 @@ def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, p
         'checkpoint': None,
         'classification': None,
         'class_sampling_factors': None,
-        'family': None, # can be 'bernoulli'
         'cols': None,
         'destination_key': None,
+        'distribution': None, # multinomial is a choice
+        'family': None, # can be 'bernoulli' or 'AUTO'
+        'grid_parallelism': None,
+        'group_split': None,
         'grid_parallelism': None,
         'group_split': None, # categoricals
         'holdout_fraction': None,
@@ -1179,8 +1180,8 @@ def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, p
         'keep_cross_validation_splits': None,
         'learn_rate': None,
         'max_depth': None,
+        'max_after_balance_size': None,
         'min_rows': None,
-        'n_folds': None,
         'nbins': None,
         'ntrees': None,
         'overwrite_checkpoint': None,
@@ -1524,8 +1525,10 @@ def GLM_shared(self, key,
     params_dict = {
         'alpha': None,
         'beta_epsilon': None, # GLMGrid doesn't use this name
+        'beta_constraints': None, 
         'cols': None,
         'destination_key': None,
+        'disable_line_search': None,
         'family': None,
         'intercept': None, # use intercept in the model
         'higher_accuracy': None, # use line search (use if no convergence otherwise)

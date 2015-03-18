@@ -284,7 +284,7 @@ dw_3:
 	mkdir $(BUILD_WEBSITE_DIR)
 	cp -r h2o-docs/build/html/* $(BUILD_WEBSITE_DIR)
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits
-	cp -p docs/0xdata_H2O_Algorithms.pdf $(BUILD_WEBSITE_DIR)/bits
+	cp -p docs/H2O-Algorithms-Road-Map.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -rp target/javadoc $(BUILD_WEBSITE_DIR)/bits
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/hadoop
 	cp -p hadoop/README.txt $(BUILD_WEBSITE_DIR)/bits/hadoop
@@ -292,6 +292,7 @@ dw_3:
 	cp -p docs/sparkling_water_meetup.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -p docs/h2o_datasheet.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -p docs/H2ODeveloperCookbook.pdf $(BUILD_WEBSITE_DIR)/bits
+	cp -p docs/DeploymentModels_v1.pdf $(BUILD_WEBSITE_DIR)/bits
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
 	@if [ -f R/h2o_package.pdf ]; then \

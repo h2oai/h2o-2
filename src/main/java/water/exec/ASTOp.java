@@ -21,8 +21,6 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static water.util.Utils.seq;
-
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
  */
@@ -183,6 +181,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTToLower());
     putPrefix(new ASTToUpper());
     putPrefix(new ASTGSub());
+    putPrefix(new ASTSetLevel());
     putPrefix(new ASTStrSub());
     putPrefix(new ASTRevalue());
     putPrefix(new ASTWhich());
@@ -989,6 +988,36 @@ class ASTGSub extends ASTOp {
 
     Frame fr2 = new Frame(fr.names(), fr.vecs());
     fr2.anyVec()._domain = doms;
+    env.subRef(fr, skey);
+    env.poppush(1, fr2, null);
+  }
+}
+
+class ASTSetLevel extends ASTOp {
+  ASTSetLevel() { super(new String[]{"setLevel", "x", "level"},
+          new Type[]{Type.ARY, Type.ARY, Type.STR},
+          OPF_PREFIX,
+          OPP_PREFIX, OPA_RIGHT); }
+  @Override String opStr() { return "setLevel"; }
+  @Override ASTOp make() { return new ASTSetLevel(); }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final String level = env.popStr();
+    String skey = env.key();
+    Frame fr = env.popAry();
+    if (fr.numCols() != 1) throw new IllegalArgumentException("setLevel works on a single column at a time.");
+    String[] doms = fr.anyVec().domain().clone();
+    if( doms == null )
+      throw new IllegalArgumentException("Cannot set the level on a non-factor column!");
+    final int idx = Arrays.asList(doms).indexOf(level);
+    if (idx == -1)
+      throw new IllegalArgumentException("Did not find level `" + level + "` in the column.");
+
+    Frame fr2 = new MRTask2() {
+      @Override public void map(Chunk c, NewChunk nc) {
+        for (int i=0;i<c._len;++i)
+          nc.addNum(idx);
+      }
+    }.doAll(1, fr.anyVec()).outputFrame(null, fr.names(), fr.domains());
     env.subRef(fr, skey);
     env.poppush(1, fr2, null);
   }
