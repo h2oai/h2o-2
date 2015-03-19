@@ -43,41 +43,31 @@ Select **Random Forest** to create a SpeeDRF model for classification, or select
 
 #. Once data are parsed a horizontal menu appears at the top
    of the screen that displays "Build model using ... ". Select 
-   *Random Forest* here, or go to the drop-down **Model** menu  and
-   find Random Forest there.
+   *Random Forest* here, or go to the drop-down **Model** menu and
+   find *Random Forest* there.
 
-#. In the "source" field, enter the .hex key generated during data parsing. 
+#. In the **source** field, enter the .hex key generated during data parsing if it is not already entered. 
 
+#. From the drop-down **response** list, select the last column (`C1559`). 
 
-#. From the "response" drop-down list, select the column to use for the response variable. 
+#. In the **ntrees** field, specify the number of trees to build (in this case, `150`).
 
-
-#. To exclude an attribute from tree building, select it in the "Ignored columns" section.
-
-#. (For BigData only)Check the "classification" checkbox to use classification or uncheck it to use regression. 
-
-#. In the "ntrees" field, specify the number of trees to build (in this case, 150).
- 
-
-#. Specify the number of features on which the trees will
-   split in the "mtries" field. For this example, use 1000. 
+#. In the **mtries** field, specify the number of features on which the trees will
+   split. For this example, enter `1000`. 
 
 
 #. Specify the maximum distance from root to terminal
-   node in the "max depth" field. For the example, use the default values.  
+   node in the **max depth** field. For the example, use the default value of 20.  
 
 
-#. Make a selection from the drop-down "select stat type" list to choose between split criteria. Entropy maximizes information gain, where Gini seeks to isolate the dominant category at each node. For this example, select Gini. 
+#. To choose between split criteria, make a selection from the drop-down **select stat type** list. Entropy maximizes information gain, while Gini seeks to isolate the dominant category at each node. For this example, select **GINI**. 
+
+#. To correct unbalanced data, select a sampling strategy (random) from the drop-down **sampling strategy** list and check the **balance classes** checkbox. For this example, use the default values.
 
 
+#. Specify the proportion of observations sampled when building any given tree in the "sample rate" field. The omitted observations are run down the tree, and the classification error rate of that tree is estimated using the error rate from this holdout set. For this example, use the default value. 
 
-
-#. To correct unbalanced data, use "balance classes" and "sampling strategy". For this example, use the default values.
-
-
-#. Specify the proportion of observations sampled when building any given tree in the "sample rate" field. The omitted observations are run down the tree, and the classification error rate of that tree is estimated using the error rate from this holdout set. 
-
-
+#. To generate the model, click the **Submit** button. 
 .. image:: RequestRF1.png
    :width: 90%
 
@@ -86,19 +76,13 @@ Select **Random Forest** to create a SpeeDRF model for classification, or select
 RF Output
 """""""""
 
+The RF output is a confusion matrix detailing
+the classification error rates for each level in the range of the
+target variable. In addition to the confusion matrix, the mean squared error by tree, AUC, accuracy, error rate, precision, and max per class error ratios are included. A chart displays the data visually, and the tree statistics (min, mean, and max for the tree depth and number of leaves) are also displayed. 
 
-
-For a SpeeDRF model or BigData RF classification model, the RF output is a confusion matrix detailing the classification error rates for each level in the range of the target variable. In addition to the confusion matrix, the overall
-classification error, the number of trees, and data use descriptives
-are included in the output. 
-
-.. image:: RFoutput2.png
+.. image:: RFoutput.png
    :width: 100%
 
-|
-
-RF inspect also includes information about the specified
-tuning parameters at the top of RFView. To generate predictions for another dataset, click the "Score on dataset" link at the top of the page. 
 
 """"
 
@@ -109,7 +93,8 @@ RF Predict
 To generate a prediction, click the *Score on dataset* link at the top
 of the RFView page or go to the drop-down **Score** menu and select *Predict*. 
 
-The predict function requires a .hex key associated with a model. To find the .hex key, go to the drop-down **Admin** menu and select *Jobs*.
+The predict function requires a .hex key associated with a model. If you click the *Score on dataset* link, the model key is entered automatically. If you select **Score**>*Predict*, the model .hex key must be entered manually. 
+To find the .hex key, go to the drop-down **Admin** menu and select *Jobs*.
 
 |
 
@@ -128,12 +113,13 @@ here. Find the appropriate job (in this example, "Random Forest 150
 Trees"). Save the associated key to clipboard, and paste it into the
 model key field on the "Request Generate Predictions" Page. Enter a .hex
 key associated with a parsed data set other than the one used to build
-the model. 
+the model. To generate the prediction, click the **Submit** button.
 
 |
 
-.. Image:: RequestPredict.png
+.. Image:: RFpredict.png
    :width: 90 %
+
 
 
 """"
