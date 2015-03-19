@@ -67,40 +67,39 @@ Before modeling, parse data into H2O:
 Building a Model
 """"""""""""""""
 
-#. Once data are parsed, go to the drop-down **Model** menu and
-   select *GLM*. 
+#. Once data are parsed, a horizontal menu displays at the top
+   of the screen reading "Build model using ... ". Click the **Generalized Linear Modeling** link here, or click the drop-down **Model** menu and select **Generalized Linear Model**.
 
 
-#. In the **Source** field, enter the .hex key for the data set. 
+#. In the **Source** field, enter the .hex key for the Abalone data set, if it is not already entered. 
 
 
-#. In the **Response** field, select the column associated with the Whole Weight
-   variable (column 5). 
+#. From the drop-down **Response** list, select the column associated with the Whole Weight variable (`C5`). 
 
 
-#. In the **Ignored Columns** field, select the columns to ignore. 
+#. In the **Ignored Columns** field, select the columns to ignore. For this example, select `C6, C7,` and `C8`. 
 
-#. Do not change the default **Classification** and **Max Iter** values. Classification is
-   used when the dependent variable is a binomial classifier. "Max iter"
-   defines the maximum number of iterations performed by the algorithm in the event that it fails to converge. 
+#. From the drop-down **Family** list, select *Gaussian*. 
+
+
+#. Confirm the value for **Tweedie Variance Power** is zero. This option is only used for the Tweedie family of GLM models (like zero-inflated Poisson). 
+
+
+#. To disable cross-validation, enter 0 in the **Nfolds** field. If the Nfolds value is greater than 0, the GLM model displays the specified  number of cross-validation models. 
+
+
+#. In the **Alpha** field, enter .3. The alpha parameter is the mixing
+   parameter for the L1 and L2 penalty.
+
+#. In the **Lambda** field, enter .002.
+
 
 #. Confirm the **Standardize** option is not checked (disabled). 
 
 
-#. Enter 0 in the **Nfolds** field to disable cross-validation. If the Nfolds values is greater
-   than 0, the GLM model displays the specified  number of cross-validation
-   models. 
-
-#. Specify **Family** to be *Gaussian*. 
-
-#. Confirm the value for **Tweedie Variance Power** is zero. This option is only used
-   for the Tweedie family of GLM models (like zero-inflated Poisson). 
-
-#. Enter .3 in the **Alpha** field. The alpha parameter is the mixing
-   parameter for the L1 and L2 penalty.
-
-
-#. Enter .002 for the **Lambda** value.
+#. Do not change the default **Max Iter** value. Classification is
+   used when the dependent variable is a binomial classifier. "Max iter"
+   defines the maximum number of iterations performed by the algorithm in the event that it fails to converge. 
 
 #. Click **Submit**. 
 
@@ -137,18 +136,6 @@ If you select a different lambda value, the page refreshes and the selected lamb
 #. If you clicked the **Predict!** link on the GLM results page, the model .hex key is entered automatically. Otherwise, enter the model .hex key in the "model" field. 
 
 #. In the "data" field, enter the .hex key of the test data set and click **Submit**.  
-
-#. For regression models, click the **Score** menu and select *Confusion Matrix*. For binomial models, click the **Score** menu and select *AUC*.
-
-#. In the "actual" field, enter the .hex key for the test data set. 
-
-#. From the drop-down "vactual" list, select the column to use for prediction.
-
-#. In the "predict" field, enter the .hex key for the prediction generated in the first step. 
-
-#. From the drop-down "vpredict" list, select *predict*.
-
-#. Click **Submit**. 
 
 
 Validation results report the same model statistics that were generated when the model was originally specified.

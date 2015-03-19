@@ -31,7 +31,7 @@ Before modeling, parse data into H2O:
 
 #. Click **Submit**. Parsing data into H2O generates a .hex key in the format  "data name.hex"
 
-.. image:: PCAparse.png
+.. image:: GBMparse.png
    :width: 100%
 
 """"
@@ -41,44 +41,35 @@ Building a Model
 
 #. Once data are parsed, a horizontal menu displays at the top
    of the screen reading "Build model using ... ". Select 
-   GBM here, or go to the drop down menu Model and
-   select GBM. 
+   **Distributed GBM** here, or go to the drop down menu Model and
+   select **Gradient Boosting Machine**. 
 
 
-#. In the "source" field, enter the .hex key for the Arrhythmia data set. 
+#. In the "source" field, enter the .hex key for the Arrhythmia data set, if it is not already entered. 
  
 
-#. In the "response" list, select the response variable. In this example, it is variable 1.   
+#. From the drop-down "response" list, select `C1`.   
 
+#. Select Gradient Boosted Classification by checking the "classification" checkbox or Gradient Boosted Regression by unchecking the "classification" checkbox. GBM is set to classification by default. For this example, check the **classification** checkbox.
 
-#. In the "Ignored Columns" section, select the subset of variables to
-   omit from the model. In this example, the only column to 
-   omit is the index column, 0. 
-
-
-#. Select Gradient Boosted Classification by checking the "classification" checkbox or Gradient Boosted Regression by unchecking the "classification" checkbox. GBM is set to classification by default. For this example, the desired output is classification.
-
-
-#. In the "validation" field, enter the .hex key associated with a holdout (testing)
-   data set to apply results to a new data set after the model is generated. 
-
-#. In the "ntrees" field, enter the number of trees to generate. For this example, enter  20. 
+#. In the "ntrees" field, enter the number of trees to generate. For this example, enter `20`. 
 
 #. In the "max depth" field, specify the maximum number of edges between the top
-   node and the furthest node as a stopping criteria. For this example, set the depth
-   of interaction to 5. 
+   node and the furthest node as a stopping criteria. For this example, enter `5`. 
 
 #. In the "min rows" field, specify the minimum number of observations (rows)
-   to include in any terminal node as a stopping criteria. For this example, use 25. 
+   to include in any terminal node as a stopping criteria. For this example, use `25`. 
 
-#. In the "nbins" field, specify the number of bins to use for splitting data. 
+#. In the "nbins" field, specify the number of bins to use for splitting data. For this example, use the default value of 20. 
    Split points are evaluated at the boundaries of each of these
    bins. As the value for Nbins increases, the more closely the algorithm approximates
    evaluating each individual observation as a split point. The trade
    off for this refinement is an increase in computational time. 
 
 #. In the "learn rate" field, specify a value to slow the convergence of the
-   algorithm to a solution and help prevent overfitting. This parameter is also referred to as shrinkage. In this example, enter .3. 
+   algorithm to a solution and help prevent overfitting. This parameter is also referred to as shrinkage. For this example, enter `.3`. 
+
+#. To generate the model, click the **Submit** button. 
 
 .. image:: GBMrequest.png
    :width: 70%
@@ -93,16 +84,26 @@ GBM Results
 The GBM output for classification displays a confusion matrix with the
 classifications for each group, the associated error by group, and
 the overall average error. Regression models can be quite complex and
-difficult to directly interpret. For that reason, a model key is
-given for subsequent use in validation and prediction. 
+difficult to directly interpret. For that reason, H2O provides a model key for subsequent use in validation and prediction. 
 
-Both model types provide the MSE by tree. For classification models, the MSE is based on
-the classification error within the tree. For regression models, MSE is
-calculated from the squared deviances, as with standard regressions. 
+Both model types provide the MSE by tree. 
+  - For classification models, the MSE is based on the classification error within the tree. 
+  - For regression models, MSE is calculated from the squared deviances, as with standard regressions. 
 
 .. image:: GBMresults.png
    :width: 100%
 
+The output also includes a table containing the tree statistics (min, max, and mean for tree depth and number of leaves), as well as a table and chart representing the variable importances. 
+
+.. image:: GBMVarImp.png
+   :width: 100%
+
+
+
+To change the order in which the variable importances are displayed (from most important to least or vice versa), click the **Sort** button below the chart.  
+
+.. image:: GBMsort.png
+   :width: 100%
 
 """"
 
