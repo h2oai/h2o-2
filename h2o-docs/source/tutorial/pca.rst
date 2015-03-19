@@ -47,26 +47,23 @@ Before modeling, parse data into H2O:
 Building a Model
 """"""""""""""""
 
-#. Once data are parsed, a horizontal menu displays at the top
-   of the screen reading "Build model using ... ". Select 
-   PCA here, or go to the drop-down **Model** menu and
-   select PCA. 
+#. Click the the drop-down **Model** menu and select *PCA*. 
 
 
-#. In the "source" field, enter the .hex key for the Arrhythmia data set. 
+#. In the **source** field, enter the .hex key for the Arrhythmia data set. 
  
 
 #. In the "Ignored Columns" field, select the set of columns to 
-   omit from the analysis.  
+   omit from the analysis. For this example, do not select any columns.  
    
    **Note**: PCA ignores categorical variables and constant columns. Categoricals can be included by expanding the categorical into a set of binomial indicators.  
 
 
 #. To specify the maximum number of principal components to
-   be returned, enter a value in the "max pc" field. In this example, the maximum number of components is 100.  
+   be returned, enter a value in the **max pc** field. For this example, enter `100`.  
 
 
-#. To omit components exhibiting low standard deviation (which indicates a lack of contribution to the overall variance observed in the data), enter a value in the "tolerance" field. In this example, set Tolerance to .5.
+#. To omit components exhibiting low standard deviation (which indicates a lack of contribution to the overall variance observed in the data), enter a value in the **tolerance** field. For this example, enter `.5`.
 
 
 #. To standardize, check the "standardize" checkbox. Standardizing is highly
@@ -75,7 +72,7 @@ Building a Model
    variances relative to other attributes purely as a matter of scale,
    rather than true contribution. 
 
-
+#. To generate the model, click the **Submit** button. 
 
 .. image:: PCArequest.png
    :width: 70%
