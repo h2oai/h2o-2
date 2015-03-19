@@ -637,7 +637,7 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
   if(!is.character(key)) stop("key must be of class character")
   if(missing(key) || nchar(key) == 0) {
     key = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
-    .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
+    .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .pkg.env$RESULT_MAX
   }
   
   # TODO: Be careful, there might be a limit on how long a vector you can define in console
