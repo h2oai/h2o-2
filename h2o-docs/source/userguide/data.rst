@@ -13,6 +13,10 @@ Data
    datainspect
    datasummary
    dataquantiles
+   dataimpute
+   datainteraction
+   datacreateframe
+   datasplitframe
    dataviewall
    dataexportfiles   
    inspect
