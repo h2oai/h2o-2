@@ -41,6 +41,18 @@ Defining a GBM Model
   A .hex key associated with data to be used in validation of the
   model built using the data specified in **Source**.
 
+**N folds**
+
+  Number of folds for cross-validation (if no validation data is specified)
+  
+**Holdout fraction**
+
+  Fraction of training data (from end) to hold out for validation (if no validation data is specified).
+  
+**Keep cross validation dataset splits**
+
+  Preserve cross-validation dataset splits.
+  
 **NTrees:**
 
   The number of trees to build. To specify models with different total numbers
@@ -84,6 +96,32 @@ Defining a GBM Model
   Return information about each variable's importance
   in training the specified model. 
 
+**Balance classes**
+
+  For imbalanced data, balance training data class counts via over/under-sampling for improved predictive accuracy.
+    
+**Class sampling factors**
+
+  Specify the over/under-sampling ratios per class (lexicographic order). 
+  
+**Max after balance size**
+
+  If classes are balanced, limit the resulting dataset size to the specified multiple of the original dataset size.
+
+**Checkpoint**
+
+   A model key associated with a previously trained model. Use this option to build a new model as a continuation of a previously generated model (e.g., by a grid search).      
+
+**Overwrite checkpoint**
+
+  Overwrite the checkpoint. 
+  
+  
+**Family**
+
+  Select the family (auto or bernoulli).  
+
+
 **Learn Rate:**
 
   A number between 0 and 1 that specifies the rate at which the
@@ -96,6 +134,16 @@ Defining a GBM Model
   such as specification of multiple learning rates, selecting this
   option will build the set of models in parallel, rather than
   sequentially.
+
+**Seed**
+
+  The random seed controls sampling and initialization. Reproducible results are only expected with single-threaded operation (i.e., when running on one node, turning off load balancing and providing a small dataset that fits in one chunk).  In general, the multi-threaded asynchronous updates to the model parameters will result in (intentional) race conditions and non-reproducible results. Note that deterministic sampling and initialization might still lead to some weak sense of determinism in the model.
+
+**Group split**
+
+  Perform group splitting categoricals. 
+
+
   
 """"  
 

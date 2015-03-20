@@ -36,7 +36,7 @@ Defining a Deep Learning Model
 
 **Source**
 
-   A .hex key associated with the parsed training data.
+    A .hex key associated with the parsed training data.
  
 **Response**
 
@@ -65,6 +65,18 @@ Defining a Deep Learning Model
     training data to use in model validation (i.e., production of
     error rates on data not used in model building). 
 
+**N folds**
+
+    The number of folds for cross-validation (if no validation data is specified).      To disable cross-validation, enter 0. If the number of folds is more than 1, validation must remain empty. 
+
+**Holdout fraction**
+
+    The fraction of training data (from end) to hold out for validation (if no validation data is specified).  
+    
+**Keep cross validation dataset splits**
+
+    Preserve cross-validation dataset splits.
+   
 **Checkpoint**
       
     A model key associated with a previously trained Deep Learning
@@ -84,6 +96,16 @@ Defining a Deep Learning Model
     values is fine for many problems, but best results on complex
     datasets are often only attainable via expert mode options.
     
+**Autoencoder**
+
+    Enable deep auto encoders. For more information, refer to `the Deep Learning booklet <https://leanpub.com/deeplearning/read#Autoencoder>`_.
+
+
+**Use all factor levels**
+
+    Use all factor levels of categorical variables. Otherwise, the first factor level is omitted (without loss of accuracy). Useful for variable importances and auto-enabled for autoencoder.
+
+
 **Activation**
 
     The activation function (non-linearity) to be used the neurons in the
@@ -252,13 +274,13 @@ Defining a Deep Learning Model
     A fraction of the inputs for each hidden layer to omit from training 
     to improve generalization. The default is 0.5 for each hidden layer.
 
-**L1 Regularization** 
+**L1** 
 
     A regularization method that constrains the absolute value of the weights and
     has the net effect of dropping some weights (setting them to zero) from a model
     to reduce complexity and avoid overfitting. 
 
-**L2 Regularization** 
+**L2** 
 
     A regularization method that constrains the sum of the squared
     weights. This method introduces bias into parameter estimates, but
@@ -286,7 +308,7 @@ Defining a Deep Learning Model
     scale. For Normal, the values are drawn from a Normal distribution
     with the standard deviation of the initial weight scale.
 
-**Loss Function** 
+**Loss** 
 
     The loss (error) function to be optimized by the model. 
 
@@ -317,6 +339,7 @@ Defining a Deep Learning Model
     training dataset.
 
 **Score Duty Cycle**
+    
     Maximum fraction of time spent for model scoring on training, validation samples,
     and diagnostics, such as computation of feature importances (i.e., not on training).
 
@@ -366,7 +389,7 @@ Defining a Deep Learning Model
     Gather diagnostics for hidden layers, such as mean and RMS values for learning
     rate, momentum, weights and biases.
 
-**Variable Importance**
+**Variable Importances**
 
     Compute variable importances for input features.
     The implemented method (by Gedeon) considers the weights connecting the
@@ -404,6 +427,35 @@ Defining a Deep Learning Model
     is close to N times the dataset size, where all nodes train will almost all
     the data. It is automatically enabled if the number of training
     samples per iteration is set to -1 (or to N times the dataset size or larger).
+    
+    
+**Sparse**
+
+    Enable sparse data handling (experimental). 
+
+
+**Col major**
+
+    Use a column major weight matrix for the input layer; can speed up forward propagation, but may slow down back propagation. 
+
+
+**Average activation**
+
+     Average activation for sparse autoencoder (experimental).
+   
+**Sparsity beta**
+
+     Sparsity regularization (experimental). 
+
+**Max categorical features**
+
+    Maximum number of categorical features, enforced via hashing (experimental)
+
+**Reproducible**
+
+    Force reproducibility on small data (will be slow - only uses one thread)
+
+    
     
 """"    
 

@@ -23,6 +23,11 @@ Here are some examples:
 Defining a K-Means model
 """"""""""""""""""""""""
 
+**Destination key**
+
+  A user-defined name for the model. 
+
+
 **Source:**
   
   The .hex key associated with the data set for use in clustering.
@@ -77,6 +82,11 @@ Defining a K-Means model
   dependent on randomization. Note that the seed stays the same for
   each instance of H2O, allowing the user to create models with the
   same starting conditions in alternative configurations.
+  
+  
+**Drop na cols**
+
+  Drop columns where over 20% of the values are missing.  
 
 """"
 
