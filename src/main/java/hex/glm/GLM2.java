@@ -469,13 +469,19 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           //pass
       }
       toEnum = family == Family.binomial && (!response.isEnum() && (response.min() < 0 || response.max() > 1));
+      String offsetName = "";
+      int offsetId = -1;
+      if(offset != null) {
+        offsetId = source2.find(offset);
+        offsetName = source2.names()[offsetId];
+        source2.remove(offsetId);
+      }
+
       Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, toEnum, true, true);
       if(offset != null){ // now put the offset just before response
-        int id = fr.find(offset);
-        String offsetName = fr.names()[id];
         String responseName = fr.names()[fr.numCols()-1];
         Vec responseVec = fr.remove(fr.numCols()-1);
-        fr.add(offsetName, fr.remove(id));
+        fr.add(offsetName, offset);
         fr.add(responseName,responseVec);
       }
       TransformType dt = TransformType.NONE;
@@ -483,8 +489,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         dt = intercept ? TransformType.STANDARDIZE : TransformType.DESCALE;
       _srcDinfo = new DataInfo(fr, 1, intercept, use_all_factor_levels || lambda_search, dt, DataInfo.TransformType.NONE);
       if(offset != null && dt != TransformType.NONE) { // do not standardize offset
-        _srcDinfo._normMul[_srcDinfo._normMul.length-1] = 1;
-        _srcDinfo._normSub[_srcDinfo._normSub.length-1] = 0;
+        if(_srcDinfo._normMul != null)
+          _srcDinfo._normMul[_srcDinfo._normMul.length-1] = 1;
+        if(_srcDinfo._normSub != null)
+          _srcDinfo._normSub[_srcDinfo._normSub.length-1] = 0;
       }
       if (!intercept && _srcDinfo._cats > 0)
         throw new IllegalArgumentException("Models with no intercept are only supported with all-numeric predictors.");
@@ -563,6 +571,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             _lbs[i] = 0;
       }
     } catch(RuntimeException e) {
+      e.printStackTrace();
       cleanup();
       throw e;
     }
