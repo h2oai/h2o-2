@@ -29,6 +29,14 @@ either for prediction or classification.
 Defining a GLM Model
 """"""""""""""""""""
 
+**Destination key**
+
+  A user-defined name for the model. 
+  
+**Source**
+
+  The .hex key associated with the parsed data to be used in the model.  
+
 **Response:**
   Response is the model dependent variable, often noted as Y. 
   The specific features of a dependent variable should be considered
@@ -44,6 +52,10 @@ Defining a GLM Model
 
   	*Tweedie*: Y variables follow a Poisson-Gamma mixed compound distribution. This is often also called a zero-inflated Poisson, and is used when Y variables follow a distribution with a large mass at 0, and integer-valued counts for all non-zero observations. 
     
+**Offset**
+
+  The column to use as the offset.
+
   	
 **Ignored Columns:** 
      
@@ -73,32 +85,6 @@ Defining a GLM Model
      training on factors. Use out-of-data prediction with caution, as the
      veracity of the original results are often constrained to the
      data range used in the original model.  
-
-    
-**Max Iter:**
-
-     The maximum number of iterations to be performed for training the
-     model via gradient descent. If Max Iter is set to 100, the
-     algorithm repeats the gradient descent 100 times or until
-     the model converges, whichever comes first. If the model does not
-     converge after 100 cycles, modeling stops. 
-
-**Standardize:** 
-
-     Transform variables into
-     standardized variables, each with a mean of 0 and unit
-     variance. Variables and coefficients are now expressed in terms
-     of their relative position to 0 and in standard units. 
-
-**N Folds:** 
-
-     Specify the number of cross-validation models to 
-     generate simultaneously for training a model on the full data
-     set. If N folds is set to 10, additional models are generated
-     with 1/10 of the data used to train each. The purpose of N folds
-     is to evaluate the stability of the parameter estimates.
-     
-  
 
 **Family and Link:**  
    
@@ -130,6 +116,8 @@ Defining a GLM Model
 
      Dependent variable is a survival measure or is distributed as
      Poisson, where variance is greater than the mean of the distribution. 
+    
+
 
 **Tweedie Variance Power:** 
       
@@ -150,6 +138,17 @@ Defining a GLM Model
     > 2	        Stable, with support on the positive reals 
     =======    =====================================================    
 
+**Prior**
+
+    Prior probability for y==1. For logistic regression only if and only if the data has been sampled and the mean of response does not reflect reality. 
+
+**N Folds:** 
+
+     Specify the number of cross-validation models to 
+     generate simultaneously for training a model on the full data
+     set. If N folds is set to 10, additional models are generated
+     with 1/10 of the data used to train each. The purpose of N folds
+     is to evaluate the stability of the parameter estimates.
 
 **Alpha:**
 
@@ -168,12 +167,73 @@ Defining a GLM Model
       prevent overfitting. The best value(s) of lambda depends on the
       desired level of agreement. 
 
+**Lambda Search:**
+
+     The lambda search option allows users to start at 0.90*Lambda
+     max, where lambda max is the value for lambda at which the model
+     returned estimates all coefficients as zero. An additional 50 values of
+     lambda are estimated. These values are successively smaller, and
+     are log scaled. Models for each are returned, along with the
+     ratio of the explained deviance to nonzero parameter estimates. 
+
+**Nlambdas**
+
+    The number of lambdas to use in the search. 
+    
+**Lambda min ratio**
+
+    The minimum lambda used in the lambda search, specified as a ratio of **lambda_max**.    
+    
+    
+**Max predictors**
+
+    The lambda search stop condition; stops training when the model has more than the specified number of predictors. To disable, enter `-1`.
+    
+**Strong rules**
+
+    Use strong rules to filter inactive columns.        
+
+**Standardize:** 
+
+     Transform variables into
+     standardized variables, each with a mean of 0 and unit
+     variance. Variables and coefficients are now expressed in terms
+     of their relative position to 0 and in standard units. 
+
+**Intercept**
+
+    Include intercept term in the model. 
+    
+**Non negative**
+
+    Restrict coefficients to be non-negative.      
+    
+**Use all factor levels**
+
+    Use all factor levels of categorical variables. By default, the first factor level is skipped from the possible set of predictors. This option requires sufficient regularization to solve.     
+  
+**Variable importances**
+
+    Compute variable importances for input features. If **use all factor levels** is disabled, the importance of the base is not displayed.
+
+
  
 **Beta Epsilon:** 
 
      Precision of the vector of coefficients. Computation
      stops when the maximum difference between two beta vectors is
      below the beta epsilon threshold.
+
+ 
+     
+     
+**Max Iter:**
+
+     The maximum number of iterations to be performed for training the
+     model via gradient descent. If Max Iter is set to 100, the
+     algorithm repeats the gradient descent 100 times or until
+     the model converges, whichever comes first. If the model does not
+     converge after 100 cycles, modeling stops. 
 
 **Higher Accuracy:**
 
@@ -184,15 +244,7 @@ Defining a GLM Model
      algorithm it can improve model convergence without specification
      of additional regularization. Line search can slow model
      training. 
- 
-**Lambda Search:**
-
-     The lambda search option allows users to start at 0.90*Lambda
-     max, where lambda max is the value for lambda at which the model
-     returned estimates all coefficients as zero. An additional 50 values of
-     lambda are estimated. These values are successively smaller, and
-     are log scaled. Models for each are returned, along with the
-     ratio of the explained deviance to nonzero parameter estimates. 
+     
      
 """"""     
      
@@ -262,9 +314,7 @@ Interpreting a Model
      chosen positive observation is correctly ranked greater than a
      randomly chosen negative observation. In machine learning, AUC is
      usually seen as the preferred evaluative criteria (over accuracy) for a model
-      for classification models. AUC is not an output
-     for Gaussian regression but for classification models,
-     like binomial. 
+     for classification models. AUC is not an output for Gaussian regression but for classification models, like binomial. 
 
 **Confusion Matrix:** 
 
@@ -276,7 +326,7 @@ Interpreting a Model
 
 Validate GLM 
 """""""""""""
-For information on validation, refer to the :ref:`GLM_tutorial`_. 
+For information on validation, refer to the `GLM_tutorial <http://docs.h2o.ai/tutorial/glm.html>`_. 
 
 """"""
 
@@ -344,10 +394,10 @@ the form:
 
 :math:`f(y_{i})=exp[\frac{y_{i}\theta_{i} - b(\theta_{i})}{a_{i}(\phi)} + c(y_{i}; \phi)]`
 
-:math:`where\: \theta \:and \: \phi \:are \: location \: and \: scale\: parameters,`
-:math:`and \: a_{i}(\phi), \:b_{i}(\theta_{i}),\: c_{i}(y_{i}; \phi)\:are\:known\:functions.`
+where :math:`\theta` and :math:`\phi` are location and scale parameters,
+and :math:`\: a_{i}(\phi), \:b_{i}(\theta_{i}),\: c_{i}(y_{i}; \phi)` are known functions.
 
-:math:`a_{i}\:is\:of\:the\: form: \:a_{i}=\frac{\phi}{p_{i}}; p_{i}\: is\: a\: known\: prior\: weight.`
+:math:`a_{i}` is of the form :math:`\:a_{i}=\frac{\phi}{p_{i}}; p_{i}`  is a known prior weight.
 
 When :math:`Y` has a pdf from the exponential family: 
 

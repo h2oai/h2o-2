@@ -5,11 +5,18 @@ Admin
 .. toctree::
    :maxdepth: 1
 
-   adminclusterstat
    adminjobs
-   adminshutdown
-   adminadvanced
+   adminclusterstat
+   adminwatermeter
    admininspectlog
+   adminprofiler
+   adminstackdump
+   adminnetworktest
+   adminclusterio
+   admintimeline
+   adminudptest
+   admintaskstatus
+   adminshutdown
 
 
 

@@ -192,6 +192,13 @@ public class GLMTest2  extends TestUtil {
       assertEquals(2015, model.null_validation.residualDeviance(),1e-1);
       assertEquals(1516, val.residualDeviance(),1e-1);
       assertEquals(1532, val.aic(),1e-1);
+      // test constant offset (had issues with constant-column filtering)
+      fr = getFrameForFile(parsed, "smalldata/glm_test/abcd.csv", new String[0], "D");
+      new GLM2("GLM testing constant offset on a toy dataset.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("D"),false,false,fr.vec("E")),Family.gaussian).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
+      // just test it does not blow up and the model is sane
+      model = DKV.get(modelKey).get();
+      assertEquals(model.coefficients().get("E"),1,0); // should be exactly 1
+      assertTrue(model.validation().residualDeviance() <= model.validation().nullDeviance());
     } finally {
       fr.delete();
       if(model != null)model.delete();
@@ -390,7 +397,6 @@ public class GLMTest2  extends TestUtil {
     fr = DKV.get(k).get();
     fr.remove("ID");
     Key betaConsKey = Key.make("beta_constraints");
-
     //String[] cfs1 = new String[]{"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON","Intercept"};
     //double[] vals = new double[]{0, 0, 0.54788332,0.53816534, 0.02380097, 0, 0.98115670,-8.945984};
     // [AGE, RACE, DPROS, DCAPS, PSA, VOL, GLEASON, Intercept]

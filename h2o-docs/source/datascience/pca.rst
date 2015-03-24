@@ -18,6 +18,9 @@ manifold are orthogonal.
 
 Defining a PCA Model
 """"""""""""""""""""
+**Destination key**
+
+  A user-defined name for the model. 
 
 
 **Source:**

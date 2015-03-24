@@ -13,6 +13,11 @@ trees for classification problems.
   
 Defining a Naive Bayes Model
 """""""""""""""""""""""""""""
+
+**Destination key**
+
+  A user-defined name for the model. 
+
 **Source:**
 
   The .hex key associated with the data to be modeled. 
@@ -34,6 +39,16 @@ Defining a Naive Bayes Model
   does not appear in the training data. Smoothing modifies the maximum
   likelihood estimates used to generate classification probabilities,
   even when unknown cases are encountered. 
+
+**Min std dev**
+
+  The minimum standard deviation to use for observations without enough data. 
+  
+**Drop na cols**
+
+  Drop columns where over 20% of the values are missing.  
+  
+
 
 """"
 

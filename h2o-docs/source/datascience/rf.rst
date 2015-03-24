@@ -22,6 +22,11 @@ RF is a good choice when your objective is classification.
 Defining a Model
 """"""""""""""""""
 
+**Destination key**
+
+  A user-defined name for the model. 
+
+
 **Source:**
 
   The parsed data set to be used in training a model. 
@@ -37,19 +42,33 @@ Defining a Model
   The set of features from the source data set to omit from
   training a model. 
 
-**Classification:**
-
-  Specifies the model as classification. 
-
 **Validation:** 
 
   A .hex key associated with data to be used in validation of the
   model built using the data specified in **Source**.
 
+**N folds**
+
+   The number of folds for cross-validation (if no validation data is specified).      To disable cross-validation, enter 0. If the number of folds is more than 1, validation must remain empty. 
+
+**Holdout fraction**
+
+   The fraction of training data (from end) to hold out for validation (if no validation data is specified).  
+
+**Keep cross validation dataset splits**
+
+   Preserve cross-validation dataset splits.
+
+
 **N Trees:** 
   
   The number of trees to generate for classification.
 
+**Mtries:**
+
+  At each iteration, a randomly chosen subset of the features in the training data is selected and evaluated to define the optimal split of that subset. Mtries specifies the number of features to be selected from the whole set. When set to -1, the number of features is the square root of the total number of features, rounded to the nearest integer. 
+
+ 
 
 **Max Depth:** 
 
@@ -58,46 +77,78 @@ Defining a Model
   furthest leaf. Maximum depth also specifies the maximum number of
   interactions that can be accounted for by the model.
 
-**Min Rows:**
+**Min Rows**
 
-  The minimum number of observations to include in each terminal
-  node. The maximum possible observations in a terminal node is N-1,
-  where N is the number of observations. The minimum is 1, and is the
-  case where each observation is in a unique terminal node. 
+  (BigData only)The minimum number of observations to include in each terminal node. The maximum possible observations in a terminal node is N-1, where N is the number of observations. The minimum is 1, and is the case where each observation is in a unique terminal node.
 
- **N Bins:**  
+**Select stat type**
 
-    A user-defined tuning parameter for controlling model complexity.
-    N bins sets the number of groups into which the original data 
-    can be split.
+  (DRF only) Specify the stat type (entropy, gini, or twoing).
+  
+**Sampling strategy**
 
-**Score each iteration:**
+  (DRF only)Specify the sampling strategy (random).  
 
-   Returns an error rate for each iteration of the
-   training process. It is used when models are especially complex. By
-   producing a score for the model at each iteration, users can stop
-   the training process when the cost of continuing to model is
-   greater than the marginal gains in predictive power.   
+
+**Sample rate**
+
+  The sampling rate at each split. 
+  
+**Score pojo**
+
+  Create a POJO for scoring.   
+  
+**Balance classes**  
+
+ For imbalanced data, balance training data class counts via over/under-sampling for improved predictive accuracy.
+
+**Class sampling factors**
+
+  (BigData only) Specify the over/under-sampling ratios per class (lexicographic order). 
+
+
+**Checkpoint**
+
+   (BigData only)A model key associated with a previously trained model. Use this option to build a new model as a continuation of a previously generated model (e.g., by a grid search).      
+
+**Overwrite checkpoint**
+
+  (BigData only)Overwrite the checkpoint. 
+  
+
+
+**Max After Balance Size** 
+
+   If classes are balanced, limit the resulting dataset size to the specified multiple of the original dataset size.
+
+
+**Oobee** 
+
+  Generate an out-of-bag error estimate. 
 
 **Importance:** 
 
   Returns information about the importance of each
   feature in the overall model. 
 
-**Mtries:**
 
-  At each iteration, a randomly chosen subset of the features in the
-  training data is selected and evaluated to define the optimal split
-  of that subset. Mtries specifies the number of features to be
-  selected from the whole set. When set to -1, the number of features
-   is the square root of the total number of
-  features, rounded to the nearest integer. 
+
+ **N Bins:**  
+
+   A user-defined tuning parameter for controlling model complexity. N bins sets the number of groups into which the original data can be split.
+
+**Score each iteration:**
+
+  (BogData only)Returns an error rate for each iteration of the training process. It is used when models are especially complex. By producing a score for the model at each iteration, users can stop the training process when the cost of continuing to model is greater than the marginal gains in predictive power.
+
 
  **Seed:**
  
-    A large number that allows the user to recreate an analysis by
-    specifying a starting point for black box processes that would
-    otherwise occur at a randomly chosen place within the data.
+  A large number that allows the user to recreate an analysis by specifying a starting point for black box processes that would otherwise occur at a randomly chosen place within the data.
+
+**Verbose**
+
+  Display tree splits and extra statistics in the trout. 
 
 **Build tree one node:**
 

@@ -1,8 +1,77 @@
+# Nunes Release (2.8.6.2) - 3/16/15
+
+(*includes changes from Novikov release [2.8.5.3] - 3/7/15)
+
+####New Features
+These changes represent features that have been added since the previous release: 
+
+- Create mechanism to move VMs between Hypervisor [(HEX-1965)](https://0xdata.atlassian.net/browse/HEX-1965)
+
+
+####Enhancements
+
+These changes are improvements to existing features (which includes changed default values):
+
+#####Algorithms 
+- Enforce `min_rows` input parameter for leaf nodes in tree builder [(github)](https://github.com/h2oai/h2o/commit/ff6b7f024e642acf05a8e34d0bb8fcd900644a4c)
+- Enable variable importances for autoencoder [(github)](https://github.com/h2oai/h2o/commit/4f392e8afcd61083c3e553a044480ff5853e5ad6)
+- GLM coefficient constraints [(HEX-1961)](https://0xdata.atlassian.net/browse/HEX-1961)
+- added grid search across all relevant parameters that might be affected by beta constraints [(github)](https://github.com/h2oai/h2o/commit/c481f40dd422d7fdca3959b355af789168d93b0f)
+- added stricter threshold in checkmodel, and added higher accuracy by default [(github)](https://github.com/h2oai/h2o/commit/f17c7ee41f239596e2f67fd7e3d5d268bff6f397) 
+- Added proximal penalty to objective value used in line search [(github)](https://github.com/h2oai/h2o/commit/d8605e76f4566dc5fbe33bd9c61c37efbbe76904)
+- try different setting for importance [(github)](https://github.com/h2oai/h2o/commit/cfbcf3479fca79111f5c4a2ef86b421ba8e01f79)
+- add some tolerance [(github)](https://github.com/h2oai/h2o/commit/c3f6ce942010b7f4613aa32340edae2a5e42b86c)
+- Write trees to individual files for easier debugging [(github)](https://github.com/h2oai/h2o/commit/9ba0e12332115857d296a9b3042a03d9bf6f303a)
+
+#####API
+- Add h2o.setMaxLastValue() [(github)](https://github.com/h2oai/h2o/commit/c4f64c4682f02293a0d7ecca46e8c49619cef9d0)
+- adding as.numeric mehtod to R package [(github)](https://github.com/h2oai/h2o/commit/67f4295a86e4fd4e656a85c83001566f34b2cae3)
+
+#####System
+- add UUID field to generated POJOs in h2o1 [(HEX-2014)](https://0xdata.atlassian.net/browse/HEX-2014) [(github)](https://github.com/h2oai/h2o/commit/903f229eae8df9f7781edbada530fbc5d28c2e54)
+- allow column type setting [(HEX-1291)](https://0xdata.atlassian.net/browse/HEX-1291)
+- Need a way to set a specific level on a factor col [(PUB-1153)](https://0xdata.atlassian.net/browse/PUB-1153)[(github)](https://github.com/h2oai/h2o/commit/69515ebe5915f6266a840ca0914d36bfd9bfed98)
+- Bind both TCP and UDP ports before clustering [(github)](https://github.com/h2oai/h2o/commit/b9fd80f339cf7727142d6a3a71a9651f2ea1845f)
+- Removes all GA messages [(github)](https://github.com/h2oai/h2o/commit/7e6c7c98693b55b3fa1999bf59e1725a963fc686)
+
+
+####Bug Fixes 
+These changes are to resolve incorrect software behavior: 
+
+#####Algorithms
+- GLM : the proximal penalty was not being added to the objective value used during line-search, which would cause line search to stop the solver prematurely. [(HEX-2028)](https://0xdata.atlassian.net/browse/HEX-2028)
+- GLM : With some Bayesian priors, the coeff estimates are off from our expectation: [(HEX-2026)](https://0xdata.atlassian.net/browse/HEX-2026)
+- GLM : Modeling with constraints delivers unexpected results [(HEX-2025)](https://0xdata.atlassian.net/browse/HEX-2025)
+- GLM in R: h2o.glm with Beta Constraints overwrites input training frame [(HEX-2021)](https://0xdata.atlassian.net/browse/HEX-2021)
+- GLM: linear regression fails to run with beta constraints [(HEX-2020)](https://0xdata.atlassian.net/browse/HEX-2020) [(github)](https://github.com/h2oai/h2o/commit/a4fedfd0d61756b051afd3c5261322ff50ff0952)
+- java.lang.ArrayIndexOutOfBoundsException while running GBM [(HEX-2011)](https://0xdata.atlassian.net/browse/HEX-2011)
+- i pass "do_classification: True" parameter to ModelBuilders/gbm. no error. but it's not echoed and the result is regression [(PUB-1134)](https://0xdata.atlassian.net/browse/PUB-1134)
+- Fixed proximal interface in glm [(github)](https://github.com/h2oai/h2o/commit/3562bd7091b457e94ee8e975034eae8ed92b495d)
+- GLM bug fix [(github)](https://github.com/h2oai/h2o/commit/b28566e8d2d415e8c3cc57d3d4a78adb53c319a8)
+- Bug fix in glm to protect against (throw IAE) user supplying beta_given but no vector of penalties in the beta_constraints [(github)](https://github.com/h2oai/h2o/commit/8e0e38300d5bdd9b293f3872b799502619d216aa)
+- fixed LR beta constraints, took out beta given since no rho is given [(github)](https://github.com/h2oai/h2o/commit/7fab0264492b383de5f36008f608f6f7ad8ddbb9)
+- Fix in GLM [(github)](https://github.com/h2oai/h2o/commit/5617c6e95885dd3dd2d30bb3bf7cfd6d2e0aec8d)
+
+
+
+#####API 
+- as.h2o() broken, cannot import date column into h2o [(HEX-2027)](https://0xdata.atlassian.net/browse/HEX-2027) [(github)](https://github.com/h2oai/h2o/commit/c27f9a3c152f3c17c4fbfb6e7fb16534779488d5)
+- R: as.numeric missing from R package [(HEX-2024)](https://0xdata.atlassian.net/browse/HEX-2024)
+- Fix bug in as.h2o. h2o.exec call (for turning cols into enums) was somehow overwriting h2odataset object in outer scope. [(github)](https://github.com/h2oai/h2o/commit/b63c42b6838b630a5e9ad042737c4d00b61597b0)
+
+
+#####System
+
+- handle GA not able to call home gracefully [(HEX-2030)](https://0xdata.atlassian.net/browse/HEX-2030)
+- Rapids apply: java.lang.AssertionError at water.fvec.Frame.<init>(Frame.java:100) at water.fvec.Frame.<init>(Frame.java:72) at water.rapids.ASTApply.apply(ASTApply.java:63) at water.rapids.AST.treeWalk(AST.java:50) [(PUB-1145)](https://0xdata.atlassian.net/browse/PUB-1145)
+- NPE in fvec parse on 164 on multiple gz files [(PUB-441)](https://0xdata.atlassian.net/browse/PUB-441)
+- 
+
+
+
 #Noether Release (2.8.4.1) - 1/30/15
 
 ####Enhancements 
-
-These changes are improvements to existing features (which includes changed default values):
 
 #####UI
 
@@ -62,7 +131,6 @@ These changes are improvements to existing features (which includes changed defa
 
 ####Bug Fixes
 
-These changes are to resolve incorrect software behavior: 
 
 #####UI
 - Fixed a bug in an example due to createFrame change [(github)](https://github.com/h2oai/h2o/commit/afc93a9734ea22efa9afcec46bbc7e26b2faee98)

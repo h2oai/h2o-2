@@ -28,7 +28,19 @@ Quick Start Video
 
 Dependencies
 """"""""""""
-The H2O package is built with some required packages. To properly install H2O, install the following dependencies:
+
+**Note**: If you are using RStudio, clear the workspace before installing or updating packages. 
+
+
+- **For OS X:** In a new terminal window, enter ``sudo apt-get install libcurl4-openssl-dev``. After the download completes, open R and enter ``install.packages("RCurl")``. 
+
+- **For Windows**: `Download <http://curl.haxx.se/dlwiz/>`_ the latest Curl package. Select **curl executable** as the package type, **Windows/Win32** or **Win64** (depending on your version of Windows), and select **Generic** as the flavour. If you selected **Windows/Win32** as the operating system, select **Unspecified** as the version. Download the file, extract it, and install it in R. 
+	
+- **For Linux (CentOS)**: After you install RStudio, install the ``R-devel`` package using ``yum install R-devel.x86_64``. Then, install curl-config using ``yum install libcurl-devel.x86_64``.
+
+
+The H2O package is built with some required packages. To install the packages, use ``install.packages()`` (for example, ``install.packages(RCurl)``). 
+To properly install H2O, install the following dependencies:
 
     - RCurl
     - rjson
@@ -39,18 +51,53 @@ The H2O package is built with some required packages. To properly install H2O, i
     - utils 
     - methods
     
-If your machine does not have curl-config, you must install the dependencies outside of R. Refer to the following directions for your OS.  
+If your machine does not have curl-config, you must install the dependencies outside of R. Refer to the directions above for your OS.  
 
-- **For OS X:** In a new terminal window, enter ``sudo apt-get install libcurl4-openssl-dev``. After the download completes, open R and enter ``install.packages("RCurl")``. 
+Depending on your system configuration, installation of R packages may fail due to dependencies. Before launching H2O, confirm the packages installed correctly by looking for the following output in R (where `<PackageName>` represents the R package and `<DirectoryPath>` represents the directory path of the package):  
 
-- **For Windows**: `Download <http://curl.haxx.se/dlwiz/>`_ the latest Curl package. Select **curl executable** as the package type, **Windows/Win32** or **Win64** (depending on your version of Windows), and select **Generic** as the flavour. If you selected **Windows/Win32** as the operating system, select **Unspecified** as the version. Download the file, extract it, and install it in R. 
-	
-- **For Linux (CentOS)**: After you install RStudio, install the ``R-devel`` package using ``yum install R-devel.x86_64``. Then, install curl-config using ``yum install libcurl-devel.x86_64``.
+::
+
+	trying URL 'http://cran.rstudio.com/bin/macosx/mavericks/contrib/3.1/<PackageName>'
+	Content type 'application/x-gzip' length 160850 bytes (157 Kb)
+	opened URL
+	==================================================
+	downloaded 157 Kb
+
+
+	The downloaded binary packages are in
+		<DirectoryPath>
+
+::
+
+If the package did not install successfully, the following output displays:
+
+::
+
+	> install.packages("RCurl")
+	Installing package into ‘/home/kevin/.Rlibrary’
+	(as ‘lib’ is unspecified)
+	trying URL 'http://cran.stat.ucla.edu/src/contrib/RCurl_1.95-4.5.tar.gz'
+	Content type 'application/x-tar' length 878607 bytes (858 Kb)
+	opened URL
+	==================================================
+	downloaded 858 Kb
+
+	* installing *source* package ‘RCurl’ ...
+	** package ‘RCurl’ successfully unpacked and MD5 sums checked
+	checking for curl-config... no
+	Cannot find curl-config
+	ERROR: configuration failed for package ‘RCurl’
+	* removing ‘/home/kevin/.Rlibrary/RCurl’
+
+	The downloaded source packages are in
+    ‘/tmp/RtmpnAjlbd/downloaded_packages’
+	Warning message:
+	In install.packages("RCurl") :
+  	installation of package ‘RCurl’ had non-zero exit status
+
+::
+
    
-To install the packages, use ``install.packages()`` (for example, ``install.packages(RCurl)``). 
-
-""""""""""""""""""""""
-
 Download zip file from h2o.ai
 """""""""""""""""""""""""""""
 

@@ -3,16 +3,22 @@
 .pkg.env = new.env()
 .pkg.env$result_count = 0
 .pkg.env$temp_count = 0
+.pkg.env$RESULT_MAX = 1000
 .pkg.env$IS_LOGGING = FALSE
 
 .TEMP_KEY = "Last.value"
-.RESULT_MAX = 1000
 .MAX_INSPECT_ROW_VIEW = 10000
 .MAX_INSPECT_COL_VIEW = 10000
 .LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!", "is.na")
 
 "%p0%"   <- function(x,y) assign(deparse(substitute(x)), paste(x, y, sep = ""), parent.frame())  # paste0
 "%p%"    <- function(x,y) assign(deparse(substitute(x)), paste(x, y), parent.frame()) # paste
+
+# Function to manage temp key wrapping behavior
+h2o.setMaxLastValue <- function(val = 1000000000) {
+  assign("RESULT_MAX", val, envir = .pkg.env)
+  print(paste("Set h2o .pkg.env$RESULT_MAX to", .pkg.env$RESULT_MAX))
+}
 
 # Initialize functions for R logging
 .myPath = paste(Sys.getenv("HOME"), "Library", "Application Support", "h2o", sep=.Platform$file.sep)
@@ -393,7 +399,7 @@ h2o.setLogPath <- function(path, type) {
 #------------------------------------ Exec2 ------------------------------------#
 .h2o.__exec2 <- function(client, expr) {
   destKey = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
-  .pkg.env$temp_count <- (.pkg.env$temp_count + 1) %% .RESULT_MAX
+  .pkg.env$temp_count <- (.pkg.env$temp_count + 1) %% .pkg.env$RESULT_MAX
   .h2o.__exec2_dest_key(client, expr, destKey)
   # .h2o.__exec2_dest_key(client, expr, .TEMP_KEY)
 }

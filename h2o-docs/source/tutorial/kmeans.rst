@@ -28,7 +28,7 @@ Getting Started
 This tutorial uses a publicly available data set that can be found at http://archive.ics.uci.edu/ml/datasets/seeds
 
 
-The data are composed of 210 observations, 7 attributes, and an priori
+The data are composed of 210 observations, 7 attributes, and an a priori
 grouping assignment. All data are positively valued and
 continuous. Before modeling, parse data into H2O:
 
@@ -58,25 +58,20 @@ Building a Model
 
 #. In the "source" field, enter the .hex key associated with the
    data set. 
-
-
-#. Specify a value for "k." For this dataset, use 3.  
-
-
-#. Check the "normalize" checkbox to normalize data, but this is not required for this
-   example. 
-
-#. Select an option from the "Initialization" drop-down list. 
+   
+   
+#. Select an option from the "Initialization" drop-down list. For this example, select **PlusPlus**. 
 	
    - Plus Plus initialization chooses one initial center at random and weights the random selection of subsequent centers so that points furthest from the first center are more likely to be chosen. 
    - Furthest initialization chooses one initial center at random, and then chooses the next center to be the  point furthest away in terms of Euclidean distance. 
    - The default ("None") results in K initial centers being chosen independently at random.  
 
+#. Specify a value for "k." For this dataset, use 3.  
+
 #. Enter a "Max Iter" (short for maximum iterations) value to specify the maximum number of iterations the algorithm processes.
 
-#. Select the columns of attributes that should be used 
-   in defining the clusters in the "Cols" section. In this example, all columns except column 7 (the a priori known clusters for this particular set) are selected. 
 
+#. Check the "normalize" checkbox to normalize data, but this is not required for this example. 
 
 #. Click **Submit**.
 
@@ -88,9 +83,15 @@ Building a Model
 K-Means Output
 """"""""""""""
 
-The output is a matrix of the cluster assignments and the
-coordinates of the cluster centers (in terms of the originally 
-selected attributes). Your cluster centers may differ slightly. 
+The output is a series of table that contain: 
+
+- the cluster centers (in terms of the originally selected attributes)
+- cluster sizes
+- cluster variances
+- overall totals (the total within the cluster sum of squares)
+
+To view the cluster assignments by observation, click the **View the row-by-row cluster assignments**. 
+
 K-Means randomly chooses starting points and converges on 
 optimal centroids. The cluster number is arbitrary and should
 be thought of as a factor. 
@@ -100,35 +101,15 @@ be thought of as a factor.
 
 """"""
 
-K-means Next Steps
+K-means Predictions
 """""""""""""""""""
 
-For more information about the model, select *K-Means* from the
-drop-down **Score** menu. Specify the K-Means model key and the 
-.hex key for the original data set. 
+To make a prediction based on the model, click the **model Parameters** button. Copy the `destination_key` for the model, then click the drop-down **Score** menu. Select **Predict**, then paste the copied `destination_key` in the **model** field. Type the name of the seeds dataset in the **data** entry field. When you begin typing, the fields will auto-complete; press the arrow keys to select the correct entry and press the Enter button to confirm. To generate the prediction, click the **Submit** button. 
 
-The output that displays when you click **Submit** is the number of rows 
-assigned to each cluster and the squared error per cluster. 
+The prediction results display in a two-column table. The first column represents the number of rows assigned to each cluster and the second row contains the squared error per cluster. 
 
-.. image:: KMscore.png
+.. image:: KMPredict.png
    :width: 90%
 
 """"""
 
-K-means Apply
-"""""""""""""
-
-To generate a prediction (assign the observations in a data set
-to a cluster), select **K-means Apply** from the drop-down **Score** menu.
-Specify the model and the  .hex key for the data, then click **Submit**. 
-
-In the following example, cluster assignments have been generated
-for the original data. Because the data have been sufficiently well 
-researched, the ideal cluster assignments were known in
-advance. Comparing known clusters with predicted clusters demonstrated
-that this K-Means model classifies with a less than 10% error rate. 
-
-.. image:: KMapply.png
-   :width: 90%
-
-""""""
