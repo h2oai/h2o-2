@@ -111,6 +111,7 @@ public class GLMValidation extends Iced {
     else for(int i = 0; i < _cms.length; ++i)_cms[i].add(v._cms[i]);
   }
   public final double residualDeviance(){return residual_deviance;}
+  public final double nullDeviance(){return null_deviance;}
   public final long resDOF(){return nobs - _rank -1;}
   public double auc(){return auc;}
   public double aic(){return aic;}
