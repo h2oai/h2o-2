@@ -12,6 +12,29 @@ Running H2O on Hadoop
 - `-mapperXmx`, `-nodes`, and `-output` are required
 - Root permissions are not required - just unzip the H2O .zip file on any single node
 
+
+Prerequisite: Open Communication Paths
+--------------------------------------
+
+H2O communicates using two communication paths. Verify these are open and available for use by H2O. 
+
+**Path 1: mapper to driver**
+
+Optionally specify this port using the `-driverport` option in the `hadoop jar` command (see "Hadoop Launch Parameters" below). This port is opened on the driver host (the host where you entered the `hadoop jar` command). By default, this port is chosen randomly by the operating system. 
+
+**Path 2: mapper to mapper**
+
+Optionally specify this port using the `-baseport` option in the `hadoop jar` command (see "Hadoop Launch Parameters" below). This port and the next subsequent port are opened on the mapper hosts (the Hadoop worker nodes) where the H2O mapper nodes are placed by the Resource Manager. By default, ports 54321 (TCP) and 54322 (TCP & UDP) are used. 
+
+The mapper port is adaptive: if 54321 and 54322 are not available, H2O will try 54323 and 54324 and so on. The mapper port is designed to be adaptive because sometimes if the YARN cluster is low on resources, YARN will place two H2O mappers for the same H2O cluster request on the same physical host. For this reason, we recommend opening a range of more than two ports (20 ports should be sufficient). 
+
+----
+
+Tutorial
+---------
+
+
+
 The following tutorial will walk the user through the download or build of H2O and the parameters involved in launching H2O from the command line.
 
 

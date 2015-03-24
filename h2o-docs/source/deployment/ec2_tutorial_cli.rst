@@ -4,6 +4,8 @@ Launch H\ :sub:`2`\ O from Command Line
 =======================================
 Launch scripts are available on our Github repository :ref:`QuickstartGit`
 
+**Note**: This procedure applies to H2O only and is not applicable to H2O-Dev. 
+
 **Step 1**
 
 Prerequisite: Install boto python library. In order to run the scripts, you must have the boto library installed. References are available on boto and amazon's website:
