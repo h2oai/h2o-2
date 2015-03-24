@@ -1947,16 +1947,16 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       bodySb.i(1).p("}").nl();
       bodySb.i().p("}").nl();
     } else if (!get_params().autoencoder) { //Regression
-      bodySb.i().p("}").nl();
-      bodySb.i().p("if (i == ACTIVATION.length-1) {").nl();
+      bodySb.i(1).p("if (i == ACTIVATION.length-1) {").nl();
       // regression: set preds[1], FillPreds0 will put it into preds[0]
       if (model_info().data_info()._normRespMul != null) {
-        bodySb.i().p("preds[1] = (float) (ACTIVATION[i][0] / NORMRESPMUL[0] + NORMRESPSUB[0]);").nl();
+        bodySb.i(2).p("preds[1] = (float) (ACTIVATION[i][0] / NORMRESPMUL[0] + NORMRESPSUB[0]);").nl();
       }
       else {
-        bodySb.i().p("preds[1] = ACTIVATION[i][0];").nl();
+        bodySb.i(2).p("preds[1] = ACTIVATION[i][0];").nl();
       }
-      bodySb.i().p("if (Float.isNaN(preds[1])) throw new RuntimeException(\"Predicted regression target NaN!\");").nl();
+      bodySb.i(2).p("if (Float.isNaN(preds[1])) throw new RuntimeException(\"Predicted regression target NaN!\");").nl();
+      bodySb.i(1).p("}").nl();
       bodySb.i().p("}").nl();
     } else { //AutoEncoder
       bodySb.i(1).p("if (i == ACTIVATION.length-1) {").nl();
