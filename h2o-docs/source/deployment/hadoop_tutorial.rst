@@ -102,6 +102,3 @@ Hadoop Launch Parameters
 - `-license <license file name>`: Specify the directory of local filesytem location and the license file name.  
 - `-o | -output <HDFS output directory>`: Specify the HDFS directory for the output. 
 
-
-
-
