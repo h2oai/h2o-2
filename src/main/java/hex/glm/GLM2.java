@@ -1242,7 +1242,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               if(lambda == null || lambda.length == 0)
                 lambda = new double[]{DEFAULT_LAMBDA};
               int i = 0;
-              while(i < lambda.length && lambda[i] >= lambda_max)++i;
+              while(i < lambda.length && lambda[i] > lambda_max)++i;
               if(i == lambda.length)
                 throw new IllegalArgumentException("Given lambda(s) are all > lambda_max = " + lambda_max + ", have nothing to run with. lambda = " + Arrays.toString(lambda));
               if(i > 0) {

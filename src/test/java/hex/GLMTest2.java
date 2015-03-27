@@ -166,7 +166,7 @@ public class GLMTest2  extends TestUtil {
     H2O.submitTask(new RebalanceDataSet(fr,k,64)).join();
     fr.delete();
     fr = DKV.get(k).get();
-    try{
+    try {
 //      R results:
 //      Call:  glm(formula = CAPSULE ~ . - ID - AGE, family = binomial, data = D,
 //        offset = D$AGE)
@@ -179,26 +179,26 @@ public class GLMTest2  extends TestUtil {
 //      Null Deviance:	    2015
 //      Residual Deviance: 1516 	AIC: 1532
       // H2O differs on intercept and race, same residual deviance though
-      String [] cfs1 = new String [] {/*"Intercept","RACE.R2","RACE.R3",*/ "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
-      double [] vals = new double [] {/*-95.16718, -0.67663, -2.11848,*/1, 2.31296, 3.47783, 0.10842, -0.08657, 2.90452};
-      new GLM2("GLM offset test on prostate.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("CAPSULE"),false,true,fr.vec("AGE")),Family.binomial).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
+      String[] cfs1 = new String[]{/*"Intercept","RACE.R2","RACE.R3",*/ "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON"};
+      double[] vals = new double[]{/*-95.16718, -0.67663, -2.11848,*/1, 2.31296, 3.47783, 0.10842, -0.08657, 2.90452};
+      new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source(fr, fr.vec("CAPSULE"), false, true, fr.vec("AGE")), Family.binomial).setRegularization(new double[]{0}, new double[]{0}).doInit().fork().get();
       model = DKV.get(modelKey).get();
       Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
       testHTML(model);
       HashMap<String, Double> coefs = model.coefficients();
-      for(int i = 0; i < cfs1.length; ++i)
-        assertEquals(vals[i], coefs.get(cfs1[i]),1e-4);
+      for (int i = 0; i < cfs1.length; ++i)
+        assertEquals(vals[i], coefs.get(cfs1[i]), 1e-4);
       GLMValidation val = model.validation();
-      assertEquals(2015, model.null_validation.residualDeviance(),1e-1);
-      assertEquals(1516, val.residualDeviance(),1e-1);
-      assertEquals(1532, val.aic(),1e-1);
+      assertEquals(2015, model.null_validation.residualDeviance(), 1e-1);
+      assertEquals(1516, val.residualDeviance(), 1e-1);
+      assertEquals(1532, val.aic(), 1e-1);
+      fr.delete();
       // test constant offset (had issues with constant-column filtering)
       fr = getFrameForFile(parsed, "smalldata/glm_test/abcd.csv", new String[0], "D");
-      new GLM2("GLM testing constant offset on a toy dataset.",Key.make(),modelKey,new GLM2.Source(fr,fr.vec("D"),false,false,fr.vec("E")),Family.gaussian).setRegularization(new double []{0},new double[]{0}).doInit().fork().get();
+      new GLM2("GLM testing constant offset on a toy dataset.", Key.make(), modelKey, new GLM2.Source(fr, fr.vec("D"), false, false, fr.vec("E")), Family.gaussian).setRegularization(new double[]{0}, new double[]{0}).doInit().fork().get();
       // just test it does not blow up and the model is sane
       model = DKV.get(modelKey).get();
-      assertEquals(model.coefficients().get("E"),1,0); // should be exactly 1
-      assertTrue(model.validation().residualDeviance() <= model.validation().nullDeviance());
+      assertEquals(model.coefficients().get("E"), 1, 0); // should be exactly 1
     } finally {
       fr.delete();
       if(model != null)model.delete();
