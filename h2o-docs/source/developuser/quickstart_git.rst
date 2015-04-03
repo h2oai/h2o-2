@@ -3,7 +3,7 @@
 From Source Code (Github)
 ----------------------------
 
-**Warning**: This project has been replaced by H2O-Dev. Please refer to the instructions `here <https://github.com/h2oai/h2o-dev/blob/master/README.md#4-building-h2o-dev>`_ for updated instructions.
+**Warning**: This project has been replaced by H2O-Dev. Please refer to the instructions `here <https://github.com/h2oai/h2o-dev/blob/master/README.md>`_ for updated instructions.
 
 
 These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
