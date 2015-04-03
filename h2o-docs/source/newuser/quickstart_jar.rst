@@ -4,8 +4,6 @@ Getting Started From a Downloaded Zip File
 ============================================
 
 
-**Note**: For instructions on how to get started using H2O-Dev, please refer to the instructions on the `H2O-Dev Downloads <http://h2o-release.s3.amazonaws.com/h2o-dev/master/latest.html>`_ page.
-
 Quick Start Video
 """""""""""""""""
 
