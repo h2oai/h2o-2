@@ -1213,7 +1213,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             }
             _nullDeviance = glmt._val.residualDeviance();
             _currentLambda = lambda_max = Math.max(Utils.maxValue(glmt._grad),-Utils.minValue(glmt._grad))/Math.max(1e-3,alpha[0]);
-            assert lambda_max > 0;
             _lastResult = makeIterationInfo(0,glmt,null,glmt.gradient(0,0));
             GLMModel model = new GLMModel(GLM2.this, dest(), _srcDinfo, _glm, glmt._val, beta_epsilon, alpha[0], lambda_max, _ymu, prior);
             model.start_training(start_time);
