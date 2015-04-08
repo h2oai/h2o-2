@@ -440,6 +440,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         int id = source.find(offset);
         int idx = Arrays.binarySearch(ignored_cols, id);
         if (idx >= 0) Utils.remove(ignored_cols, idx);
+        source2.remove(ignored_cols);
         String name = source2.names()[id];
 //        source2.add(name, source2.remove(id));
         _noffsets = 1;
@@ -477,7 +478,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         source2.remove(offsetId);
       }
 
-      Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, toEnum, true, true);
+      Frame fr = DataInfo.prepareFrame(source2, response, new int[0], toEnum, true, true);
       if(offset != null){ // now put the offset just before response
         String responseName = fr.names()[fr.numCols()-1];
         Vec responseVec = fr.remove(fr.numCols()-1);
