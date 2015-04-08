@@ -16,6 +16,8 @@ in the EC2 directory of the downloadable zip file
 Github repository :ref:`QuickstartGit` along with all the scripts used
 to launch H\ :sub:`2`\ O.
 
+**Note**: Before launching H2O on an EC2 cluster, verify that ports `54321` and `54322` are both accessible by TCP and UDP. 
+
 .. toctree::
    :maxdepth: 1
 

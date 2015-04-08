@@ -133,6 +133,8 @@ Distribute a flatfile.txt with all the private node IP addresses.
 
 **Step 7**
 
+**Note**: Before launching H2O on an EC2 cluster, verify that ports `54321` and `54322` are both accessible by TCP and UDP. 
+
 Start H2O by executing `./h2o-cluster-start-h2o.sh`.
 
 ::
