@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'H2O Documentation'
-copyright = u'2013, 0xdata, Inc'
+copyright = u'2015, H2O.ai'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -269,7 +269,7 @@ texinfo_documents = [
 epub_title = u'h2o'
 epub_author = u'H2O Open Source Team'
 epub_publisher = u'H2O Open Source Team'
-epub_copyright = u'2013, H2O Open Source Team'
+epub_copyright = u'2015, H2O Open Source Team'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.
