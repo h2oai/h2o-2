@@ -284,7 +284,7 @@ dw_3:
 	mkdir $(BUILD_WEBSITE_DIR)
 	cp -r h2o-docs/build/html/* $(BUILD_WEBSITE_DIR)
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits
-	cp -p docs/H2O-Algorithms-Road-Map.pdf $(BUILD_WEBSITE_DIR)/bits
+	cp -p docs/0xdata_H2O_Algorithms.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -rp target/javadoc $(BUILD_WEBSITE_DIR)/bits
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/hadoop
 	cp -p hadoop/README.txt $(BUILD_WEBSITE_DIR)/bits/hadoop
@@ -292,7 +292,6 @@ dw_3:
 	cp -p docs/sparkling_water_meetup.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -p docs/h2o_datasheet.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -p docs/H2ODeveloperCookbook.pdf $(BUILD_WEBSITE_DIR)/bits
-	cp -p docs/DeploymentModels_v1.pdf $(BUILD_WEBSITE_DIR)/bits
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
 	@if [ -f R/h2o_package.pdf ]; then \
@@ -302,7 +301,6 @@ dw_3:
 	sed -i -e "s/SUBST_RELEASE_NAME/$(RELEASE_NAME)/g; s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g; s/SUBST_BUILD_NUMBER/$(BUILD_NUMBER)/g" $(BUILD_WEBSITE_DIR)/deployment/hadoop_tutorial.html
 	sed -i -e "s/SUBST_RELEASE_NAME/$(RELEASE_NAME)/g; s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g; s/SUBST_BUILD_NUMBER/$(BUILD_NUMBER)/g" $(BUILD_WEBSITE_DIR)/Ruser/Rinstall.html
 	sed -i -e "s/SUBST_RELEASE_NAME/$(RELEASE_NAME)/g; s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g; s/SUBST_BUILD_NUMBER/$(BUILD_NUMBER)/g" $(BUILD_WEBSITE_DIR)/deployment/ec2_build_ami.html
-	sed -i -e "s/SUBST_RELEASE_NAME/$(RELEASE_NAME)/g; s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g; s/SUBST_BUILD_NUMBER/$(BUILD_NUMBER)/g" $(BUILD_WEBSITE_DIR)/deployment/H2O_Hadoop_Mapr.html
 
 #
 # Set appropriately for your data size to quickly try out H2O.
