@@ -434,16 +434,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
       source2 = new Frame(source);
       assert sorted(ignored_cols);
-      if (offset != null) {
-        if (offset.isEnum())
-          throw new IllegalArgumentException("Categorical offsets are not supported. Can not use column '" + source2.names()[source2.find(offset)] + "' as offset");
-        int id = source.find(offset);
-        int idx = Arrays.binarySearch(ignored_cols, id);
-        if (idx >= 0) Utils.remove(ignored_cols, idx);
-        String name = source2.names()[id];
-//        source2.add(name, source2.remove(id));
-        _noffsets = 1;
-      }
+      source2.remove(ignored_cols);
+      if(offset != null)
+        source2.remove(source2.find(offset)); // remove offset and add it later explicitly (so that it does not interfere with DataInfo.prepareFrame)
       if (nlambdas == -1)
         nlambdas = 100;
       if (lambda_search && lambda.length > 1)
@@ -469,20 +462,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           //pass
       }
       toEnum = family == Family.binomial && (!response.isEnum() && (response.min() < 0 || response.max() > 1));
-      String offsetName = "";
-      int offsetId = -1;
-      if(offset != null) {
-        offsetId = source2.find(offset);
-        offsetName = source2.names()[offsetId];
-        source2.remove(offsetId);
-      }
-
-      Frame fr = DataInfo.prepareFrame(source2, response, ignored_cols, toEnum, true, true);
-      if(offset != null){ // now put the offset just before response
+      if(source2.numCols() <= 1 && !intercept)
+        throw new IllegalArgumentException("There are no predictors left after ignoring constant columns in the dataset and no intercept => No parameters to estimate.");
+      Frame fr = DataInfo.prepareFrame(source2, response, new int[0], toEnum, true, true);
+      if(offset != null){ // now put the offset just in front of response
+        int id = source.find(offset);
+        String name = source.names()[id];
         String responseName = fr.names()[fr.numCols()-1];
         Vec responseVec = fr.remove(fr.numCols()-1);
-        fr.add(offsetName, offset);
+        fr.add(name, offset);
         fr.add(responseName,responseVec);
+        _noffsets = 1;
       }
       TransformType dt = TransformType.NONE;
       if (standardize)
