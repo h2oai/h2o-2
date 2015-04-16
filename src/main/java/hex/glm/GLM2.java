@@ -462,7 +462,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           //pass
       }
       toEnum = family == Family.binomial && (!response.isEnum() && (response.min() < 0 || response.max() > 1));
-
+      if(source2.numCols() <= 1 && !intercept)
+        throw new IllegalArgumentException("There are no predictors left after ignoring constant columns in the dataset and no intercept => No parameters to estimate.");
       Frame fr = DataInfo.prepareFrame(source2, response, new int[0], toEnum, true, true);
       if(offset != null){ // now put the offset just in front of response
         int id = source.find(offset);
