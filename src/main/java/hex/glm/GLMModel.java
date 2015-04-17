@@ -21,7 +21,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="lambda_value max, smallest lambda_value which drives all coefficients to zero")
   final double  lambda_max;
   @API(help="mean of response in the training dataset")
-  final double     ymu;
+  public final double     ymu;
 
   @API(help="actual expected mean of the response (given by the user before running the model or ymu)")
   final double prior;

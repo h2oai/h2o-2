@@ -289,12 +289,19 @@ public class GLMTest2  extends TestUtil {
       assertEquals(512.3, model.null_validation.residualDeviance(), 1e-1);
       assertEquals(378.3, val.residualDeviance(),1e-1);
       assertEquals(396.3, val.aic(), 1e-1);
+      double prior = 1e-5;
+      // test the same data and model with prior, should get the same model except for the intercept
+      new GLM2("GLM test on prostate.",Key.make(),modelKey,new Source(fr,fr.lastVec(),false),Family.binomial).setRegularization(new double []{0},new double[]{0}).setPrior(prior).doInit().fork().get();
+      GLMModel model2 = DKV.get(modelKey).get();
+      for(int i = 0; i < model2.beta().length-1; ++i)
+        assertEquals(model.beta()[i], model2.beta()[i], 1e-8);
+      assertEquals(model.beta()[model.beta().length-1] -Math.log(model.ymu * (1-prior)/(prior * (1-model.ymu))),model2.beta()[model.beta().length-1],1e-10);
     } finally {
       fr.delete();
       if(model != null)model.delete();
     }
-
   }
+
 
   @Test public void testNoNNegative() {
 //    glmnet's result:

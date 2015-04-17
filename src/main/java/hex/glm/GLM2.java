@@ -323,7 +323,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     beta_constraints = f;
     return this;
   }
-
+  public GLM2 setPrior(double p){
+    this.prior = p;
+    return this;
+  }
   static String arrayToString (double[] arr) {
     if (arr == null) {
       return "(null)";
