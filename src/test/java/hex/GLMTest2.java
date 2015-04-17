@@ -422,6 +422,17 @@ public class GLMTest2  extends TestUtil {
       for(int i = 0; i < beta.length; ++i)
         Assert.assertEquals(0,grad[i] + betaConstraints.vec("rho").at(i) * (beta[i] - betaConstraints.vec("beta_given").at(i)),1e-8);
       // now standardized
+      src = new GLM2.Source((Frame)fr.clone(), fr.vec("CAPSULE"), true, true);
+      new GLM2("GLM offset test on prostate.", Key.make(), modelKey, src, Family.binomial).setNonNegative(false).setRegularization(new double[]{0},new double[]{0.000}).setBetaConstraints(betaConstraints).setHighAccuracy().doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
+      model = DKV.get(modelKey).get();
+      fr.add("CAPSULE", fr.remove("CAPSULE"));
+      dinfo = new DataInfo(fr, 1, true, false, TransformType.STANDARDIZE, DataInfo.TransformType.NONE);
+      glmt = new GLMTask.GLMIterationTask(0,null, dinfo, new GLMParams(Family.binomial),false, true, true, model.norm_beta(0), 0, 1.0/380, ModelUtils.DEFAULT_THRESHOLDS, null).doAll(dinfo._adaptedFrame);
+      double [] beta2 = model.norm_beta(0);
+      double [] grad2 = glmt.gradient(0,0);
+      for(int i = 0; i < beta.length-1; ++i)
+        Assert.assertEquals("grad[" + i + "] != 0",0,grad2[i] + betaConstraints.vec("rho").at(i) * (beta2[i] - betaConstraints.vec("beta_given").at(i) * dinfo._adaptedFrame.vec(i).sigma()),1e-8);
+      Assert.assertEquals("grad[intercept] != 0",0,grad2[grad2.length-1],1e-8);
     } finally {
       fr.delete();
       if(model != null)model.delete();
