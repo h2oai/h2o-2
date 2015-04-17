@@ -39,5 +39,5 @@ checkGLMModel2 <- function(myGLM.h2o, myGLM.r) {
   print("R Coefficients")
   print(sort(coeff.R))
   checkEqualsNumeric(myGLM.h2o@model$deviance, deviance(myGLM.r)[numcol], tolerance = 0.1)
-  checkEqualsNumeric(sort(myGLM.h2o@model$coefficients), sort(coeff.R), tolerance = 0.5)
+  checkEqualsNumeric(sort(myGLM.h2o@model$coefficients), sort(coeff.R), tolerance = 0.1)
 }

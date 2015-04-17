@@ -133,7 +133,7 @@ test.Priors.BetaConstraints <- function(conn) {
   testEnd()
 }
 
-doTest("GLM Test: Beta Constraints with Priors", test.Priors.BetaConstraints)
+doTest("GLM Test: Beta Constraints with added Rho penalty", test.Priors.BetaConstraints)
 
 
 
