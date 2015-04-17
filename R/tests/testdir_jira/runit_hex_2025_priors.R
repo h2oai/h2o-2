@@ -47,10 +47,10 @@ test.priors <- function(conn) {
   intercept1 = glm_priors.h2o@model$coefficients["Intercept"]
   intercept2 = glm_nopriors.h2o@model$coefficients["Intercept"]
   ymean = mean(data.hex[,depVars])
-  adjustment = ymean * -log(1-totRealProb)/(totRealProb*(1-ymean))
+  adjustment = - log(ymean*(1-totRealProb)/(totRealProb*(1-ymean))
   intercept2adj = intercept1-adjustment
   checkEqualsNumeric(coeff1, coeff2, tolerance = 0)
-  checkEqualsNumeric(intercept1, intercept2adj, tolerance = 0.01)  
+  checkEqualsNumeric(intercept2, intercept2adj, tolerance = 1E-10)  
   testEnd()
 }
 
