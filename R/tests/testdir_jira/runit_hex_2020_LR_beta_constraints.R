@@ -45,7 +45,10 @@ test.LR.betaConstraints <- function(conn) {
     upper_bound = -0.002
     beta_age$lower_bounds = lower_bound
     beta_age$upper_bounds = upper_bound
+    nrow_prior = nrow(prostate.hex)
     lr_negativeUpper.h2o = h2o.glm(x = "AGE", y = "CAPSULE", data = prostate.hex, family = family_type, alpha = 0, beta_constraints = beta_age, standardize = T)
+    nrow_after = nrow(prostate.hex)
+    if(!nrow_prior == nrow_after) stop("H2OParsedData object is being overwritten.")
     
     Log.info("Shift AGE column to reflect negative upperbound...")
     xDataFrame = data.frame(AGE = prostate.csv[,"AGE"]*(1+upper_bound), Intercept = intercept)

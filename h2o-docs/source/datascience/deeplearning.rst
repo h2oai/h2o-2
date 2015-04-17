@@ -528,13 +528,16 @@ References
 
     Feature Importance http://www.ncbi.nlm.nih.gov/pubmed/9327276
     
-    Deep Learning Vignette http://h2o.gitbooks.io/h2o-deep-learning/
+    Deep Learning Vignette https://leanpub.com/deeplearning
     
     Deep Learning Training http://learn.h2o.ai/content/hands-on_training/deep_learning.html
     
-   Niu, Feng, et al. "Hogwild!: A lock-free approach to parallelizing
-stochastic gradient descent." Advances in Neural Information
-Processing Systems 24 (2011): 693-701. (algorithm implemented is on p.5)
-https://papers.nips.cc/paper/4390-hogwild-a-lock-free-approach-to-parallelizing-stochastic-gradient-descent.pdf
+    Slideshare slide decks http://www.slideshare.net/0xdata/presentations?order=latest
+    
+    Youtube channel https://www.youtube.com/user/0xdata
+    
+    The Definitive Performance Tuning Guide for H2O Deep Learning http://h2o.ai/blog/2015/02/deep-learning-performance/
+
+	Niu, Feng, et al. "Hogwild!: A lock-free approach to parallelizing stochastic gradient descent." Advances in Neural Information Processing Systems 24 (2011): 693-701. (algorithm implemented is on p.5) https://papers.nips.cc/paper/4390-hogwild-a-lock-free-approach-to-parallelizing-stochastic-gradient-descent.pdf
 
 """"""
