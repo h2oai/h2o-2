@@ -108,14 +108,20 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
   }
 
   public static class GLMLineSearchTask extends GLMTask<GLMLineSearchTask> {
-    public GLMLineSearchTask(int noff, Key jobKey, DataInfo dinfo, GLMParams glm, double[] oldBeta, double[] newBeta, double betaEps, double ymu, long nobs, H2OCountedCompleter cmp) {
+
+    public GLMLineSearchTask(int noff, Key jobKey, DataInfo dinfo, GLMParams glm, double[] oldBeta, double[] newBeta,  double [] lowerBounds, double [] upperBounds, double ymu, long nobs, H2OCountedCompleter cmp) {
       super(jobKey, dinfo, glm, cmp);
       double [][] betas = new double[32][];
       double step = GLM2.LS_STEP;
       for(int i = 0; i < betas.length; ++i){
         betas[i] = MemoryManager.malloc8d(newBeta.length);
-        for(int j = 0; j < oldBeta.length; ++j)
-          betas[i][j] = oldBeta[j] + step*(newBeta[j] - oldBeta[j]);
+        for(int j = 0; j < oldBeta.length; ++j) {
+          betas[i][j] = oldBeta[j] + step * (newBeta[j] - oldBeta[j]);
+          if(lowerBounds != null && betas[i][j] < lowerBounds[j])
+            betas[i][j] = lowerBounds[j];
+          if(upperBounds != null && betas[i][j] > upperBounds[j])
+            betas[i][j] = upperBounds[j];
+        }
         step *= GLM2.LS_STEP;
       }
       // public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
@@ -123,6 +129,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       for(int i = 0; i < _glmts.length; ++i)
         _glmts[i] = new GLMIterationTask(noff, jobKey,dinfo,glm,false,true,true,betas[i],ymu,1.0/nobs,new float[]{0} /* don't really want CMs!*/,null);
     }
+
     GLMIterationTask [] _glmts;
     @Override public void chunkInit(){
       _glmts = _glmts.clone();

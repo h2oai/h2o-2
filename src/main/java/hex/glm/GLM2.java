@@ -13,6 +13,7 @@ import hex.glm.GLMTask.GLMIterationTask;
 import hex.glm.GLMTask.YMUTask;
 import hex.glm.LSMSolver.ADMMSolver;
 import jsr166y.CountedCompleter;
+import org.apache.poi.util.ArrayUtil;
 import water.*;
 import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
@@ -29,6 +30,7 @@ import water.util.Utils;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -498,11 +500,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         String [] dom = v.domain();
         String [] names = Utils.append(_srcDinfo.coefNames(), "Intercept");
         int [] map = Utils.asInts(v);
+        HashSet<Integer> s = new HashSet<Integer>();
+        for(int i:map)
+          if(!s.add(i))
+            throw new IllegalArgumentException("Invalid beta constraints file, got duplicate coordinate constraints for '" + dom[i] + "'");
+
         if(!Arrays.deepEquals(dom,names)) { // need mapping
           HashMap<String,Integer> m = new HashMap<String, Integer>();
-          for(int i = 0; i < names.length; ++i)
-            m.put(names[i],i);
-          int [] newMap = MemoryManager.malloc4(dom.length);
+          for(int i = 0; i < names.length; ++i) {
+            m.put(names[i], i);
+          }
+          int [] newMap = MemoryManager.malloc4(map.length);
           for(int i = 0; i < map.length; ++i) {
             Integer I = m.get(dom[map[i]]);
             newMap[i] = I == null?-1:I;
@@ -514,6 +522,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           _lbs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.NEGATIVE_INFINITY), map);
 //            for(int i = 0; i < _lbs.length; ++i)
 //            if(_lbs[i] > 0) throw new IllegalArgumentException("lower bounds must be non-positive");
+          System.out.println("lower bounds = " + Arrays.toString(_lbs));
           if(_srcDinfo._normMul != null) {
             for (int i = numoff; i < _srcDinfo.fullN(); ++i) {
               if (Double.isInfinite(_lbs[i])) continue;
@@ -521,6 +530,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             }
           }
         }
+        System.out.println("lbs = " + Arrays.toString(_lbs));
         if((v = beta_constraints.vec("upper_bounds")) != null) {
           _ubs = map == null ? Utils.asDoubles(v) : mapVec(Utils.asDoubles(v), makeAry(names.length, Double.POSITIVE_INFINITY), map);
           System.out.println("upper bounds = " + Arrays.toString(_ubs));
@@ -532,7 +542,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               _ubs[i] /= _srcDinfo._normMul[i - numoff];
             }
         }
-
+        System.out.println("ubs = " + Arrays.toString(_ubs));
         if(_lbs != null && _ubs != null) {
           for(int i = 0 ; i < _lbs.length; ++i)
             if(_lbs[i] > _ubs[i])
@@ -943,7 +953,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           return;
         }
         LogInfo("invoking line search");
-        new GLMTask.GLMLineSearchTask(_noffsets, GLM2.this.self(), _activeData,_glm, lastBeta(_noffsets), glmt._beta, 1e-4, _ymu, _nobs, new LineSearchIteration(glmt,getCompleter())).asyncExec(_activeData._adaptedFrame);
+        new GLMTask.GLMLineSearchTask(_noffsets, GLM2.this.self(), _activeData,_glm, lastBeta(_noffsets), glmt._beta,  _lbs, _ubs, _ymu, _nobs, new LineSearchIteration(glmt,getCompleter())).asyncExec(_activeData._adaptedFrame);
         return;
       }
       if(glmt._grad != null)
@@ -1374,10 +1384,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(_bgs != null && _rho != null) {
       for(int i = 0; i < _bgs.length; ++i){
         double diff = fullBeta[i] - _bgs[i];
-        res += .5*_rho[i]*diff*diff;
+        res += _rho[i]*diff*diff;
       }
     }
-    return res;
+//    System.out.println("beta = " + Utils.pprint(new double[][]{beta}));
+//    System.out.println("bgvn = " + Utils.pprint(new double[][]{_bgs}));
+//    System.out.println("rhos = " + Utils.pprint(new double[][]{_rho}));
+//    System.out.println("pen = " + .5*res);
+    return .5*res;
   }
 
   //  // filter the current active columns using the strong rules
