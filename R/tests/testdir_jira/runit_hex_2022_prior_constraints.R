@@ -9,8 +9,9 @@ source('../findNSourceUtils.R')
 test.Priors.BetaConstraints <- function(conn) {
   Log.info("Import modelStack data into H2O...")
   ## Import data
-  pathToFile = "/mnt/0xcustomer-datasets/c27/data.csv"
-  pathToConstraints <- "/mnt/0xcustomer-datasets/c27/constraints_indices.csv"
+  homeDir = "/mnt/0xcustomer-datasets/c27/"
+  pathToFile = paste0(homeDir, "data.csv")
+  pathToConstraints <- paste0(homeDir, "constraints_indices.csv")
   modelStack = h2o.importFile(conn, pathToFile)
   betaConstraints.hex = h2o.importFile(conn, pathToConstraints)
   beta_nointercept.hex <- betaConstraints.hex[1:nrow(betaConstraints.hex)-1,]
@@ -19,7 +20,7 @@ test.Priors.BetaConstraints <- function(conn) {
   betaConstraints = as.data.frame(betaConstraints.hex)
   indVars =  as.character(betaConstraints$names[1:nrow(betaConstraints)-1])
   depVars = "C3"
-  #totRealProb=0.002912744
+  totRealProb=0.002912744
   higherAccuracy = TRUE
   lambda = 0
   alpha = 0
@@ -100,40 +101,46 @@ test.Priors.BetaConstraints <- function(conn) {
     t(grad) %*% x
   }
   # no L1 here, alpha is 0
-  h2o_logistic_gradient <- function(x,y,beta,beta_give,rho,lambda) {
+  h2o_logistic_gradient <- function(x,y,beta,beta_given,rho,lambda) {
     grad <- logistic_gradient(x,y,beta)/nrow(x) + (beta - beta_given)*rho + lambda*beta
   }
   
   ########### Run check of priors vs no priors  
   glm.h2o1 = h2o.glm(x = indVars, y = depVars, data = data.hex, family = family_type,
-                    higher_accuracy = T, standardize = F, 
+                    higher_accuracy = T, standardize = F,  prior = totRealProb,
                     alpha = alpha, beta_constraints = betaConstraints.hex)  
   glm.h2o2 = h2o.glm(x = indVars, y = depVars, data = data.hex, family = family_type,
-                    higher_accuracy = T, standardize = F,
+                    higher_accuracy = T, standardize = F, prior = totRealProb,
                     alpha = alpha, beta_constraints = betaConstraints.hex[c("names","lower_bounds","upper_bounds")] )    
-  y = as.matrix(train.df[,depVars])
-  x = xMatrix
-  beta1 = glm.h2o1@model$coefficients
-  beta2 = glm.h2o2@model$coefficients
-  beta_given = as.data.frame(betaConstraints.hex$beta_given)
+  
+  ## Seperate into x and y matrices
+  y = as.matrix(modelStack[,depVars])
+  x = cbind(as.matrix(modelStack[,indVars]),1)
+  
+  Log.info("Calculate the gradient: ")  
+  beta1 = as.numeric(glm.h2o1@model$coefficients)
+  beta2 = as.numeric(glm.h2o2@model$coefficients)
+  beta_given = as.numeric(betaConstraints$beta_given)
   rho = as.data.frame(betaConstraints.hex$rho)
   lambda = glm.h2o1@model$lambda
   logistic_gradient(x,y,beta1)
   gradient1 = h2o_logistic_gradient(x,y,beta1, beta_given, rho=1, lambda)
+  gradient1
   gradient2 = h2o_logistic_gradient(x,y,beta2, beta_given, rho=0, lambda)
+  gradient2
   
   Log.info("Check gradient of beta constraints with priors or beta given...")
-  threshold = 1E-1
-  print(as.numeric(gradient1$beta_given)[-23])
-  all(as.numeric(gradient1$beta_given)[-23] < threshold)
+  threshold = 1E-4
+  print(gradient1)
+  if(!all(gradient1 < threshold)) stop(paste0("Gradients from model output > ", threshold))
   
   Log.info("Check gradient of beta constraints without priors or beta given...")
-  all(as.numeric(gradient2$beta_given)[-23] < threshold)
-  print(as.numeric(gradient1$beta_given)[-23])
+  print(gradient2)
+  if(!all(gradient2 < threshold)) stop(paste0("Gradients from model output > ", threshold))
   testEnd()
 }
 
-doTest("GLM Test: Beta Constraints with Priors", test.Priors.BetaConstraints)
+doTest("GLM Test: Beta Constraints with added Rho penalty", test.Priors.BetaConstraints)
 
 
 

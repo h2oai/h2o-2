@@ -408,34 +408,23 @@ public class GLMTest2  extends TestUtil {
         new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source((Frame) fr.clone(), fr.vec("CAPSULE"), true, true), Family.binomial).setNonNegative(false).setRegularization(new double[]{1}, new double[]{0.001607}).setBetaConstraints(betaConstraints).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
         assertTrue("should've thrown",false);
       } catch(IllegalArgumentException t) {
-        assertTrue(t.getMessage().contains("duplicate coordinate constraints for 'AGE'"));
+        assertTrue(t.getMessage().contains("duplicate constraints for 'AGE'"));
       }
+      FVecTest.makeByteVec(betaConsKey, "names, lower_bounds, upper_bounds\n AGE, .5, .5\n XXX, -.5, .5\n DCAPS, -.4, .4\n DPROS, -.5, .5 \nPSA, -.5, .5\n VOL, -.5, .5\nGLEASON, -.5, .5");
+      betaConstraints = ParseDataset2.parse(parsed, new Key[]{betaConsKey});
+      try {
+        new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source((Frame) fr.clone(), fr.vec("CAPSULE"), true, true), Family.binomial).setNonNegative(false).setRegularization(new double[]{1}, new double[]{0.001607}).setBetaConstraints(betaConstraints).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
+        assertTrue("should've thrown",false);
+      } catch(IllegalArgumentException t) {
+        assertTrue(t.getMessage().contains("unknown predictor name 'XXX'"));
+      }
+
     } finally {
+      if(betaConstraints != null)
+        betaConstraints.delete();
       fr.delete();
       if(model != null)model.delete();
     }
-  }
-
-  @Test public void testMS() {
-    Key parsed = Key.make("ms_parsed");
-    Key bcs = Key.make("ms_bcs");
-    Key modelKey = Key.make("model");
-    Frame fr = getFrameForFile(parsed, "/Users/tomasnykodym/marketshare/stack_out.csv", new String[]{},"response");
-    Frame bc = getFrameForFile(bcs,    "/Users/tomasnykodym/marketshare/beta_constraints.csv", new String[]{},null);
-    System.out.println("names = " + Arrays.toString(bc.names()));
-    HashSet<String> ignored = new HashSet<String>();
-    for(String s:fr.names())ignored.add(s);
-    ignored.remove("response");
-    String [] myCols = new String[] {
-      "transvar_ind_cnt_conversion_all_60_1", "stackmetric_ads20_event_affiliate_afcl_null", "stackmetric_ads20dim100_event_crm_crm_null","stackmetric_ads20dim200_event_display_cl_desktop","stackmetric_ads20dim200_event_display_cl_mobile","stackmetric_ads60_event_display_cl_null","stackmetric_ads20dim30_event_display_cl_onlineaudio","stackmetric_ads60dim100_event_display_cl_video","stackmetric_ads60_event_display_im_desktop","stackmetric_ads20_event_display_im_mobile","stackmetric_ads60_event_display_im_null","stackmetric_ads20dim200_event_display_im_onlineaudio","stackmetric_ads20dim30_event_display_im_other","stackmetric_ads20_event_display_im_video","stackmetric_ads20dim200_event_paidsearch_ps_psbrand","stackmetric_ads20dim30_event_paidsearch_ps_psnonbrand","stackmetric_ads60dim200_event_paidsocial_socl_null","stackmetric_ads60dim200_event_unpaidsocial_upsocl_null","transvar_non_mktg_ind","transvar_log_cnt_webengagement_30_1","transvar_add_cnt_webvisits_60_1"
-    };
-    for(String s:myCols)ignored.remove(s);
-    Futures fs = new Futures();
-    for(String s:ignored) fr.remove(s).remove(fs);
-    GLM2.Source src = new GLM2.Source((Frame)fr.clone(), fr.vec("response"), false, true);
-    new GLM2("GLM offset test on prostate.", Key.make(), modelKey, src, Family.binomial).setNonNegative(false).setRegularization(new double[]{0},new double[]{0.000}).setBetaConstraints(bc).setHighAccuracy().doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
-    GLMModel model = DKV.get(modelKey).get();
-    System.out.println(model.validation());
   }
 
   @Test public void testProximal() {

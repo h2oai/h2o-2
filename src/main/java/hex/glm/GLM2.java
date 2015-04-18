@@ -503,7 +503,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         HashSet<Integer> s = new HashSet<Integer>();
         for(int i:map)
           if(!s.add(i))
-            throw new IllegalArgumentException("Invalid beta constraints file, got duplicate coordinate constraints for '" + dom[i] + "'");
+            throw new IllegalArgumentException("Invalid beta constraints file, got duplicate constraints for '" + dom[i] + "'");
 
         if(!Arrays.deepEquals(dom,names)) { // need mapping
           HashMap<String,Integer> m = new HashMap<String, Integer>();
@@ -513,6 +513,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           int [] newMap = MemoryManager.malloc4(map.length);
           for(int i = 0; i < map.length; ++i) {
             Integer I = m.get(dom[map[i]]);
+            if(I == null) throw new IllegalArgumentException("unknown predictor name '" + dom[map[i]]+"'");
             newMap[i] = I == null?-1:I;
           }
           map = newMap;
