@@ -46,8 +46,12 @@ test.priors <- function(conn) {
   coeff2 = glm_nopriors.h2o@model$coefficients[-ncol(data.hex)]
   intercept1 = glm_priors.h2o@model$coefficients["Intercept"]
   intercept2 = glm_nopriors.h2o@model$coefficients["Intercept"]
+  print("Coefficients from GLM ran with priors: ")
+  print(coeff1)
+  print("Coefficients from GLM ran without priors: ")
+  print(coeff2)
   ymean = mean(data.hex[,depVars])
-  adjustment = - log(ymean*(1-totRealProb)/(totRealProb*(1-ymean))
+  adjustment = -log(ymean*(1-totRealProb)/(totRealProb*(1-ymean)))
   intercept2adj = intercept1-adjustment
   checkEqualsNumeric(coeff1, coeff2, tolerance = 0)
   checkEqualsNumeric(intercept2, intercept2adj, tolerance = 1E-10)  

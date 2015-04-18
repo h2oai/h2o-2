@@ -95,11 +95,11 @@ test.bayesian.priors <- function(conn) {
   
   Log.info("Check gradient of beta constraints with priors or beta given...")
   print(gradient1)
-  all(gradient1 < 1E-8)
+  if(!all(gradient1 < 1E-8)) stop(paste0("Gradient from model output > ", 1E-8))
   
   Log.info("Check gradient of beta constraints without priors or beta given...")
   print(gradient2)
-  all(gradient2 < 1E-4)
+  if(!all(gradient2 < 1E-4)) stop(paste0("Gradient from model output > ", 1E-4))
   testEnd()
 }
 
