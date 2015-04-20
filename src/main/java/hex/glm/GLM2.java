@@ -494,8 +494,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _activeData = _srcDinfo;
       if (higher_accuracy) setHighAccuracy();
       if (beta_constraints != null) {
-        Vec v;
-        v = beta_constraints.vec("names");
+        Vec v = beta_constraints.vec("names");
+        if(v == null)
+          throw new IllegalArgumentException("Invalid beta constraints file, missing column with predictor names");
         // for now only enums allowed here
         String [] dom = v.domain();
         String [] names = Utils.append(_srcDinfo.coefNames(), "Intercept");
@@ -566,6 +567,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           _rho = map == null?Utils.asDoubles(v):mapVec(Utils.asDoubles(v),makeAry(names.length,0),map);
         else if(_bgs != null)
           throw new IllegalArgumentException("Missing vector of penalties (rho) in beta_constraints file.");
+        String [] cols = new String[]{"names","rho","beta_given","lower_bounds","upper_bounds"};
+        Arrays.sort(cols);
+        for(String str:beta_constraints.names())
+          if(Arrays.binarySearch(cols,str) < 0)
+            Log.warn("unknown column in beta_constraints file: '"  + str + "'");
       }
       if (non_negative) { // make srue lb is >= 0
         if (_lbs == null)
