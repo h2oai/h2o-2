@@ -23,7 +23,7 @@ test.LR.betaConstraints <- function(conn) {
   ######## Single variable CAPSULE ~ AGE in H2O and then R
   ## actual coeff for Age without constraints = -.00823
   Log.info("Run a Linear Regression with CAPSULE ~ AGE with bound beta->[0,1] in H2O...")
-  beta_age = betaConstraints[betaConstraints$names == "AGE"]
+  beta_age = betaConstraints[betaConstraints$names == "AGE",]
   beta_age$lower_bounds = 0
   beta_age$upper_bounds = 1
   lr.h2o = h2o.glm(x = "AGE", y = "CAPSULE", data = prostate.hex, family = "gaussian", alpha = 0, beta_constraints = beta_age, standardize = T)
