@@ -5,7 +5,7 @@
 
 #setwd("/Users/amy/h2o/R/tests/testdir_jira")
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
-source('../findNSourceUtils.R')
+source('../../../findNSourceUtils.R')
 
 test.GLM.betaConstraints <- function(conn) {
   
@@ -59,6 +59,11 @@ test.GLM.betaConstraints <- function(conn) {
   grid = expand.grid(families, alpha, standard)
   names(grid) = c("Family", "Alpha", "Standardize")
   
+  d <- mapply(run_glm, as.character(grid[,1]), grid[,2], grid[,3], rep(-0.1,nrow(grid)), rep(0.1, nrow(grid)))
+  t <- cbind(grid,Passed = d)
+  print("TEST RESULTS FOR PROSTATE DATA SET with bounds [-0.1,0.1] : ")
+  print(t)
+  
   b <- mapply(run_glm, as.character(grid[,1]), grid[,2], grid[,3], rep(-1,nrow(grid)), rep(0, nrow(grid)))
   t <- cbind(grid,Passed = b)
   print("TEST RESULTS FOR PROSTATE DATA SET with bounds [-1,0] : ")
@@ -69,10 +74,7 @@ test.GLM.betaConstraints <- function(conn) {
   print("TEST RESULTS FOR PROSTATE DATA SET with bounds [0,1] : ")
   print(t)  
   
-  d <- mapply(run_glm, as.character(grid[,1]), grid[,2], grid[,3], rep(-0.1,nrow(grid)), rep(0.1, nrow(grid)))
-  t <- cbind(grid,Passed = d)
-  print("TEST RESULTS FOR PROSTATE DATA SET with bounds [-0.1,0.1] : ")
-  print(t)  
+  
 
   testEnd()
 }
