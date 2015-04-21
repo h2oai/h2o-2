@@ -28,7 +28,7 @@ gaussian_obj <- function(deviance, nobs, lambda, alpha, beta) {
 }
 
 binomial_obj <- function(deviance, nobs, lambda, alpha, beta) {
-  deviance/2 + lambda * penalty(alpha, beta)
+  deviance/2 * (1/nobs) + lambda * penalty(alpha, beta)
 }
 
 ###
