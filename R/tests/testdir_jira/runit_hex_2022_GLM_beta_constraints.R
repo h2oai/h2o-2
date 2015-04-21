@@ -79,6 +79,40 @@ test.GLM.betaConstraints <- function(conn) {
 #   print("TEST RESULTS FOR PROSTATE DATA SET with bounds [-0.1,0.1] : ")
 #   print(t)  
   
+  Log.info("Run same test over different dataset.")
+  Log.info("Import modelStack data into H2O...")
+  ## Import data
+  homeDir = "/mnt/0xcustomer-datasets/c27/"
+  pathToFile = paste0(homeDir, "data.csv")
+  pathToConstraints <- paste0(homeDir, "constraints_indices.csv")
+  data.hex = h2o.importFile(conn, pathToFile)
+  betaConstraints.hex = h2o.importFile(conn, pathToConstraints)[1:22, 1:3]
+  
+  ## Set Parameters (default standardization = T)
+  betaConstraints = as.data.frame(betaConstraints.hex)
+  myX =  as.character(betaConstraints$names)
+  myY = "C3"
+  totRealProb=0.002912744  
+  
+  
+  Log.info("Pull data frame into R to run GLMnet...")
+  data = as.data.frame(data.hex)
+  Log.info("Prep Data Frame for run in GLMnet, includes categorical expansions...")
+  xDataFrame = cbind(data[,myX], rep(0, times = nrow(data)))
+  names(xDataFrame) = c(myX, "Intercept")
+  
+  families = c("gaussian", "binomial", "poisson")
+  alpha = c(0,0.5,1.0)
+  standard = c(T, F)
+  
+  grid = expand.grid(families, alpha, standard)
+  names(grid) = c("Family", "Alpha", "Standardize")
+  
+  fullTest <- mapply(run_glm, as.character(grid[,1]), grid[,2], grid[,3], rep(-10,nrow(grid)), rep(10, nrow(grid)))
+  testResults <- cbind(grid,Passed = fullTest)
+  print("RESULTS FOR RUNS ON PROSTATE DATASET :")
+  print(testResults)    
+
   testEnd()
 }
 
