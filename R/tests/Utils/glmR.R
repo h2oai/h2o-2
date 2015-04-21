@@ -68,5 +68,6 @@ checkGLMModel2 <- function(myGLM.h2o,myGLM.r){
   print("H2O Coefficients")
   print(sort(beta))
   
-  checkEqualsNumeric(res_h2o , res_r, tolerance = 1E-2)
+  # If objective value vary by more than 1% the test will fail.
+  if(res_h2o < res_r) TRUE else checkEqualsNumeric(res_h2o , res_r, tolerance = .01)
 }
