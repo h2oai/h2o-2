@@ -42,9 +42,11 @@ test.bc.illegal <- function(conn) {
   # Illegal Argument Exception: uknown predictor name 'fakeFeature'
   checkException(run_glm(b), "Did not catch fake feature in file.", silent = T)
 
-#   Log.info("Used empty frame for beta constraints: ")
-#   empty <- betaConstraints.hex[betaConstraints.hex$names == "fake"]
-#   checkException(run_glm(empty), "Did not reject empty frame.", silent = T)
+  Log.info("Used empty frame for beta constraints: ")
+  empty <- betaConstraints.hex[betaConstraints.hex$names == "fake"]
+  m1 <- run_glm(empty)
+  m2 <- run_glm(NULL)
+  checkEqualsNumeric(m1@model$deviance, m2@model$deviance)
 
 #   Log.info("Typo in one of column names.")
 #   c <- bc
