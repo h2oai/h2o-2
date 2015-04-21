@@ -43,9 +43,9 @@ checkGLMModel2 <- function(myGLM.h2o,myGLM.r){
     numfeat = length(myGLM.h2o@model$coefficients)
     beta = myGLM.h2o@model$coefficients[-numfeat]
     
-    r_dev = myGLM.r$nulldev*(1-myGLM.r$dev.ratio)
-    r_nobs = myGLM.r$nobs
     r_lambda = myGLM.r$lambda
+    r_dev = myGLM.r$nulldev*(1-myGLM.r$dev.ratio[length(r_lambda)])
+    r_nobs = myGLM.r$nobs
     r_beta = myGLM.r$beta[-numfeat,length(r_lambda)]
   }
 
