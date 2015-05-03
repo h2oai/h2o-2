@@ -1815,11 +1815,11 @@ function(test, yes, no, type) {
  }
 }
 
-setMethod("ifelse", signature(test="H2OParsedData", yes="ANY", no="ANY"), function (test, yes, no) {
+setMethod("ifelse", signature(test="H2OParsedData", yes="ANY", no="ANY"), function(test, yes, no) {
   .h2o.ifelse(test,yes,no)
-}
+})
 
-setMethod("ifelse", signature(test="ANY",yes="H2OFrame", no="H2OFrame"), function(test,yes,no)
+setMethod("ifelse", signature(test="ANY",yes="H2OParsedData", no="H2OParsedData"), function(test,yes,no) {
   .h2o.ifelse(test,yes,no)
 })
 
