@@ -2309,9 +2309,20 @@ class ASTIfElse extends ASTOp {
 
     Frame  frtst=null, frtru= null, frfal= null;
     double  dtst=  0 ,  dtru=   0 ,  dfal=   0 ;
-    if( env.isAry() ) frfal= env.popAry(); else dfal = env.popDbl(); String kf = env.key();
-    if( env.isAry() ) frtru= env.popAry(); else dtru = env.popDbl(); String kt = env.key();
-    if( env.isAry() ) frtst= env.popAry(); else dtst = env.popDbl(); String kq = env.key();
+    String kf, kt, kq;
+
+    if( env.isAry() ) frfal= env.popAry();
+    else if( env.isDbl() && !env.isStr() ) { dfal = env.popDbl(); }
+    else if( env.isStr() ) { env.popStr(); dfal=0.0; }
+    kf = env.key();
+
+    if( env.isAry() ) frtru= env.popAry();
+    else if( env.isDbl() && !env.isStr() ) { dtru = env.popDbl(); }
+    else if( env.isStr() ) { env.popStr(); dtru=1.0; }
+    kt = env.key();
+
+    if( env.isAry() ) frtst= env.popAry(); else dtst = env.popDbl();
+    kq = env.key();
 
     // Multi-selection
     // Build a doAll frame

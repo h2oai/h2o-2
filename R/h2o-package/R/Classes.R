@@ -1839,11 +1839,16 @@ setMethod("ifelse", signature(test="ANY",yes="H2OParsedData", no="H2OParsedData"
     if (is.logical(no)) no <- as.numeric(no)
     return(.h2o.__multop2("ifelse", as.numeric(test), yes, no))
   }
-  if (is.atomic(test))
-      storage.mode(test) <- "logical"
-  else test <- if (isS4(test))
-      as(test, "logical")
-  else as.logical(test)
+
+  if( is(test, "H2OParsedData") ) {
+    if( is.character(yes) ) yes <- deparse(yes)
+    if( is.character(no)  ) no <- deparse(no)
+    return(.h2o.__multop2("ifelse",test,yes,no))
+  }
+
+  if (is.atomic(test))  storage.mode(test) <- "logical"
+  else if( isS4(test) ) test <- as(test, "logical")
+  else                  test <- as.logical("test")
   ans <- test
   ok <- !(nas <- is.na(test))
   if (any(test[ok]))
