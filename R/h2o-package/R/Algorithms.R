@@ -1363,9 +1363,9 @@ h2o.calcattrib <- function(object, newdata, basefeatures, marketingfeatures) {
       object@data@h2o,
       .h2o.__PAGE_GLMMKTGLIFT2,
       model=object@key,
-      data=newdata@key,
-      basefeatures=basefeatures,
-      marketingfeatures=marketingfeature)
+      stack_frame=newdata@key,
+      base_names=basefeatures,
+      marketing_names=marketingfeatures)
   }
   else {
     stop(paste("Lift calculation has not yet been implemented for", class(object)))

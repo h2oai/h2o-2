@@ -262,6 +262,10 @@ public class EvalModelAttrib {
           + lift[marketingNamesList.indexOf(marketingName)]);
     }
 
+//    for (int i = 0; i < lift.length; i++) {
+//      lift[i] = 1.0;
+//    }
+
     if (convProbFull != null)
       convProbFull.delete();
     if (baseModel != null)
