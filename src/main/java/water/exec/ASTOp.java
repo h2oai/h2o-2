@@ -2311,18 +2311,23 @@ class ASTIfElse extends ASTOp {
     double  dtst=  0 ,  dtru=   0 ,  dfal=   0 ;
     String kf, kt, kq;
 
+    boolean bothStr=false; // are both yes and no a string? ok that's easy to deal with...
+    String stru=null, sfal=null;
+
     if( env.isAry() ) frfal= env.popAry();
     else if( env.isDbl() && !env.isStr() ) { dfal = env.popDbl(); }
-    else if( env.isStr() ) { env.popStr(); dfal=0.0; }
+    else if( env.isStr() ) { sfal=env.popStr(); dfal=0.0; }
     kf = env.key();
 
     if( env.isAry() ) frtru= env.popAry();
     else if( env.isDbl() && !env.isStr() ) { dtru = env.popDbl(); }
-    else if( env.isStr() ) { env.popStr(); dtru=1.0; }
+    else if( env.isStr() ) { stru=env.popStr(); dtru=1.0; }
     kt = env.key();
 
     if( env.isAry() ) frtst= env.popAry(); else dtst = env.popDbl();
     kq = env.key();
+
+    bothStr= stru!=null&&sfal!=null; // bothStr==true => make domain [stru, sfal]
 
     // Multi-selection
     // Build a doAll frame
@@ -2347,7 +2352,8 @@ class ASTIfElse extends ASTOp {
     final boolean f = frfal != null;
     final double fdtru = dtru;
     final double fdfal = dfal;
-
+    String[][] domains=fr.domains();
+    if( bothStr ) domains[0] = new String[]{sfal,stru};
     // Run a selection picking true/false across the frame
     Frame fr2 = new MRTask2() {
         @Override public void map( Chunk chks[], NewChunk nchks[] ) {
@@ -2363,7 +2369,7 @@ class ASTIfElse extends ASTOp {
               else n.addNum(ctst.at0(r)!=0 ? (t ? ctru.at0(r) : fdtru) : (f ? cfal.at0(r) : fdfal));
           }
         }
-      }.doAll(ncols,fr).outputFrame(names,fr.domains());
+      }.doAll(ncols,fr).outputFrame(names,domains);
     env.subRef(frtst,kq);
     if( frtru != null ) env.subRef(frtru,kt);
     if( frfal != null ) env.subRef(frfal,kf);
