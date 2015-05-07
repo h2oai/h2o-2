@@ -136,6 +136,7 @@ public class EvalModelAttrib {
     for(double coeff : modelCoeffs) {
       Log.info("fullcoeff: " + coeff);
     }
+    */
 
     /*
     Score the full model to find out the conversion probability. There is
