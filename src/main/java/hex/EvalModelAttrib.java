@@ -122,6 +122,7 @@ public class EvalModelAttrib {
     String baseNames,
     String marketingNames) {
 
+    Log.info("Entering function to calculate attribute lift.");
     /* Convert the variable names string into list of names. */
     List<String> baseNamesList = Arrays.asList(baseNames.trim().split("\\s*,\\s*"));
     List<String> marketingNamesList =
@@ -131,6 +132,7 @@ public class EvalModelAttrib {
     double [] modelCoeffs = model.beta().clone();
 
     /* Diagnostic printing of all coefficients. */
+    /*
     for(double coeff : modelCoeffs) {
       Log.info("fullcoeff: " + coeff);
     }
@@ -143,8 +145,10 @@ public class EvalModelAttrib {
     o Probability of non conversion
     o Probability of conversion
     */
+    Log.info("Scoring the original model to determine the conversion probability.");
     Frame convProbFull = model.score(stackFrame);
 
+    Log.info("Creating a base terms only model to to determin base conversion probability.");
     /*
     Create the base model structure from full model by masking the
     marketing variables.
@@ -159,10 +163,13 @@ public class EvalModelAttrib {
         model);
 
     /* Diagnostic printing of base coefficients. */
+    /*
     for(double basecoeff : baseModelCoeffs) {
       Log.info("basecoeff: " + basecoeff);
     }
+    */
 
+    Log.info("Estimate the coefficients of the base only model to determine the conversion probability.");
     /*
     Step 2: Create the H2O model structure of the base model from the
     full model.
@@ -179,11 +186,14 @@ public class EvalModelAttrib {
       0.5);
     baseModel.delete_and_lock(null).unlock(null);
 
+    Log.info("Score the base only model to determine the conversion probability.");
     /* Score the base model to find out the base conversion probability. */
     Frame convProbBase = baseModel.score(stackFrame);
 
+
     double [] lift = new double[marketingNamesList.size()];
 
+    Log.info("Add each marketing term individually to the base only model to determine the lift in conversion probability due to that marketing term.");
     /*
     For each marketing term, add it individually to the the base model
     and score it to get the conversion probability of that
@@ -191,7 +201,7 @@ public class EvalModelAttrib {
     avg(singleprob - baseprob / fullprob)
     */
     for (String marketingName : marketingNamesList) {
-      Log.info("Trying out: " + marketingName);
+      //Log.info("Trying out: " + marketingName);
       // Create a list with the single marketing variable to pass it to mask
       // function
       ArrayList<String> marketingList = new ArrayList<String>();
@@ -208,9 +218,11 @@ public class EvalModelAttrib {
       Diagnostic printing of {all base + single marketing} model
       coefficients
       */
+      /*
       for(double singlecoeff : singleMarketingModelCoeffs) {
         Log.info("singlecoeff: " + singlecoeff);
       }
+      */
 
       /* Make the H2O model structure for {all base + single marketing} model */
       Key singleMarketingModelKey = Key.make();
@@ -242,11 +254,13 @@ public class EvalModelAttrib {
       lift[marketingNamesList.indexOf(marketingName)] =
         new EvalLiftTask().doAll(v)._res / v[0].length();
 
+      /*
       Log.info("Is Float? " + v[0].isFloat() + ", Length: " + v[0].length());
       for (long i = 0; i < v[0].length(); i++) {
         if (((i % 50) == 0) && (v[0].at(i) != v[1].at(i)))
           Log.info("Marketing: " + v[0].at(i) + ", Base: " + v[1].at(i) + ", Full: " + v[2].at(i));
       }
+      */
 
       /* Delete the model and conversion probability structures to release memory */
       convProbMarketing.delete();
@@ -254,6 +268,7 @@ public class EvalModelAttrib {
     }
 
     /* Diagnostic printing of the final lift array */
+    /*
     for (String marketingName : marketingNamesList) {
       Log.info(
         "lift["
@@ -261,6 +276,7 @@ public class EvalModelAttrib {
           + "]: "
           + lift[marketingNamesList.indexOf(marketingName)]);
     }
+    */
 
 //    for (int i = 0; i < lift.length; i++) {
 //      lift[i] = 1.0;
@@ -272,6 +288,8 @@ public class EvalModelAttrib {
       baseModel.delete();
     if (convProbBase != null)
       convProbBase.delete();
+
+    Log.info("Exiting function to calculate attribute lift.");
     return lift;
   }
 }
