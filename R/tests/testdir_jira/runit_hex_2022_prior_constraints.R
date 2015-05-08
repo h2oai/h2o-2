@@ -90,7 +90,7 @@ test.Priors.BetaConstraints <- function(conn) {
   print(paste0("AUC of GLMnet model on training set:  ", glmnet_train_auc))
   print(paste0("AUC of GLMnet model on testing set:  ", glmnet_test_auc))
   
-  checkEqualsNumeric(h2o_auc, glmnet_train_auc, tolerance = 0.05)
+  checkEqualsNumeric(h2o_auc, glmnet_test_auc, tolerance = 0.05)
   
   ### Functions to calculate logistic gradient
   logistic_gradient <- function(x,y,beta) {

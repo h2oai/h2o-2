@@ -21,7 +21,7 @@ test.cbind <- function(conn) {
     colnames(index) <- c("index")
 
     df.hex = as.h2o(conn, df, key="df")
-    index.h2o = as.h2o(conn, index, key="index.h2o")
+    index.h2o = as.h2o(conn, index, key="index")
 
     df.hex = cbind(df.hex,index.h2o)
     summary(df.hex[,"index"])

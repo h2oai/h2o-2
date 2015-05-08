@@ -16,28 +16,58 @@ checkGLMModel <- function(myGLM.h2o, myGLM.r) {
   checkEqualsNumeric(myGLM.h2o@model$null.deviance, myGLM.r$nulldev, tolerance = 1.5)
 }
 
-# Used to check glmnet models that have an extra intercept term
-checkGLMModel2 <- function(myGLM.h2o, myGLM.r) {
-  coeff.mat = as.matrix(myGLM.r$beta)
-  numcol = ncol(coeff.mat)
-  coeff.R = c(coeff.mat[1:nrow(coeff.mat)-1,numcol], Intercept = as.numeric(myGLM.r$a0[numcol]))
-#  print("H2O Coefficients")
-#  print(myGLM.h2o@model$coefficients)
-#  print("R Coefficients")
-#  print(coeff.R)
+###
+l1norm <- function(x) sum(abs(x))
+l2norm <- function(x) sum(x^2)
+penalty <- function(alpha, beta){
+  (1-alpha) * l2norm(beta) + alpha * l1norm(beta)
+}
 
-  print("H2O NULL DEVIANCE and DEVIANCE")
-  print(myGLM.h2o@model$null.deviance)
-  print(myGLM.h2o@model$deviance)
-  print("GLMNET NULL DEVIANCE and DEVIANCE")
-  print(myGLM.r$nulldev)
-  print(deviance(myGLM.r)[numcol])
+gaussian_obj <- function(deviance, nobs, lambda, alpha, beta) {
+  deviance * (1/nobs) + lambda * penalty(alpha, beta)
+}
+
+binomial_obj <- function(deviance, nobs, lambda, alpha, beta) {
+  deviance/2 * (1/nobs) + lambda * penalty(alpha, beta)
+}
+
+###
+
+checkGLMModel2 <- function(myGLM.h2o,myGLM.r){
+  if(inherits(myGLM.h2o, "H2OModel")){
+    f = myGLM.h2o@model$params$family$family
+    dev = myGLM.h2o@model$deviance
+    nobs = myGLM.h2o@model$df.residual
+    lambda = myGLM.h2o@model$lambda
+    alpha = myGLM.h2o@model$params$alpha
+    numfeat = length(myGLM.h2o@model$coefficients)
+    beta = myGLM.h2o@model$coefficients[-numfeat]
+    
+    r_lambda = myGLM.r$lambda
+    r_dev = myGLM.r$nulldev*(1-myGLM.r$dev.ratio[length(r_lambda)])
+    r_nobs = myGLM.r$nobs
+    r_beta = myGLM.r$beta[-numfeat,length(r_lambda)]
+  }
+
+  if(f == "gaussian"){
+    res_h2o = gaussian_obj(dev, nobs, lambda, alpha, beta)
+    res_r = gaussian_obj(r_dev, nobs, lambda, alpha, r_beta)
+  } else {
+    res_h2o = binomial_obj(dev, nobs, lambda, alpha, beta)
+    res_r = binomial_obj(r_dev, nobs, lambda, alpha, r_beta)
+  }
+  print(paste0("GLMNET OBJECTIVE VALUE : ", res_r))  
+  print(paste0("H2O OBJECTIVE VALUE : ", res_h2o))
+  
+  print(paste0("GLMNET RESIDUAL DEVIANCE : ", r_dev))  
+  print(paste0("H2O RESIDUAL DEVIANCE : ", dev))
 
   print("SORTED COEFFS")
+  print("GLMNET Coefficients")
+  print(sort(r_beta))
   print("H2O Coefficients")
-  print(sort(myGLM.h2o@model$coefficients))
-  print("R Coefficients")
-  print(sort(coeff.R))
-  checkEqualsNumeric(myGLM.h2o@model$deviance, deviance(myGLM.r)[numcol], tolerance = 0.1)
-  checkEqualsNumeric(sort(myGLM.h2o@model$coefficients), sort(coeff.R), tolerance = 0.1)
+  print(sort(beta))
+  
+  # If objective value vary by more than 1% the test will fail.
+  if(res_h2o < res_r) TRUE else checkEqualsNumeric(res_h2o , res_r, tolerance = .01)
 }
