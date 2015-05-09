@@ -24,7 +24,7 @@ h2o.setMaxLastValue <- function(val = 1000000000) {
 .myPath = paste(Sys.getenv("HOME"), "Library", "Application Support", "h2o", sep=.Platform$file.sep)
 if(.Platform$OS.type == "windows")
   .myPath = paste(Sys.getenv("APPDATA"), "h2o", sep=.Platform$file.sep)
-  
+
 .pkg.env$h2o.__LOG_COMMAND = paste(.myPath, "commands.log", sep=.Platform$file.sep)
 .pkg.env$h2o.__LOG_ERROR = paste(.myPath, "errors.log", sep=.Platform$file.sep)
 
@@ -39,7 +39,7 @@ h2o.startLogging     <- function() {
     warning(errDir, " directory does not exist. Creating it now...")
     dir.create(errDir, recursive = TRUE)
   }
-  
+
   cat("Appending to log file", .pkg.env$h2o.__LOG_COMMAND, "\n")
   cat("Appending to log file", .pkg.env$h2o.__LOG_ERROR, "\n")
   assign("IS_LOGGING", TRUE, envir = .pkg.env)
@@ -58,9 +58,9 @@ h2o.openLog <- function(type) {
     stop("type must be either 'Command' or 'Error'")
   myFile = switch(type, Command = .pkg.env$h2o.__LOG_COMMAND, Error = .pkg.env$h2o.__LOG_ERROR)
   if(!file.exists(myFile)) stop(myFile, " does not exist")
-    
+
   myOS = Sys.info()["sysname"]
-  if(myOS == "Windows") shell.exec(paste("open '", myFile, "'", sep="")) 
+  if(myOS == "Windows") shell.exec(paste("open '", myFile, "'", sep=""))
   else system(paste("open '", myFile, "'", sep=""))
 }
 
@@ -69,7 +69,7 @@ h2o.setLogPath <- function(path, type) {
   if(!file.exists(path)) stop(path, " directory does not exist")
   if(missing(type) || !type %in% c("Command", "Error"))
     stop("type must be either 'Command' or 'Error'")
-  
+
   myVar = switch(type, Command = "h2o.__LOG_COMMAND", Error = "h2o.__LOG_ERROR")
   myFile = switch(type, Command = "commands.log", Error = "errors.log")
   cmd <- paste(path, myFile, sep = .Platform$file.sep)
@@ -95,7 +95,7 @@ h2o.setLogPath <- function(path, type) {
   if(commandOrErr == "Command")
     h <- paste(h, ifelse(isPost, "POST", "GET"), sep = "\n")
   s <- paste(h, "\n", s)
-  
+
   myFile <- ifelse(commandOrErr == "Command", .pkg.env$h2o.__LOG_COMMAND, .pkg.env$h2o.__LOG_ERROR)
   myDir <- normalizePath(dirname(myFile))
   if(!file.exists(myDir)) stop(myDir, " directory does not exist")
@@ -200,7 +200,7 @@ h2o.setLogPath <- function(path, type) {
 
   cmd = sprintf("%s)", cmd)
   #cat(sprintf("TOM: cmd is %s\n", cmd))
-  
+
   rv = eval(parse(text=cmd))
   return(rv)
 }
@@ -219,31 +219,31 @@ h2o.setLogPath <- function(path, type) {
   if(.pkg.env$IS_LOGGING) {
     # Log list of parameters sent to H2O
     .h2o.__logIt(myURL, list(...), "Command")
-    
+
     hg = basicHeaderGatherer()
     tg = basicTextGatherer()
-    postForm(myURL, style = "POST", .opts = curlOptions(headerfunction = hg$update, writefunc = tg[[1]], useragent=R.version.string), ...)
+    postForm(myURL, style = "POST", .opts = curlOptions(httpheader = c('Expect' = ''), headerfunction = hg$update, writefunc = tg[[1]], useragent=R.version.string), ...)
     temp = tg$value()
-    
+
     # Log HTTP response from H2O
     hh <- hg$value()
     s <- paste(hh["Date"], "\nHTTP status code: ", hh["status"], "\n ", temp, sep = "")
     s <- paste(s, "\n\n------------------------------------------------------------------\n")
-    
+
     cmdDir <- normalizePath(dirname(.pkg.env$h2o.__LOG_COMMAND))
     if(!file.exists(cmdDir)) stop(cmdDir, " directory does not exist")
     write(s, file = .pkg.env$h2o.__LOG_COMMAND, append = TRUE)
   } else
-    temp = postForm(myURL, style = "POST", .opts = curlOptions(useragent=R.version.string), ...)
-  
+    temp = postForm(myURL, style = "POST", .opts = curlOptions(httpheader = c('Expect' = ''), useragent=R.version.string), ...)
+
   # The GET code that we used temporarily while NanoHTTPD POST was known to be busted.
   #
   #if(length(list(...)) == 0)
   #  temp = getURLContent(myURL)
   #else
   #  temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
-  
-  # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1]) 
+
+  # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])
   # after = gsub("NaN", '"NaN"', after)
   after = gsub('"Infinity"', '"Inf"', temp[1])
   after = gsub('"-Infinity"', '"-Inf"', after)
@@ -303,7 +303,7 @@ h2o.setLogPath <- function(path, type) {
   if(class(client) != "H2OClient") stop("client must be a H2OClient object")
   if(missing(keyName)) stop("keyName is missing!")
   if(!is.character(keyName) || nchar(keyName) == 0) stop("keyName must be a non-empty string")
-  
+
   res = .h2o.__remoteSend(client, .h2o.__PAGE_JOBS)
   res = res$jobs
   if(length(res) == 0) stop("No jobs found in queue")
@@ -344,7 +344,7 @@ h2o.setLogPath <- function(path, type) {
              finally = .h2o.__cancelJob(client, job_key))
     setTxtProgressBar(pb, 1.0); close(pb)
   } else
-    tryCatch(while(.h2o.__poll(client, job_key) != -1) { Sys.sleep(pollInterval) }, 
+    tryCatch(while(.h2o.__poll(client, job_key) != -1) { Sys.sleep(pollInterval) },
              finally = .h2o.__cancelJob(client, job_key))
 }
 
@@ -352,10 +352,10 @@ h2o.setLogPath <- function(path, type) {
 # .h2o.__isDone <- function(client, algo, resH) {
 #   if(!algo %in% c("GBM", "KM", "RF1", "RF2", "DeepLearning", "GLM1", "GLM2", "GLM1Grid", "PCA")) stop(algo, " is not a supported algorithm")
 #   version = ifelse(algo %in% c("RF1", "GLM1", "GLM1Grid"), 1, 2)
-#   page = switch(algo, GBM = .h2o.__PAGE_GBMProgress, KM = .h2o.__PAGE_KM2Progress, RF1 = .h2o.__PAGE_RFVIEW, 
-#                 RF2 = .h2o.__PAGE_DRFProgress, DeepLearning = .h2o.__PAGE_DeepLearningProgress, GLM1 = .h2o.__PAGE_GLMProgress, 
+#   page = switch(algo, GBM = .h2o.__PAGE_GBMProgress, KM = .h2o.__PAGE_KM2Progress, RF1 = .h2o.__PAGE_RFVIEW,
+#                 RF2 = .h2o.__PAGE_DRFProgress, DeepLearning = .h2o.__PAGE_DeepLearningProgress, GLM1 = .h2o.__PAGE_GLMProgress,
 #                 GLM1Grid = .h2o.__PAGE_GLMGridProgress, GLM2 = .h2o.__PAGE_GLM2Progress, PCA = .h2o.__PAGE_PCAProgress)
-#   
+#
 #   if(version == 1) {
 #     job_key = resH$response$redirect_request_args$job
 #     dest_key = resH$destination_key
@@ -369,7 +369,7 @@ h2o.setLogPath <- function(path, type) {
 #     job_key = resH$job_key; dest_key = resH$destination_key
 #     res = .h2o.__remoteSend(client, page, job_key = job_key, destination_key = dest_key)
 #     if(res$response_info$status == "error") stop(res$error)
-#     
+#
 #     if(!is.null(res$response_info$redirect_url)) {
 #       ind = regexpr("\\?", res$response_info$redirect_url)[1]
 #       url = ifelse(ind > 1, substr(res$response_info$redirect_url, 1, ind-1), res$response_info$redirect_url)
@@ -791,20 +791,20 @@ function(expr, envir = globalenv(), expr_only = FALSE) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
   if(class(x) == "H2OParsedData") LHS <- x@key else LHS <- x
-  
+
   if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
     anyFactorsX <- .h2o.__checkForFactors(x)
     anyFactorsY <- .h2o.__checkForFactors(y)
     anyFactors <- any(c(anyFactorsX, anyFactorsY))
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
-  
+
   if(class(y) == "H2OParsedData") RHS <- y@key else RHS <- y
   expr <- paste(LHS, op, RHS)
   if(class(x) == "H2OParsedData") myClient = x@h2o
   else myClient <- y@h2o
   res <- .h2o.__exec2(myClient, expr)
-  
+
   if(res$num_rows == 0 && res$num_cols == 0) {
     if(op %in% .LOGICAL_OPERATORS) res$scalar <- as.logical(res$scalar)
     return(res$scalar)
@@ -821,7 +821,7 @@ function(expr, envir = globalenv(), expr_only = FALSE) {
   idx = which(sapply(myInput, function(x) { class(x) == "H2OParsedData" }))[1]
   if(is.na(idx)) stop("H2OClient not specified in any input parameter!")
   myClient = myInput[[idx]]@h2o
-  
+
   myArgs = lapply(myInput, function(x) { if(class(x) == "H2OParsedData") x@key else x })
   expr = paste(op, "(", paste(myArgs, collapse = ","), ")", sep="")
   res = .h2o.__exec2(myClient, expr)
@@ -843,7 +843,7 @@ function(expr, envir = globalenv(), expr_only = FALSE) {
       result[i] = paste(nams[i], ": ", vec[i], sep="")
     paste(result, collapse="\n")
   }
-  
+
   cat("Writing JSON response to", fileName, "\n")
   temp = strsplit(as.character(Sys.time()), " ")[[1]]
   # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
@@ -1039,7 +1039,7 @@ h2o.getFrame <- function(h2o, key) {
 .h2o.__getFamily <- function(family, link, tweedie.var.p = 0, tweedie.link.p = 1-tweedie.var.p) {
   if(family == "tweedie")
     return(tweedie(var.power = tweedie.var.p, link.power = tweedie.link.p))
-  
+
   if(missing(link)) {
     switch(family,
            "gaussian" = gaussian(),
