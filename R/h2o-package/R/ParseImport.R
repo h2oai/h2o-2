@@ -286,9 +286,9 @@ h2o.uploadFile <- function(object, path, key = "", parse = TRUE, header, header_
   url = paste(url, "?key=", URLencode(path), sep="")
   if(file.exists(h2o.getLogPath("Command"))) .h2o.__logIt(url, NULL, "Command")
   if(silent)
-    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = curlOptions(useragent=R.version.string))
+    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = curlOptions(httpheader = c('Expect' = ''), useragent=R.version.string))
   else
-    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = curlOptions(verbose = TRUE, useragent=R.version.string))
+    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = curlOptions(httpheader = c('Expect' = ''), verbose = TRUE, useragent=R.version.string))
   rawData = new("H2ORawData", h2o=object, key=path)
   if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, header=header, header_with_hash=header_with_hash, sep=sep, col.names=col.names, parser_type = parser_type) else rawData
 }
