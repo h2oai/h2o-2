@@ -838,7 +838,7 @@ class RUnitRunner:
             cloud = self.clouds[0]
             port = cloud.get_port()
             ip = "127.0.0.1:"
-            if (g_use_cloud2):
+            if g_use_cloud or g_use_cloud2:
                 ip = cloud.get_ip()+":"
             cmd = ["R",
                    "--quiet",

@@ -1815,40 +1815,52 @@ function(test, yes, no, type) {
  }
 }
 
-ifelse<-
-function (test, yes, no)
-{
-    if (.check.ifelse.conditions(test, yes, no, "test")) {
-      if (is.logical(yes)) yes <- as.numeric(yes)
-      if (is.logical(no)) no <- as.numeric(no)
-      return(.h2o.__multop2("ifelse", test, yes, no))
+setMethod("ifelse", signature(test="H2OParsedData", yes="ANY", no="ANY"), function(test, yes, no) {
+  .h2o.ifelse(test,yes,no)
+})
 
-    } else if ( class(yes) == "H2OParsedData" && class(test) == "logical") {
-      if (is.logical(yes)) yes <- as.numeric(yes)
-      if (is.logical(no)) no <- as.numeric(no)
-      return(.h2o.__multop2("ifelse", as.numeric(test), yes, no))
+setMethod("ifelse", signature(test="ANY",yes="H2OParsedData", no="H2OParsedData"), function(test,yes,no) {
+  .h2o.ifelse(test,yes,no)
+})
 
-    } else if (class(no) == "H2OParsedData" && class(test) == "logical") {
-      if (is.logical(yes)) yes <- as.numeric(yes)
-      if (is.logical(no)) no <- as.numeric(no)
-      return(.h2o.__multop2("ifelse", as.numeric(test), yes, no))
-    }
-    if (is.atomic(test))
-        storage.mode(test) <- "logical"
-    else test <- if (isS4(test))
-        as(test, "logical")
-    else as.logical(test)
-    ans <- test
-    ok <- !(nas <- is.na(test))
-    if (any(test[ok]))
-        ans[test & ok] <- rep(yes, length.out = length(ans))[test &
-            ok]
-    if (any(!test[ok]))
-        ans[!test & ok] <- rep(no, length.out = length(ans))[!test &
-            ok]
-    ans[nas] <- NA
-    ans
+.h2o.ifelse <- function(test,yes,no) {
+  if (.check.ifelse.conditions(test, yes, no, "test")) {
+    if (is.logical(yes)) yes <- as.numeric(yes)
+    if (is.logical(no)) no <- as.numeric(no)
+    return(.h2o.__multop2("ifelse", test, yes, no))
+
+  } else if ( class(yes) == "H2OParsedData" && class(test) == "logical") {
+    if (is.logical(yes)) yes <- as.numeric(yes)
+    if (is.logical(no)) no <- as.numeric(no)
+    return(.h2o.__multop2("ifelse", as.numeric(test), yes, no))
+
+  } else if (class(no) == "H2OParsedData" && class(test) == "logical") {
+    if (is.logical(yes)) yes <- as.numeric(yes)
+    if (is.logical(no)) no <- as.numeric(no)
+    return(.h2o.__multop2("ifelse", as.numeric(test), yes, no))
+  }
+
+  if( is(test, "H2OParsedData") ) {
+    if( is.character(yes) ) yes <- deparse(yes)
+    if( is.character(no)  ) no <- deparse(no)
+    return(.h2o.__multop2("ifelse",test,yes,no))
+  }
+
+  if (is.atomic(test))  storage.mode(test) <- "logical"
+  else if( isS4(test) ) test <- as(test, "logical")
+  else                  test <- as.logical("test")
+  ans <- test
+  ok <- !(nas <- is.na(test))
+  if (any(test[ok]))
+      ans[test & ok] <- rep(yes, length.out = length(ans))[test &
+          ok]
+  if (any(!test[ok]))
+      ans[!test & ok] <- rep(no, length.out = length(ans))[!test &
+          ok]
+  ans[nas] <- NA
+  ans
 }
+
 
 #.getDomainMapping2 <- function(l, s = "") {
 # if (is.list(l)) {
