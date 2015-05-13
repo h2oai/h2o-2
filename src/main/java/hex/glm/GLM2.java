@@ -575,7 +575,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       }
       if (non_negative) { // make srue lb is >= 0
         if (_lbs == null)
-          _lbs = new double[_srcDinfo.fullN()];
+          _lbs = new double[_srcDinfo.fullN()+1];
+        _lbs[_srcDinfo.fullN()] = Double.NEGATIVE_INFINITY; // no bounds for intercept
         for (int i = 0; i < _lbs.length; ++i)
           if (_lbs[i] < 0)
             _lbs[i] = 0;
@@ -972,7 +973,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
       final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       long t1 = System.currentTimeMillis();
-      ADMMSolver slvr = new ADMMSolver(lambda_max, _currentLambda,alpha[0], _gradientEps, _addedL2);
+      ADMMSolver slvr = new ADMMSolver(lambda_max, _currentLambda,alpha[0], _gradientEps, _addedL2,_intercept == 1);
       if(_lbs != null)
         slvr._lb = _activeCols == null?contractVec(_lbs,_activeCols,0):_lbs;
       if(_ubs != null)
