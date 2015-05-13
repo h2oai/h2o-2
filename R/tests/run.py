@@ -724,7 +724,7 @@ class RUnitRunner:
             print("")
             sys.exit(1)
 
-    def build_test_list(self, test_group, run_small, run_medium, run_large):
+    def build_test_list(self, test_group, run_small, run_medium, run_large, run_xlarge):
         """
         Recursively find the list of tests to run and store them in the object.
         Fills in self.tests and self.tests_not_started.
@@ -746,11 +746,14 @@ class RUnitRunner:
                 is_small = False
                 is_medium = False
                 is_large = False
+                is_xlarge= False
 
                 if (re.match(".*large.*", f)):
                     is_large = True
                 elif (re.match(".*medium.*", f)):
                     is_large = True
+                elif "xlarge" in f:
+                    is_xlarge = True
                 else:
                     is_small = True
 
@@ -759,6 +762,8 @@ class RUnitRunner:
                 if (is_medium and not run_medium):
                     continue
                 if (is_large and not run_large):
+                    continue
+                if is_xlarge and not run_xlarge:
                     continue
 
                 if (test_group is not None):
@@ -1139,6 +1144,7 @@ g_test_group = None
 g_run_small = True
 g_run_medium = True
 g_run_large = True
+g_run_xlarge = True
 g_use_cloud = False
 g_use_cloud2 = False
 g_config = None
@@ -1301,6 +1307,7 @@ def parse_args(argv):
     global g_run_small
     global g_run_medium
     global g_run_large
+    global g_run_xlarge
     global g_use_cloud
     global g_use_cloud2
     global g_config
@@ -1360,6 +1367,8 @@ def parse_args(argv):
                     g_run_medium = False
                 if (not 'l' in v):
                     g_run_large = False
+                if not "xl" in v:
+                    g_run_xlarge = False
             else:
                 bad_arg(s)
         elif (s == "--usecloud"):
@@ -1496,7 +1505,7 @@ def main(argv):
         g_runner.read_test_list_file(g_test_list_file)
     else:
         # Test group can be None or not.
-        g_runner.build_test_list(g_test_group, g_run_small, g_run_medium, g_run_large)
+        g_runner.build_test_list(g_test_group, g_run_small, g_run_medium, g_run_large, g_run_xlarge)
 
     # If no run is specified, then do an early exit here.
     if (g_no_run):
