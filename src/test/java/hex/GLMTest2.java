@@ -354,7 +354,7 @@ public class GLMTest2  extends TestUtil {
     Key parsed = Key.make("prostate_parsed");
     Key modelKey = Key.make("prostate_model");
     GLMModel model = null;
-    Frame fr = getFrameForFile(parsed, "smalldata/glm_test/prostate_cat_replaced.csv", new String[]{"ID"}, "CAPSULE");
+    Frame fr = getFrameForFile(parsed, "smalldata/logreg/prostate.csv", new String[]{"ID"}, "CAPSULE");
     Key k = Key.make("rebalanced");
     H2O.submitTask(new RebalanceDataSet(fr, k, 64)).join();
     fr.delete();
