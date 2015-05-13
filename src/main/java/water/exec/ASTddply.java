@@ -448,6 +448,7 @@ public class ASTddply extends ASTOp {
       else {
         r = new double[_ncols];
         for (int i = 0; i < _ncols; ++i) r[i] = fr.vecs()[i].at(0);
+        fr.delete();
       }
       Key resultKey = Key.make("ddply_RemoteRez_"+_grpnum);
       Result rez = new Result(d, r);
