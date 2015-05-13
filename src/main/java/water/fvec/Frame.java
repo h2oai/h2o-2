@@ -569,10 +569,20 @@ public class Frame extends Lockable<Frame> {
 
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   @Override public Futures delete_impl(Futures fs) {
-    for( Key k : _keys ) UKV.remove(k,fs);
+    final Key[] keys = _keys;
+    if( keys.length==0 ) return fs;
+    final int ncs = anyVec().nChunks();
     _names = new String[0];
     _vecs = new Vec[0];
     _keys = new Key[0];
+    // Bulk dumb local remove - no JMM, no ordering, no safety.
+    new DRemoteTask() {
+      @Override public void lcompute() {
+        for( Key k : keys ) if( k != null ) Vec.bulk_remove(k,ncs,_fs);
+        tryComplete(); 
+      }
+      @Override public void reduce(DRemoteTask that) { }
+    }.invokeOnAllNodes();
     return fs;
   }
   @Override public String errStr() { return "Dataset"; }

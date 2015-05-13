@@ -507,6 +507,7 @@ public final class H2O {
   // Get the value from the store
   public static Value get( Key key ) { return STORE.get(key); }
   public static Value raw_get( Key key ) { return STORE.get(key); }
+  public static void raw_remove(Key key) { STORE.remove(key); }
   public static Key getk( Key key ) { return STORE.getk(key); }
   public static Set<Key> localKeySet( ) { return STORE.keySet(); }
   public static Collection<Value> values( ) { return STORE.values(); }
