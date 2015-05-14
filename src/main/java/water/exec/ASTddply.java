@@ -426,12 +426,8 @@ public class ASTddply extends ASTOp {
       // Clone a private copy of the environment for local execution
       Env env = shared_env.capture(true);
       ASTOp op = env.fcn(-1);
-      Key fr_key = Key.make("ddply_grpkey_"+_grpnum);
-      Frame aa = DKV.get(fr_key).get();
-      Frame fv = new Frame(null, aa.names(), aa.vecs().clone());
-//      fv.anyVec().rollupStats();
       env.push(op);
-      env.push(fv);
+      env.push(_fr);
 
       op.apply(env,2/*1-arg function*/,null);
 
@@ -458,7 +454,6 @@ public class ASTddply extends ASTOp {
 
       // No need to return any results here.
       _fr.delete();
-      aa.delete();
       _fr = null;
       _ds = null;
       _envkey= null;

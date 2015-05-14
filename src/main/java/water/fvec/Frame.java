@@ -571,7 +571,34 @@ public class Frame extends Lockable<Frame> {
   @Override public Futures delete_impl(Futures fs) {
     final Key[] keys = _keys;
     if( keys.length==0 ) return fs;
-    final int ncs = anyVec().nChunks();
+
+    // Get number of chunks, without using the DKV, ever.  Obvious hack is to
+    // call anyVec().nChunks() - but this can load from the DKV.  Parallel
+    // racing deletes will then crash, as the 2nd delete will fail to get the
+    // count of chunks.
+    Vec c0 = _col0;
+    if( c0 == null ) {
+      Vec[] vecs = _vecs;
+      if( vecs != null ) {
+        for( int i=0; i<vecs.length; i++ )
+          if( (c0 = vecs[i]) != null && c0.readable() )
+            break;
+      }
+      if( c0 == null ) {
+        for( int i=0; i<_keys.length; i++ ) {
+          Value val = H2O.raw_get(_keys[i]);
+          if( val != null ) {
+            c0 = val.get();
+            break;
+          }
+        }
+      }
+      if( c0 == null ) {
+        throw H2O.unimpl();     // Must get nchunks remotely
+      }
+    }
+    final int ncs = c0.nChunks();
+
     _names = new String[0];
     _vecs = new Vec[0];
     _keys = new Key[0];

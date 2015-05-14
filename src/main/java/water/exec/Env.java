@@ -283,7 +283,7 @@ public class Env extends Iced {
     if ( cnt > 0 ) {
       _refcnt.put(vec,new IcedInt(cnt));
     } else {
-      UKV.remove(vec._key,fs);
+      vec.remove(fs);
       _refcnt.remove(vec);
     }
     return fs;

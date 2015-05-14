@@ -273,19 +273,15 @@ public class DeepLearningProstateTest extends TestUtil {
                                         if (model2.nclasses() == 2) {
                                           // make labels with 0.5 threshold for binary classifier
                                           Env ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + 0.5);
-                                          try {
-                                            pred2 = ev.popAry();
-                                            String skey = ev.key();
-                                            ev.subRef(pred2, skey);
-                                          } finally {
-                                            if (ev!=null) ev.remove_and_unlock();
-                                          }
+                                          Frame pred3 = ev.popAry();
+                                          ev.subRef(pred3, ev.key());
+                                          ev.remove_and_unlock();
 
                                           water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
                                           CM.actual = valid;
                                           CM.vactual = valid.vecs()[1];
-                                          CM.predict = pred2;
-                                          CM.vpredict = pred2.vecs()[0];
+                                          CM.predict = pred3;
+                                          CM.vpredict = pred3.vecs()[0];
                                           CM.invoke();
                                           sb = new StringBuilder();
                                           sb.append("\n");
@@ -297,19 +293,15 @@ public class DeepLearningProstateTest extends TestUtil {
 
                                           // make labels with AUC-given threshold for best F1
                                           ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + threshold);
-                                          try {
-                                            pred2 = ev.popAry();
-                                            String skey = ev.key();
-                                            ev.subRef(pred2, skey);
-                                          } finally {
-                                            if (ev != null) ev.remove_and_unlock();
-                                          }
+                                          Frame pred4 = ev.popAry();
+                                          ev.subRef(pred4, ev.key());
+                                          ev.remove_and_unlock();
 
                                           CM = new water.api.ConfusionMatrix();
                                           CM.actual = valid;
                                           CM.vactual = valid.vecs()[1];
-                                          CM.predict = pred2;
-                                          CM.vpredict = pred2.vecs()[0];
+                                          CM.predict = pred4;
+                                          CM.vpredict = pred4.vecs()[0];
                                           CM.invoke();
                                           sb = new StringBuilder();
                                           sb.append("\n");
@@ -318,9 +310,15 @@ public class DeepLearningProstateTest extends TestUtil {
                                           Log.info(sb);
                                           double threshErr2 = new ConfusionMatrix(CM.cm).err();
                                           Assert.assertEquals(threshErr2, error, 1e-15);
+
+                                          pred3.delete();
+                                          pred4.delete();
                                         }
+                                      } catch( Exception e ) {
+                                        System.err.println("crunk");
+                                        e.printStackTrace();
                                       } finally {
-                                        if (pred != null) pred.delete();
+                                        if (pred  != null) pred .delete();
                                         if (pred2 != null) pred2.delete();
                                       }
                                     } //classifier
