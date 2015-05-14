@@ -52,6 +52,7 @@ class Check:
             r"^The Title field starts with the package name.",
             r"^The Date field is over a month old.",
 
+            r"^\n",
             r"^New submission",
 
             r"^Package was archived on CRAN",
