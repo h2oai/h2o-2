@@ -18,6 +18,7 @@ export('h2o.shutdown', 'h2o.init', 'h2o.coxph', 'h2o.coxph.control', 'h2o.glm',
        'h2o.importFolder', 'h2o.uploadFile', 'h2o.parseRaw', 'h2o.ls',
        'h2o.rm', 'h2o.cut', '.', 'h2o..', 'h2o.ddply', 'cbind.H2OParsedData')
 S3method("as.Date",       "H2OParsedData")
+S3method("as.numeric",    "H2OParsedData")
 S3method("as.data.frame", "H2OParsedData")
 S3method("as.matrix",     "H2OParsedData")
 S3method("as.table",      "H2OParsedData")
