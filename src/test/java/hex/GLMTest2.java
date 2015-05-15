@@ -360,7 +360,7 @@ public class GLMTest2  extends TestUtil {
     fr.delete();
     fr = DKV.get(k).get();
     Key betaConsKey = Key.make("beta_constraints");
-    FVecTest.makeByteVec(betaConsKey, "names, lower_bounds, upper_bounds\n AGE, -.5, .5\n RACE, -.5, .5\n DCAPS, -.4, .4\n DPROS, -.5, .5 \nPSA, -.5, .5\n VOL, -.5, .5\nGLEASON, -.5, .5");
+    FVecTest.makeByteVec(betaConsKey, "names, lower_bounds, upper_bounds\n RACE, -.5, .5\n DCAPS, -.4, .4\n DPROS, -.5, .5 \nPSA, -.5, .5\n VOL, -.5, .5\nGLEASON, -.5, .5\nAGE, -.5, .5");
     Frame betaConstraints = ParseDataset2.parse(parsed, new Key[]{betaConsKey});
     try {
       // H2O differs on intercept and race, same residual deviance though
@@ -382,7 +382,7 @@ public class GLMTest2  extends TestUtil {
       model.delete();
       betaConstraints.delete();
       // fix AGE at .5
-      FVecTest.makeByteVec(betaConsKey, "names, lower_bounds, upper_bounds\n AGE, .5, .5 \n RACE, -.5, .5\n DCAPS, -.4, .4\n DPROS, -.5, .5 \nPSA, -.5, .5\n VOL, -.5, .5\nGLEASON, -.5, .5");
+      FVecTest.makeByteVec(betaConsKey, "names, lower_bounds, upper_bounds\n RACE, -.5, .5\n DCAPS, -.4, .4\n DPROS, -.5, .5 \nPSA, -.5, .5\n VOL, -.5, .5\nGLEASON, -.5, .5\nAGE, .5, .5");
       betaConstraints = ParseDataset2.parse(parsed, new Key[]{betaConsKey});
       new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source((Frame)fr.clone(), fr.vec("CAPSULE"), true, true), Family.binomial).setNonNegative(false).setRegularization(new double[]{1},new double[]{0.001607}).setBetaConstraints(betaConstraints).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
       model = DKV.get(modelKey).get();
@@ -418,7 +418,15 @@ public class GLMTest2  extends TestUtil {
       } catch(IllegalArgumentException t) {
         assertTrue(t.getMessage().contains("unknown predictor name 'XXX'"));
       }
-
+      betaConstraints.delete();
+      FVecTest.makeByteVec(betaConsKey, "nms, lower_bounds, upper_bounds\n AGE, .5, .5\n XXX, -.5, .5\n DCAPS, -.4, .4\n DPROS, -.5, .5 \nPSA, -.5, .5\n VOL, -.5, .5\nGLEASON, -.5, .5");
+      betaConstraints = ParseDataset2.parse(parsed, new Key[]{betaConsKey});
+      try {
+        new GLM2("GLM offset test on prostate.", Key.make(), modelKey, new GLM2.Source((Frame) fr.clone(), fr.vec("CAPSULE"), true, true), Family.binomial).setNonNegative(false).setRegularization(new double[]{1}, new double[]{0.001607}).setBetaConstraints(betaConstraints).doInit().fork().get(); //.setHighAccuracy().doInit().fork().get();
+        assertTrue("should've thrown",false);
+      } catch(IllegalArgumentException t) {
+        assertTrue(t.getMessage().contains("missing column with predictor names"));
+      }
     } finally {
       if(betaConstraints != null)
         betaConstraints.delete();
@@ -450,7 +458,7 @@ public class GLMTest2  extends TestUtil {
     //String[] cfs1 = new String[]{"RACE", "AGE", "DPROS", "DCAPS", "PSA", "VOL", "GLEASON","Intercept"};
     //double[] vals = new double[]{0, 0, 0.54788332,0.53816534, 0.02380097, 0, 0.98115670,-8.945984};
     // [AGE, RACE, DPROS, DCAPS, PSA, VOL, GLEASON, Intercept]
-    FVecTest.makeByteVec(betaConsKey, "names, beta_given, rho\n AGE, 0.1, 1\n RACE, -0.1, 1 \n DPROS, 10, 1 \n DCAPS, -10, 1 \n PSA, 0, 1\n VOL, 0, 1\nGLEASON, 0, 1\n Intercept, 0, 0 \n");
+    FVecTest.makeByteVec(betaConsKey, "names, beta_given, rho\n AGE, 0.1, 1\nRACE, -0.1, 1 \n DPROS, 10, 1 \n DCAPS, -10, 1 \n PSA, 0, 1\n VOL, 0, 1\nGLEASON, 0, 1\n Intercept, 0, 0 \n");
     Frame betaConstraints = ParseDataset2.parse(parsed, new Key[]{betaConsKey});
     try {
       // H2O differs on intercept and race, same residual deviance though

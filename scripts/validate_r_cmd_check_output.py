@@ -49,7 +49,10 @@ class Check:
             r"^Old maintainer\(s\):",
             r"^\s*Anqi Fu",
             r"^NOTE: There was 1 note.",
+            r"^The Title field starts with the package name.",
+            r"^The Date field is over a month old.",
 
+            r"^\n",
             r"^New submission",
 
             r"^Package was archived on CRAN",
@@ -65,6 +68,9 @@ class Check:
 
             r"^Package has FOSS license, installs .class/.jar but has no 'java' directory.",
             r"^\* DONE",
+
+            r"^Checking URLs requires 'libcurl' support in the R build",
+            r"^Status: 2 NOTEs",
         ]
 
         s = f.readline()

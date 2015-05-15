@@ -176,18 +176,21 @@ public abstract class LSMSolver extends Iced{
 
     final double _lambdaMax;
     public double _addedL2;
+    final boolean _intercept;
 
-    public ADMMSolver (double lmax, double lambda, double alpha, double gradEps) {
+    public ADMMSolver (double lmax, double lambda, double alpha, double gradEps, boolean intercept) {
       super(lambda,alpha);
       _gradientEps = gradEps;
       _lambdaMax = lmax;
+      _intercept = intercept;
     }
 
-    public ADMMSolver (double lmax, double lambda, double alpha, double gradEps,double addedL2) {
+    public ADMMSolver (double lmax, double lambda, double alpha, double gradEps,double addedL2, boolean intercept) {
       super(lambda,alpha);
       _lambdaMax = lmax;
       _addedL2 = addedL2;
       _gradientEps = gradEps;
+      _intercept = intercept;
     }
 
     public JsonObject toJson(){
@@ -390,12 +393,12 @@ public abstract class LSMSolver extends Iced{
       gerr = 0;
       boolean bounds = _lb != null || _ub != null;
       double d = gram._diagAdded;
-      final int N = xy.length;
+      final int N = xy.length - (_intercept?1:0);
       Arrays.fill(z, 0);
       if(_lambda>0 || _addedL2 > 0)
-        gram.addDiag(_lambda*(1-_alpha) + _addedL2);
+        gram.addDiag(_lambda*(1-_alpha) + _addedL2,!_intercept);
       if(bounds || (_alpha > 0 && _lambda > 0))
-        gram.addDiag(rho);
+        gram.addDiag(rho,!_intercept);
       if(_wgiven != null){
         gram.addDiag(_proximalPenalties);
         xy = xy.clone();
@@ -429,18 +432,20 @@ public abstract class LSMSolver extends Iced{
       int max_iter = Math.max(500,(int)(50000.0/(1+(xy.length >> 3))));
       double orlx = 1.8; // over-relaxation
       double reltol = RELTOL;
+
       for(i = 0; i < max_iter; ++i ) {
         long tX = System.currentTimeMillis();
         // first compute the x update
         // add rho*(z-u) to A'*y
-        for( int j = 0; j < N-1; ++j )
+        for( int j = 0; j < N; ++j )
           xyPrime[j] = xy[j] + rho*(z[j] - u[j]);
-        xyPrime[N-1] = xy[N-1];
+        if(_intercept)
+          xyPrime[N] = xy[N];
         // updated x
         chol.solve(xyPrime);
         // compute u and z update ADMM
         double rnorm = 0, snorm = 0, unorm = 0, xnorm = 0;
-        for( int j = 0; j < N-1; ++j ) {
+        for( int j = 0; j < N; ++j ) {
           double x = xyPrime[j];
           double zold = z[j];
           double x_hat = x * orlx + (1 - orlx) * zold;
@@ -457,12 +462,13 @@ public abstract class LSMSolver extends Iced{
           xnorm += x*x;
           unorm += u[j]*u[j];
         }
-        z[N-1] = xyPrime[N-1];
+        if(_intercept)
+          z[N] = xyPrime[N];
         if(rnorm < reltol*xnorm && snorm < reltol*unorm){
           gerr = 0;
           double [] grad = grad(gram,z,xy);
           subgrad(_alpha,_lambda,z,grad);
-          for(int x = 0; x < grad.length-1; ++x){
+          for(int x = 0; x < N; ++x){
             if(gerr < grad[x]) gerr = grad[x];
             else if(gerr < -grad[x]) gerr = -grad[x];
           }

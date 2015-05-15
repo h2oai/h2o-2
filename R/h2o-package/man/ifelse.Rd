@@ -1,6 +1,6 @@
 \name{ifelse}
-\alias{ifelse}
-%- Also NEED an '\alias' for EACH other topic documented here.
+\alias{ifelse,ANY,H2OParsedData,H2OParsedData-method}
+\alias{ifelse,H2OParsedData,ANY,ANY-method}
 \title{
 Applies conditional statements to an \code{\linkS4class{H2OParsedData} object. 
 }}
@@ -8,7 +8,9 @@ Applies conditional statements to an \code{\linkS4class{H2OParsedData} object.
 Applies conditional statements to numeric vectors in H2O parsed data objects when the data are numeric.
 }
 \usage{
-ifelse(test, yes, no)
+\S4method{ifelse}{H2OParsedData,ANY,ANY}(test, yes, no)
+
+\S4method{ifelse}{ANY,H2OParsedData,H2OParsedData}(test, yes, no)
 }
 
 \arguments{
