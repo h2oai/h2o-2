@@ -91,6 +91,6 @@ class TypeaheadHexKeyRequest extends TypeaheadKeysRequest {
   }
 
   @Override protected boolean matchesType(H2O.KeyInfo kinfo) {
-    return !kinfo._rawData && (kinfo._type == TypeMap.FRAME);
+    return kinfo._type==TypeMap.FRAME && !((water.fvec.Frame)DKV.get(kinfo._key).get()).isRawData();
   }
 }

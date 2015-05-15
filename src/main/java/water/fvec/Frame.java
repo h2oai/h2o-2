@@ -442,7 +442,7 @@ public class Frame extends Lockable<Frame> {
   }
 
   public final String[] names() { return _names; }
-  public int  numCols() { return vecs().length; }
+  public int  numCols() { return _keys.length; }
   public long numRows() { return anyVec()==null ? 0 : anyVec().length(); }
 
   public boolean isRawData() {
@@ -567,45 +567,55 @@ public class Frame extends Lockable<Frame> {
     return fs;
   }
 
+
+  // Get number of chunks, without using the DKV, ever.  Obvious hack is to
+  // call anyVec().nChunks() - but this can load from the DKV.  Parallel
+  // racing deletes will then crash, as the 2nd delete will fail to get the
+  // count of chunks.
+  private Vec localVec() {
+
+    // Try the cache
+    Vec c0 = _col0;
+    if( c0 != null ) return c0;
+    // Try the set of local vecs
+    Vec[] vecs = _vecs;
+    if( vecs != null )
+      for( int i=0; i<vecs.length; i++ )
+        if( (c0 = vecs[i]) != null && c0.readable() )
+          return c0;
+    // Try the local H2O store
+    for( int i=0; i<_keys.length; i++ ) {
+      Value val = H2O.raw_get(_keys[i]);
+      if( val != null ) return val.get();
+    }
+    
+    // Finally, fetch Vecs from Keys, one by one, until we find an existing one
+    for( int i=0; i<_keys.length; i++ ) {
+      Value val = DKV.get(_keys[i]);
+      if( val != null ) return c0 = val.get();
+      _keys[i] = null;          // We KNOW this Vec is already dead
+    }
+
+    // Whole frame is dead
+    return null;
+  }
+
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   @Override public Futures delete_impl(Futures fs) {
     final Key[] keys = _keys;
     if( keys.length==0 ) return fs;
 
-    // Get number of chunks, without using the DKV, ever.  Obvious hack is to
-    // call anyVec().nChunks() - but this can load from the DKV.  Parallel
-    // racing deletes will then crash, as the 2nd delete will fail to get the
-    // count of chunks.
-    Vec c0 = _col0;
-    if( c0 == null ) {
-      Vec[] vecs = _vecs;
-      if( vecs != null ) {
-        for( int i=0; i<vecs.length; i++ )
-          if( (c0 = vecs[i]) != null && c0.readable() )
-            break;
-      }
-      if( c0 == null ) {
-        for( int i=0; i<_keys.length; i++ ) {
-          Value val = H2O.raw_get(_keys[i]);
-          if( val != null ) {
-            c0 = val.get();
-            break;
-          }
-        }
-      }
-      if( c0 == null ) {
-        throw H2O.unimpl();     // Must get nchunks remotely
-      }
-    }
-    final int ncs = c0.nChunks();
-
+    // Get number of chunks, without using the DKV, ever.
+    Vec c0 = localVec();
     _names = new String[0];
     _vecs = new Vec[0];
     _keys = new Key[0];
+    if( c0 == null ) return fs;
+    final int ncs = c0.nChunks();
     // Bulk dumb local remove - no JMM, no ordering, no safety.
     new DRemoteTask() {
       @Override public void lcompute() {
-        for( Key k : keys ) if( k != null ) Vec.bulk_remove(k,ncs,_fs);
+        for( Key k : keys ) if( k != null ) Vec.bulk_remove(k,ncs);
         tryComplete(); 
       }
       @Override public void reduce(DRemoteTask that) { }

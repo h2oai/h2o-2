@@ -84,7 +84,7 @@ abstract public class Parse extends Request {
       final Key [] keyAry = H2O.KeySnapshot.globalSnapshot().filter(new H2O.KVFilter() {
         @Override
         public boolean filter(H2O.KeyInfo k) {
-          if(k._rawData && k._nrows > 0) {
+          if( k._type==TypeMap.FRAME && ((water.fvec.Frame)DKV.get(k._key).get()).isRawData() ) {
             String ks = k._key.toString();
             return (p.matcher(ks).matches() && (exclude == null || !exclude.matcher(ks).matches()));
           }

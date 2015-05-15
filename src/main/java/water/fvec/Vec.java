@@ -861,7 +861,7 @@ public class Vec extends Iced {
     // Bulk dumb local remove - no JMM, no ordering, no safety.
     final int ncs = nChunks();
     new DRemoteTask() {
-      @Override public void lcompute() { bulk_remove(_key,ncs,_fs); tryComplete(); }
+      @Override public void lcompute() { bulk_remove(_key,ncs); tryComplete(); }
       @Override public void reduce(DRemoteTask that) { }
     }.invokeOnAllNodes();
     return fs;
@@ -870,13 +870,12 @@ public class Vec extends Iced {
   // Bulk remove: removes LOCAL keys only, without regard to total visibility.
   // Must be run in parallel on all nodes to preserve semantics, completely
   // removing the Vec without any JMM communication.
-  static Futures bulk_remove( Key vkey, int ncs, Futures fs ) {
+  static void bulk_remove( Key vkey, int ncs ) {
     for( int i=0; i<ncs; i++ ) {
       Key kc = chunkKey(vkey,i);
       H2O.raw_remove(kc);
     }
     H2O.raw_remove(vkey);
-    return fs;
   }
 
   @Override public boolean equals( Object o ) {
