@@ -244,7 +244,7 @@ public class
   public boolean isRawData() {
     if(isFrame()){
       Frame fr = get();
-      return fr.vecs().length == 1 && (fr.vecs()[0] instanceof ByteVec);
+      return fr.numCols() == 1 && (fr.vecs()[0] instanceof ByteVec);
     }
     // either simple value with bytearray, un-parsed value array or byte vec
     return _type == TypeMap.PRIM_B || isByteVec();
