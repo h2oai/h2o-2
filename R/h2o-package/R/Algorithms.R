@@ -813,7 +813,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
   noGrid <- noGrid && (missing(override_with_best_model) || length(override_with_best_model) == 1)
   noGrid <- noGrid && (missing(seed) || length(seed) == 1)
   noGrid <- noGrid && (missing(input_dropout_ratio) || length(input_dropout_ratio) == 1)
-  noGrid <- noGrid && (missing(hidden_dropout_ratios) || (!is.list(hidden_dropout_ratios) && length(hidden_dropout_ratios) > 1))
+  noGrid <- noGrid && (missing(hidden_dropout_ratios) || !(is.list(hidden_dropout_ratios) && length(hidden_dropout_ratios) > 1))
   noGrid <- noGrid && (missing(max_w2) || length(max_w2) == 1)
   noGrid <- noGrid && (missing(initial_weight_distribution) || length(initial_weight_distribution) == 1)
   noGrid <- noGrid && (missing(initial_weight_scale) || length(initial_weight_scale) == 1)

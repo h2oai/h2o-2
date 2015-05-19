@@ -15,6 +15,7 @@ test.Priors.BetaConstraints <- function(conn) {
   modelStack = h2o.importFile(conn, pathToFile)
   betaConstraints.hex = h2o.importFile(conn, pathToConstraints)
   beta_nointercept.hex <- betaConstraints.hex[1:nrow(betaConstraints.hex)-1,]
+  beta_nointercept.hex
   
   ## Set Parameters (default standardization = T)
   betaConstraints = as.data.frame(betaConstraints.hex)
