@@ -172,6 +172,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new UnlockKeys());
       registerRequest(new Order());
       registerRequest(new RemoveVec());
+      registerRequest(new GarbageCollect());
     } else {
       Request.addToNavbar(registerRequest(new MatrixMultiply()),       "Matrix Multiply",      "Beta");
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
@@ -189,6 +190,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new UnlockKeys()),           "Unlock Keys (use with caution)","Beta");
       Request.addToNavbar(registerRequest(new Order()),                "Order",                "Beta");
       Request.addToNavbar(registerRequest(new RemoveVec()),            "RemoveVec",            "Beta");
+      Request.addToNavbar(registerRequest(new GarbageCollect()),       "GarbageCollect",       "Beta");
     }
 
     registerRequest(new Up());
