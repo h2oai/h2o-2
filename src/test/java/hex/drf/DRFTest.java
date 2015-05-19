@@ -290,7 +290,7 @@ public class DRFTest extends TestUtil {
         parms.source = tfr;
         parms.validation = test;
         //parms.ignored_cols_by_name = new int[]{4,5,6};
-        parms.ignored_cols_by_name = new int[]{1,2,3,4,5,7};
+        parms.ignored_cols_by_name = new int[]{0,1,2,3,4,5,7};
         parms.response = tfr.lastVec();
         parms.nbins = 20;
         parms.ntrees = 1;
