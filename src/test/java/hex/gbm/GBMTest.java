@@ -7,6 +7,7 @@ import hex.gbm.GBM.GBMModel;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import water.*;
@@ -341,6 +342,7 @@ public class GBMTest extends TestUtil {
     Assert.assertArrayEquals("GBM has to report same list of MSEs for run without/with validation dataset (which is equal to training data)", mseWithoutVal, mseWithVal, 0.0001);
   }
 
+  @Ignore
   @Test public void testModelMSEEqualityOnTitanic() {
     final PrepData titanicPrep =
             new PrepData() {
