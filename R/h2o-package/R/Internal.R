@@ -116,6 +116,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__SET_DOMAIN = "2/SetDomains.json"
 .h2o.__PAGE_ALLMODELS = "2/Models.json"
 .h2o.__GAINS <- "2/GainsLiftTable.json"
+.h2o.__PAGE_GARBAGECOLLECT = "GarbageCollect.json"
 
 .h2o.__PAGE_IMPUTE= "2/Impute.json"
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
@@ -1053,4 +1054,14 @@ h2o.getFrame <- function(h2o, key) {
            "poisson" = poisson(link),
            "gamma" = Gamma(link))
   }
+}
+
+#
+# This function is internal intentionally.
+#
+# Call it as:
+#    h2o:::.h2o.garbageCollect(localH2O)
+#
+.h2o.garbageCollect <- function(client) {
+  res = .h2o.__remoteSend(client, .h2o.__PAGE_GARBAGECOLLECT)
 }
