@@ -73,6 +73,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
       old = _maxIn;
   }
 
+  private static int MAX_FACTOR_BINS=1024; // Allow more bins for factors
   public DHistogram( String name, final int nbins, final byte isInt, final float min, final float maxEx, long nelems, int min_rows, boolean doGrpSplit ) {
     assert nelems > 0;
     assert nbins >= 1;
@@ -88,17 +89,15 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
     int xbins = nbins;
-    float step;
-    if( isInt>0 && maxEx-min <= nbins ) {
+    if( isInt>0 && maxEx-min <= Math.max(nbins,(isInt==2?MAX_FACTOR_BINS:nbins)) ) {
       assert ((long)min)==min;                // No overflow
       xbins = (char)((long)maxEx-(long)min);  // Shrink bins
       assert xbins > 1;                       // Caller ensures enough range to bother
-      step = 1.0f;                            // Fixed stepsize
+      _step = 1.0f;                            // Fixed stepsize
     } else {
-      step = (maxEx-min)/nbins; // Step size for linear interpolation
-      assert step > 0;
+      _step = nbins/(maxEx-min);
+      assert _step > 0 && !Float.isInfinite(_step);
     }
-    _step = 1.0f/step; // Use multiply instead of division during frequent binning math
     _nbin = (char)xbins;
     // Do not allocate the big arrays here; wait for scoreCols to pick which cols will be used.
   }
@@ -174,7 +173,8 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   static public float find_maxEx(float maxIn, int isInt ) {
     float ulp = Math.ulp(maxIn);
     if( isInt > 0 && 1 > ulp ) ulp = 1;
-    return maxIn+ulp;
+    float res = maxIn+ulp;
+    return Float.isInfinite(res) ? maxIn : res;
   }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
