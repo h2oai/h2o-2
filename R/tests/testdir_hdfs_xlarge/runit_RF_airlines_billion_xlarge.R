@@ -17,6 +17,7 @@ library(h2o)
 
 heading("BEGIN TEST")
 conn <- h2o.init(ip=myIP, port=myPort, startH2O = FALSE)
+h2o.removeAll()
 
 hdfs_data_file = "/datasets/airlinesbillion.csv"
 
@@ -43,16 +44,16 @@ s <- h2o.runif(data.hex)    # Useful when number of rows too large for R to hand
 data.train <- data.hex[s <= 0.8,]
 data.valid <- data.hex[s > 0.8,]
 
-## Response = Distance
-
-myY = "C19"
-#myX = setdiff(names(data.hex), c(myY, ""))
+## Chose which col as response
+## Response = IsDepDelayed
+myY = "C31"
+# myX = setdiff(names(data1.hex), myY)
 myX = c("C20", "C21", "C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29")
-## Build GLM Model and compare AUC with h2o1
 
-#glm_irlsm_time <- system.time(data_irlsm.glm <- h2o.glm(x = myX, y = myY, data = data.train, validation=data.valid, family = "gaussian", solver = "IRLSM"))
-glm_time <- system.time(data.glm <- h2o.glm(x = myX, y = myY, data = data.train, family = "gaussian"))
-data.glm
-paste("Time it took to build GLM ", glm_time[[1]])
+rf_time <- system.time(data1.rf <- h2o.randomForest(x = myX, y = myY,
+  data = data.train, validation=data.valid, ntree = 10, depth = 5,
+  type = "BigData"))
+data1.rf
+paste("Time it took to build RF ", rf_time[[1]])
 
 PASS_BANNER()

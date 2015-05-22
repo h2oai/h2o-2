@@ -17,6 +17,7 @@ library(h2o)
 
 heading("BEGIN TEST")
 conn <- h2o.init(ip=myIP, port=myPort, startH2O = FALSE)
+h2o.removeAll()
 
 hdfs_data_file = "/datasets/airlinesbillion.csv"
 
@@ -43,16 +44,15 @@ s <- h2o.runif(data.hex)    # Useful when number of rows too large for R to hand
 data.train <- data.hex[s <= 0.8,]
 data.valid <- data.hex[s > 0.8,]
 
-## Response = Distance
+## Chose which col as response
+## Response = IsDepDelayed
+myY = "C31"
+myX = setdiff(names(data1.hex), myY)
 
-myY = "C19"
-#myX = setdiff(names(data.hex), c(myY, ""))
-myX = c("C20", "C21", "C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29")
-## Build GLM Model and compare AUC with h2o1
-
-#glm_irlsm_time <- system.time(data_irlsm.glm <- h2o.glm(x = myX, y = myY, data = data.train, validation=data.valid, family = "gaussian", solver = "IRLSM"))
-glm_time <- system.time(data.glm <- h2o.glm(x = myX, y = myY, data = data.train, family = "gaussian"))
-data.glm
-paste("Time it took to build GLM ", glm_time[[1]])
+dl_time <- system.time(data1.dl <- h2o.deeplearning(x=myX, y=myY,
+  data=data.train, validation=data.valid, replicate_training_data=FALSE,
+  epochs=.1, hidden=c(5,5)))
+data1.dl
+paste("Time it took to build DL ", dl_time[[1]])
 
 PASS_BANNER()
