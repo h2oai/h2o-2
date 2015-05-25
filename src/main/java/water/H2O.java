@@ -920,6 +920,11 @@ public final class H2O {
       Log.info("Opted out of sending usage metrics.");
     }
 
+    if (OPT_ARGS.no_ice) {
+      // Cleaner callback happens in a different classloader.  Do this so they can share the state info.
+      System.setProperty("h2o.args.no_ice", "true");
+    }
+
     if (OPT_ARGS.baseport != 0) {
       DEFAULT_PORT = OPT_ARGS.baseport;
     }
@@ -1612,11 +1617,19 @@ public final class H2O {
       return !H2O.OPT_ARGS.no_ice && H2O.SELF._heartbeat.get_free_disk() > MemoryManager.MEM_MAX;
     }
     static boolean isDiskFull(){ // free disk space < 5K?
+      if (H2O.OPT_ARGS.no_ice) {
+        return true;
+      }
+
       long space = Persist.getIce().getUsableSpace();
       return space != Persist.UNKNOWN && space < (5 << 10);
     }
 
     @Override public void run() {
+      if (H2O.OPT_ARGS.no_ice) {
+        return;
+      }
+
       boolean diskFull = false;
       while( true ) {
         // Sweep the K/V store, writing out Values (cleaning) and free'ing

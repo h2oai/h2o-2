@@ -200,6 +200,10 @@ public abstract class MemoryManager {
      * Limit to touching global vars in the Boot class.
      */
     public void handleNotification(Notification notification, Object handback) {
+      if (System.getProperty("h2o.args.no_ice") != null) {
+        return;
+      }
+
       String notifType = notification.getType();
       if( notifType.equals(MemoryNotificationInfo.MEMORY_COLLECTION_THRESHOLD_EXCEEDED)) {
         // Memory used after this FullGC
