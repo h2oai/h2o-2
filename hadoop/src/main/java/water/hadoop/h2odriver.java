@@ -51,6 +51,7 @@ public class h2odriver extends Configured implements Tool {
   static int chunk_bytes;
   static int data_max_factor_levels;
   static boolean beta = false;
+  static boolean noIce = false;
   static boolean enableRandomUdpDrop = false;
   static boolean enableExceptions = false;
   static boolean enableVerboseGC = false;
@@ -584,6 +585,9 @@ public class h2odriver extends Configured implements Tool {
       else if (s.equals("-beta")) {
         beta = true;
       }
+      else if (s.equals("-no_ice")) {
+        noIce = true;
+      }
       else if (s.equals("-random_udp_drop")) {
         enableRandomUdpDrop = true;
       }
@@ -978,6 +982,9 @@ public class h2odriver extends Configured implements Tool {
     }
     if (beta) {
         conf.set(h2omapper.H2O_BETA_KEY, "-beta");
+    }
+    if (noIce) {
+        conf.set(h2omapper.H2O_NOICE_KEY, "-no_ice");
     }
     if (manyCols) {
       conf.set(h2omapper.H2O_MANYCOLS_KEY, "-many_cols");

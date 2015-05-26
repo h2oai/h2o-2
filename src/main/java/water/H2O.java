@@ -923,6 +923,7 @@ public final class H2O {
     if (OPT_ARGS.no_ice) {
       // Cleaner callback happens in a different classloader.  Do this so they can share the state info.
       System.setProperty("h2o.args.no_ice", "true");
+      Log.info("Memory cleaner is disabled since -no_ice was specified.");
     }
 
     if (OPT_ARGS.baseport != 0) {
