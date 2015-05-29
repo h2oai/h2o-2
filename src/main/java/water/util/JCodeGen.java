@@ -5,6 +5,8 @@ import water.fvec.Vec;
 
 public class JCodeGen {
 
+  public static final String[] EMPTY_SA = new String[] {} ;
+
   /** Generates data sample as a dedicated class with static <code>double[][]</code> member. */
   public static SB toClass(SB sb, String classSig, String varname, Frame f, int nrows, String comment) {
     sb.p(classSig).p(" {").nl().ii(1);

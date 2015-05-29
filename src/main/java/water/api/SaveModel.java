@@ -1,6 +1,7 @@
 package water.api;
 
 import java.io.*;
+
 import static water.util.FSUtils.isHdfs;
 import static water.util.FSUtils.isS3N;
 
@@ -8,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 
 import hex.glm.GLMModel;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -16,6 +18,7 @@ import water.persist.PersistHdfs;
 import water.serial.Model2FileBinarySerializer;
 import water.serial.Model2HDFSBinarySerializer;
 import water.util.FSUtils;
+import water.util.JCodeGen;
 
 public class SaveModel extends Func {
   static final int API_WEAVER = 1;
@@ -48,7 +51,7 @@ public class SaveModel extends Func {
       // Create folder
       parentDir.mkdirs();
       // Save parent model
-      new Model2FileBinarySerializer().save(model, new File(parentDir, model._key.toString()));
+      new Model2FileBinarySerializer().save(model, new File(parentDir, JCodeGen.toJavaId(model._key.toString())));
       // Write to model_names
       File model_names = new File(parentDir, "model_names");
       FileOutputStream is = new FileOutputStream(model_names);
@@ -61,8 +64,8 @@ public class SaveModel extends Func {
         Model[] models = getCrossValModels(model);
         System.out.println(models);
         for (Model m : models) {
-          new Model2FileBinarySerializer().save(m, new File(parentDir, m._key.toString()));
-          br.write(m._key.toString());
+          new Model2FileBinarySerializer().save(m, new File(parentDir, JCodeGen.toJavaId(m._key.toString())));
+          br.write(JCodeGen.toJavaId(m._key.toString()));
           br.newLine();
         }
       }
@@ -80,7 +83,7 @@ public class SaveModel extends Func {
       if (force && fs.exists(parentDir)) fs.delete(parentDir);
       fs.mkdirs(parentDir);
       // Save parent model
-      new Model2HDFSBinarySerializer(fs, force).save(model, new Path(parentDir, model._key.toString()));
+      new Model2HDFSBinarySerializer(fs, force).save(model, new Path(parentDir, JCodeGen.toJavaId(model._key.toString())));
       // Save parent model key to model_names file
       Path model_names = new Path(parentDir, "model_names");
       BufferedWriter br = new BufferedWriter(new OutputStreamWriter(fs.create(model_names,true)));
@@ -89,8 +92,8 @@ public class SaveModel extends Func {
       if (save_cv) {
         Model[] models = getCrossValModels(model);
         for (Model m : models ) {
-          new Model2HDFSBinarySerializer(fs, force).save(m, new Path(parentDir, m._key.toString()));
-          br.write(m._key.toString());
+          new Model2HDFSBinarySerializer(fs, force).save(m, new Path(parentDir, JCodeGen.toJavaId(m._key.toString())));
+          br.write(JCodeGen.toJavaId(m._key.toString()));
           br.newLine();
         }
       }

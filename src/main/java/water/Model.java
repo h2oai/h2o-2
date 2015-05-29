@@ -656,7 +656,13 @@ public abstract class Model extends Lockable<Model> {
 
     return sb;
   }
-  private SB toJavaNAMES( SB sb ) { return JCodeGen.toStaticVar(sb, "NAMES", _names, "Names of columns used by model."); }
+  private SB toJavaNAMES( SB sb ) {
+    //
+    int limit = ((1<<16) /* Max size of class */ - 4 * 500 /* Free space for loading any static stuff */ ) / (4*2*2); // Static initialized needs 4 instructions to load String from constant pool + load ColInfo
+    return _names.length < limit ?
+        JCodeGen.toStaticVar(sb, "NAMES", _names, "Names of columns used by model.") :
+        JCodeGen.toStaticVar(sb, "NAMES", JCodeGen.EMPTY_SA, "Names of columns used by model. WARNING: It is too large to be generated!");
+  }
   protected SB toJavaNCLASSES( SB sb ) { return isClassifier() ? JCodeGen.toStaticVar(sb, "NCLASSES", nclasses(), "Number of output classes included in training data response column.") : sb; }
   private SB toJavaDOMAINS( SB sb, SB fileContextSB ) {
     sb.nl();
@@ -667,7 +673,7 @@ public abstract class Model extends Lockable<Model> {
       String[] dom = _domains[i];
       String colInfoClazz = "ColInfo_"+i;
       sb.i(1).p("/* ").p(_names[i]).p(" */ ");
-      sb.p(colInfoClazz).p(".VALUES");
+      if (dom != null) sb.p(colInfoClazz).p(".VALUES"); else sb.p("null");
       if (i!=_domains.length-1) sb.p(',');
       sb.nl();
       fileContextSB.i().p("// The class representing column ").p(_names[i]).nl();
