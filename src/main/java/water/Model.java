@@ -676,8 +676,10 @@ public abstract class Model extends Lockable<Model> {
       if (dom != null) sb.p(colInfoClazz).p(".VALUES"); else sb.p("null");
       if (i!=_domains.length-1) sb.p(',');
       sb.nl();
-      fileContextSB.i().p("// The class representing column ").p(_names[i]).nl();
-      JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, dom);
+      if (dom != null) {
+        fileContextSB.i().p("// The class representing column ").p(_names[i]).nl();
+        JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, dom);
+      }
     }
     return sb.i().p("};").nl();
   }
