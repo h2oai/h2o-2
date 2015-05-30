@@ -626,7 +626,7 @@ public abstract class Model extends Lockable<Model> {
     sb.nl();
     sb.p("public class ").p(modelName).p(" extends water.genmodel.GeneratedModel {").nl(); // or extends GenerateModel
     toJavaInit(sb, fileContextSB).nl();
-    toJavaNAMES(sb);
+    toJavaNAMES(sb, fileContextSB);
     toJavaNCLASSES(sb);
     toJavaDOMAINS(sb, fileContextSB);
     toJavaPROB(sb);
@@ -636,15 +636,7 @@ public abstract class Model extends Lockable<Model> {
     sb.p(fileContextSB).nl(); // Append file
     return sb;
   }
-  // Same thing as toJava, but as a Javassist CtClass
-  private CtClass makeCtClass() throws CannotCompileException {
-    CtClass clz = ClassPool.getDefault().makeClass(JCodeGen.toJavaId(_key.toString()));
-    clz.addField(CtField.make(toJavaNAMES   (new SB()).toString(),clz));
-    clz.addField(CtField.make(toJavaNCLASSES(new SB()).toString(),clz));
-    toJavaInit(clz);            // Model-specific top-level goodness
-    clz.addMethod(CtMethod.make(toJavaPredict(new SB(), new SB()).toString(),clz)); // FIX ME
-    return clz;
-  }
+
   /** Generate implementation for super class. */
   protected SB toJavaSuper( SB sb ) {
     sb.nl();
@@ -656,12 +648,14 @@ public abstract class Model extends Lockable<Model> {
 
     return sb;
   }
-  private SB toJavaNAMES( SB sb ) {
-    //
-    int limit = ((1<<16) /* Max size of class */ - 4 * 500 /* Free space for loading any static stuff */ ) / (4*2*2); // Static initialized needs 4 instructions to load String from constant pool + load ColInfo
-    return _names.length < limit ?
-        JCodeGen.toStaticVar(sb, "NAMES", _names, "Names of columns used by model.") :
-        JCodeGen.toStaticVar(sb, "NAMES", JCodeGen.EMPTY_SA, "Names of columns used by model. WARNING: It is too large to be generated!");
+  private SB toJavaNAMES(SB sb, SB fileContextSB) {
+    String namesHolderClassName = "NamesHolder";
+    sb.i().p("// ").p("Names of columns used by model.").nl();
+    sb.i().p("public static final String[] NAMES = NamesHolder.VALUES;").nl();
+    // Generate class which fills the names into array
+    fileContextSB.i().p("// The class representing training column names ").nl();
+    JCodeGen.toClassWithArray(fileContextSB, null, namesHolderClassName, _names);
+    return sb;
   }
   protected SB toJavaNCLASSES( SB sb ) { return isClassifier() ? JCodeGen.toStaticVar(sb, "NCLASSES", nclasses(), "Number of output classes included in training data response column.") : sb; }
   private SB toJavaDOMAINS( SB sb, SB fileContextSB ) {
@@ -717,21 +711,6 @@ public abstract class Model extends Lockable<Model> {
   }
 
   protected String toJavaDefaultMaxIters() { return "-1"; }
-
-  // Convenience method for testing: build Java, convert it to a class &
-  // execute it: compare the results of the new class's (JIT'd) scoring with
-  // the built-in (interpreted) scoring on this dataset.  Throws if there
-  // is any error (typically an AssertionError).
-  public void testJavaScoring( Frame fr ) {
-    try {
-      //System.out.println(toJava());
-      Class clz = ClassPool.getDefault().toClass(makeCtClass());
-      Object modelo = clz.newInstance();
-    }
-    catch( CannotCompileException cce ) { throw new Error(cce); }
-    catch( InstantiationException cce ) { throw new Error(cce); }
-    catch( IllegalAccessException cce ) { throw new Error(cce); }
-  }
 
   /** Generates code which unify preds[1,...NCLASSES] */
   protected void toJavaUnifyPreds(SB bodySb) {
