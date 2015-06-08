@@ -748,23 +748,15 @@ class RUnitRunner:
                 is_large = False
                 is_xlarge= False
 
-                if (re.match(".*large.*", f)):
-                    is_large = True
-                elif (re.match(".*medium.*", f)):
-                    is_large = True
-                elif "xlarge" in f:
-                    is_xlarge = True
-                else:
-                    is_small = True
+                if   "xlarge" in f: is_xlarge = True
+                elif "medium" in f: is_medium = True
+                elif "large"  in f: is_large  = True
+                else:               is_small  = True
 
-                if (is_small and not run_small):
-                    continue
-                if (is_medium and not run_medium):
-                    continue
-                if (is_large and not run_large):
-                    continue
-                if is_xlarge and not run_xlarge:
-                    continue
+                if is_small  and not run_small:  continue
+                if is_medium and not run_medium: continue
+                if is_large  and not run_large:  continue
+                if is_xlarge and not run_xlarge: continue
 
                 if (test_group is not None):
                     test_short_dir = self._calc_test_short_dir(os.path.join(root, f))
@@ -837,7 +829,7 @@ class RUnitRunner:
 
         self._log("")
         self._log("Setting up R H2O package...")
-        if (True):
+        if (False):
             out_file_name = os.path.join(self.output_dir, "runnerSetupPackage.out.txt")
             out = open(out_file_name, "w")
             cloud = self.clouds[0]
@@ -1367,7 +1359,7 @@ def parse_args(argv):
                     g_run_medium = False
                 if (not 'l' in v):
                     g_run_large = False
-                if not "xl" in v:
+                if not "x" in v:
                     g_run_xlarge = False
             else:
                 bad_arg(s)
