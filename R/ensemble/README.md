@@ -13,7 +13,7 @@ R CMD INSTALL h2o/R/ensemble/h2oEnsemble-package
 - Install in R using `devtools::install_github`:
 ```
 library(devtools)
-install_github("h2oai/h2o/R/ensemble/h2oEnsemble-package")
+install_github("h2oai/h2o-2/R/ensemble/h2oEnsemble-package")
 ```
 
 ## Create Ensembles
