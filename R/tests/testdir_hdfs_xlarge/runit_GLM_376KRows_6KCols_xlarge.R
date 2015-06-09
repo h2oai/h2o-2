@@ -19,7 +19,6 @@ running_inside_hexdata = file.exists("/mnt/0xcustomer-datasets/c28")
 
 heading("BEGIN TEST")
 conn <- h2o.init(ip=myIP, port=myPort, startH2O = FALSE)
-h2o.removeAll()
 
 h2o.ls(conn)
 #----------------------------------------------------------------------
