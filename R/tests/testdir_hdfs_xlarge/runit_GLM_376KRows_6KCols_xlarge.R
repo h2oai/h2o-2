@@ -25,7 +25,8 @@ h2o.ls(conn)
 # Parameters for the test.
 #----------------------------------------------------------------------
 parse_time <- system.time(data.hex <- h2o.importFile(conn, "/mnt/0xcustomer-datasets/c28/mr_output.tsv.sorted.gz"))
-paste("Time it took to parse", parse_time[[1]])
+print("Time it took to parse")
+print(parse_time)
 
 dim(data.hex)
 
@@ -36,7 +37,8 @@ valid = data.hex[s > 0.8,]
 #GLM Model
 glm_time <- system.time(model.glm <- h2o.glm(x = 3:(ncol(train)), y = 6,
   data = train, validation=valid, family = "binomial"))
-paste("Time it took to build GLM ", glm_time[[1]])
+print("Time it took to build DL ")
+print(glm_time)
 model.glm
 
 pred = h2o.predict(model.glm, valid)

@@ -27,7 +27,8 @@ hdfs_data_file = "/datasets/airlinesbillion.csv"
 heading("Testing single file importHDFS")
 url <- sprintf("hdfs://%s%s", hdfs_name_node, hdfs_data_file)
 parse_time <- system.time(data.hex <- h2o.importFile(conn, url))
-paste("Time it took to parse", parse_time[[1]])
+print("Time it took to parse")
+print(parse_time)
 
 data1.hex <- data.hex
 
@@ -51,6 +52,7 @@ gbm_10tree_time <- system.time(data1.gbm <- h2o.gbm(x = myX, y = myY,
   data = data.train, validation=data.valid, n.trees = 10, interaction.depth = 5,
   distribution = "bernoulli"))
 data1.gbm
-paste("Time it took to build GBM ", gbm_10tree_time[[1]])
+print("Time it took to build DL ")
+print(gbm_10tree_time)
 
 PASS_BANNER()
