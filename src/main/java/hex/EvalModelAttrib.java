@@ -78,7 +78,7 @@ public class EvalModelAttrib {
         double fullP = (Math.exp(-full) + 1.0); // fullP inverse
         double baseP = 1.0/(Math.exp(-base) + 1);
         for(int i = 0; i < _marketing.length; ++i)
-          _lift[i] = (1.0/(Math.exp(-mps[i]) + 1) - baseP)*fullP;
+          _lift[i] += (1.0/(Math.exp(-mps[i]) + 1) - baseP)*fullP;
       }
     }
     @Override public void postGlobal(){
