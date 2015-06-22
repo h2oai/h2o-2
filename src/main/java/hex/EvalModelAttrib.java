@@ -5,8 +5,11 @@
 package hex;
 
 import hex.glm.GLMModel;
+import org.apache.commons.lang.ArrayUtils;
+import water.Iced;
 import water.Key;
 import water.MRTask2;
+import water.MemoryManager;
 import water.api.Request;
 import water.api.Request.API;
 import water.fvec.Chunk;
@@ -16,6 +19,7 @@ import water.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 public class EvalModelAttrib {
@@ -43,254 +47,101 @@ public class EvalModelAttrib {
     filter = Request.Default.class)
   public String marketingNames;
 
-  public static class EvalLiftTask extends MRTask2<EvalLiftTask> {
-    double _res;
-    @Override public void map(Chunk[] c) {
-      for(int i = 0; i < c[0]._len; i++) {
-        if (c[2].at0(i) != 0) {
-          _res += (c[0].at0(i) - c[1].at0(i)) / c[2].at0(i);
+  public static class ModelAtribTask extends MRTask2<ModelAtribTask> {
+    final double [] _beta;
+    int [] _base;
+    int [] _marketing;
+    double [] _lift;
+    long _nobs;
+
+    public ModelAtribTask(double [] beta, int [] base, int [] marketing) {
+      _beta = beta;
+      _base = base;
+      _marketing = marketing;
+    }
+    public void map(Chunk [] chunks) {
+      _lift = MemoryManager.malloc8d(_marketing.length);
+      double [] mps = MemoryManager.malloc8d(_marketing.length);
+      for(int r = 0; r < chunks[0]._len; ++r ) {
+        for(Chunk c:chunks) if(c.isNA0(r)) continue;
+        ++_nobs;
+        double base = _beta[_beta.length-1]; // intercept
+        for (int i:_base)
+          base += _beta[i] * chunks[i].at0(r);
+        double full = base;
+        for(int i = 0; i < _marketing.length; ++i) {
+          int idx = _marketing[i];
+          double d = _beta[idx]*chunks[idx].at0(r);
+          full += d;
+          mps[i] = base + d;
         }
+        double fullP = (Math.exp(-full) + 1.0); // fullP inverse
+        double baseP = 1.0/(Math.exp(-base) + 1);
+        for(int i = 0; i < _marketing.length; ++i)
+          _lift[i] = (1.0/(Math.exp(-mps[i]) + 1) - baseP)*fullP;
       }
     }
-    @Override public void reduce(EvalLiftTask mst) {
-      _res += mst._res;
+    @Override public void postGlobal(){
+      double d = 1.0/_nobs;
+      for(int i = 0; i < _lift.length; ++i)
+        _lift[i] *= d;
+    }
+    public void reduce(ModelAtribTask mat) {
+      _nobs += mat._nobs;
+      for(int i = 0; i < _lift.length; ++i)
+        _lift[i] += mat._lift[i];
     }
   }
-
-  private double[] maskModelCoeffs(
-    List<String> baseNames,
-    List<String> marketingNames,
-    double[] modelCoeffs,
-    GLMModel model) {
-
-    /* Allocate and initialize the return array. Default initialization is 0.0 */
-    double [] newModelCoeffs = new double[modelCoeffs.length];
-    /*
-    If model coefficients is a list then I can find out the index for a
-    variable and selectively copy the coefficient of that particular variable
-    to new coefficients array. Hence converting double[] to List<double>
-    */
-
-    List<String> modelCoefficientsNames =
-      Arrays.asList(model.coefficients_names);
-    /*
-    for (String mcn : modelCoefficientsNames) {
-      Log.info(mcn + ":" + mcn.length());
+  public static class LiftResult extends Iced {
+    public final long nobs;
+    public final String [] marketingVars;
+    public final double [] liftValues;
+    public LiftResult(long nobs, String [] mVars, double [] lVals){
+      this.nobs = nobs;
+      this.marketingVars = mVars;
+      this.liftValues = lVals;
     }
-    */
-    if (baseNames != null) {
-      for (String bterm : baseNames) {
-        /*
-        Log.info("Copying " + bterm + ":" + bterm.length());
-        Log.info(" at index " + modelCoefficientsNames.indexOf(bterm));
-        Log.info(" with value " + modelCoeffs[modelCoefficientsNames.indexOf(bterm)]);
-        Log.info(" to new coefficient array.");
-        */
-        //Log.info("Copying " + bterm + " at index " + modelCoefficientsNames.indexOf(bterm) + " with value " + modelCoeffs[modelCoefficientsNames.indexOf(bterm)] + " to new coefficient array.");
-
-        int indbterm = modelCoefficientsNames.indexOf(bterm);
-        if (indbterm != -1) {
-          newModelCoeffs[modelCoefficientsNames.indexOf(bterm)] =
-            modelCoeffs[modelCoefficientsNames.indexOf(bterm)];
-        }
-      }
-    }
-
-    if (marketingNames != null) {
-      for (String mterm : marketingNames) {
-        /*
-        Log.info("Copying " + bterm + ":" + bterm.length());
-        Log.info(" at index " + modelCoefficientsNames.indexOf(bterm));
-        Log.info(" with value " + modelCoeffs[modelCoefficientsNames.indexOf(bterm)]);
-        Log.info(" to new coefficient array.");
-        */
-        //Log.info("Copying " + mterm + " at index " + modelCoefficientsNames.indexOf(mterm) + " with value " + modelCoeffs[modelCoefficientsNames.indexOf(mterm)] + " to new coefficient array.");
-
-        int indbterm = modelCoefficientsNames.indexOf(mterm);
-        if (indbterm != -1) {
-          newModelCoeffs[modelCoefficientsNames.indexOf(mterm)] =
-            modelCoeffs[modelCoefficientsNames.indexOf(mterm)];
-        }
-      }
-    }
-    return newModelCoeffs;
   }
-
-  public double [] scoreModelAttrib(
+  public static double [] scoreModelAttrib(
     GLMModel model,
     Frame stackFrame,
     String baseNames,
     String marketingNames) {
-
-    Log.info("Entering function to calculate attribute lift.");
     /* Convert the variable names string into list of names. */
     List<String> baseNamesList = Arrays.asList(baseNames.trim().split("\\s*,\\s*"));
     List<String> marketingNamesList =
       Arrays.asList(marketingNames.trim().split("\\s*,\\s*"));
-
-    /* Extract the coefficients of the full model */
-    double [] modelCoeffs = model.beta().clone();
-
-    /* Diagnostic printing of all coefficients. */
-    /*
-    for(double coeff : modelCoeffs) {
-      Log.info("fullcoeff: " + coeff);
-    }
-    */
-
-    /*
-    Score the full model to find out the conversion probability. There is
-    one output for every row of the stack. An output is a tuple of three
-    elements:
-    o Boolean whether converted or not
-    o Probability of non conversion
-    o Probability of conversion
-    */
-    Log.info("Scoring the original model to determine the conversion probability.");
-    Frame convProbFull = model.score(stackFrame);
-
-    Log.info("Creating a base terms only model to to determin base conversion probability.");
-    /*
-    Create the base model structure from full model by masking the
-    marketing variables.
-    Step 1: mask the marketing coefficients from the full model
-    coefficients.
-    */
-    double [] baseModelCoeffs =
-      maskModelCoeffs(
-        baseNamesList,
-        null,
-        modelCoeffs,
-        model);
-
-    /* Diagnostic printing of base coefficients. */
-    /*
-    for(double basecoeff : baseModelCoeffs) {
-      Log.info("basecoeff: " + basecoeff);
-    }
-    */
-
-    Log.info("Estimate the coefficients of the base only model to determine the conversion probability.");
-    /*
-    Step 2: Create the H2O model structure of the base model from the
-    full model.
-    */
-    Key baseModelKey = Key.make();
-    GLMModel baseModel = new GLMModel(
-      model.get_params(),
-      baseModelKey,
-      model._dataKey,
-      model.getParams(),
-      model.coefficients_names,
-      baseModelCoeffs,
-      model.dinfo(),
-      0.5);
-    baseModel.delete_and_lock(null).unlock(null);
-
-    Log.info("Score the base only model to determine the conversion probability.");
-    /* Score the base model to find out the base conversion probability. */
-    Frame convProbBase = baseModel.score(stackFrame);
-
-
-    double [] lift = new double[marketingNamesList.size()];
-
-    Log.info("Add each marketing term individually to the base only model to determine the lift in conversion probability due to that marketing term.");
-    /*
-    For each marketing term, add it individually to the the base model
-    and score it to get the conversion probability of that
-    {all base terms + single marketing term} model and calculate
-    avg(singleprob - baseprob / fullprob)
-    */
-    for (String marketingName : marketingNamesList) {
-      //Log.info("Trying out: " + marketingName);
-      // Create a list with the single marketing variable to pass it to mask
-      // function
-      ArrayList<String> marketingList = new ArrayList<String>();
-      marketingList.add(marketingName);
-
-      /*
-      Keep all the base terms and mask out all the marketing terms except
-      for the one marketing term being tackled in this iteration
-      */
-      double [] singleMarketingModelCoeffs =
-        maskModelCoeffs(baseNamesList, marketingList, modelCoeffs, baseModel);
-
-      /*
-      Diagnostic printing of {all base + single marketing} model
-      coefficients
-      */
-      /*
-      for(double singlecoeff : singleMarketingModelCoeffs) {
-        Log.info("singlecoeff: " + singlecoeff);
+    HashSet<String> mVars = new HashSet<String>(marketingNamesList);
+    HashSet<String> bVars = new HashSet<String>(baseNamesList);
+    bVars.remove("Intercept"); // remove intercept if present
+    int [] mIds = new int[mVars.size()];
+    int [] bIds = new int[bVars.size()];
+    String [] coefNames = model.coefficients_names;
+    String [] mVarNames = new String[mVars.size()];
+    int j = 0, k = 0;
+    for(int i = 0; i < coefNames.length; ++i)
+      if(mVars.contains(coefNames[i])) {
+        mIds[j] = i;
+        mVarNames[j] = coefNames[i];
+        ++j;
+      } else if(bVars.contains(coefNames[i]))
+        bIds[k++] = i;
+    assert j == mIds.length;
+    assert bIds.length == k;
+    Frame [] frs = model.adapt(stackFrame,true,true);
+    double [] lift = new ModelAtribTask(model.beta(),bIds,mIds).doAll(frs[0])._lift;
+    frs[1].delete();
+    // may need to permute the marketing vars back
+    double [] res = new double[lift.length];
+    j = 0;
+    for(String mVar: marketingNamesList) {
+      for(int i = 0; i < mVarNames.length; ++i) {
+        if(mVar.equals(mVarNames[i])) {
+          res[j++] = lift[i];
+          break;
+        }
       }
-      */
-
-      /* Make the H2O model structure for {all base + single marketing} model */
-      Key singleMarketingModelKey = Key.make();
-      GLMModel singleMarketingModel = new GLMModel(
-        model.get_params(),
-        singleMarketingModelKey,
-        model._dataKey,
-        model.getParams(),
-        model.coefficients_names,
-        singleMarketingModelCoeffs,
-        model.dinfo(),
-        0.5);
-      singleMarketingModel.delete_and_lock(null).unlock(null);
-
-      /*
-      Score the {all base + single marketing} model and find the
-      conversion probability
-      */
-      Frame convProbMarketing = singleMarketingModel.score(stackFrame);
-
-      /*
-      Calculate the "lift" to conversion probability due to this
-      individual marketing term.
-      */
-      Vec[] v = new Vec[3];
-      v[0] = convProbMarketing.vec(2);
-      v[1] = convProbBase.vec(2);
-      v[2] = convProbFull.vec(2);
-      lift[marketingNamesList.indexOf(marketingName)] =
-        new EvalLiftTask().doAll(v)._res / v[0].length();
-
-      /*
-      Log.info("Is Float? " + v[0].isFloat() + ", Length: " + v[0].length());
-      for (long i = 0; i < v[0].length(); i++) {
-        if (((i % 50) == 0) && (v[0].at(i) != v[1].at(i)))
-          Log.info("Marketing: " + v[0].at(i) + ", Base: " + v[1].at(i) + ", Full: " + v[2].at(i));
-      }
-      */
-
-      /* Delete the model and conversion probability structures to release memory */
-      convProbMarketing.delete();
-      singleMarketingModel.delete();
     }
-
-    /* Diagnostic printing of the final lift array */
-    /*
-    for (String marketingName : marketingNamesList) {
-      Log.info(
-        "lift["
-          + marketingName
-          + "]: "
-          + lift[marketingNamesList.indexOf(marketingName)]);
-    }
-    */
-
-//    for (int i = 0; i < lift.length; i++) {
-//      lift[i] = 1.0;
-//    }
-
-    if (convProbFull != null)
-      convProbFull.delete();
-    if (baseModel != null)
-      baseModel.delete();
-    if (convProbBase != null)
-      convProbBase.delete();
-
-    Log.info("Exiting function to calculate attribute lift.");
-    return lift;
+    return res;
   }
 }

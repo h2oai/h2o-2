@@ -1,6 +1,7 @@
 package water.api;
 
 import hex.EvalModelAttrib;
+import hex.EvalModelAttrib.LiftResult;
 import hex.glm.GLMModel;
 import water.Request2;
 import water.fvec.Frame;
@@ -59,14 +60,11 @@ public class EvalMarketingLift extends Request2 {
       if (marketing_names == null) {
         marketing_names = "";
       }
-
-      lift =
-        new EvalModelAttrib().scoreModelAttrib(
+      lift = EvalModelAttrib.scoreModelAttrib(
           model,
           stack_frame,
           base_names,
           marketing_names);
-
       return Response.done(this);
     }
     catch (Throwable t) {
