@@ -62,8 +62,9 @@ public class EvalModelAttrib {
     public void map(Chunk [] chunks) {
       _lift = MemoryManager.malloc8d(_marketing.length);
       double [] mps = MemoryManager.malloc8d(_marketing.length);
+      OUTER:
       for(int r = 0; r < chunks[0]._len; ++r ) {
-        for(Chunk c:chunks) if(c.isNA0(r)) continue;
+        for(Chunk c:chunks) if(c.isNA0(r)) continue OUTER;
         ++_nobs;
         double base = _beta[_beta.length-1]; // intercept
         for (int i:_base)
@@ -75,10 +76,14 @@ public class EvalModelAttrib {
           full += d;
           mps[i] = base + d;
         }
+
         double fullP = (Math.exp(-full) + 1.0); // fullP inverse
-        double baseP = 1.0/(Math.exp(-base) + 1);
+        double baseP = (Math.exp(-base) + 1);
+        if(Double.isInfinite(fullP))
+          fullP = 1.0/0.00000001;
+        baseP = 1.0/baseP;
         for(int i = 0; i < _marketing.length; ++i)
-          _lift[i] += (1.0/(Math.exp(-mps[i]) + 1) - baseP)*fullP;
+          _lift[i] += (1.0 / (Math.exp(-mps[i]) + 1) - baseP) * fullP;
       }
     }
     @Override public void postGlobal(){
@@ -120,12 +125,14 @@ public class EvalModelAttrib {
     String [] mVarNames = new String[mVars.size()];
     int j = 0, k = 0;
     for(int i = 0; i < coefNames.length; ++i)
-      if(mVars.contains(coefNames[i])) {
+      if(bVars.contains(coefNames[i]))
+        bIds[k++] = i;
+      else if(mVars.contains(coefNames[i])) {
         mIds[j] = i;
         mVarNames[j] = coefNames[i];
         ++j;
-      } else if(bVars.contains(coefNames[i]))
-        bIds[k++] = i;
+      } else
+        System.out.println("did not find " + coefNames[i]);
     assert j == mIds.length;
     assert bIds.length == k;
     Frame [] frs = model.adapt(stackFrame,true,true);
