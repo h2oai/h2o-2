@@ -1,0 +1,25 @@
+}
+}
+if(clarificationDescriptor !=null){
+User assigneeUser = issue.getAssigneeUser();
+IssueService issueService = ComponentAccessor.getIssueService();
+IssueInputParameters parameters = issueService.newIssueInputParameters();
+parameters.setRetainExistingValuesWhenParameterNotProvided(true);
+IssueService.TransitionValidationResult validationResult = issueService.validateTransition(assigneeUser, issue.getId(), clarificationDescriptor.getId(), parameters);
+ if (validationResult.isValid()){
+// Do Something
+} 
+else{
+System.out.println(validationResult.getErrorCollection().getErrorMessages());
+}&lt;/pre&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p&gt;&lt;br /&gt;But this gives me the following error: &lt;/p&gt;&lt;p&gt;It seems that you have tried to perform a workflow operation (Received Clarification) that is not valid for the current state of this issue (INBOX-50). The likely cause is that somebody has changed the issue recently, please look at the issue history for details.&lt;/p&gt;&lt;p&gt; &lt;/p&gt;&lt;p&gt;I have cross verified that my workflow is correct. Also when I am trying to change the state through curl, I am able to do it. So what is the problem with the above code.&lt;/p&gt;&lt;p&gt; &lt;/p&gt;</description>
+      <category>answers</category>
+      <pubDate>Fri, 26 Jun 2015 09:07:43 GMT</pubDate>
+      <guid isPermaLink="false">tag:https://answers.atlassian.com,2014:question-18450566</guid>
+      <dc:creator>cxpsaml</dc:creator>
+      <dc:date>2015-06-26T09:07:43Z</dc:date>
+    </item>
+    <item>
+      <title>I can associate a screen to a issue type, but i don't want enter in each project for configuration</title>
+      <link>https://answers.atlassian.com/questions/18450539/i-can-associate-a-screen-to-a-issue-type-but-i-dont-want-enter-in-each-project-for-configuration</link>
+      <description>&lt;pre class="tw-data-text vk_txt tw-ta tw-text-small"&gt;&lt;span lang="en"&gt;Good morning , I'm using Jiracloud recently and I'm wondering if you can create a connection between screen and &lt;/span&gt;issue type, that is not to be configured for each project . &lt;/pre&gt;&lt;pre class="tw-data-text vk_txt tw-ta tw-text-small"&gt;&lt;span lang="en"&gt;I wish that by choosing different type issue would open different screen . &lt;/span&gt;&lt;/pre&gt;&lt;pre class=
