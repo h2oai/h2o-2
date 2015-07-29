@@ -1396,6 +1396,18 @@ h2o.predict <- function(object, newdata, ...) {
     stop(paste("Prediction has not yet been implemented for", class(object)))
 }
 
+h2o.predictResults <- function(model, newdata){
+  # make a prediction
+  modelPredict <- h2o.predict(model, newdata=newdata)
+  modelPredict <- as.data.frame(modelPredict)
+  # find the predictions with maximum probability
+  result <- as.matrix(apply(modelPredict, 1, function(x){
+    # index of the column that has the maximum probability in this row
+    ind <- which(x[2:length(x)] == max(x[2:length(x)])) + 1 
+    return(colnames(modelPredict)[ind])
+  }))
+  return(result)
+}
 
 h2o.makeGLMModel <- function(model, beta) {
   if( missing(model) || class(model) != "H2OGLMModel") 
