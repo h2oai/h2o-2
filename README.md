@@ -1,3 +1,10 @@
+# Caution:  H2O-3 is now the current H2O!
+# Please visit <https://github.com/h2oai/h2o-3>
+
+---
+---
+
+
 H2O
 ========
 
