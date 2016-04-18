@@ -147,7 +147,7 @@ Defining a GLM Model
      Specify the number of cross-validation models to 
      generate simultaneously for training a model on the full data
      set. If N folds is set to 10, additional models are generated
-     with 1/10 of the data used to train each. The purpose of N folds
+     with 9/10 of the data used to train each. The purpose of N folds
      is to evaluate the stability of the parameter estimates.
 
 **Alpha:**
