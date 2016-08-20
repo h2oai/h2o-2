@@ -22,8 +22,8 @@ public class DeepLearningMnist extends Job {
 
     System.out.println("from develop -- 10551 part2 commit 1");
     System.out.println("from develop -- 10551 part2 commit 2");
-    System.out.println("from develop commit 3");
-    System.out.println("from develop commit 4");
+    System.out.println("from develop develop commit 3");
+    System.out.println("from develop develop commit 4");
     System.out.println("from develop commit 5");
     System.out.println("from develop commit 6");
     System.out.println("from develop commit 7");
