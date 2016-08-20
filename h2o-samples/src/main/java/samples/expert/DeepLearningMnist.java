@@ -19,6 +19,23 @@ public class DeepLearningMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = DeepLearningMnist.class;
     samples.launchers.CloudLocal.launch(job, 1);
+
+    System.out.println("from develop commit 1");
+    System.out.println("from develop commit 2");
+    System.out.println("from develop commit 3");
+    System.out.println("from develop commit 4");
+    System.out.println("from develop commit 5");
+    System.out.println("from develop commit 6");
+    System.out.println("from develop commit 7");
+    System.out.println("from develop commit 8");
+    System.out.println("from develop commit 9");
+    System.out.println("from develop commit 10");
+    System.out.println("from develop commit 11");
+    System.out.println("from develop commit 12");
+    System.out.println("from develop commit 13");
+    System.out.println("from develop commit 14");
+    System.out.println("from develop commit 15");
+
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.171", "192.168.1.172", "192.168.1.173", "192.168.1.174", "192.168.1.175");
