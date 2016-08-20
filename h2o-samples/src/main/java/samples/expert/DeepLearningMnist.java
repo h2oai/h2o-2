@@ -20,8 +20,8 @@ public class DeepLearningMnist extends Job {
     Class job = DeepLearningMnist.class;
     samples.launchers.CloudLocal.launch(job, 1);
 
-    System.out.println("from develop commit 1");
-    System.out.println("from develop commit 2");
+    System.out.println("from develop -- 10551 part2 commit 1");
+    System.out.println("from develop -- 10551 part2 commit 2");
     System.out.println("from develop commit 3");
     System.out.println("from develop commit 4");
     System.out.println("from develop commit 5");
