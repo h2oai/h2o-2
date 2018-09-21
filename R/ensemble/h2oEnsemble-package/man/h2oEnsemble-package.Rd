@@ -24,11 +24,11 @@ Maintainer: Erin LeDell <ledell@berkeley.edu>
 }
 \references{
 van der Laan, M. J., Polley, E. C. and Hubbard, A. E. (2007) Super Learner, Statistical Applications of Genetics and Molecular Biology, 6, article 25. \cr
-\url{http://dx.doi.org/10.2202/1544-6115.1309}\cr
+\url{https://doi.org/10.2202/1544-6115.1309}\cr
 \url{http://biostats.bepress.com/ucbbiostat/paper222}\cr
 \cr
 Breiman, L. (1996) Stacked Regressions, Machine Learning, 24:49–64.\cr
-\url{http://dx.doi.org/10.1007/BF00117832}\cr
+\url{https://doi.org/10.1007/BF00117832}\cr
 \url{http://statistics.berkeley.edu/sites/default/files/tech-reports/367.pdf}
 }
 
