@@ -34,7 +34,7 @@
     "groc": "~0.6.3",
     "lodash": "~2.4.1",
     "watchy": "~0.4.3",
-    "request": "~2.34.0",
+    "request": "~2.88.2",
     "tape": "~2.12.3",
     "browserify": "~3.44.2",
     "faucet": "0.0.1",
