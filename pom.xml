@@ -21,6 +21,7 @@
   <properties>
     <!-- Default compile time version of Hadoop client: in H2O lib-directory structured referenced as cdh3. -->
     <h2o.hadoop.version>0.20.2-cdh3u6</h2o.hadoop.version>
+  	<closeTestReports>true</closeTestReports>
   </properties>
 
   <!-- Repositories -->
@@ -240,6 +241,7 @@
          <configuration>
            <!-- FIXME: we still have no proper JUnit runner for H2O tests -->
            <skipTests>true</skipTests>
+         	<disableXmlReport>${closeTestReports}</disableXmlReport>
          </configuration>
        </plugin>
     </plugins>
