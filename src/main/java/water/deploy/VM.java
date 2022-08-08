@@ -267,7 +267,7 @@ public abstract class VM {
         for( String s : System.getProperty("java.class.path").split(File.pathSeparator) ) {
           cp += cp.length() != 0 ? ":" : "";
           String path = new File(s).getCanonicalPath();
-          if( path.startsWith(h2o) )
+          if( new File(s).getCanonicalFile().toPath().startsWith(h2o) )
             path = path.substring(h2o.length() + 1);
           cp += path.replace('\\', '/').replace(" ", "\\ ");
         }
